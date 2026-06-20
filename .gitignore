@@ -1,0 +1,6 @@
+# u6gb md-vault safety gitignore.
+# Ignore EVERYTHING by default. Markdown is force-added explicitly by
+# .git-md-sync.sh (event-driven PostToolUse hook), so a stray `git add -A`
+# is a no-op and never walks / commits the heavy Lustre tree
+# (jax_cache, coredumps, logs_*, the 19 nested repos, ...).
+*
