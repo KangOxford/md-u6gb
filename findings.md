@@ -112,3 +112,10 @@ F021 UTC 2026-06-20T21:23:20Z: 这台机器无任何 GitHub 写凭证 — ~/.git
   - The model outputs a 20-dimensional action vector representing a two-arm robot setup (10 dimensions per arm): `[position_3d, rotation_6d, gripper_1d] x 2`.
   - In `models/action_hub.py`, `EE6DActionSpace` uses BCE loss for the gripper channels, and MSE loss for both the XYZ positions (scaled by `500.0`) and the 6D rotation components (scaled by `10.0`).
   - Because of the large scale factors (`500.0` and `10.0`), the absolute values of the training action loss in `ee6d` mode are relatively large, which explains the high loss values observed in the active log files.
+
+## 2026-06-20 Rotation 6D explanation
+
+- Investigated the reason for using 6D rotation representation in neural networks and robotics:
+  - Typical representations (Euler angles, quaternions) are topologically discontinuous when mapping to $SO(3)$, leading to learning instability.
+  - The 6D representation (Zhou et al., CVPR 2019) uses the first two columns ($a_1, a_2$) of a rotation matrix and applies Gram-Schmidt orthogonalization to reconstruct a full $SO(3)$ matrix.
+  - This mapping is continuous and significantly improves regression performance in deep learning models like VLAs.

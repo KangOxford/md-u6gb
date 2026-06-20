@@ -88,3 +88,9 @@ P018 UTC 2026-06-20T21:04:47Z: obsidian-md sync — 用户 Notion 页问 "全系
 - Search the X-VLA repository for references to `ee6d` and `action_mode`.
 - Examine `models/action_hub.py` to identify the implementation details of `EE6DActionSpace` (dimension layout, loss computation, scaling factors, preprocessing/postprocessing).
 - Provide a clear explanation of `ee6d` to the user.
+
+## 2026-06-20 Rotation 6D explanation plan
+
+- Explain the topological discontinuity issues of traditional rotation representations (Euler angles, quaternions).
+- Describe the Gram-Schmidt reconstruction process from 6D (two 3D vectors) to a 3D rotation matrix ($SO(3)$).
+- Detail why this continuous representation is highly beneficial for neural network regression.

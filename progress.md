@@ -124,3 +124,9 @@ PG026 UTC 2026-06-20T21:23:20Z: 本地 repo 建成 — git init@u6gb 根, status
 - Analyzed the architecture of `EE6DActionSpace` (20-dimensional action vector, scaling factors `500.0` for position and `10.0` for rotation, gripper BCE loss).
 - Committed prior unstaged changes in the local md records to adhere to the safety-rule commit guidelines.
 - Answered the user's question with the layout and mathematical details of the `ee6d` action space.
+
+## 2026-06-20 Rotation 6D explanation progress
+
+- Documented the mathematical rationale behind 6D rotation representations (continuity, Gram-Schmidt orthogonalization).
+- Updated local md records and committed changes.
+- Replied to the user with a detailed explanation of the 6D rotation representation.

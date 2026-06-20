@@ -103,3 +103,7 @@ L022 UTC 2026-06-20T21:23:20Z: 教训 — 验证 git 写鉴权必须用真 push 
 
 - When troubleshooting or explaining training log messages like `use action mode: ee6d`, tracing the name back to the configuration schemas and the action space registry (e.g. `action_hub.py`) helps clarify the exact dimension mapping and scaling factors.
 - In robot learning control spaces, scaling factors applied to individual loss terms (like position or rotation) directly impact the absolute scale of the total reported loss.
+
+## 2026-06-20 Rotation 6D explanation lessons
+
+- 6D continuous rotation representation (Zhou et al.) is standard in modern robotics and VLA models due to its continuity, which makes it easier for neural networks to regress smooth trajectories.
