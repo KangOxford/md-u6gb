@@ -114,3 +114,5 @@ PG024 UTC 2026-06-18T00:14:38Z: 处理用户第3批内嵌指令(c13640f):(1)Bran
 - Correction completed: the callout was restored to gray background, then every answer child block after `the tokenization` was set to Notion text color `blue`; API verification confirmed all answer paragraphs/list items are blue and the prompt line stays default.
 
 PG025 UTC 2026-06-20T21:04:47Z: 已完成环境勘查(git 状态 / 顶层结构 / 嵌套 repo / crontab 缺失 / GitHub 可达)。结论:服务器端推送须改为事件驱动 hook(复用 notion-auto-sync-md 模式),Mac 端轮询拉取,GitHub 作中转。下一步:向用户确认覆盖范围后执行。
+
+PG026 UTC 2026-06-20T21:23:20Z: 本地 repo 建成 — git init@u6gb 根, status.showUntrackedFiles=no + .gitignore=* 双保险, 提交 19 文件(17 depth-1 md + .gitignore + .git-md-sync.sh), README 含 Mac 配置。memory md(110)因 .claude 是指向 /home 的符号链接、git 不追符号链接背后内容而无法就地追踪(待定:镜像或跳过)。BLOCKED: 等用户把 deploy key 加到 GitHub(写权限)后 push。

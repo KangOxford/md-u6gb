@@ -96,3 +96,5 @@ L020 UTC 2026-06-17T23:53:34Z: LaTeX 浮动体——\begin{figure}[H](float 包,
 - To color only answer text inside a mixed prompt/answer callout, use Notion block-level `color` on the child answer paragraphs/list items; MCP markdown replacement is too coarse because it changes the whole callout.
 
 L021 UTC 2026-06-20T21:04:47Z: 教训 — 收到"照这个方案做"类请求,先验证方案在本环境是否可行再动手:本例页面的每分钟 cron 在无 crontab + 禁 daemon + Lustre 元数据敏感 + 嵌套 repo 的现实下三重不可行。通用 git-sync 教程默认单机 ext4,搬到共享 HPC Lustre 必须重设计:时间驱动→事件驱动,全树→窄范围,常驻→无常驻。
+
+L022 UTC 2026-06-20T21:23:20Z: 教训 — 验证 git 写鉴权必须用真 push 或 `git push --dry-run`,不能用 `git ls-remote` exit 0 推断:public repo 读是匿名的,ls-remote 成功不代表有写权限。早一步 dry-run 能省一轮。
