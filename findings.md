@@ -104,3 +104,11 @@ F019 UTC 2026-06-17T22:44:59Z: CHFS 数据性质核实(WebSearch)——CHFS 是 
 F020 UTC 2026-06-20T21:04:47Z: 环境实测三处硬伤,使页面"每分钟 cron"方案不可行 — (1) login 节点 `which crontab` 无;(2) u6gb 根=Lustre,298 顶层条目 + ≥10 嵌套 git repo(openreview×4/overleaf_xvla/quant/lob_pipeline/exp_sigker_nsdes…),全树 git add -A 每分钟=元数据风暴 + 嵌套 repo 内 md 抓不到;(3) HPC 反模式 #9 禁止 login 常驻 daemon。md-u6gb.git 可达(空)。quant 已是 git repo。
 
 F021 UTC 2026-06-20T21:23:20Z: 这台机器无任何 GitHub 写凭证 — ~/.git-credentials 不存在、无 ~/.ssh/key、gh 未装、GITHUB_TOKEN/GH/PAT 全空。md-u6gb 是 public repo 故 ls-remote/clone 匿名可用,但 push 需凭证。已生成专用 ed25519 deploy key(/home/u6gb/kangli.u6gb/.ssh/md_u6gb_deploy),remote 切 SSH,core.sshCommand 钉死该 key。
+
+## 2026-06-20 Action mode ee6d explanation
+
+- Investigated the action mode `ee6d` within the `kangli/X-VLA` repository:
+  - `ee6d` stands for End-Effector 6D action/control space.
+  - The model outputs a 20-dimensional action vector representing a two-arm robot setup (10 dimensions per arm): `[position_3d, rotation_6d, gripper_1d] x 2`.
+  - In `models/action_hub.py`, `EE6DActionSpace` uses BCE loss for the gripper channels, and MSE loss for both the XYZ positions (scaled by `500.0`) and the 6D rotation components (scaled by `10.0`).
+  - Because of the large scale factors (`500.0` and `10.0`), the absolute values of the training action loss in `ee6d` mode are relatively large, which explains the high loss values observed in the active log files.

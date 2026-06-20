@@ -82,3 +82,9 @@ P017 UTC 2026-06-17T21:19:47Z: revision 1 闭环完成——push 上线 Overleaf
 - For the corrected color request, restore the question/callout color and use the Notion block API to color only answer child blocks blue.
 
 P018 UTC 2026-06-20T21:04:47Z: obsidian-md sync — 用户 Notion 页问 "全系统 md→git→Obsidian(服务器每分钟 push / Mac 每分钟 pull)可行吗"。计划:先摸清环境再给环境感知的方案,而非照搬页面的通用 cron 方案。范围(u6gb-only 就地 / u6gb+quant 双 repo / 全系统 md 收集器)待用户定。
+
+## 2026-06-20 Action mode ee6d explanation plan
+
+- Search the X-VLA repository for references to `ee6d` and `action_mode`.
+- Examine `models/action_hub.py` to identify the implementation details of `EE6DActionSpace` (dimension layout, loss computation, scaling factors, preprocessing/postprocessing).
+- Provide a clear explanation of `ee6d` to the user.
