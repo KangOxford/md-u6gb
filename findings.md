@@ -119,3 +119,12 @@ F021 UTC 2026-06-20T21:23:20Z: 这台机器无任何 GitHub 写凭证 — ~/.git
   - Typical representations (Euler angles, quaternions) are topologically discontinuous when mapping to $SO(3)$, leading to learning instability.
   - The 6D representation (Zhou et al., CVPR 2019) uses the first two columns ($a_1, a_2$) of a rotation matrix and applies Gram-Schmidt orthogonalization to reconstruct a full $SO(3)$ matrix.
   - This mapping is continuous and significantly improves regression performance in deep learning models like VLAs.
+
+## 2026-06-22 Baseline 200K recent-run Notion check
+
+- Target page `job4853407 vs current HyperXVLA code evidence - 2026-06-20` was updated in place; original prompt `[any full run of the baseline recent 10 days. like 200k do a subpage]` is now struck through with a callout link to child page `Baseline 200K recent run check - 2026-06-22` (`https://app.notion.com/p/38712c4568fd81469d1feab76cc3f8b3`).
+- Live/local evidence for `2026-06-12` through `2026-06-22` UTC found no completed full recent baseline 200K run.
+- Checked SLURM rows: `5285199 baseline-200k FAILED 1:0`, `5289175 baseline-200k TIMEOUT`, and `5292779 resume-submit-baseline FAILED 2:0`; no matching active `squeue` jobs.
+- Closest useful baseline evidence is `5289175`: configured for `iters=200000`, effective batch `1024`, `learning_rate=1e-4`, `learning_coef=0.1`, `weight_decay=0.01`, `freeze_steps=1000`, `warmup_steps=1000`, cosine schedule, but timed out after about 24h.
+- `5289175` reached logged step `45800/200000`; checkpoints observed only `ckpt-10000`, `ckpt-20000`, `ckpt-30000`, and `ckpt-40000`; no `ckpt-50000` or `ckpt-200000` evidence.
+- Loss readout for partial baseline trajectory stayed numerically stable: `4.2633` at 1k, `0.9872` at 2k, `0.2795` at 10k, `0.2566` at 40k, `0.1924` at 45.7k, `0.4345` at 45.8k.

@@ -94,3 +94,12 @@ P018 UTC 2026-06-20T21:04:47Z: obsidian-md sync — 用户 Notion 页问 "全系
 - Explain the topological discontinuity issues of traditional rotation representations (Euler angles, quaternions).
 - Describe the Gram-Schmidt reconstruction process from 6D (two 3D vectors) to a 3D rotation matrix ($SO(3)$).
 - Detail why this continuous representation is highly beneficial for neural network regression.
+
+## 2026-06-22 Baseline 200K recent-run Notion plan
+
+- Fetch the exact Notion target page first and preserve the bracketed prompt as struck-through text in place.
+- Verify recent baseline evidence from live SLURM accounting (`sacct -S 2026-06-12`) and current queue state instead of relying on the existing comparison table alone.
+- Inspect local baseline 200K artifacts under `kangli/X-VLA/logs`, `kangli/X-VLA/runnings/baseline_200k_joint_7datasets`, and `kangli/X-VLA/scripts/train_baseline_200k.sh`.
+- Create one child Notion page under the target page with the evidence table, job status table, loss readout, and conclusion about full vs partial baseline status.
+- Update the parent page directly under the original prompt with a short callout linking the child page.
+- Re-fetch both parent and child pages to verify Notion state, then update local records and commit only the record files.

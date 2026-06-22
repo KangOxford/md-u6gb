@@ -107,3 +107,9 @@ L022 UTC 2026-06-20T21:23:20Z: 教训 — 验证 git 写鉴权必须用真 push 
 ## 2026-06-20 Rotation 6D explanation lessons
 
 - 6D continuous rotation representation (Zhou et al.) is standard in modern robotics and VLA models due to its continuity, which makes it easier for neural networks to regress smooth trajectories.
+
+## 2026-06-22 Baseline 200K recent-run lessons
+
+- For XVLA training provenance, distinguish three states explicitly: configured 200K target, partial trajectory with checkpoints, and completed full 200K run. A stable partial loss curve is not a full-run result.
+- `sacct` parent rows can show the high-level outcome, but the step rows and stderr are needed to explain why the run stopped; for `5289175`, stderr showed time-limit cancellation after the partial run.
+- Notion child-page links inside callouts render more robustly as plain Markdown links than as raw `<page url="...">` tags; raw page tags can be escaped/mangled inside callout text.

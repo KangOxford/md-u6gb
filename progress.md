@@ -130,3 +130,11 @@ PG026 UTC 2026-06-20T21:23:20Z: 本地 repo 建成 — git init@u6gb 根, status
 - Documented the mathematical rationale behind 6D rotation representations (continuity, Gram-Schmidt orthogonalization).
 - Updated local md records and committed changes.
 - Replied to the user with a detailed explanation of the 6D rotation representation.
+
+## 2026-06-22 Baseline 200K recent-run Notion progress
+
+- Fetched target Notion page `38512c4568fd8117926cf5c58b8ae5f2` and verified the unresolved top prompt was exactly `[any full run of the baseline recent 10 days. like 200k do a subpage]`.
+- Checked live `sacct` for `2026-06-12` through `2026-06-22` and local X-VLA logs/configs/checkpoints.
+- Created Notion child page `Baseline 200K recent run check - 2026-06-22` at `https://app.notion.com/p/38712c4568fd81469d1feab76cc3f8b3`.
+- Updated the parent page in place: original bracketed prompt is struck through and followed by a callout linking the child page and stating no completed full recent baseline 200K run was found.
+- Re-fetched parent and child pages to verify the visible Notion update; parent callout link was cleaned from a raw page tag to a plain Markdown link after first verification showed escaped markup.
