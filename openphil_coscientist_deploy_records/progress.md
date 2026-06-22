@@ -60,3 +60,17 @@
   - Re-fetched the Notion page and verified the updated layout.
 - Remaining:
   - Exposed keys are still present on Notion pending explicit user confirmation to delete or rotate them.
+
+## 2026-06-22 Mac access page
+
+- Status: Notion subpage for Mac access is created and verified.
+- Completed:
+  - Verified the live service is on `login40`.
+  - Created child page `Mac 访问 server 上的 OpenPhil Coscientist UI`.
+  - Included the Mac Terminal SSH tunnel command and browser URL.
+  - Included fallback local ports `18501` and `18765`.
+  - Re-fetched the child page and parent page to verify visibility.
+  - Downloaded the parent page `image.png` attachment to `notion_fetches/openphil_mac_tunnel_20260622T1129/assets/image.png`.
+  - Wrote attachment manifest at `notion_fetches/openphil_mac_tunnel_20260622T1129/manifest.md`.
+- Remaining:
+  - The user should run the SSH tunnel from Mac Terminal and keep that Terminal window open while using the UI.

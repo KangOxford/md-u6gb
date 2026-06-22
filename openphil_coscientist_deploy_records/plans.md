@@ -18,3 +18,4 @@
 2. Configure real agent credentials only through a secure `.env` or shell environment path that does not expose key values in chat or command logs.
 3. After credentials are configured, run a small research-session smoke test and inspect `state/sessions/<session>/runtime.log`.
 4. If the user confirms deletion/rotation, remove the exposed credential block from Notion after preserving the non-secret status notes.
+5. For Mac browser access, use the Notion child page tunnel instructions and run the `ssh -L` command from Mac Terminal, not from a login-node shell.

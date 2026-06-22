@@ -43,3 +43,14 @@
 - tmux pane logs showed clean Uvicorn and Streamlit startup.
 - Notion page `openphil-quant` was updated and re-fetched: install checkbox is checked, deployment callout is under the install item, and API credential status callout is under `APIs`.
 - The credential block remains on Notion because deletion was not explicitly requested or confirmed.
+
+## 2026-06-22 Mac access page
+
+- Current service host was verified as `login40` with user `kangli.u6gb`.
+- `openphil_coscientist` tmux session was still running with two windows.
+- API health check and UI HTTP check passed immediately before writing the Mac-access instructions.
+- Created Notion child page: https://app.notion.com/p/38712c4568fd81a58cd8e7e56138e879
+- The child page documents the Mac-side SSH tunnel command, browser URL, fallback local ports, and troubleshooting checklist.
+- Re-fetched the child page and verified the content under parent `openphil-quant`.
+- Re-fetched the parent page and confirmed the child page block is visible.
+- Parent page contained a Notion-hosted `image.png` attachment; archived it locally under `notion_fetches/openphil_mac_tunnel_20260622T1129/assets/` with a manifest.

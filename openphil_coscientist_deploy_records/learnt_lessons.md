@@ -10,3 +10,5 @@
 - The Streamlit app's default API hostname is valid inside Docker Compose but not in host-mode on a login node; prefer an environment override for local deployment.
 - The minimal host-mode override is enough to keep Docker Compose behavior unchanged while letting login-node Streamlit reach the local API.
 - When Notion contains exposed keys, update adjacent status without repeating values and do not delete the original secret block unless the user explicitly confirms deletion.
+- For local-browser access to a server-bound Streamlit app, the SSH `-L` tunnel must originate on the Mac; running the tunnel from another server only exposes the forwarded port on that server.
+- When a Notion fetch exposes an attachment during a writeback task, archive the attachment bytes and a manifest even if the attachment is not the main requested deliverable.
