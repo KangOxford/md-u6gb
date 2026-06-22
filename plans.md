@@ -103,3 +103,12 @@ P018 UTC 2026-06-20T21:04:47Z: obsidian-md sync — 用户 Notion 页问 "全系
 - Create one child Notion page under the target page with the evidence table, job status table, loss readout, and conclusion about full vs partial baseline status.
 - Update the parent page directly under the original prompt with a short callout linking the child page.
 - Re-fetch both parent and child pages to verify Notion state, then update local records and commit only the record files.
+
+## 2026-06-22 Baseline 200K resume plan
+
+- Confirm no duplicate baseline/XVLA 200K job is already active in `squeue`.
+- Inspect `scripts/resume_200k_from_latest.sh` and run it once in dry-run mode from the X-VLA repo root.
+- Submit a single direct baseline resume job from `ckpt-40000` rather than using the previously failed wrapper path.
+- Update the parent Notion page under a struck-through `[resume the job]` line with job ID, checkpoint, command, and current SLURM state.
+- Create local SLURM supervision artifacts with manifest, event log, state snapshot, and summary for future resume checks.
+- Append local markdown records and commit only the intended record/artifact files.

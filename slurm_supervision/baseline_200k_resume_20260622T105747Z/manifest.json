@@ -1,0 +1,39 @@
+{
+  "experiment": "baseline_200k_resume_from_ckpt_40000",
+  "created_utc": "2026-06-22T10:57:47Z",
+  "repo": "/lus/lfs1aip2/projects/public/u6gb/kangli/X-VLA",
+  "notion_parent_page": "https://app.notion.com/p/38512c4568fd8117926cf5c58b8ae5f2",
+  "notion_context_page": "https://app.notion.com/p/38712c4568fd81469d1feab76cc3f8b3",
+  "evidence_question": "Continue the recent baseline 200K run from the latest verified checkpoint and determine whether it can progress beyond the partial 45.8k-step trajectory.",
+  "jobs": [
+    {
+      "job_id": "5333005",
+      "name": "baseline-200k",
+      "submit_command": "MODEL=baseline SUBMIT=1 scripts/resume_200k_from_latest.sh",
+      "resolved_sbatch": "sbatch --export=ALL,BENCHMARK=joint_7datasets,MODEL_PATH=runnings/baseline_200k_joint_7datasets/ckpt-40000,START_STEP=40000,OUTPUT_DIR=runnings/baseline_200k_joint_7datasets scripts/train_baseline_200k.sh",
+      "state_at_submission_check": "PENDING",
+      "pending_reason": "Priority",
+      "workdir": "/lus/lfs1aip2/projects/public/u6gb/kangli/X-VLA"
+    }
+  ],
+  "checkpoints": {
+    "resume_from": "/lus/lfs1aip2/projects/public/u6gb/kangli/X-VLA/runnings/baseline_200k_joint_7datasets/ckpt-40000",
+    "next_gate": "/lus/lfs1aip2/projects/public/u6gb/kangli/X-VLA/runnings/baseline_200k_joint_7datasets/ckpt-50000",
+    "final_target": "/lus/lfs1aip2/projects/public/u6gb/kangli/X-VLA/runnings/baseline_200k_joint_7datasets/ckpt-200000"
+  },
+  "logs": {
+    "stdout_expected": "/lus/lfs1aip2/projects/public/u6gb/kangli/X-VLA/logs/baseline_200k_5333005.out",
+    "stderr_expected": "/lus/lfs1aip2/projects/public/u6gb/kangli/X-VLA/logs/baseline_200k_5333005.err",
+    "train_log": "/lus/lfs1aip2/projects/public/u6gb/kangli/X-VLA/runnings/baseline_200k_joint_7datasets/train.log"
+  },
+  "gate_rules": [
+    "Confirm job leaves PENDING and creates stdout/stderr files.",
+    "After RUNNING, check train log for Args with start_step=40000 and models=ckpt-40000.",
+    "First checkpoint gate is ckpt-50000.",
+    "Do not claim full 200K completion until ckpt-200000 exists and the job has completed cleanly."
+  ],
+  "stop_policy": {
+    "auto_cancel": false,
+    "notes": "Do not cancel automatically from chat-side supervision. Escalate non-finite loss, repeated startup failure, or missing checkpoint progress."
+  }
+}

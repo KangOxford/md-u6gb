@@ -1,0 +1,11 @@
+{
+  "updated_utc": "2026-06-22T10:58:36Z",
+  "state": "pending",
+  "job_id": "5333005",
+  "slurm_state": "PENDING",
+  "pending_reason": "Priority",
+  "last_verified_checkpoint": "ckpt-40000",
+  "next_checkpoint_gate": "ckpt-50000",
+  "alert": null,
+  "next_action": "When resumed, check squeue/sacct for job 5333005, then inspect logs/baseline_200k_5333005.out once the job starts."
+}

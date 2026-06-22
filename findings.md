@@ -128,3 +128,11 @@ F021 UTC 2026-06-20T21:23:20Z: 这台机器无任何 GitHub 写凭证 — ~/.git
 - Closest useful baseline evidence is `5289175`: configured for `iters=200000`, effective batch `1024`, `learning_rate=1e-4`, `learning_coef=0.1`, `weight_decay=0.01`, `freeze_steps=1000`, `warmup_steps=1000`, cosine schedule, but timed out after about 24h.
 - `5289175` reached logged step `45800/200000`; checkpoints observed only `ckpt-10000`, `ckpt-20000`, `ckpt-30000`, and `ckpt-40000`; no `ckpt-50000` or `ckpt-200000` evidence.
 - Loss readout for partial baseline trajectory stayed numerically stable: `4.2633` at 1k, `0.9872` at 2k, `0.2795` at 10k, `0.2566` at 40k, `0.1924` at 45.7k, `0.4345` at 45.8k.
+
+## 2026-06-22 Baseline 200K resume submission
+
+- User requested `[resume the job]`; parent Notion page now preserves that line as strikethrough and has a resume callout directly below it.
+- Direct dry run from the X-VLA repo resolved correctly: `MODEL_PATH=runnings/baseline_200k_joint_7datasets/ckpt-40000`, `START_STEP=40000`, `OUTPUT_DIR=runnings/baseline_200k_joint_7datasets`.
+- Submitted direct resume job `5333005` with `MODEL=baseline SUBMIT=1 scripts/resume_200k_from_latest.sh`.
+- Submission check showed `5333005 baseline-200k PENDING (Priority)`; `sacct` showed `5333005|baseline-200k|PENDING|0:0|00:00:00|Unknown|Unknown|/lus/lfs1aip2/projects/public/u6gb/kangli/X-VLA`.
+- Prior resume wrapper `5292779` failed because it could not find `scripts/train_baseline_200k.sh`; direct submission from repo root avoids that wrapper path issue.

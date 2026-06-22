@@ -138,3 +138,12 @@ PG026 UTC 2026-06-20T21:23:20Z: 本地 repo 建成 — git init@u6gb 根, status
 - Created Notion child page `Baseline 200K recent run check - 2026-06-22` at `https://app.notion.com/p/38712c4568fd81469d1feab76cc3f8b3`.
 - Updated the parent page in place: original bracketed prompt is struck through and followed by a callout linking the child page and stating no completed full recent baseline 200K run was found.
 - Re-fetched parent and child pages to verify the visible Notion update; parent callout link was cleaned from a raw page tag to a plain Markdown link after first verification showed escaped markup.
+
+## 2026-06-22 Baseline 200K resume progress
+
+- Confirmed no active baseline/XVLA/200K job was present before submission.
+- Read `scripts/resume_200k_from_latest.sh`; dry run resolved latest baseline checkpoint as `ckpt-40000` with `START_STEP=40000`.
+- Submitted direct resume job `5333005` from `/lus/lfs1aip2/projects/public/u6gb/kangli/X-VLA`.
+- Verified initial scheduler state: `PENDING (Priority)`.
+- Updated and re-fetched the parent Notion page; `[resume the job]` is struck through and the resume callout records job `5333005`.
+- Created local supervision artifacts under `slurm_supervision/baseline_200k_resume_20260622T105747Z/`.
