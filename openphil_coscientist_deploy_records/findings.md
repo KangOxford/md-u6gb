@@ -54,3 +54,7 @@
 - Re-fetched the child page and verified the content under parent `openphil-quant`.
 - Re-fetched the parent page and confirmed the child page block is visible.
 - Parent page contained a Notion-hosted `image.png` attachment; archived it locally under `notion_fetches/openphil_mac_tunnel_20260622T1129/assets/` with a manifest.
+- User corrected that Mac SSH target is `u6gb.aip2.isambard` and each login is randomly assigned to a login node.
+- The original direct `kangli.u6gb@login40` tunnel instruction was wrong for this access pattern unless `login40` is directly SSH-reachable from the Mac.
+- Updated the Notion child page to use `ssh -J kangli.u6gb@u6gb.aip2.isambard ... kangli.u6gb@login40`, preserving the user's bracketed correction as struck-through text with a callout.
+- Re-fetched the child page and verified the corrected ProxyJump command and explanation rendered in place.

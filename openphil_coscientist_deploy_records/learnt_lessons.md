@@ -12,3 +12,4 @@
 - When Notion contains exposed keys, update adjacent status without repeating values and do not delete the original secret block unless the user explicitly confirms deletion.
 - For local-browser access to a server-bound Streamlit app, the SSH `-L` tunnel must originate on the Mac; running the tunnel from another server only exposes the forwarded port on that server.
 - When a Notion fetch exposes an attachment during a writeback task, archive the attachment bytes and a manifest even if the attachment is not the main requested deliverable.
+- On Isambard-style load-balanced login hosts, a tunnel to the public login alias reaches whichever login node the alias assigns; to reach a service bound to `127.0.0.1` on a specific login node, use a final SSH target for that node via `ProxyJump`.

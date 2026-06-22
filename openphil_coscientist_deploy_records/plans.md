@@ -19,3 +19,4 @@
 3. After credentials are configured, run a small research-session smoke test and inspect `state/sessions/<session>/runtime.log`.
 4. If the user confirms deletion/rotation, remove the exposed credential block from Notion after preserving the non-secret status notes.
 5. For Mac browser access, use the Notion child page tunnel instructions and run the `ssh -L` command from Mac Terminal, not from a login-node shell.
+6. Because `u6gb.aip2.isambard` load-balances login nodes, use ProxyJump to `login40` while the service remains on `login40`; if ProxyJump fails, relocate the service or create a stable SSH alias.

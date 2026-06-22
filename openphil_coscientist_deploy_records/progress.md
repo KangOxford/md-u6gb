@@ -74,3 +74,15 @@
   - Wrote attachment manifest at `notion_fetches/openphil_mac_tunnel_20260622T1129/manifest.md`.
 - Remaining:
   - The user should run the SSH tunnel from Mac Terminal and keep that Terminal window open while using the UI.
+
+## 2026-06-22 Mac tunnel correction
+
+- Status: Notion child page corrected and verified.
+- Completed:
+  - Preserved the user's bracketed correction as struck-through text in the child page.
+  - Added a callout explaining why `u6gb.aip2.isambard` alone is insufficient.
+  - Replaced the direct `kangli.u6gb@login40` command with a ProxyJump command through `kangli.u6gb@u6gb.aip2.isambard` to final target `kangli.u6gb@login40`.
+  - Updated the fallback-port command to use the same ProxyJump pattern.
+  - Re-fetched the child page and verified the corrected content.
+- Remaining:
+  - If ProxyJump from Mac to `login40` is blocked, the service should be moved to the currently assigned login node or a stable SSH alias should be configured.
