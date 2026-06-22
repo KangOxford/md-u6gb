@@ -32,3 +32,20 @@
   - Reconfirmed `openphil_coscientist` tmux session is absent and ports `8765`/`8501` are down.
   - Reconfirmed host-mode Python dependencies are installed in `.venv`.
 - Next step: patch host-mode UI API URL handling, commit the change, restart services, and verify.
+
+## 2026-06-22 restart complete
+
+- Status: API and UI are live in tmux session `openphil_coscientist`; API-key configuration remains intentionally incomplete.
+- Completed:
+  - Added environment overrides to `ui/app.py` for `COSCIENTIST_API_URL` and `COSCIENTIST_STATE_DIR`.
+  - Committed the nested repo code change: `8d0478f Allow host-mode UI API configuration`.
+  - Ran tests after the code change: `8 passed in 2.80s`.
+  - Started API in tmux window `openphil_coscientist:api`.
+  - Started UI in tmux window `openphil_coscientist:ui` with `COSCIENTIST_API_URL=http://127.0.0.1:8765`.
+  - Verified API `/health` and UI root endpoint.
+- Access:
+  - API: `http://127.0.0.1:8765`
+  - UI: `http://127.0.0.1:8501`
+- Remaining:
+  - `.env` is still absent, and no pasted API keys were copied into local files or command lines.
+  - Real Claude agent execution still needs secure credential configuration.

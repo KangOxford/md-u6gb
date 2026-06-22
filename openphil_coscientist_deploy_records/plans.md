@@ -11,3 +11,9 @@
 3. Restart API and UI in tmux without writing pasted API keys to files or command lines.
 4. Verify `/health` and the UI HTTP response.
 5. Update the Notion checklist only for the parts that are actually verified.
+
+## 2026-06-22 follow-up plan
+
+1. Keep `openphil_coscientist` tmux running for API/UI access.
+2. Configure real agent credentials only through a secure `.env` or shell environment path that does not expose key values in chat or command logs.
+3. After credentials are configured, run a small research-session smoke test and inspect `state/sessions/<session>/runtime.log`.

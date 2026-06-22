@@ -8,3 +8,4 @@
 - The app surfaces can start without the API key, but actual Claude agent sessions require Anthropic authentication.
 - A 2026-06-22 refresh showed the old tmux deployment can become stale; always recheck live ports before marking Notion checkboxes complete.
 - The Streamlit app's default API hostname is valid inside Docker Compose but not in host-mode on a login node; prefer an environment override for local deployment.
+- The minimal host-mode override is enough to keep Docker Compose behavior unchanged while letting login-node Streamlit reach the local API.

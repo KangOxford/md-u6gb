@@ -35,3 +35,9 @@
 - API health check failed on `127.0.0.1:8765` and Streamlit failed on `127.0.0.1:8501`; the old deployment is down.
 - Host-mode dependencies remain installed in `.venv` with Python 3.13.12, `coscientist` editable install, FastAPI, Streamlit, and `claude-agent-sdk`.
 - `ui/app.py` hardcodes Docker hostname `http://coscientist-api:8765`; host-mode UI needs an API URL override to make UI actions reach `127.0.0.1:8765`.
+- Host-mode UI override was added and committed in `OpenPhil_coscientist` as `8d0478f`.
+- Test suite after the code change passed: `8 passed in 2.80s`.
+- API and UI were restarted in tmux session `openphil_coscientist` with two windows: `api` and `ui`.
+- API health check passed at `http://127.0.0.1:8765/health`.
+- Streamlit UI responded `HTTP/1.1 200 OK` at `http://127.0.0.1:8501/`.
+- tmux pane logs showed clean Uvicorn and Streamlit startup.
