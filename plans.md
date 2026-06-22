@@ -112,3 +112,14 @@ P018 UTC 2026-06-20T21:04:47Z: obsidian-md sync — 用户 Notion 页问 "全系
 - Update the parent Notion page under a struck-through `[resume the job]` line with job ID, checkpoint, command, and current SLURM state.
 - Create local SLURM supervision artifacts with manifest, event log, state snapshot, and summary for future resume checks.
 - Append local markdown records and commit only the intended record/artifact files.
+
+## 2026-06-22 OpenPhil coscientist vs heuristic-learning analysis
+- Understand the openphil-quant Notion page (the OpenPhil_coscientist system) and relate it to the user's heuristic-learning work.
+- Deep-read the local coscientist repo and the meta-learning-evolution skill to ground the comparison.
+- Draft a Chinese subpage with a "claudecode" name suffix and push it under openphil-quant once that page is shared with the "cc" integration.
+
+## 2026-06-22 Smoke-test Notion path lookup plan
+
+- Fetch the exact Notion URL and read the returned title plus `ancestor-path`.
+- Answer with the Notion hierarchy and canonical page URL.
+- State explicitly that no local filesystem path is implied by the Notion URL unless the user asks for a workspace search.

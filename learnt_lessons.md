@@ -119,3 +119,12 @@ L022 UTC 2026-06-20T21:23:20Z: 教训 — 验证 git 写鉴权必须用真 push 
 - Before resubmitting a failed wrapper job, run the resume helper directly from the intended repo root; the earlier `resume-submit-baseline` failure was path-resolution related, not evidence that the checkpoint was unusable.
 - For heavy 4-node training resumes, submit one verified resume job first unless chained continuation is explicitly requested; a chain can consume multiple allocations and should be a separate decision.
 - If a bracketed Notion instruction appears appended to an existing sentence, normalize it into its own struck-through line before adding the answer callout.
+
+## 2026-06-22 coscientist-vs-heuristic-learning
+- In this u6gb context HOME is /projects/public/u6gb, so ~/.notion_token does not resolve to the real token; use $NOTION_TOKEN_PATH (points to /home/u6gb/kangli.u6gb/.notion_token).
+- The Notion "cc" integration only sees explicitly shared pages; a successful write in a prior session does not guarantee current access because a page can be unshared. Verify with GET /v1/pages/<id> before attempting a write.
+- OpenPhil_coscientist's "evolution" is a naming trap: it is LLM self-modification, not evolutionary computation; do not infer GA/fitness from the module name.
+
+## 2026-06-22 Smoke-test Notion path lookup lessons
+
+- For Notion `app.notion.com/p/...` links, the useful "full path" is usually the fetched `ancestor-path`; do not invent a filesystem path when the page metadata only exposes Notion hierarchy.

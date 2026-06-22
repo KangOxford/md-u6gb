@@ -147,3 +147,17 @@ PG026 UTC 2026-06-20T21:23:20Z: 本地 repo 建成 — git init@u6gb 根, status
 - Verified initial scheduler state: `PENDING (Priority)`.
 - Updated and re-fetched the parent Notion page; `[resume the job]` is struck through and the resume callout records job `5333005`.
 - Created local supervision artifacts under `slurm_supervision/baseline_200k_resume_20260622T105747Z/`.
+
+## 2026-06-22 coscientist-vs-heuristic-learning
+- Read the four openphil_coscientist_deploy_records files for context.
+- Dispatched a subagent (id ae7da5077dad4fe8e) to deep-read the coscientist repo; confirmed the no-fitness "evolution = self-modification" finding.
+- Read the meta-learning-evolution and notion-push-via-rest skills.
+- Located the Notion token via NOTION_TOKEN_PATH (/home/u6gb/kangli.u6gb/.notion_token); verified bot "cc" but confirmed openphil-quant is not shared (404).
+- Wrote the subpage markdown at openphil_coscientist_deploy_records/coscientist_vs_heuristic_learning_claudecode.md.
+- Blocked on the Notion push until the user shares openphil-quant with the "cc" integration.
+- Push succeeded after the user shared openphil-quant with cc: created subpage 38712c45-68fd-812e-b13a-e964d07c3030 (33 blocks). Verified parent = openphil-quant, title carries the "claudecode" suffix, 1 comparison table (width 3), inline equation rendered.
+
+## 2026-06-22 Smoke-test Notion path lookup progress
+
+- Fetched the user-provided Notion URL and identified the page hierarchy.
+- Updated local task records with the lookup result before final response.

@@ -136,3 +136,18 @@ F021 UTC 2026-06-20T21:23:20Z: 这台机器无任何 GitHub 写凭证 — ~/.git
 - Submitted direct resume job `5333005` with `MODEL=baseline SUBMIT=1 scripts/resume_200k_from_latest.sh`.
 - Submission check showed `5333005 baseline-200k PENDING (Priority)`; `sacct` showed `5333005|baseline-200k|PENDING|0:0|00:00:00|Unknown|Unknown|/lus/lfs1aip2/projects/public/u6gb/kangli/X-VLA`.
 - Prior resume wrapper `5292779` failed because it could not find `scripts/train_baseline_200k.sh`; direct submission from repo root avoids that wrapper path issue.
+
+## 2026-06-22 coscientist vs heuristic-learning
+- OpenPhil_coscientist is an AI co-scientist on the Claude Agent SDK: a research runtime (supervisor plus generalist_researcher plus data_analyst, HITL checkpoints, BM25 memory) and an evolution runtime.
+- Key fact: the evolution runtime is LLM-driven, human-gated self-modification of its own code; a repo grep shows no fitness/score/reward/loss/benchmark/population/GA. The only automated check is a binary pytest smoke gate on sensitive-path diffs; acceptance is human approve then git merge --ff-only.
+- The user's heuristic learning (meta-learning-evolution skill) uses GA for weights/combinations plus LLM for new primitives, with automated numeric fitness (Sharpe/IC/winrate_margin), populations and generations; the EvoEnv/EvoCurr/RAGEN-2 Notion pages are the same self-evolving-RL family.
+- Notion access blocker: the openphil-quant page (38712c45-68fd-8070-945c-d3e0173a45bb) and its prior child are not shared with the "cc" integration; both MCP and REST (same bot) return 404. A blank search shows "cc" can see other project pages but not openphil-quant.
+- Subpage URL: https://app.notion.com/p/OpenPhil-Coscientist-Heuristic-Learning-claudecode-38712c4568fd812eb13ae964d07c3030 ; the background poller detected HTTP 200 within the window and pushed automatically.
+
+## 2026-06-22 Smoke-test Notion path lookup
+
+- Fetched Notion page `38412c4568fd818c9725eea7e54ed51f` from the user-provided URL.
+- Page title is `Smoke test result - 2026-06-19`.
+- Notion ancestor path is `refactoring the code base` -> `smoke test of the codes` -> `Smoke test result - 2026-06-19`.
+- Parent page ID is `38412c4568fd80c3ad39ff61e2938163`; ancestor-2 page ID is `36f12c4568fd80e5a924d0551c384157`.
+- The Notion fetch exposed hierarchy and URLs, not a local filesystem path.
