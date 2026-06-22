@@ -160,3 +160,11 @@ F021 UTC 2026-06-20T21:23:20Z: 这台机器无任何 GitHub 写凭证 — ~/.git
 - Verified key directories exist there: `src/lobpipeline`, `src/lobs5`, `src/alphatrade`, `tests`, and `logs_lobs5`.
 - `sigma-0` current recent git commit is `929fc5e`; smoke data sidecar fix is commit `9a67a17`.
 - Updated Notion in place: the bracketed prompt is now struck through and directly followed by a callout with the verified paths.
+
+## 2026-06-22 AlphaTrade mid/post training folders
+
+- Target Notion page was `AlphaTrade` (`38712c4568fd80d3bc08dbcb32c47651`) under `refactoring the code base` -> `smoke test of the codes`.
+- Page already contained the instruction to add `mid_training` and `post_training` under `/lus/lfs1aip2/projects/public/u6gb/sigma-0/src`.
+- `mid_training` is the open-loop layer and should not require a simulator; examples recorded are `eggroll_gan`, `DFM`, and `CRPS_RL_return_alignment`.
+- `post_training` is the closed-loop layer and can require simulator feedback; example recorded is `trading_agents`.
+- Local commit `9533bba` added only `src/mid_training/__init__.py` and `src/post_training/__init__.py`; pre-existing staged edits/deletions in `sigma-0` were left untouched.

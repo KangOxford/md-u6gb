@@ -168,3 +168,11 @@ PG026 UTC 2026-06-20T21:23:20Z: 本地 repo 建成 — git init@u6gb 根, status
 - Verified `/lus/lfs1aip2/projects/public/u6gb/sigma-0` and its smoke config, sidecar, launcher, source, tests, and log paths.
 - Updated Notion in place with the original prompt struck through and a callout answer directly below it.
 - Re-fetched the page and confirmed the visible update.
+
+## 2026-06-22 AlphaTrade mid/post training folder progress
+
+- Fetched AlphaTrade page `38712c4568fd80d3bc08dbcb32c47651` and added a `Mid/Post Training Split - 2026-06-22` callout below the user's instruction.
+- Created `sigma-0/src/mid_training/__init__.py` and `sigma-0/src/post_training/__init__.py`.
+- Committed the package markers only in `sigma-0` as `9533bba Add mid and post training packages`.
+- Verified direct imports with `PYTHONPATH=src python` and confirmed the simulator-boundary constants.
+- Re-fetched the AlphaTrade Notion page and confirmed the final implementation callout with commit `9533bba` is visible.

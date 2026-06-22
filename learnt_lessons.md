@@ -133,3 +133,9 @@ L022 UTC 2026-06-20T21:23:20Z: 教训 — 验证 git 写鉴权必须用真 push 
 
 - When a Notion smoke-test page asks for a code path, verify exact files from the smoke-result subpage before answering; nearby roots like `/lus/lfs1aip2/projects/public/s5e/quant_team/quant` can exist without containing the refactored smoke files.
 - Avoid broad recursive searches across the shared Lustre tree; targeted filename checks under likely repos are faster and safer for login nodes.
+
+## 2026-06-22 AlphaTrade training-layer split lessons
+
+- If a repo already has staged changes from another batch, avoid editing shared import-test files unless necessary; otherwise a path-limited commit can accidentally capture pre-existing staged content.
+- For empty folder requests in Python packages, add minimal `__init__.py` markers with boundary constants so the directories are tracked and importable without introducing placeholder algorithm code.
+- Record open-loop versus closed-loop dependency boundaries explicitly: mid-training should not import simulator code, while post-training may depend on environment/simulator feedback.

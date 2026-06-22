@@ -130,3 +130,10 @@ P018 UTC 2026-06-20T21:04:47Z: obsidian-md sync — 用户 Notion 页问 "全系
 - Verify the actual local checkout path by checking the smoke config, sidecar, wrapper, batch entrypoint, source packages, tests, and logs.
 - Update the bracketed Notion line in place with strikethrough plus a callout directly below it.
 - Re-fetch Notion to verify the answer is visible before updating local records.
+
+## 2026-06-22 AlphaTrade mid/post training folder plan
+
+- Fetch and update the exact AlphaTrade Notion page first, because the user supplied the page URL as the coordination surface.
+- Add real tracked Python package folders under `sigma-0/src`: `mid_training` for open-loop/no-simulator methods and `post_training` for closed-loop/simulator-backed methods.
+- Keep the commit path-limited because `sigma-0` already has unrelated staged changes and unstaged `src/alphatrade` deletions.
+- Verify direct imports of both packages, re-fetch Notion after the implementation note, then update local task records.
