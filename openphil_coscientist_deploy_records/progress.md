@@ -49,3 +49,14 @@
 - Remaining:
   - `.env` is still absent, and no pasted API keys were copied into local files or command lines.
   - Real Claude agent execution still needs secure credential configuration.
+
+## 2026-06-22 Notion writeback
+
+- Status: Notion page is updated and verified.
+- Completed:
+  - Checked the install task on `openphil-quant`.
+  - Added a deployment callout with the local path, commit `8d0478f`, test result, tmux session, API URL, and UI URL.
+  - Left `APIs` unchecked and added a credential-status callout.
+  - Re-fetched the Notion page and verified the updated layout.
+- Remaining:
+  - Exposed keys are still present on Notion pending explicit user confirmation to delete or rotate them.

@@ -17,3 +17,4 @@
 1. Keep `openphil_coscientist` tmux running for API/UI access.
 2. Configure real agent credentials only through a secure `.env` or shell environment path that does not expose key values in chat or command logs.
 3. After credentials are configured, run a small research-session smoke test and inspect `state/sessions/<session>/runtime.log`.
+4. If the user confirms deletion/rotation, remove the exposed credential block from Notion after preserving the non-secret status notes.

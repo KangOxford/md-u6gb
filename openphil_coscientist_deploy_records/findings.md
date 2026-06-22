@@ -41,3 +41,5 @@
 - API health check passed at `http://127.0.0.1:8765/health`.
 - Streamlit UI responded `HTTP/1.1 200 OK` at `http://127.0.0.1:8501/`.
 - tmux pane logs showed clean Uvicorn and Streamlit startup.
+- Notion page `openphil-quant` was updated and re-fetched: install checkbox is checked, deployment callout is under the install item, and API credential status callout is under `APIs`.
+- The credential block remains on Notion because deletion was not explicitly requested or confirmed.
