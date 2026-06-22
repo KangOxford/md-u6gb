@@ -158,6 +158,7 @@ F021 UTC 2026-06-20T21:23:20Z: 这台机器无任何 GitHub 写凭证 — ~/.git
 - Verified the refactored smoke-test checkout is `/lus/lfs1aip2/projects/public/u6gb/sigma-0`.
 - Verified key files exist there: `configs/train/mamba3_smoke.yaml`, `configs/train/goog_2022_smoke_index.json`, `node_wrapper.sh`, and `train_full_autoreg.batch`.
 - Verified key directories exist there: `src/lobpipeline`, `src/lobs5`, `src/alphatrade`, `tests`, and `logs_lobs5`.
+
 - `sigma-0` current recent git commit is `929fc5e`; smoke data sidecar fix is commit `9a67a17`.
 - Updated Notion in place: the bracketed prompt is now struck through and directly followed by a callout with the verified paths.
 
@@ -168,3 +169,12 @@ F021 UTC 2026-06-20T21:23:20Z: 这台机器无任何 GitHub 写凭证 — ~/.git
 - `mid_training` is the open-loop layer and should not require a simulator; examples recorded are `eggroll_gan`, `DFM`, and `CRPS_RL_return_alignment`.
 - `post_training` is the closed-loop layer and can require simulator feedback; example recorded is `trading_agents`.
 - Local commit `9533bba` added only `src/mid_training/__init__.py` and `src/post_training/__init__.py`; pre-existing staged edits/deletions in `sigma-0` were left untouched.
+
+## 2026-06-22 Data folder Notion page fetch
+
+- User provided Notion page `data folder` at `https://app.notion.com/p/38712c4568fd804bb1f3f4328f826eab`.
+- Page ancestor path is `refactoring the code base` -> `data folder`.
+- Page states the intended data folder is `/projects/public/u6gb/sigma-0/data`.
+- Page says this should mostly be a symlink rather than a copied data folder.
+- The referenced source corpus path on the page is `/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs`, with monthly `shard_YYYY-MM.squashfs` files and `index_2026-01.json`.
+- No concrete requested edit, filesystem change, or Notion update was included with the URL alone.

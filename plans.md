@@ -137,3 +137,10 @@ P018 UTC 2026-06-20T21:04:47Z: obsidian-md sync — 用户 Notion 页问 "全系
 - Add real tracked Python package folders under `sigma-0/src`: `mid_training` for open-loop/no-simulator methods and `post_training` for closed-loop/simulator-backed methods.
 - Keep the commit path-limited because `sigma-0` already has unrelated staged changes and unstaged `src/alphatrade` deletions.
 - Verify direct imports of both packages, re-fetch Notion after the implementation note, then update local task records.
+
+## 2026-06-22 Data folder page plan
+
+- Fetch the exact Notion page from the user URL and record its relevant path/source information.
+- Do not create, delete, copy, or symlink data until the user specifies the intended action.
+- If the next action is to implement the page guidance, verify both `/projects/public/u6gb/sigma-0/data` and `/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs` first, then prefer a symlink over copying.
+- Update these local records and commit only the record files before moving on.

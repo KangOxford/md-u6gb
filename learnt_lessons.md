@@ -139,3 +139,8 @@ L022 UTC 2026-06-20T21:23:20Z: 教训 — 验证 git 写鉴权必须用真 push 
 - If a repo already has staged changes from another batch, avoid editing shared import-test files unless necessary; otherwise a path-limited commit can accidentally capture pre-existing staged content.
 - For empty folder requests in Python packages, add minimal `__init__.py` markers with boundary constants so the directories are tracked and importable without introducing placeholder algorithm code.
 - Record open-loop versus closed-loop dependency boundaries explicitly: mid-training should not import simulator code, while post-training may depend on environment/simulator feedback.
+
+## 2026-06-22 Data folder page lessons
+
+- A bare Notion URL should first be treated as context: fetch and summarize the page, but avoid inferring a filesystem mutation when the user has not asked for one.
+- When the page itself says "symlink not copy", any future implementation must avoid bulk-copying SquashFS data into the repo unless the user explicitly overrides that design.

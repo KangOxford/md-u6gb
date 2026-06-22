@@ -176,3 +176,10 @@ PG026 UTC 2026-06-20T21:23:20Z: 本地 repo 建成 — git init@u6gb 根, status
 - Committed the package markers only in `sigma-0` as `9533bba Add mid and post training packages`.
 - Verified direct imports with `PYTHONPATH=src python` and confirmed the simulator-boundary constants.
 - Re-fetched the AlphaTrade Notion page and confirmed the final implementation callout with commit `9533bba` is visible.
+
+## 2026-06-22 Data folder Notion page progress
+
+- Fetched the user-provided Notion page `data folder` (`38712c4568fd804bb1f3f4328f826eab`).
+- Confirmed the page documents `/projects/public/u6gb/sigma-0/data` as the intended data folder and says it should mostly be a symlink, not a copy.
+- Confirmed the page points to `/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs` as the corresponding SP500 SquashFS corpus.
+- No Notion content was changed and no filesystem data operation was run because the user provided only the page URL.
