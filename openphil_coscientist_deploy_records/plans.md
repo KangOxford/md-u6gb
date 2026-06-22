@@ -20,3 +20,4 @@
 4. If the user confirms deletion/rotation, remove the exposed credential block from Notion after preserving the non-secret status notes.
 5. For Mac browser access, use the Notion child page tunnel instructions and run the `ssh -L` command from Mac Terminal, not from a login-node shell.
 6. Because `u6gb.aip2.isambard` load-balances login nodes, use ProxyJump to `login40` while the service remains on `login40`; if ProxyJump fails, relocate the service or create a stable SSH alias.
+7. For the code-explanation page, keep it tied to the inspected commit `8d0478f`; refresh the explanation if the OpenPhil repo receives new upstream changes.

@@ -58,3 +58,14 @@
 - The original direct `kangli.u6gb@login40` tunnel instruction was wrong for this access pattern unless `login40` is directly SSH-reachable from the Mac.
 - Updated the Notion child page to use `ssh -J kangli.u6gb@u6gb.aip2.isambard ... kangli.u6gb@login40`, preserving the user's bracketed correction as struck-through text with a callout.
 - Re-fetched the child page and verified the corrected ProxyJump command and explanation rendered in place.
+
+## 2026-06-22 code explanation page
+
+- Target Notion page: https://app.notion.com/p/38712c4568fd80708a7ceb12e4efd564
+- Page was initially blank under parent `openphil-quant`, with title `主要就看openphil的代码 给我详细解释`.
+- Inspected local repo at `/lus/lfs1aip2/projects/public/u6gb/OpenPhil_coscientist`.
+- Explanation is based on nested repo commit `8d0478f`.
+- Inspected core files: `README.md`, `pyproject.toml`, `api/server.py`, `api/schemas.py`, `ui/app.py`, `research/runtime.py`, `research/supervisor_prompt.md`, `scaffold/settings.py`, `scaffold/bus.py`, `scaffold/eventlog.py`, `scaffold/hitl.py`, `scaffold/memory.py`, `scaffold/sandbox.py`, `scaffold/config_loader.py`, `scaffold/spawn.py`, `scaffold/tools_registry.py`, `scaffold/system_tools.py`, `tools/*/server.py`, `evolution/runtime.py`, `evolution/tools/*`, `roles/*.yaml`, `prompts/*.md`, `Dockerfile`, `.env.example`, and `tests/test_smoke_v0.py`.
+- Smoke test passed after inspection: `8 passed in 4.84s`.
+- Wrote a detailed Chinese architecture/code explanation directly into the Notion page and re-fetched it successfully.
+- No API keys or secret values were copied into the explanation.

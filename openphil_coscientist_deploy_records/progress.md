@@ -86,3 +86,15 @@
   - Re-fetched the child page and verified the corrected content.
 - Remaining:
   - If ProxyJump from Mac to `login40` is blocked, the service should be moved to the currently assigned login node or a stable SSH alias should be configured.
+
+## 2026-06-22 code explanation page
+
+- Status: Notion code explanation page is written and verified.
+- Completed:
+  - Fetched blank target page under `openphil-quant`.
+  - Inspected OpenPhil code structure, research runtime, API, UI, scaffold, tools, evolution workflow, roles, prompts, Dockerfile, env example, and tests.
+  - Ran smoke tests: `8 passed in 4.84s`.
+  - Wrote a detailed Chinese explanation into the target Notion page.
+  - Re-fetched the page and verified the rendered content.
+- Remaining:
+  - Refresh this page if the nested repo moves beyond commit `8d0478f` or upstream access is restored and new code is fetched.
