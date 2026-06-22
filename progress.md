@@ -161,3 +161,10 @@ PG026 UTC 2026-06-20T21:23:20Z: 本地 repo 建成 — git init@u6gb 根, status
 
 - Fetched the user-provided Notion URL and identified the page hierarchy.
 - Updated local task records with the lookup result before final response.
+
+## 2026-06-22 Refactored code path Notion progress
+
+- Fetched Notion page `38412c4568fd80c3ad39ff61e2938163` and found the unresolved line `[重构后的代码路径在哪]`.
+- Verified `/lus/lfs1aip2/projects/public/u6gb/sigma-0` and its smoke config, sidecar, launcher, source, tests, and log paths.
+- Updated Notion in place with the original prompt struck through and a callout answer directly below it.
+- Re-fetched the page and confirmed the visible update.

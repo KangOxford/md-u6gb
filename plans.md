@@ -123,3 +123,10 @@ P018 UTC 2026-06-20T21:04:47Z: obsidian-md sync — 用户 Notion 页问 "全系
 - Fetch the exact Notion URL and read the returned title plus `ancestor-path`.
 - Answer with the Notion hierarchy and canonical page URL.
 - State explicitly that no local filesystem path is implied by the Notion URL unless the user asks for a workspace search.
+
+## 2026-06-22 Refactored code path Notion plan
+
+- Fetch the exact `smoke test of the codes` Notion page and locate the bracketed question.
+- Verify the actual local checkout path by checking the smoke config, sidecar, wrapper, batch entrypoint, source packages, tests, and logs.
+- Update the bracketed Notion line in place with strikethrough plus a callout directly below it.
+- Re-fetch Notion to verify the answer is visible before updating local records.

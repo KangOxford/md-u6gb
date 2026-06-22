@@ -151,3 +151,12 @@ F021 UTC 2026-06-20T21:23:20Z: 这台机器无任何 GitHub 写凭证 — ~/.git
 - Notion ancestor path is `refactoring the code base` -> `smoke test of the codes` -> `Smoke test result - 2026-06-19`.
 - Parent page ID is `38412c4568fd80c3ad39ff61e2938163`; ancestor-2 page ID is `36f12c4568fd80e5a924d0551c384157`.
 - The Notion fetch exposed hierarchy and URLs, not a local filesystem path.
+
+## 2026-06-22 Refactored code path Notion answer
+
+- Target Notion page `smoke test of the codes` (`38412c4568fd80c3ad39ff61e2938163`) contained the unresolved bracketed line `[重构后的代码路径在哪]`.
+- Verified the refactored smoke-test checkout is `/lus/lfs1aip2/projects/public/u6gb/sigma-0`.
+- Verified key files exist there: `configs/train/mamba3_smoke.yaml`, `configs/train/goog_2022_smoke_index.json`, `node_wrapper.sh`, and `train_full_autoreg.batch`.
+- Verified key directories exist there: `src/lobpipeline`, `src/lobs5`, `src/alphatrade`, `tests`, and `logs_lobs5`.
+- `sigma-0` current recent git commit is `929fc5e`; smoke data sidecar fix is commit `9a67a17`.
+- Updated Notion in place: the bracketed prompt is now struck through and directly followed by a callout with the verified paths.

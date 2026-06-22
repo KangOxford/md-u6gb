@@ -128,3 +128,8 @@ L022 UTC 2026-06-20T21:23:20Z: 教训 — 验证 git 写鉴权必须用真 push 
 ## 2026-06-22 Smoke-test Notion path lookup lessons
 
 - For Notion `app.notion.com/p/...` links, the useful "full path" is usually the fetched `ancestor-path`; do not invent a filesystem path when the page metadata only exposes Notion hierarchy.
+
+## 2026-06-22 Refactored code path Notion lessons
+
+- When a Notion smoke-test page asks for a code path, verify exact files from the smoke-result subpage before answering; nearby roots like `/lus/lfs1aip2/projects/public/s5e/quant_team/quant` can exist without containing the refactored smoke files.
+- Avoid broad recursive searches across the shared Lustre tree; targeted filename checks under likely repos are faster and safer for login nodes.
