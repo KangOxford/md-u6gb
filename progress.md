@@ -183,3 +183,12 @@ PG026 UTC 2026-06-20T21:23:20Z: 本地 repo 建成 — git init@u6gb 根, status
 - Confirmed the page documents `/projects/public/u6gb/sigma-0/data` as the intended data folder and says it should mostly be a symlink, not a copy.
 - Confirmed the page points to `/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs` as the corresponding SP500 SquashFS corpus.
 - No Notion content was changed and no filesystem data operation was run because the user provided only the page URL.
+
+PG027 UTC 2026-06-22T16:25:14Z: Retrieved page via Notion MCP retrieve-page-markdown (page_id 38712c45...). Confirmed full-page mode (?source=copy_link is a query param, not a #block-id fragment). Got next record IDs (P019/F022/PG027/L023). Launched Explore agent (lobpipeline inference→scores→squashfs slot-in point) with strict Lustre-safety constraints; running in background.
+
+## 2026-06-22 AlphaTrade README coverage progress
+
+- Added 12 README files under the direct `sigma-0/src` split folders and confirmed `src/matching_engine/README.md` already existed.
+- Verified README coverage with a direct shell check across 13 folders.
+- Committed README additions in `sigma-0` as `9e7a8dd`; committed `sigma-0` record updates as `7eb7142`.
+- Updated and re-fetched the AlphaTrade Notion page; the `README coverage update - 2026-06-22` callout is visible.

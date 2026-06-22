@@ -144,3 +144,11 @@ P018 UTC 2026-06-20T21:04:47Z: obsidian-md sync — 用户 Notion 页问 "全系
 - Do not create, delete, copy, or symlink data until the user specifies the intended action.
 - If the next action is to implement the page guidance, verify both `/projects/public/u6gb/sigma-0/data` and `/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs` first, then prefer a symlink over copying.
 - Update these local records and commit only the record files before moving on.
+
+P019 UTC 2026-06-22T16:25:14Z: Notion page "inference-and-scores" (full-page link, no #block-id) → task = modify code at /projects/public/u6gb/sigma-0/src/lobpipeline so that AFTER lob bench inference, the inference outputs (predictions) + scores are packaged together into ONE self-contained squashfs (recommended layout from the page's reference Q&A: manifest.json + scores.json + predictions/). Then smoke test. Inference checkpoint source = public/s5e alphatrade/experiments/r1/mamba3 (Mamba arch). FLAGGED CONFLICT: global CLAUDE.md 2026-06-14 override says "everything on login node, refuse compute nodes" but the page says "submit to compute nodes" — must ask user to resolve before any sbatch. Launched Explore agent to map inference→scores flow first.
+
+## 2026-06-22 AlphaTrade README coverage plan
+
+- Add README files to direct source-split package/subpackage folders, not recursively to every deeper copied baseline/config folder.
+- Keep README content focused on folder purpose and dependency boundary.
+- Commit the README batch in `sigma-0`, update the AlphaTrade Notion page, then update both `sigma-0` and root records.

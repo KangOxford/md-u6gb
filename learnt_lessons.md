@@ -144,3 +144,10 @@ L022 UTC 2026-06-20T21:23:20Z: 教训 — 验证 git 写鉴权必须用真 push 
 
 - A bare Notion URL should first be treated as context: fetch and summarize the page, but avoid inferring a filesystem mutation when the user has not asked for one.
 - When the page itself says "symlink not copy", any future implementation must avoid bulk-copying SquashFS data into the repo unless the user explicitly overrides that design.
+
+L023 UTC 2026-06-22T16:25:14Z: Notion deep-link single-block mode triggers ONLY on a #<block-id> URL fragment. "?source=copy_link" is a query parameter, NOT a fragment → full-page scan mode applies. Do not confuse the two. Also: a Notion page can carry a direct dev task with zero [...] brackets; the [...] callout workflow does not apply when there are no brackets — just do the task.
+
+## 2026-06-22 AlphaTrade README coverage lessons
+
+- For copied source trees, add README files at semantic package boundaries first; recursive README boilerplate in nested config/baseline folders adds clutter unless explicitly requested.
+- Use README files to document the architectural split: matching engine is simulator-independent, environment is simulator-backed, mid-training is open-loop, and post-training is closed-loop.

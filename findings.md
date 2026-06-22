@@ -178,3 +178,12 @@ F021 UTC 2026-06-20T21:23:20Z: 这台机器无任何 GitHub 写凭证 — ~/.git
 - Page says this should mostly be a symlink rather than a copied data folder.
 - The referenced source corpus path on the page is `/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs`, with monthly `shard_YYYY-MM.squashfs` files and `index_2026-01.json`.
 - No concrete requested edit, filesystem change, or Notion update was included with the URL alone.
+
+F022 UTC 2026-06-22T16:25:14Z: The Notion page has NO [...] bracketed instructions — it is a direct dev task (NOT the [...] callout workflow). Page = (1) "modify code: sigma-0/src/lobpipeline" (2) a code-block reference Q&A concluding squashfs-packaging of inference+scores IS appropriate, recommending self-contained dir {manifest.json, scores.json, predictions/<TICKER>_*.npz} (3) "then smoke test, submit to compute nodes". Follow-up msg: inference checkpoint at public/s5e alphatrade experiments r1 mamba3 (model = mamba3, a Mamba SSM, not LOBS5/S5).
+
+## 2026-06-22 AlphaTrade README coverage
+
+- Added README files for direct source-split folders under `/lus/lfs1aip2/projects/public/u6gb/sigma-0/src`.
+- Covered `mid_training`, `mid_training/return_alignment`, `post_training`, `post_training/es`, `post_training/heuristic_learning`, `post_training/rl`, `environment`, `environment/jaxen`, `environment/jaxrl`, `matching_engine/jaxlobster`, `matching_engine/jaxob`, and `matching_engine/utils`; `matching_engine/README.md` already existed.
+- `sigma-0` commits: `9e7a8dd Add README files for training split folders` and `7eb7142 Record AlphaTrade README coverage`.
+- AlphaTrade Notion page `38712c4568fd80d3bc08dbcb32c47651` was updated and re-fetched with the README coverage callout.
