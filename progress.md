@@ -207,3 +207,5 @@ PG032 UTC 2026-06-23T09:25:00Z: Merged sigma-0 slurm/ into scripts/ by role. git
 
 PG033 UTC 2026-06-24T11:12:54Z: Diagnosis complete. Cannot retrieve sigma0/sigma1 uptime from login44 (sessions on another login node + inter-login ssh blocked). Deliverable = one-shot query command for the user to run ON the node that owns the sessions, plus how to locate that node (hostname / tmux display -p '#{host}'). Stored reference memory on Isambard login-node topology.
 PG1781454141 UTC 2026-06-24T11:14:12Z: 已确认当前节点 login40 且 sigma session 不在此;已给出 `hostname && tmux ls` 逐节点撞点的 reattach 方法;阻塞在等用户确认是否支持直连指定 loginNN 或只能负载均衡随机重连。
+
+PG034 UTC 2026-06-25T12:31:13Z: DONE CLI repair. Verified `codex` resolves to `/home/u6gb/kangli.u6gb/miniforge3/bin/codex`, reports `codex-cli 0.142.2`, `codex doctor --json` succeeds, and `codex mcp list` parses config. Installed `@anthropic-ai/claude-code@2.1.191` into npm prefix `/home/u6gb/kangli.u6gb/miniforge3`; verified `claude` resolves to `/home/u6gb/kangli.u6gb/miniforge3/bin/claude` and reports `2.1.191 (Claude Code)`.

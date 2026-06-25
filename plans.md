@@ -167,3 +167,5 @@ P024 UTC 2026-06-23T09:25:00Z: User instruction '[i want to merge these two]' = 
 
 P025 UTC 2026-06-24T11:12:54Z: Task = report info (uptime etc.) for two tmux sessions sigma0 / sigma1. Approach: tmux ls + named-socket probe + process table on current node; if absent, diagnose node-locality (tmux server bound to creating node's /tmp socket) and inter-login ssh reachability before concluding.
 P1781454141 UTC 2026-06-24T11:14:12Z: 定位用户 tmux session sigma0/sigma1 所在的 login 节点(用户已重新 ssh,当前落在 login40,要回到宿主节点 reattach)。
+
+P026 UTC 2026-06-25T12:31:13Z: CLI repair plan: reproduce Codex startup, validate `~/.codex/config.toml` through `codex doctor` and `codex mcp list`, then repair only the broken Claude Code global package in the active Miniforge npm prefix. Avoid deleting package/user data; use npm install to restore the missing package payload, then verify both commands from PATH.
