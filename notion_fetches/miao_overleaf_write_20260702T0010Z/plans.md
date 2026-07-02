@@ -7,6 +7,12 @@
 5. After Overleaf access is restored, clone the repository, inspect `.tex` structure, and write the empirical section first.
 6. Use `empirical_section_draft.tex` as the first insertion candidate once the Overleaf project is reachable.
 
+LaTeX draft Notion page:
+
+```text
+https://app.notion.com/p/39112c4568fd814b8826c7945344639b
+```
+
 Notion child page created:
 
 ```text

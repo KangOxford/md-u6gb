@@ -16,3 +16,5 @@
 - Retried Overleaf connectivity; `curl` and both `git ls-remote` variants timed out again.
 - Created local LaTeX empirical-section draft at `empirical_section_draft.tex`.
 - Created execution audit at `execution_audit.md`.
+- Created Notion page for the LaTeX draft: `https://app.notion.com/p/39112c4568fd814b8826c7945344639b`.
+- Updated the parent 3.7 page status callout to link both the audit page and the LaTeX draft page.

@@ -12,3 +12,5 @@
 - 2026-07-02T00:14Z: Re-fetched parent and child pages to verify the final Notion state.
 - 2026-07-02T00:22Z: Retried Overleaf remote access after user said to begin execution; all bounded checks timed out.
 - 2026-07-02T00:23Z: Created a local LaTeX empirical-section draft and execution audit for later Overleaf insertion.
+- 2026-07-02T00:24Z: Created Notion child page `LaTeX 实证章节草稿（2026-07-02）` and linked it from the audit page.
+- 2026-07-02T00:25Z: Updated the parent 3.7 status callout to point to both the audit and LaTeX draft pages.

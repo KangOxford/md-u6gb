@@ -22,6 +22,12 @@ Created a direct LaTeX draft for the empirical section:
 /lus/lfs1aip2/projects/public/u6gb/notion_fetches/miao_overleaf_write_20260702T0010Z/empirical_section_draft.tex
 ```
 
+Notion copy:
+
+```text
+https://app.notion.com/p/39112c4568fd814b8826c7945344639b
+```
+
 The draft covers:
 
 - baseline pension effect;
