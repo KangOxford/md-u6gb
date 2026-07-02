@@ -40,3 +40,10 @@
 - The draft is a prose version of the empirical section, not merely a LaTeX snippet.
 - Linked the draft from both the 3.7 parent page and the Overleaf writing/audit page.
 - Re-fetched all three Notion pages and verified the links/content are visible.
+
+2026-07-02 policy/institution extension:
+- User asked for analysis of current Chinese policies and institutions related to the paper and how the empirical results should improve policy.
+- Added section `3.8 当前政策制度背景与政策建议` to the Notion Chinese draft page.
+- Preserved the user bracketed prompt in strikethrough and added a callout immediately below it.
+- Used current official policy sources covering pension insurance, elderly-care services, silver economy, personal pension, long-term care insurance, and delayed retirement.
+- Re-fetched the Notion page and verified the section, callout, result-to-policy table, and policy-source links are visible.

@@ -9,6 +9,7 @@
 7. Do not retry credentials on this host until `git.overleaf.com:443` is reachable; the current blocker is network connectivity.
 8. Use the Notion Chinese draft as the current source-of-truth prose while Overleaf Git is blocked.
 9. When Overleaf becomes reachable, copy/adapt the Notion Chinese draft into the project's actual `.tex` structure before translating or refining tables.
+10. In the paper conclusion, connect empirical findings to institutions through three policy levers: pension adequacy/stability, psychological/community elderly-care services, and living-alone targeting.
 
 LaTeX draft Notion page:
 

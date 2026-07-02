@@ -22,3 +22,6 @@
 - 2026-07-02T00:45Z: Created Notion page `论文正文初稿：实证模型与结果（Notion版，2026-07-02）`.
 - 2026-07-02T00:45Z: Linked the Chinese draft page from the 3.7 parent page and the Overleaf writing/audit page.
 - 2026-07-02T00:45Z: Re-fetched the new draft page, parent page, and audit page to verify visibility.
+- 2026-07-02T00:53Z: Added `3.8 当前政策制度背景与政策建议` to the Notion Chinese draft page.
+- 2026-07-02T00:53Z: Fixed a duplicate unstruck bracket line, leaving only the strikethrough prompt and callout.
+- 2026-07-02T00:53Z: Re-fetched the page to verify the policy section and source links.

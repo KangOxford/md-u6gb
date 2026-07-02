@@ -5,3 +5,4 @@
 - When Overleaf access is blocked, the safe deliverable is a Notion-backed writing plan and audit, not a claim that the paper was written into `.tex`.
 - The current CHARLS paper should start Overleaf drafting from the empirical section because that is where the evidence is already validated.
 - For this paper, the Notion-first draft should be Chinese prose, not only LaTeX, because the user's immediate writing target is the paper text and Notion is the reachable collaboration surface.
+- Policy interpretation should not stop at "raise pensions"; the stronger writing move is to connect pension stability to psychological welfare, living-alone vulnerability, and coordination with community services and long-term care insurance.
