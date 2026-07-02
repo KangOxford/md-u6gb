@@ -27,3 +27,6 @@
 - 2026-07-02T00:53Z: Re-fetched the page to verify the policy section and source links.
 - 2026-07-02T01:03Z: Replaced the verbose 3.8 policy section on the Notion Chinese draft page with a three-point concise version.
 - 2026-07-02T01:03Z: Verified by re-fetch that the latest bracketed prompt is struck through with a callout and the old six-point policy section has been removed from 3.8.
+- 2026-07-02T01:11Z: Created Notion child page `完整论文初稿：养老金收入、心理机制与养老质量（2026-07-02）` with full paper structure.
+- 2026-07-02T01:11Z: Updated the parent Chinese draft page with a struck-through full-paper expansion prompt, a callout, and a link to the new child page.
+- 2026-07-02T01:11Z: Re-fetched the parent and child pages to verify the link, title, abstract, methodology, results, policy discussion, conclusion, and references are visible.

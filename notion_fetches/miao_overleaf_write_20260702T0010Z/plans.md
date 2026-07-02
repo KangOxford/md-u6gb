@@ -10,6 +10,8 @@
 8. Use the Notion Chinese draft as the current source-of-truth prose while Overleaf Git is blocked.
 9. When Overleaf becomes reachable, copy/adapt the Notion Chinese draft into the project's actual `.tex` structure before translating or refining tables.
 10. In the paper conclusion, use the concise 3.8 framing: pension stability as expectation security, psychological welfare as an elderly-care evaluation target, and living-alone elders as the priority group for pension/community-service linkage.
+11. Treat the full-paper Notion child page as the main manuscript draft until Overleaf Git becomes reachable.
+12. Before Overleaf insertion, add final sample counts, descriptive statistics, full standard errors, and table numbering from the final regression outputs.
 
 LaTeX draft Notion page:
 
@@ -21,6 +23,12 @@ Notion Chinese draft page:
 
 ```text
 https://app.notion.com/p/39112c4568fd81ce9251d1a35bfab7b9
+```
+
+Full-paper Notion draft page:
+
+```text
+https://app.notion.com/p/39112c4568fd81a0beb0dc57bfcfe5b3
 ```
 
 Notion child page created:

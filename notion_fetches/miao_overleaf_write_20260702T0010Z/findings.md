@@ -54,3 +54,11 @@
 - The rewritten 3.8 now keeps only three policy implications: pensions as a stable-expectations tool, psychological welfare in elderly-care evaluation, and living-alone elders as the priority target for pension/community-service linkage.
 - Preserved the latest bracketed prompt in strikethrough and added a callout immediately below it.
 - Re-fetched the Notion page and verified the long six-point policy discussion was removed from 3.8.
+
+2026-07-02 full paper expansion:
+- User asked to expand the paper into a complete paper with abstract, introduction, literature review, methodology, results, references, and related sections.
+- Created Notion child page `完整论文初稿：养老金收入、心理机制与养老质量（2026-07-02）`: `https://app.notion.com/p/39112c4568fd81a0beb0dc57bfcfe5b3`.
+- The new page includes Chinese abstract, English abstract, introduction, literature review and hypotheses, data/variables, methodology, results, robustness, policy discussion, conclusion, and references.
+- The existing Chinese draft page was updated in place: the latest bracketed prompt was struck through, followed directly by a callout and a link to the full-paper child page.
+- Re-fetched both the parent page and the new full-paper page and verified the title, link, section structure, tables, and references are visible.
+- The full draft avoids inventing sample size or descriptive statistics; it uses only the validated current coefficients and states that final regression-table metadata should be filled in later.
