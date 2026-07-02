@@ -2,6 +2,8 @@
 
 Target page: `https://app.notion.com/p/38512c4568fd81a6b472cf09a5e009f1`
 
+Notion audit page: `https://app.notion.com/p/39112c4568fd81b2bffee957937c908f`
+
 Target Overleaf remote:
 
 ```text
