@@ -19,3 +19,9 @@ Key robustness evidence:
 - Living-alone-available sample: `ln_pension -> Q_equal_fixed = 0.00288749`, `p=9.05e-19`.
 - Leave-one-wave-out checks keep `Q_equal_fixed` coefficients between `0.00289624` and `0.00305783`, all `p<0.001`.
 - Lagged pension is not suitable as a main robustness result: W2-W4 sample shrinks, `L1_ln_pension -> Q_equal_fixed = -0.000755846`, `p=0.0442`, while psychological and ADL outcomes are not significant.
+
+2026-07-02 follow-up:
+- User questioned whether robustness item `(4) 控制子女转移支付与样本限制` should be deleted or moved to appendix.
+- Decision recorded on Notion: do not delete completely, but demote it.
+- Recommended placement: one short sentence in the main text, full coefficients in an appendix robustness/sample-consistency table.
+- Rationale: the check supports model stability and heterogeneity-sample consistency, but it is not a new mechanism and should not compete with the stronger robustness checks.

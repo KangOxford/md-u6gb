@@ -12,3 +12,5 @@
    - family-structure sample restriction;
    - leave-one-wave-out checks.
 5. Report lagged pension only as an appendix diagnostic, because it does not support the main mechanism consistently.
+6. Treat child-transfer-control and family-structure sample restriction as appendix robustness/sample-consistency checks.
+7. In the main text, mention item 6 only briefly: pension remains significant after controlling for child transfer or restricting to the living-alone-identifiable sample.

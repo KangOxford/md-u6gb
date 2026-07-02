@@ -5,3 +5,4 @@
 - The most persuasive robustness check for this CHARLS paper is not merely replacing the dependent variable; it is rebuilding the quality index without the income dimension to address mechanical-income concerns.
 - The lagged pension check is empirically weak in the current W2-W4 sample and should not be framed as supporting evidence.
 - Notion fetch still rejects `notion://docs/enhanced-markdown-spec` as an invalid URL in this environment, so updates should reuse markdown constructs already verified in the target page.
+- In this paper's writing hierarchy, robustness checks that only validate control-variable choice or sample consistency should be demoted to appendix unless they resolve a central identification concern.
