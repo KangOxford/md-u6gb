@@ -19,3 +19,6 @@
 - 2026-07-02T00:41Z: Updated the Notion audit page with the Git-host network diagnosis.
 - 2026-07-02T00:45Z: Retried the exact user-provided `git clone` URL with a 45-second timeout; it timed out and left no checkout.
 - 2026-07-02T00:46Z: Updated the Notion audit page with the exact-clone retry result.
+- 2026-07-02T00:45Z: Created Notion page `论文正文初稿：实证模型与结果（Notion版，2026-07-02）`.
+- 2026-07-02T00:45Z: Linked the Chinese draft page from the 3.7 parent page and the Overleaf writing/audit page.
+- 2026-07-02T00:45Z: Re-fetched the new draft page, parent page, and audit page to verify visibility.

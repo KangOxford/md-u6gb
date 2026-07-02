@@ -33,3 +33,10 @@
 - Command printed `Cloning into ...` and then timed out with exit code `124`.
 - No usable checkout or partial target directory remained after the timeout.
 - The result confirms the blocker is still access to `git.overleaf.com:443`, not URL spelling.
+
+2026-07-02 Notion-first writing:
+- User asked to write into Notion first.
+- Created Chinese paper draft page: `https://app.notion.com/p/39112c4568fd81ce9251d1a35bfab7b9`.
+- The draft is a prose version of the empirical section, not merely a LaTeX snippet.
+- Linked the draft from both the 3.7 parent page and the Overleaf writing/audit page.
+- Re-fetched all three Notion pages and verified the links/content are visible.
