@@ -25,3 +25,5 @@
 - 2026-07-02T00:53Z: Added `3.8 当前政策制度背景与政策建议` to the Notion Chinese draft page.
 - 2026-07-02T00:53Z: Fixed a duplicate unstruck bracket line, leaving only the strikethrough prompt and callout.
 - 2026-07-02T00:53Z: Re-fetched the page to verify the policy section and source links.
+- 2026-07-02T01:03Z: Replaced the verbose 3.8 policy section on the Notion Chinese draft page with a three-point concise version.
+- 2026-07-02T01:03Z: Verified by re-fetch that the latest bracketed prompt is struck through with a callout and the old six-point policy section has been removed from 3.8.

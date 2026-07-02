@@ -47,3 +47,10 @@
 - Preserved the user bracketed prompt in strikethrough and added a callout immediately below it.
 - Used current official policy sources covering pension insurance, elderly-care services, silver economy, personal pension, long-term care insurance, and delayed retirement.
 - Re-fetched the Notion page and verified the section, callout, result-to-policy table, and policy-source links are visible.
+
+2026-07-02 concise policy rewrite:
+- User said the previous 3.8 had too much filler and should keep only the most important, innovative, and core policy points.
+- Replaced the old long 3.8 policy section on the Notion Chinese draft page with a concise version.
+- The rewritten 3.8 now keeps only three policy implications: pensions as a stable-expectations tool, psychological welfare in elderly-care evaluation, and living-alone elders as the priority target for pension/community-service linkage.
+- Preserved the latest bracketed prompt in strikethrough and added a callout immediately below it.
+- Re-fetched the Notion page and verified the long six-point policy discussion was removed from 3.8.
