@@ -17,3 +17,5 @@
 - 2026-07-02T00:39Z: Retried Overleaf authentication with user-supplied tokens using username `git`; both attempts timed out with no authentication error.
 - 2026-07-02T00:40Z: Confirmed `www.overleaf.com` is reachable but `git.overleaf.com:443` is not reachable from this machine.
 - 2026-07-02T00:41Z: Updated the Notion audit page with the Git-host network diagnosis.
+- 2026-07-02T00:45Z: Retried the exact user-provided `git clone` URL with a 45-second timeout; it timed out and left no checkout.
+- 2026-07-02T00:46Z: Updated the Notion audit page with the exact-clone retry result.

@@ -26,3 +26,10 @@
 - Network diagnostics showed `www.overleaf.com` returns HTTP 200, but `git.overleaf.com:443` is unreachable from this machine.
 - `getent ahosts git.overleaf.com` resolved `35.229.82.106`, while TCP 443 to `git.overleaf.com` failed.
 - Conclusion: the blocker is the network path to the Overleaf Git endpoint, not the LaTeX draft or token format.
+
+2026-07-02 exact clone retry:
+- User repeated the exact Overleaf clone URL.
+- Retried `git clone https://git@git.overleaf.com/6a45abc0a2fd90b8e04523f6` with `GIT_TERMINAL_PROMPT=0 timeout 45`.
+- Command printed `Cloning into ...` and then timed out with exit code `124`.
+- No usable checkout or partial target directory remained after the timeout.
+- The result confirms the blocker is still access to `git.overleaf.com:443`, not URL spelling.

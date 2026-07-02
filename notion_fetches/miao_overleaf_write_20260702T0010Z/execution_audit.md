@@ -58,3 +58,20 @@ Result:
 - TCP 443 to `git.overleaf.com` failed from this machine.
 
 Conclusion: the immediate blocker is network access to the Overleaf Git endpoint, not token format.
+
+## Exact Clone Retry
+
+The exact URL was retried after the user repeated it:
+
+```bash
+GIT_TERMINAL_PROMPT=0 timeout 45 git clone https://git@git.overleaf.com/6a45abc0a2fd90b8e04523f6 overleaf_exact_retry_20260702T0045Z
+```
+
+Result:
+
+- Git printed `Cloning into ...`.
+- No authentication prompt, transfer progress, or error text appeared.
+- The command timed out with exit code `124`.
+- No usable checkout or partial target directory remained.
+
+This confirms that the URL is not the issue; the current host cannot reach the Overleaf Git endpoint.
