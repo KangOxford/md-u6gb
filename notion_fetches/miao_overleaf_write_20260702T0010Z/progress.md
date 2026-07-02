@@ -10,3 +10,5 @@
 - 2026-07-02T00:14Z: Created Notion child page `Overleaf 写作计划与 Markdown 审核（2026-07-02）`.
 - 2026-07-02T00:14Z: Updated parent 3.7 page with final status callout and child-page link.
 - 2026-07-02T00:14Z: Re-fetched parent and child pages to verify the final Notion state.
+- 2026-07-02T00:22Z: Retried Overleaf remote access after user said to begin execution; all bounded checks timed out.
+- 2026-07-02T00:23Z: Created a local LaTeX empirical-section draft and execution audit for later Overleaf insertion.

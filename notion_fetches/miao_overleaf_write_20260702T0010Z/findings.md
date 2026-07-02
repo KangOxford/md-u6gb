@@ -10,3 +10,9 @@
 - No usable checkout exists for the requested Overleaf repo in this environment yet.
 - Created Notion child page for the plan and audit: `https://app.notion.com/p/39112c4568fd81b2bffee957937c908f`.
 - Updated the parent 3.7 page with a clean struck-through `[开始写论文]` instruction, a status callout, and a link to the child page.
+
+2026-07-02 execution follow-up:
+- User instructed to start execution.
+- Retried Overleaf connectivity; `curl` and both `git ls-remote` variants timed out again.
+- Created local LaTeX empirical-section draft at `empirical_section_draft.tex`.
+- Created execution audit at `execution_audit.md`.

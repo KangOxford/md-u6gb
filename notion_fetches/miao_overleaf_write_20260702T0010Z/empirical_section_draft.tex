@@ -1,0 +1,111 @@
+% Empirical section draft for the CHARLS elderly-care-quality paper.
+% Intended insertion point: empirical strategy/results section in the Overleaf project.
+% Data window: CHARLS W1-W4.
+
+\section{Empirical Strategy and Results}
+
+This section examines whether pension income improves elderly-care quality among older adults. The empirical analysis uses the CHARLS W1--W4 panel and focuses on the stable cash-flow role of pension income. Child transfer is not treated as the core explanatory variable because its coefficient is small and statistically insignificant in the current specification; instead, it is retained as a control variable and used in appendix robustness checks.
+
+\subsection{Baseline Model}
+
+The baseline specification is:
+\begin{equation}
+Q_{it}=\beta_P \ln(1+Pension_{it})+\beta_T \ln(1+Transfer_{it})+\gamma X_{it}+\alpha_i+\lambda_t+\varepsilon_{it},
+\end{equation}
+where \(Q_{it}\) denotes elderly-care quality for individual \(i\) in wave \(t\). The main explanatory variable is \(\ln(1+Pension_{it})\). The vector \(X_{it}\) includes marital status, medical insurance status, local housing-price controls, and medical-price controls. Individual fixed effects \(\alpha_i\) absorb time-invariant differences across respondents, and wave fixed effects \(\lambda_t\) absorb common macro shocks. Standard errors are clustered at the individual level.
+
+The baseline result supports the main hypothesis. The coefficient of pension income on the equal-weight elderly-care-quality index is positive and statistically significant:
+\[
+\widehat{\beta}_P=0.002949,\quad p<0.001.
+\]
+In contrast, child transfer is not statistically significant in the same specification:
+\[
+\widehat{\beta}_T=0.000215,\quad p=0.427.
+\]
+This pattern suggests that the stable institutional income provided by pensions is more closely related to elderly-care quality than irregular intergenerational transfers. Therefore, the following analysis keeps pension income as the main explanatory variable and treats child transfer only as a control or appendix robustness item.
+
+\subsection{Psychological Mechanism}
+
+The first mechanism is psychological status. Stable pension income may improve elderly well-being by reducing economic uncertainty, increasing perceived security, and strengthening autonomy in daily life. The first-stage mechanism model is:
+\begin{equation}
+Psy_{it}=a_P \ln(1+Pension_{it})+\gamma X_{it}+\alpha_i+\lambda_t+u_{it},
+\end{equation}
+where \(Psy_{it}\) is measured by CES-D depressive symptoms or life satisfaction.
+
+The empirical results support the psychological channel. Pension income significantly reduces CES-D depressive symptoms:
+\[
+\widehat{a}_P=-0.0582,\quad p=0.0008,
+\]
+and significantly increases life satisfaction:
+\[
+\widehat{a}_P=0.00668,\quad p=0.0052.
+\]
+These two outcomes are more stable than loneliness and body-function measures in the current results. The interpretation is that pension income improves elderly-care quality partly through psychological security and subjective well-being, rather than only through material consumption.
+
+\subsection{Body-Function Mechanism}
+
+The second mechanism is body function. Pension income may improve physical functioning by easing medical and care-related expenditure constraints. The body-function mechanism is estimated as:
+\begin{equation}
+Body_{it}=d_P \ln(1+Pension_{it})+\gamma X_{it}+\alpha_i+\lambda_t+v_{it}.
+\end{equation}
+
+The current evidence for body function is weaker than the psychological channel. The coefficient of pension income on ADL is negative, which is consistent with an improvement in physical difficulty, but it is only marginally significant:
+\[
+\widehat{d}_P=-0.00584,\quad p=0.0619.
+\]
+Thus, body function should be described as an auxiliary mechanism. The main mechanism emphasized in the paper should remain psychological status and life satisfaction.
+
+\subsection{Heterogeneity by Living Arrangement}
+
+The heterogeneity analysis uses whether the respondent lives alone. This variable is defined as:
+\begin{equation}
+Alone_{it}=1(hhres_{it}=1).
+\end{equation}
+The interaction model is:
+\begin{equation}
+Q_{it}=\beta_P \ln(1+Pension_{it})+\theta_P\left[\ln(1+Pension_{it})\times Alone_{it}\right]+\phi Alone_{it}+\gamma X_{it}+\alpha_i+\lambda_t+\varepsilon_{it}.
+\end{equation}
+
+The interaction term is positive and statistically significant:
+\[
+\widehat{\theta}_P=0.004588,\quad p<0.001.
+\]
+This result indicates that the pension effect is stronger among older adults who live alone. The finding is consistent with the mechanism interpretation: when co-resident family support is limited, stable pension income has a larger marginal value for security, autonomy, and perceived quality of old-age life.
+
+\subsection{Robustness Checks}
+
+The robustness analysis focuses on whether the main conclusion depends on outcome construction, pension-variable definition, extreme values, or sample choice.
+
+First, the pension effect remains positive when the dependent variable is replaced by the previous comprehensive quality index:
+\[
+\widehat{\beta}_P=0.001739,\quad p<0.001.
+\]
+It is also significant for life satisfaction and CES-D, while the ADL result is weaker. This confirms that the main conclusion is not confined to one specific quality index.
+
+Second, to address the concern that pension income may mechanically raise the income component of the quality index, two alternative non-income indices are constructed. After excluding the income dimension, the coefficient remains positive and significant:
+\[
+Q^{no\ income}_{it}: \widehat{\beta}_P=0.001202,\quad p<0.001.
+\]
+When both income and housing-value dimensions are excluded, leaving only body function, psychological status, and life satisfaction, the result also remains significant:
+\[
+Q^{non\text{-}economic}_{it}: \widehat{\beta}_P=0.001443,\quad p<0.001.
+\]
+This is the most important robustness check because it shows that the result is not mechanically driven by the inclusion of income in the outcome index.
+
+Third, replacing pension income with a pension-receipt dummy yields a positive and significant coefficient:
+\[
+ReceivePension_{it}: \widehat{\beta}=0.022620,\quad p<0.001.
+\]
+Winsorizing pension income at the 99th percentile produces an almost identical estimate:
+\[
+\ln Pension^{w99}_{it}: \widehat{\beta}=0.002950,\quad p<0.001.
+\]
+The conclusion is therefore not driven by extreme pension values or by the continuous income definition.
+
+Fourth, controlling for child transfer or restricting the sample to respondents with identifiable living-arrangement information does not change the conclusion. The coefficient is 0.002949 with child-transfer controls, 0.002954 without child-transfer controls, and 0.002887 in the living-arrangement-identifiable sample; all are significant at the 1 percent level. Because this check mainly validates control-variable and sample-consistency choices, it should be reported in the appendix rather than emphasized in the main text.
+
+Finally, leave-one-wave-out checks show that the pension coefficient on \(Q_{it}\) remains between 0.002896 and 0.003058, with \(p<0.001\) in all specifications. Lagged pension specifications are less stable and should be treated only as diagnostic appendix evidence.
+
+\subsection{Summary}
+
+Overall, the empirical evidence supports three conclusions. First, pension income is positively associated with elderly-care quality in the CHARLS W1--W4 panel. Second, the more robust mechanism is psychological status, especially lower depressive symptoms and higher life satisfaction. Third, the pension effect is stronger among older adults living alone, suggesting that institutional pension income is particularly important when household support is weaker.
