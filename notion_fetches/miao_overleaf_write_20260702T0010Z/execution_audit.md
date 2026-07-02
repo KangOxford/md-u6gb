@@ -44,3 +44,17 @@ The draft is suitable as a first empirical-section insertion once the Overleaf p
 ## Remaining Blocker
 
 The only hard blocker is access to the requested Overleaf Git remote. Once access works, the next safe action is to clone the repository, inspect its `.tex` structure, insert `empirical_section_draft.tex` into the right section, compile, and push.
+
+## Token-Auth Retry and Network Diagnosis
+
+After credentials were supplied, Overleaf authentication was retried using the documented username/password pattern: username `git`, password as the Overleaf token.
+
+Result:
+
+- Both Overleaf-token `git ls-remote` attempts timed out.
+- No authentication rejection text was returned.
+- `www.overleaf.com` was reachable with HTTP 200.
+- `git.overleaf.com` resolved to `35.229.82.106`.
+- TCP 443 to `git.overleaf.com` failed from this machine.
+
+Conclusion: the immediate blocker is network access to the Overleaf Git endpoint, not token format.

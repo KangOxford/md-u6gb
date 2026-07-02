@@ -14,3 +14,6 @@
 - 2026-07-02T00:23Z: Created a local LaTeX empirical-section draft and execution audit for later Overleaf insertion.
 - 2026-07-02T00:24Z: Created Notion child page `LaTeX 实证章节草稿（2026-07-02）` and linked it from the audit page.
 - 2026-07-02T00:25Z: Updated the parent 3.7 status callout to point to both the audit and LaTeX draft pages.
+- 2026-07-02T00:39Z: Retried Overleaf authentication with user-supplied tokens using username `git`; both attempts timed out with no authentication error.
+- 2026-07-02T00:40Z: Confirmed `www.overleaf.com` is reachable but `git.overleaf.com:443` is not reachable from this machine.
+- 2026-07-02T00:41Z: Updated the Notion audit page with the Git-host network diagnosis.

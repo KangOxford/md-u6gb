@@ -18,3 +18,11 @@
 - Created execution audit at `execution_audit.md`.
 - Created Notion page for the LaTeX draft: `https://app.notion.com/p/39112c4568fd814b8826c7945344639b`.
 - Updated the parent 3.7 page status callout to link both the audit page and the LaTeX draft page.
+
+2026-07-02 token-auth retry:
+- User supplied credentials in chat; they were treated as sensitive and were not written to task files, Notion, or commits.
+- Official Overleaf Git token workflow was checked: username should be `git`, password should be the Overleaf token.
+- Both Overleaf tokens timed out during `git ls-remote`; there was no authentication rejection text.
+- Network diagnostics showed `www.overleaf.com` returns HTTP 200, but `git.overleaf.com:443` is unreachable from this machine.
+- `getent ahosts git.overleaf.com` resolved `35.229.82.106`, while TCP 443 to `git.overleaf.com` failed.
+- Conclusion: the blocker is the network path to the Overleaf Git endpoint, not the LaTeX draft or token format.
