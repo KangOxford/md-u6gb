@@ -1,5 +1,9 @@
 # Learnt Lessons
 
+## 2026-07-05 Repeated Notion stale anchors
+
+- If multiple user-provided Notion anchors on the same page resolve to archived image blocks, treat the issue as stale/block-specific anchoring rather than failed color rendering.
+
 ## 2026-07-05 Notion archived anchors
 
 - A Notion page URL with a `#block_id` can point to an archived block; always fetch the exact block and check `archived` before diagnosing visibility or formatting.

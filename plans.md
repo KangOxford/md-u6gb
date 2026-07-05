@@ -1,5 +1,10 @@
 # Plans
 
+## 2026-07-05 HyperXVLA second archived anchor check
+
+- Explain that anchor `39412c4568fd809592f3d6b6fdec434f` is an archived image block, so it cannot display the blue paragraph.
+- Point the user to the visible blue paragraph block `39412c45-68fd-8167-8583-c6d49a94a6d7`.
+
 ## 2026-07-05 HyperXVLA block-anchor check
 
 - If the user points to a Notion block id, verify whether the block is archived before assuming formatting failed.

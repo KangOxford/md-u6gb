@@ -1,5 +1,11 @@
 # Findings
 
+## 2026-07-05 HyperXVLA second Notion archived anchor check
+
+- User sent second anchor `39412c4568fd809592f3d6b6fdec434f` on page `38512c4568fd8117926cf5c58b8ae5f2`.
+- Direct Notion API lookup showed this anchor is also an `image` block with `archived=true`, not a visible paragraph or callout.
+- Therefore this link cannot show the newly inserted blue guidance text; the current visible blue text block remains paragraph `39412c45-68fd-8167-8583-c6d49a94a6d7`.
+
 ## 2026-07-05 HyperXVLA Notion block-anchor check
 
 - User sent anchor `39412c4568fd8018a88dc695914b3749` on page `38512c4568fd8117926cf5c58b8ae5f2`.

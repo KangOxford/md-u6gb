@@ -1,5 +1,11 @@
 # Progress
 
+## 2026-07-05 HyperXVLA second Notion archived anchor check
+
+- Fetched second exact Notion anchor block sent by the user.
+- Confirmed it is an archived image block, not the current visible blue guidance paragraph.
+- No Notion content change was needed; the visible blue paragraph remains block `39412c45-68fd-8167-8583-c6d49a94a6d7`.
+
 ## 2026-07-05 HyperXVLA Notion block-anchor check
 
 - Fetched the exact Notion anchor block sent by the user.
