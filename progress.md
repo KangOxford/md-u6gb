@@ -1,5 +1,14 @@
 # Progress
 
+## 2026-07-05 HyperXVLA large-run Notion guidance
+
+- Fetched the target Notion page and identified unresolved bracket prompts in the planned HyperXVLA table cells.
+- Checked current X-VLA launcher/config evidence and recent logs; did not modify repo code or submit a SLURM job.
+- Updated the planned-run table in place using the Notion block API: bracket prompts were marked strikethrough and explanatory responses were added in blue text.
+- Aligned the planned LR rows from `2e-5` to the conservative first-run recommendation `5e-6`, with `weight_decay=0.0` and explicit 1k/2k/5k/10k/20k gates.
+- Updated the LR explanation callout to blue background/blue text and added recall comparing `4853407` versus `5285200`.
+- Re-fetched the edited blocks through the Notion API and verified strikethrough plus blue annotations on the target table cells.
+
 ## 2026-06-15 Codex W&B MCP startup disable
 
 - Commented out the `[mcp_servers.wandb]` block in `.codex/config.toml`.

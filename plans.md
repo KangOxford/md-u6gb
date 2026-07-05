@@ -1,5 +1,13 @@
 # Plans
 
+## 2026-07-05 HyperXVLA next large pretraining guidance
+
+- Keep the Notion page as the source of the run decision; do not launch a new 200k job from this turn.
+- Treat `5M/10M/20M` generated-base sizes and `50x/200x` size-ratio targets as follow-up compression experiments, not as the first stability run.
+- First planned stability run: restore `h1024/depth6/heads16`, unshared heads, `low_rank_delta` rank `4`, `freeze_steps=1000`, `warmup_steps=1000`, `learning_rate=5e-6`, `weight_decay=0.0`, W&B online, and VLM frozen for the full HyperXVLA run.
+- If the first stability gates are clean through 10k to 20k, consider follow-up sweeps at `1e-5` or `2e-5`, and only then test smaller generated-base configurations such as h768/h512 or explicit 20M/10M/5M targets.
+- For any actual launch follow-up, inspect the live script first and patch the launcher rather than relying on Notion prose.
+
 ## 2026-06-15 Codex W&B MCP startup disable plan
 
 - Disable startup loading by commenting the `mcp_servers.wandb` block in `.codex/config.toml`, preserving the original command and args for recovery.

@@ -1,5 +1,14 @@
 # Findings
 
+## 2026-07-05 HyperXVLA large-run Notion guidance update
+
+- Target Notion page: `job4853407 vs current HyperXVLA code evidence - 2026-06-20` (`38512c4568fd8117926cf5c58b8ae5f2`).
+- Updated the unresolved bracket prompts in the planned HyperXVLA table cells in place; bracket prompts remain visible with Notion strikethrough annotations and the inserted responses use blue text annotations.
+- Current tracked launcher evidence shows `scripts/train_hyper_200k.sh` initializes `h192/depth6/heads4`, uses `learning_rate=1e-4`, `weight_decay=0.01`, `iters=200000`, `warmup_steps=1000`, and no `freeze_steps` argument.
+- Successful historical evidence on the page is job `4853407`: `h1024/depth6/heads16`, unshared heads, `weight_head_type=low_rank_delta`, rank `4`, stable 30k to 80k run, and later exact backbone benchmark evidence.
+- The Notion recommendation now says the next large stability run should first restore the 4853407-style capacity/head recipe, use `freeze_steps=1000`, `warmup_steps=1000`, `learning_rate=5e-6`, `weight_decay=0.0`, and inspect 1k/2k/5k/10k/20k gates before trying compression or larger LR sweeps.
+- Direct Notion API verification confirmed the target bracket prompts are struck through and the new answer segments are blue; the existing LR callout was also changed to a blue-background callout with blue text.
+
 ## 2026-06-15 Codex W&B MCP startup disable
 
 - User-reported startup symptom: Codex v0.139.0 hangs at `Starting MCP servers (1/2): wandb` and `/mcp` shows `wandb` with `Auth: Unsupported` and `Tools: (none)`.

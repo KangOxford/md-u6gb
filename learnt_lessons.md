@@ -1,5 +1,12 @@
 # Learnt Lessons
 
+## 2026-07-05 HyperXVLA Notion guidance
+
+- When Notion table cells contain user bracket prompts, update the specific table-row rich text rather than replacing the whole page; this preserves the evidence table and allows true text-color annotations.
+- For HyperXVLA planning, do not explain the `5285200` collapse as LR alone: batch scaling makes `1e-4` only modestly above a naive linear rule, but the run also changed capacity, head mode, weight decay, and freeze behavior.
+- A "no delta / directly learn bias" note is not the same as reproducing `4853407`; `4853407` used `low_rank_delta` rank `4`, so no-delta needs a separate implementation and smoke test before a large run.
+- Baseline-XVLA VLM optimizer logic does not transfer directly to HyperXVLA: HyperXVLA keeps Florence2 frozen and should use HyperNetwork freeze/adaptation phases instead.
+
 ## 2026-06-15 Codex W&B MCP startup disable
 
 - A broken MCP server can slow every Codex startup even when it exposes no tools; disabling the config block is enough to prevent startup handshaking.
