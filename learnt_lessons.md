@@ -1,5 +1,9 @@
 # Learnt Lessons
 
+## 2026-07-05 Notion archived anchors
+
+- A Notion page URL with a `#block_id` can point to an archived block; always fetch the exact block and check `archived` before diagnosing visibility or formatting.
+
 ## 2026-07-05 Notion table color limitation
 
 - Notion table rows may keep strikethrough annotations but drop or fail to visibly render `rich_text` text-color annotations after refetch/render.

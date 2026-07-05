@@ -1,5 +1,11 @@
 # Progress
 
+## 2026-07-05 HyperXVLA Notion block-anchor check
+
+- Fetched the exact Notion anchor block sent by the user.
+- Confirmed the anchor points to an archived image block, not the current visible blue guidance paragraph.
+- Located the current visible blue guidance paragraph block id `39412c45-68fd-8167-8583-c6d49a94a6d7`.
+
 ## 2026-07-05 HyperXVLA Notion blue visibility correction
 
 - Investigated why the user could not see the blue text in the planned-run table.

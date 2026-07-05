@@ -1,5 +1,11 @@
 # Findings
 
+## 2026-07-05 HyperXVLA Notion block-anchor check
+
+- User sent anchor `39412c4568fd8018a88dc695914b3749` on page `38512c4568fd8117926cf5c58b8ae5f2`.
+- Direct Notion API lookup showed that anchor is an `image` block with `archived=true`, so it is not the current visible blue text block.
+- Current visible blue text block is paragraph `39412c45-68fd-8167-8583-c6d49a94a6d7`, `archived=false`, `paragraph.color=blue`, text `蓝色可见版 - Planned HyperXVLA next large run`.
+
 ## 2026-07-05 HyperXVLA Notion blue visibility correction
 
 - User reported the blue text was not visible in Notion.

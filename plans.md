@@ -1,5 +1,10 @@
 # Plans
 
+## 2026-07-05 HyperXVLA block-anchor check
+
+- If the user points to a Notion block id, verify whether the block is archived before assuming formatting failed.
+- For this page, refer the user to visible paragraph block `39412c45-68fd-8167-8583-c6d49a94a6d7` for the blue visible guidance.
+
 ## 2026-07-05 HyperXVLA Notion blue visibility correction
 
 - Do not rely on table-row rich-text color for visible Notion formatting; preserve strikeout in the table and add a normal paragraph/callout block for color-critical answers.
