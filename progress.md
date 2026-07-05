@@ -1,5 +1,12 @@
 # Progress
 
+## 2026-07-05 HyperXVLA Notion blue visibility correction
+
+- Investigated why the user could not see the blue text in the planned-run table.
+- Confirmed by direct Notion API refetch that the table cell strikeouts remained but table-row blue text annotations were not retained/visible.
+- Inserted a visible blue paragraph block immediately after the Detailed Comparison table with the key next-run guidance and recall.
+- Verified the inserted block has `paragraph.color=blue`.
+
 ## 2026-07-05 HyperXVLA large-run Notion guidance
 
 - Fetched the target Notion page and identified unresolved bracket prompts in the planned HyperXVLA table cells.

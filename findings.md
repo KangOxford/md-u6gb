@@ -1,5 +1,12 @@
 # Findings
 
+## 2026-07-05 HyperXVLA Notion blue visibility correction
+
+- User reported the blue text was not visible in Notion.
+- Direct API recheck showed table-cell strikethrough persisted, but the `rich_text.annotations.color=blue` annotations in table-row cells were no longer present after refetch; Notion table cells did not reliably preserve/show that text color.
+- Added a visible blue paragraph block immediately after the Detailed Comparison table (`2ba0e9a1-6096-466d-9681-e981515e9b4d`) with the planned-run guidance and recall summary.
+- API verification confirmed the new after-table paragraph has `paragraph.color=blue`.
+
 ## 2026-07-05 HyperXVLA large-run Notion guidance update
 
 - Target Notion page: `job4853407 vs current HyperXVLA code evidence - 2026-06-20` (`38512c4568fd8117926cf5c58b8ae5f2`).

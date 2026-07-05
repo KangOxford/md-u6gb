@@ -1,5 +1,10 @@
 # Plans
 
+## 2026-07-05 HyperXVLA Notion blue visibility correction
+
+- Do not rely on table-row rich-text color for visible Notion formatting; preserve strikeout in the table and add a normal paragraph/callout block for color-critical answers.
+- Keep the visible blue block directly after the comparison table so the reader can see the corrected guidance without scanning the whole page.
+
 ## 2026-07-05 HyperXVLA next large pretraining guidance
 
 - Keep the Notion page as the source of the run decision; do not launch a new 200k job from this turn.

@@ -1,5 +1,10 @@
 # Learnt Lessons
 
+## 2026-07-05 Notion table color limitation
+
+- Notion table rows may keep strikethrough annotations but drop or fail to visibly render `rich_text` text-color annotations after refetch/render.
+- For user-visible color requirements, prefer normal paragraph/callout blocks with block-level `color` near the relevant table, while keeping the exact table cell prompt struck through.
+
 ## 2026-07-05 HyperXVLA Notion guidance
 
 - When Notion table cells contain user bracket prompts, update the specific table-row rich text rather than replacing the whole page; this preserves the evidence table and allows true text-color annotations.
