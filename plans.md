@@ -1,5 +1,12 @@
 # Plans
 
+## 2026-07-05 HyperXVLA table-answer blue formatting fix
+
+- Treat the screenshot anchor as a formatting example, not the final text destination.
+- Update the actual Detailed Comparison table cells so the inserted answer text is blue in place.
+- Do not rewrite table prose or remove the separate visible blue paragraph during this formatting-only correction.
+- Re-fetch the table rows through the Notion API and confirm the stored rich-text annotations are blue.
+
 ## 2026-07-05 HyperXVLA second archived anchor check
 
 - Explain that anchor `39412c4568fd809592f3d6b6fdec434f` is an archived image block, so it cannot display the blue paragraph.

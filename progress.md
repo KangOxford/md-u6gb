@@ -1,5 +1,12 @@
 # Progress
 
+## 2026-07-05 HyperXVLA table-answer blue formatting fix
+
+- Fetched the user-provided reference anchor and confirmed it is a visible Notion image block.
+- Downloaded the reference image attachment and saved a manifest under `notion_fetches/hyperxvla_blue_reference_20260705T1405Z/`.
+- Patched the Detailed Comparison table in place, changing answer fragments from `red` annotations to `blue` annotations.
+- Re-fetched the table rows and verified `red_remaining=0`, `blue_segments=12`, with strikethrough prompts preserved.
+
 ## 2026-07-05 HyperXVLA second Notion archived anchor check
 
 - Fetched second exact Notion anchor block sent by the user.

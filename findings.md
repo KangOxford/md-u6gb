@@ -1,5 +1,13 @@
 # Findings
 
+## 2026-07-05 HyperXVLA table-answer blue formatting fix
+
+- User clarified that the requested text itself should be blue inside the Notion table, using the screenshot/image block `39412c45-68fd-80e1-9f7c-ca9258e68d86` as the formatting reference.
+- The reference anchor is a visible Notion `image` block; its attachment was archived locally at `notion_fetches/hyperxvla_blue_reference_20260705T1405Z/assets/reference_blue_text.png` with a manifest.
+- The Detailed Comparison table `2ba0e9a1-6096-466d-9681-e981515e9b4d` still had answer fragments stored as `red` rich-text annotations, not `blue`.
+- Patched the table rows in place by converting those answer fragments from `red` to `blue` while preserving existing strikethrough on user prompts.
+- Direct Notion API verification after the patch reported `red_remaining=0` and `blue_segments=12` in the table.
+
 ## 2026-07-05 HyperXVLA second Notion archived anchor check
 
 - User sent second anchor `39412c4568fd809592f3d6b6fdec434f` on page `38512c4568fd8117926cf5c58b8ae5f2`.

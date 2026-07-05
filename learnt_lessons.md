@@ -1,5 +1,10 @@
 # Learnt Lessons
 
+## 2026-07-05 Notion table answer color correction
+
+- If a user says the modified text itself should be colored and provides a screenshot anchor, update the original table-cell rich text rather than adding a separate colored paragraph.
+- For this HyperXVLA page, the existing visible answer fragments were stored as `red`; converting those rich-text annotations to `blue` matches the user's requested formatting without changing content.
+
 ## 2026-07-05 Repeated Notion stale anchors
 
 - If multiple user-provided Notion anchors on the same page resolve to archived image blocks, treat the issue as stale/block-specific anchoring rather than failed color rendering.
