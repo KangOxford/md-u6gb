@@ -273,3 +273,13 @@ P059 UTC 2026-07-06T12:12:00Z: 用户对"要不要写回Notion"回复yes,直接�
 
 P060 UTC 2026-07-06T12:14:00Z: 用户直接要"最终选哪个checkpoint+完整地址",无新增调查,直接复用F060/F061已确认的结论作答,保持简短。
 P061 UTC 2026-07-06T13:32:20Z: 响应用户"这个为什么断开了!!!!"。计划:不展开 Notion 页面,先按终端文本分层说明:已确认=SSH transport 断了;未确认=具体触发原因。给出最短恢复路径:重新 ssh 后用 tmux/codex resume 接回;若要以后抓根因,从 Mac 端启用 ServerAliveInterval/ServerAliveCountMax 与 LogLevel VERBOSE 并保存日志,同时避免把 ai-p2 jump host 与最终 login node 的断开混为一层。
+
+P062 UTC 2026-07-06T13:37:22Z: 用户在新 session 里再次粘贴同一段 SSH 断线终端记录并问"这个链接为什么断开了"。核对 findings.md/plans.md/progress.md/learnt_lessons.md 发现 P061/F063/PG071/L065(同日 13:32:20Z)已处理过同一事件,结论未变。计划:不重新分析,直接复用已确认结论(SSH transport 断在 jump-chain,具体触发原因未定),补充本轮 hostname 核对(login41,与此前 login44→login42 不同),向用户简答并重提之前待定的 Notion co-scientist API key 处理问题。
+
+P063 UTC 2026-07-06T18:50:13Z: 用户提供 Notion 链接 https://app.notion.com/p/39512c4568fd80a9ac8af77105b14d57(无 #block-id 锚点,按规则应走"整页扫描 [...] 指令"模式,而非单 block 深链模式)。首次 API-retrieve-page-markdown 返回 404(集成 "cc" 未被邀请到该页),已告知用户去 Notion 里 Add connections;用户分享后重试成功读取全文。同一轮中用户转而运行 /goal 自定义命令报错(hooks 被 disableAllHooks 阻断)并明确要求"如果必须允许 hooks 才能用 /goal,那就设置允许";按用户指示优先处理该 config 问题,处理完后需回头完成 Notion 页面的 [...] 扫描汇报(该页面实测不含 [...] 指令,见 F065)。
+
+P064 UTC 2026-07-06T19:17:00Z: 响应用户"我有一个srun的命令 怎么写的 你搜索notion 写下来,也就是 跑24hr 然后只用一个GPU"。计划:先按标题搜索Notion(srun/GPU/interactive/isambard/SLURM/命令/wiki/eval/收敛/单卡/调试等关键词)+检索最相关候选页面全文(44 SLURM提交Workflow、D debug系列、R1_mamba3-effective-checkpoints、X-VLA paper-aligned脚本页),均未找到用户描述的"单GPU 24h srun"命令;再查本地.bash_history/.zsh_history同样无"srun"记录。判定该命令并非可检索到的既有记录,转为基于本项目已确认的SLURM约定(account=brics.u6gb,partition=workq,GH200单节点4GPU)现场构造一条新命令给用户,而非编造未经验证的账户/分区名。
+
+P066 UTC 2026-07-06T20:00:02Z: 无新增计划分支——P065提出的AskUserQuestion已获用户明确、带强调语气的答复("彻底禁止这俩!!!!!记录到claude.md里!!!!!"),本轮转为纯执行(见PG077):禁用插件配置、kill现有进程树、验证结果、写入全局CLAUDE.md与memory、更新本仓库4个task-record文件。下一步只是把最终数字汇报给用户,不产生新的待决策事项。
+
+P065 UTC 2026-07-06T19:44:12Z: 响应用户连续三条消息("卡卡的1900或500那种快达到了"/"怀疑login节点跑cc导致这么卡"/"cc链接断开很卡")。计划:不重新从零假设,先核对同日已有调查链(F1783290962昨天+F055-059/F063-066今天上午,按L066教训避免重复劳动);现场重测ulimit与cgroup pids两个数字并深挖到具体进程身份,而非停留在"1900/500"这两个抽象数字本身;若发现今天早些时候(F057,11:21Z)检查过的pids墙现在数值差异巨大,则明确这是一条新增的、独立于已确认的Antigravity/SSH断连机制之外的压力源,不与旧结论混淆;呈现时遵循L059教训,先给confirmed/unconfirmed分层结论再给细节;对"kill临时缓解 vs 彻底禁用claude-mem插件(3周前PG007悬而未决的决策)"这一资源分配策略取舍,用AskUserQuestion正式提请用户决定,不代为拍板。
