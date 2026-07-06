@@ -347,6 +347,10 @@ PG081 UTC 2026-07-06T20:15:41Z: 完成"update to notion"请求。在页面39512c
 
 PG080 UTC 2026-07-06T20:15:00Z: 已完成:①1900/500 一行命令 `p=$(</sys/fs/cgroup/user.slice/user-${UID}.slice/pids.current); echo "${p}/$(</sys/fs/cgroup/user.slice/user-${UID}.slice/pids.max), ${p}/$(ulimit -u)"` 已在聊天里给出解释,并写回 Notion:block 39512c45-68fd-80fc-ae0e-ff228f2a2447 加删除线 + 其后插入 callout 39512c45-68fd-81c3-8be2-cc4863a32bc7(命令+复用同一份 pids.current 的原因+为何全用内建避免额外 fork)。②对"Mac 自动提交排队任务"提案给出技术评估,写回 Notion:block 39512c45-68fd-808d-9974-fc5994133729 加删除线 + 其后插入 callout 39512c45-68fd-81ca-9671-d0d97069e81e,内容含 3 点:不要在无人值守脚本里用 --pty bash(应改 sbatch --wrap 占位 + 事后手动 srun --jobid 接入交互)、不建议用 Kalman filter 改用 p80 分位数+AIMD 风格非对称步长的自适应方案、以及 3 个需要用户自己决定的落地细节(launchd/cron、state 文件放哪、ssh 失败要不要通知)。两次 API-update-a-block 因为把 code/paragraph 内容误塞进 type 参数首次均失败,发现后用正确顶层参数重试均成功。全程未触碰页面上已经处理完的另一个深链 callout(39512c45-68fd-8079-bafb-c74f78f781f5,对应 P067/F069/PG078)。
 
+PG083 UTC 2026-07-06T20:25:21Z: 处理"chroma-mcp/claude-mem永远禁止"指令(见F074)。在页面39512c45-68fd-80ca-...上给block 39512c45-68fd-80f2-af9c-e4067aacca40加删除线+插入✅确认callout(39512c45-68fd-81d7-aa2b-eaf83ba4977a)。刻意跳过同页另一条未处理但不属于本session的`[改完了 写回notion 你的修改]`指令,不做全页强制扫描。任务闭环。
+
 PG081 UTC 2026-07-06T20:20:00Z: 已完成:①更新一行命令,给两个数字加 cgroup/ulimit 前缀标签(`echo "cgroup ${p}/..., ulimit ${p}/$(ulimit -u)"`),命令零额外 fork 的结构不变;②同步更新 Notion 页面 callout(block 39512c45-68fd-81c3-8be2-cc4863a32bc7)的命令示例与输出示例,并更正其中"你现在卡在 88.8% 的墙上"这句已过时描述,改用真实的 37/500 新读数说明问题已解决,与 F068/F070 的修复记录呼应。未触碰页面上其他 block。
+
+PG085 UTC 2026-07-06T20:44:50Z: 完成Notion去重任务。用户确认"合并为一段,去重"后:①replace_content全页重写(保留背景/131溯源/6项根因/SSH断连讨论不变,合并两段cgroup线程墙内容为一段+灰色🔀callout说明合并缘由);②发现并修正2处手误转录typo(兆底/兜底、殫/毫);③追加另一并行session后续测得的37/500最终确认数字。全程未触碰该并行session自己在编辑的独立callout block(39512c45-68fd-81c3-...等),只动了本session自己写入的追加内容范围。任务闭环,准备向用户做最终汇报。
 
 PG079 UTC 2026-07-06T20:25:07Z: 已将 Notion callout(block 39512c45-68fd-8125-8f1e-d8abd8e49125)更新为三层递进式诊断(字符错位掩盖第一层→修好后暴露 --cpus 非法选项名→再修好后暴露方括号粘连 --mem),把不准确的"unrecognized option"表述替换为官方文档引用+现场实测双重证据支撑的准确描述,并保留原有删除线标记。全程使用现场真实账号 brics.u6gb/workq 实测,job 结束后确认无残留分配。本轮 Notion 任务(含更正)完整闭环。
