@@ -378,3 +378,5 @@ PG092 UTC 2026-07-08T22:45:00Z: Claude Code/Bun SIGBUS 诊断闭环完成到可�
 PG093 UTC 2026-07-08T22:55:00Z: 已按用户"不喜欢 Bun"的方向完成实际规避:全局 Claude Code 从 2.1.205 native/Bun 路径降级到 `@anthropic-ai/claude-code@2.1.112`;验证 active `claude` 是 `/usr/bin/env node` 脚本 `cli.js`;验证 package bin 为 `{claude: cli.js}`;`.claude/settings.json` 已禁用自动更新与手动更新路径。`claude doctor` 旧版在非 TTY 下触发 Ink raw-mode 错误并已手动停止,不影响用户在真实 shell 中运行 `claude`。
 
 PG094 UTC 2026-07-08T23:00:00Z: 用户手动尝试更新到 stable 2.1.197,说明 2.1.112 对其过旧。已复核本会话默认 `claude` 仍由 `/projects/public/u6gb/.local/bin/claude` wrapper 提供 2.1.112；Miniforge 全局路径仍是 native `claude.exe`。当前状态可按用户选择切换:wrapper=无 Bun 但旧；Miniforge/native=较新但可能继续触发 Bun SIGBUS。
+
+PG095 UTC 2026-07-08T23:08:00Z: 已完成用户要求的 stable 回切。默认 `claude` 现在解析到 `/home/u6gb/kangli.u6gb/miniforge3/bin/claude`,版本 `2.1.197`; `npm list -g` 显示 `@anthropic-ai/claude-code@2.1.197`; `claude update` 确认 stable channel 已是最新。旧 `.local/bin/claude` wrapper 不再存在/不再遮蔽默认命令。
