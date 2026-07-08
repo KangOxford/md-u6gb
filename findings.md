@@ -377,9 +377,13 @@ F086 UTC 2026-07-08T23:08:00Z: 用户明确要求"用 2.1.197 claude 改回 stab
 
 F087 UTC 2026-07-08T23:31:43Z: 用户要求"update to a notion page",但未提供目标 Notion page/block URL。根据本地 Notion 交付规则,不能猜测目标页面或把聊天答案当作完成；当前阻塞条件是缺少目标 Notion 页面链接。
 
+F088 UTC 2026-07-08T23:41:54Z: 用户改为"创建一个新的界面",按上下文理解为新建 Notion 页面。已创建 standalone/private Notion page `Claude Code stable rollback to 2.1.197`, URL=https://app.notion.com/p/39712c4568fd8104bdaeddc69fed9eb1, page_id=39712c45-68fd-8104-bdae-ddc69fed9eb1, icon=🛠️。内容记录 stable 2.1.197 当前状态、验证命令、2.1.112 Node-era workaround 太旧的取舍、以及继续 SIGBUS 时的选项。创建后 fetch 验证页面标题/内容均存在。
+
 F083 UTC 2026-07-08T01:30:00Z: 三个新实验实跑结果 (Harmonized CHARLS D, 纯W1-W4, N=12,917/4,235个体, TWFE个体+年份FE, 聚类个体)。脚本 scratchpad/new_experiments.py, 结果 CSV + 项目内 paper/new_experiments_results_20260708.md。
 ① 基线锚定: ln_pension→Q_equal = 0.002795 (p<0.001) — 近乎完美复现 Notion 草稿的 0.002949; ln_pension→ADL = -0.006563 (p=0.065) 复现草稿 -0.005840 (p=0.062)。证实草稿数字确为 W1-W4 口径, 重建忠实。
 ② Exp1 CES-D 孤独项分解: 完整10项 -0.044(p=0.039); 去掉孤独项9项 -0.041(p=0.035, 几乎不变); 孤独项单独 -0.0045(p=0.21, 不显著)。结论: 心理机制不依赖孤独项且稳健; 孤独感非独立驱动渠道; "新增孤独变量"既无必要(已在CES-D内)也无独立解释力。
 ③ Exp2 ADL vs IADL: ADL -0.0066(p=0.065), IADL(r{w}iadlza 0-5, 仅W2-4) -0.0028(p=0.50)。两个身体功能指标一致地弱, IADL更弱 → 强化"身体功能是次要机制"论点。
 ④ Exp3 家庭支持梯度 (h{w}hhres独居 + h{w}kcntf每周当面 + h{w}kcnt任一联系): 二值独居交互 +0.0028(p=0.003); 三级梯度(基组=同住): 同住0.0024, 独居+每周有联系 0.0065(交互p=0.0002, ≈同住2.7倍), 独居+无联系 0.0042(交互p=0.50, 154obs/107人薄样本不显著)。稳健结论: 养老金对独居老人作用显著更强, 主要由"独居但有联系"这一有功效群体驱动。限制: Harmonized 的联系是二值(是否每周), 非批注理想的5级频率(仅原始2020 ca015有), 5级跨波需重新协调=future work。
 ⑤ 副发现: 03_final_models.py 第30行 directions=[1,1,-1,1,1] 把 ADL 设成 +1 (与 findings.md Bug3 声称已修复矛盾); 我重建用正确的 ADL=-1。
+
+F084 UTC 2026-07-08T23:38:44Z: settings.json enabledPlugins 有两条 superpowers (均 true, 已改 false)。skills 来源分类: 插件类(可 enabledPlugins 整插件开关)= superpowers 14 + codex@openai-codex 5 + claude-hud@claude-hud 2 + frontend-design@claude-plugins-official 1; 用户自建(改 .claude/skills 下 SKILL.md, 单个粒度) 约22个; Claude Code 内置(不可卸) 约15个。注意 claude-hud 同时是 statusLine 渲染器, 禁用会影响状态栏。

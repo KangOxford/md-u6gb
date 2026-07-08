@@ -317,4 +317,10 @@ L088 UTC 2026-07-08T23:08:00Z: `claude update` 自身会管理 PATH 前置的本
 
 L089 UTC 2026-07-08T23:31:43Z: 用户只说"update to a notion page"时,不要猜测最近页面或任意 wiki 目标；Notion 写回必须有明确 page/block URL,否则应先索要目标链接。
 
+L090 UTC 2026-07-08T23:41:54Z: 用户在 Notion 上下文里说"创建一个新的界面"可按"新建 Notion 页面"处理；若无父级页面/数据库,使用 standalone/private page 是低风险默认。Notion `fetch` 对 `notion://docs/enhanced-markdown-spec` 返回 invalid URL 时,应使用最保守 Markdown 语法并在创建后 fetch 验证,避免复杂 block 语法。
+
 L085 UTC 2026-07-08T01:30:00Z: "做新实验"类任务的忠实度自检法: 在跑新实验的同一份重建管道里先复现已知的头条数字作为锚点。本例纯W1-W4重建给 ln_pension→Q=0.002795 对草稿0.002949、ADL=-0.0066(p=0.065)对草稿-0.0058(p=0.062), 近乎一致 → 立刻证明(a)重建口径正确(b)草稿数字确为W1-W4而非5波, 后续三个新实验才站得住。若锚点对不上, 说明口径错了, 新实验结果不可信。另一条: 学术论文里绝不能用我的重建数字悄悄覆盖用户草稿已有的头条数字——应保留用户数字为主设定, 把新实验作为清晰标注、可复现的"扩展"章节加入, 并说明重建验证了头条。第三条(Overleaf协作): 远端可能被 "Update on Overleaf." 这类编辑器侧提交重置(本例把我的完整论文清成空骨架), push 冲突时先 git show origin/main:file 看清远端完整内容再决定, 用 reset到远端+恢复内容+普通push(非force, 远端提交留作父节点可回溯)而不是 force-push 硬覆盖。第四条: 一个数据集常有多个协调版本(Harmonized跨波协调版 vs 原始问卷版), 原始文件里找到的变量名(ca015/db014/dc024)在协调版里是完全不同的命名(h{w}kcntf/r{w}iadlza/r{w}flonel); 要做与论文口径一致的实验必须去论文实际用的那个版本里找对应变量, 这也正是"W1-4与2020不可比"的同一根源。
+
+L086 UTC 2026-07-08T02:00:00Z: 与 Overleaf git 协作时, 若用户同时开着网页编辑器, 会持续产生 "Update on Overleaf." 自动提交(哪怕无实质改动, 重编译也会提交), 造成 push 反复被 non-fast-forward 拒绝的 race。不要 force-push 硬覆盖(会丢用户在编辑器里的实时手改)。稳妥循环: git fetch → git show origin/main:<file> 看清远端完整内容与用户改了什么 → 备份自己的版本 → git reset --hard origin/main → 恢复自己的内容(有意识地合并用户的合理改动, 如本例保留但其实是回补被误删的\author) → 普通 push。中文 LaTeX 上 Overleaf 的正确配方: \documentclass[UTF8]{ctexart} + 文件首行 % !TeX program = xelatex, 删掉 inputenc(与xelatex冲突); "英文骨架+中文正文"是中文作者面向双语评审的常用格式, 表格/图注保持英文利于跨语言单独复用。
+
+L087 UTC 2026-07-08T23:38:44Z: 用户强烈反感 superpowers:brainstorming 的 HARD-GATE(必须先产出并批准 design 才能动手)。教训: 当 Notion 页面已给出明确执行指令、仅有轻微参数歧义时, 不要机械走 brainstorming 全套多轮 gate; 用户偏好直接执行, 歧义用 1-2 个 AskUserQuestion 点澄清即可。禁用单个 plugin skill 正道 = enabledPlugins 置 false(整插件); 只删插件内某一个 skill 需重命名其 SKILL.md(在 versioned cache, 插件更新会复原, 属临时手段)。

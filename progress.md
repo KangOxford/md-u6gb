@@ -383,4 +383,10 @@ PG095 UTC 2026-07-08T23:08:00Z: 已完成用户要求的 stable 回切。默认 
 
 PG096 UTC 2026-07-08T23:31:43Z: Notion 写回尚未执行,因为目标页面/区块未知。已向用户索要 Notion URL；收到后继续实际写入并验证。
 
+PG097 UTC 2026-07-08T23:41:54Z: 已新建并验证 Notion 页面: https://app.notion.com/p/39712c4568fd8104bdaeddc69fed9eb1 。页面记录 Claude Code 已回到 stable 2.1.197、默认命令路径、npm package 版本、stable channel、以及 Node-era 2.1.112 workaround 的取舍。
+
 PG092 UTC 2026-07-08T01:30:00Z: 从"设计新实验"推进到"实跑新实验"并落盘。定位到带 linearmodels 的解释器 (/projects/public/s5e/quant_team/quant/miniforge3/bin/python), 写 scratchpad/new_experiments.py 一次性跑基线+Exp1/2/3, 结果存 paper/new_experiments_results_20260708.md (新文件, 未覆盖既有 experiment_results.md)。论文完整初稿(标题/摘要/引言/文献/数据含2020排除原因/实证/三个新实验扩展表/政策/结论)写入 Overleaf main.tex 并 push。中途遇到远端 "Update on Overleaf." 把文档重置回空骨架, 已 abort rebase → reset到远端 → 恢复我的完整内容 → 干净 fast-forward push (56849f9..68e42fb), 远端骨架作为父提交保留可回溯。全程无 Lustre 违规 (单层ls + 读已知路径 + StataReader元数据 + 单次CPU回归, 符合 login 节点小型CPU任务边界)。待办: 结果回写 Notion callout+删除线 (用户此前流转到 Overleaf, 未明确要求回 Notion)。
+
+PG093 UTC 2026-07-08T02:00:00Z: 按用户连续4条细化指令 (中文正文/表格英文/标题英文/section英文) 把 Overleaf 论文改为"英文骨架+中文正文(重要名词英文对照)"格式: 文档类换 ctexart + 首行 % !TeX program = xelatex (中文排版), 标题/25个section标题/3个表格全英文, 正文中文且首现术语括注英文, 负数用数学模式排版, 遵守无破折号规则(仅表格内2处"无数据"---, CLAUDE.md豁免)。反复遇到 "Update on Overleaf." 远端提交(用户在网页编辑器实时看文件, Overleaf同步/重编译自动生成提交)导致 push 3次被拒; 每次都: git show origin/main:main.tex 看清远端 → 备份我的版本 → reset到远端 → 恢复 → 普通push, 最终 e6de99b。保留 \author{Kang Li}(远端误删)。
+
+PG094 UTC 2026-07-08T23:38:44Z: settings.json 两条 superpowers 置 false 完成 (可逆, 下次启动生效)。brainstorming 仅 ls 过未重命名, 无需回滚。Notion smaller-dataset 整页已读: 无字面方括号, 但含执行指令 (load+save 小训练集, 总集 2022-2025 SP500, train 约2%, 另建不重叠 val; codebase exp_R1_Mamba3 + train_full_autoreg.batch)。发现页面内部数值矛盾(讨论主张 quarter 约6% vs 指令 2%)待澄清。
