@@ -380,3 +380,7 @@ PG093 UTC 2026-07-08T22:55:00Z: 已按用户"不喜欢 Bun"的方向完成实际
 PG094 UTC 2026-07-08T23:00:00Z: 用户手动尝试更新到 stable 2.1.197,说明 2.1.112 对其过旧。已复核本会话默认 `claude` 仍由 `/projects/public/u6gb/.local/bin/claude` wrapper 提供 2.1.112；Miniforge 全局路径仍是 native `claude.exe`。当前状态可按用户选择切换:wrapper=无 Bun 但旧；Miniforge/native=较新但可能继续触发 Bun SIGBUS。
 
 PG095 UTC 2026-07-08T23:08:00Z: 已完成用户要求的 stable 回切。默认 `claude` 现在解析到 `/home/u6gb/kangli.u6gb/miniforge3/bin/claude`,版本 `2.1.197`; `npm list -g` 显示 `@anthropic-ai/claude-code@2.1.197`; `claude update` 确认 stable channel 已是最新。旧 `.local/bin/claude` wrapper 不再存在/不再遮蔽默认命令。
+
+PG096 UTC 2026-07-08T23:31:43Z: Notion 写回尚未执行,因为目标页面/区块未知。已向用户索要 Notion URL；收到后继续实际写入并验证。
+
+PG092 UTC 2026-07-08T01:30:00Z: 从"设计新实验"推进到"实跑新实验"并落盘。定位到带 linearmodels 的解释器 (/projects/public/s5e/quant_team/quant/miniforge3/bin/python), 写 scratchpad/new_experiments.py 一次性跑基线+Exp1/2/3, 结果存 paper/new_experiments_results_20260708.md (新文件, 未覆盖既有 experiment_results.md)。论文完整初稿(标题/摘要/引言/文献/数据含2020排除原因/实证/三个新实验扩展表/政策/结论)写入 Overleaf main.tex 并 push。中途遇到远端 "Update on Overleaf." 把文档重置回空骨架, 已 abort rebase → reset到远端 → 恢复我的完整内容 → 干净 fast-forward push (56849f9..68e42fb), 远端骨架作为父提交保留可回溯。全程无 Lustre 违规 (单层ls + 读已知路径 + StataReader元数据 + 单次CPU回归, 符合 login 节点小型CPU任务边界)。待办: 结果回写 Notion callout+删除线 (用户此前流转到 Overleaf, 未明确要求回 Notion)。

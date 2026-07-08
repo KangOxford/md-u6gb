@@ -315,3 +315,7 @@ P077 UTC 2026-07-08T22:55:00Z: 计划更新——2.1.205 仍复现 Bun SIGBUS �
 P078 UTC 2026-07-08T23:00:00Z: 计划更新——用户偏好较新版本后,不再强行维持"默认 claude 必须 no-Bun"。向用户明确二选一:保留 `/projects/public/u6gb/.local/bin/claude` wrapper 得到 Node-era 2.1.112；或停用 wrapper/使用 Miniforge `claude` 得到较新的 stable/latest native build(2.1.197/2.1.205),但这回到 Bun/native 崩溃风险。若用户明确要新版为默认,需先确认再移动 wrapper,不能直接删除。
 
 P079 UTC 2026-07-08T23:08:00Z: 计划更新——按用户偏好切回 stable 2.1.197 native build。避免手动删除旧 wrapper；先安装/确认 Miniforge 全局 2.1.197,再让默认 `claude` 解析到 Miniforge。验证后若仍有 Bun SIGBUS,下一步只能在"稳定但可能崩"与"旧但 Node-era"之间重新取舍,或等 Anthropic/Bun 修复。
+
+P080 UTC 2026-07-08T23:31:43Z: 计划——等待用户提供目标 Notion page/block URL；收到后先 fetch 当前页面内容,再把 Claude Code stable 2.1.197 回切结果以简短 callout/section 写入目标位置,最后重新 fetch 验证。
+
+P076 UTC 2026-07-08T01:30:00Z: 计划已执行——三个"需要做新实验"的 Notion 批注全部实跑完成 (不再停留在设计), 并把论文完整写入用户指定的 Overleaf repo (git.overleaf.com/6a45abc0a2fd90b8e04523f6)。用 /projects/public/s5e/quant_team/quant/miniforge3/bin/python (linearmodels 7.0) 直接从 Harmonized CHARLS D 重建纯 W1-W4 面板跑 TWFE。下一步 (可选, 未做): ①把结果也写回 Notion 页面的对应 callout + 删除线; ②补一个把既有5项稳健性检验整合成的汇总表 (数据来自未定位到的那次运行, 不编造); ③用户提醒 token 已暴露需 revoke。

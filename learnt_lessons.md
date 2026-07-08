@@ -314,3 +314,7 @@ L086 UTC 2026-07-08T22:55:00Z: 要绕开 Claude Code 的 Bun/native runtime,不�
 L087 UTC 2026-07-08T23:00:00Z: 当用户对 fallback 版本过旧不满意时,要把版本新旧与运行时类别的冲突讲清楚,不要继续把 workaround 当作无代价修复。Claude Code 2.1.113 以后 npm 包已切 native binary,所以"更高版本但不用 Bun/native"当前没有官方路径；正确沟通是给用户选择权,并说明 wrapper 与 Miniforge binary 的 PATH 优先级。
 
 L088 UTC 2026-07-08T23:08:00Z: `claude update` 自身会管理 PATH 前置的本地 `claude` 安装/链接,可能在报告 multiple installations 后移除或改写 `.local/bin/claude`；这不应被误判为手动删除。切换 Claude Code 版本后要执行 `hash -r` 再测 `type -a claude`,否则当前 shell 可能继续缓存旧路径并报 No such file。
+
+L089 UTC 2026-07-08T23:31:43Z: 用户只说"update to a notion page"时,不要猜测最近页面或任意 wiki 目标；Notion 写回必须有明确 page/block URL,否则应先索要目标链接。
+
+L085 UTC 2026-07-08T01:30:00Z: "做新实验"类任务的忠实度自检法: 在跑新实验的同一份重建管道里先复现已知的头条数字作为锚点。本例纯W1-W4重建给 ln_pension→Q=0.002795 对草稿0.002949、ADL=-0.0066(p=0.065)对草稿-0.0058(p=0.062), 近乎一致 → 立刻证明(a)重建口径正确(b)草稿数字确为W1-W4而非5波, 后续三个新实验才站得住。若锚点对不上, 说明口径错了, 新实验结果不可信。另一条: 学术论文里绝不能用我的重建数字悄悄覆盖用户草稿已有的头条数字——应保留用户数字为主设定, 把新实验作为清晰标注、可复现的"扩展"章节加入, 并说明重建验证了头条。第三条(Overleaf协作): 远端可能被 "Update on Overleaf." 这类编辑器侧提交重置(本例把我的完整论文清成空骨架), push 冲突时先 git show origin/main:file 看清远端完整内容再决定, 用 reset到远端+恢复内容+普通push(非force, 远端提交留作父节点可回溯)而不是 force-push 硬覆盖。第四条: 一个数据集常有多个协调版本(Harmonized跨波协调版 vs 原始问卷版), 原始文件里找到的变量名(ca015/db014/dc024)在协调版里是完全不同的命名(h{w}kcntf/r{w}iadlza/r{w}flonel); 要做与论文口径一致的实验必须去论文实际用的那个版本里找对应变量, 这也正是"W1-4与2020不可比"的同一根源。
