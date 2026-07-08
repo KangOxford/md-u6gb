@@ -311,3 +311,5 @@ P075 UTC 2026-07-08T00:00:00Z: 计划——处理 CHARLS 养老金/心理机制/
 P076 UTC 2026-07-08T22:45:00Z: 计划——把这次 Claude Code/Bun SIGBUS 当作环境层面的运行时崩溃处理:先确认活动版本与安装路径,再执行 `claude update` 和 `claude doctor` 做低风险闭环；若 2.1.205 仍复现,优先建议新开会话/减少触发冷路径的长会话状态,并通过 `/bug` 或 bun.report 向 Anthropic/Bun 提供 linux-arm64/HPC/Grace/SVE 线索。由于本机当前 npm-global 包仍指向 native `claude.exe`,不要把"重新 npm install"描述成已验证的 Node.js fallback；除非后续找到 Anthropic 提供的明确 Node-only 分发路径,否则它最多是刷新安装,不是确定绕过 Bun。
 
 P077 UTC 2026-07-08T22:55:00Z: 计划更新——2.1.205 仍复现 Bun SIGBUS 后,执行降级规避而非继续调 native build。选择 `@anthropic-ai/claude-code@2.1.112` 作为 Node-era pin,原因是 npm 元数据验证 2.1.112 仍为 `cli.js`,而 2.1.113 已切到 native `claude.exe`。完成后验证真实 `claude` 链接和 shebang,并在 settings env 中禁用自动更新。后续若用户要恢复最新版,用 `npm install -g @anthropic-ai/claude-code@latest` 并移除两个禁用更新变量即可。
+
+P078 UTC 2026-07-08T23:00:00Z: 计划更新——用户偏好较新版本后,不再强行维持"默认 claude 必须 no-Bun"。向用户明确二选一:保留 `/projects/public/u6gb/.local/bin/claude` wrapper 得到 Node-era 2.1.112；或停用 wrapper/使用 Miniforge `claude` 得到较新的 stable/latest native build(2.1.197/2.1.205),但这回到 Bun/native 崩溃风险。若用户明确要新版为默认,需先确认再移动 wrapper,不能直接删除。

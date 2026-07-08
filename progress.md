@@ -376,3 +376,5 @@ PG091 UTC 2026-07-08T00:00:00Z: CHARLS 养老金/养老质量 Notion 页面的�
 PG092 UTC 2026-07-08T22:45:00Z: Claude Code/Bun SIGBUS 诊断闭环完成到可行动状态:活动版本已从用户截图里的 2.1.202 更新/确认到 2.1.205；`claude update` 返回 up to date；`claude doctor` 未发现安装问题；当前安装路径为 Miniforge npm prefix 下的 native linux-arm64 `claude.exe`。尚未能在本会话复现崩溃,也未找到本机已验证的 Node-only fallback；建议用户用 2.1.205 重新开进程继续,若再崩则通过 Claude Code `/bug` 附上 bun.report、linux-arm64/GH200/Grace/SVE、版本 2.1.205 是否仍复现等信息。
 
 PG093 UTC 2026-07-08T22:55:00Z: 已按用户"不喜欢 Bun"的方向完成实际规避:全局 Claude Code 从 2.1.205 native/Bun 路径降级到 `@anthropic-ai/claude-code@2.1.112`;验证 active `claude` 是 `/usr/bin/env node` 脚本 `cli.js`;验证 package bin 为 `{claude: cli.js}`;`.claude/settings.json` 已禁用自动更新与手动更新路径。`claude doctor` 旧版在非 TTY 下触发 Ink raw-mode 错误并已手动停止,不影响用户在真实 shell 中运行 `claude`。
+
+PG094 UTC 2026-07-08T23:00:00Z: 用户手动尝试更新到 stable 2.1.197,说明 2.1.112 对其过旧。已复核本会话默认 `claude` 仍由 `/projects/public/u6gb/.local/bin/claude` wrapper 提供 2.1.112；Miniforge 全局路径仍是 native `claude.exe`。当前状态可按用户选择切换:wrapper=无 Bun 但旧；Miniforge/native=较新但可能继续触发 Bun SIGBUS。

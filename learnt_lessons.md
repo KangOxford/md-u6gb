@@ -310,3 +310,5 @@ L084 UTC 2026-07-08T00:00:00Z: 当 Notion [...] 批注问的是用户声称"本�
 L085 UTC 2026-07-08T22:45:00Z: 处理 Claude Code 自身崩溃时,不能把安装渠道名称当成运行时事实。当前 `doctor` 虽然写着 npm-global,但实际 `bin/claude` 是指向包内 native `claude.exe` 的符号链接,`file` 也确认它是 ARM64 ELF；因此"换 npm 安装就会跑系统 Node.js,从而绕开 Bun"在 2.1.205 这个本机状态下没有被验证。以后给 workaround 前必须检查真实 bin wrapper/package layout,尤其是 Claude Code 这类安装机制变化快的 CLI。
 
 L086 UTC 2026-07-08T22:55:00Z: 要绕开 Claude Code 的 Bun/native runtime,不能只说"装 npm 版",而要指定一个仍以 `cli.js` 暴露 bin 的旧版本并验证 `file -L $(which claude)`。本轮查到 2.1.112 是可用的 Node-era pin,2.1.113 已经变成 native binary；降级后还必须禁用自动更新,否则 Claude Code 会把自己升回最新 native build。旧 Node-era CLI 的 `claude doctor` 在非 TTY runner 中会因 Ink raw mode 报错并挂住,这不是用户真实终端下的启动验证,以后不要用它作为旧版 CLI 的自动化健康检查。
+
+L087 UTC 2026-07-08T23:00:00Z: 当用户对 fallback 版本过旧不满意时,要把版本新旧与运行时类别的冲突讲清楚,不要继续把 workaround 当作无代价修复。Claude Code 2.1.113 以后 npm 包已切 native binary,所以"更高版本但不用 Bun/native"当前没有官方路径；正确沟通是给用户选择权,并说明 wrapper 与 Miniforge binary 的 PATH 优先级。
