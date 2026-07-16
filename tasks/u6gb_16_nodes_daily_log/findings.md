@@ -6,3 +6,5 @@
 - Auto-resume renames jobs to `u6gb-16-nodes-resumeN`, so coverage must include that chain.
 - The primary daily fact is actual 16-node RUNNING coverage; command and hash provenance are secondary audit detail.
 - Job `5678750` was accepted for 16 nodes / 64 GPUs / 23:59 and renamed in place to `u6gb-16-nodes-18-jluy-001`; it is still PENDING for Priority.
+- Jobs `5678908` and `5678913` were intentionally cancelled at `2026-07-16T14:33:13Z` with zero runtime; Job `5678750` is the only active candidate and has not failed.
+- Queue convergence is an outer-monitor responsibility; the submitted allocation payload must remain minimal.
