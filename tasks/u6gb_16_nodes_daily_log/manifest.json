@@ -14,6 +14,7 @@
   "batch_script": "/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/exp_R1_Mamba3/train_full_autoreg.batch",
   "batch_sha256_observed_2026_07_16": "2eb4d6f424457650f349bc4a069d6f91cf17d869e62df2d8f8d0ae84bdeb14f6",
   "fleet_job_name_match": "^u6gb-16-nodes(?:-resume[0-9]+)?$",
+  "accounting_lookback_hours": 24,
   "coverage_denominator_node_minutes": 23040,
   "allow_submit_experiments": false,
   "allow_cancel_jobs": false,

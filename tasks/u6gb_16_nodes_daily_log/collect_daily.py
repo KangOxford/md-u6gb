@@ -114,12 +114,18 @@ def load_batch_source(manifest: dict) -> BatchSource:
     )
 
 
-def run_sacct(job_name: str, start: datetime, end: datetime) -> tuple[list[Job], str]:
+def run_sacct(
+    job_name: str,
+    start: datetime,
+    end: datetime,
+    lookback_hours: int,
+) -> tuple[list[Job], str]:
+    query_start = start - timedelta(hours=lookback_hours)
     command = [
         "sacct",
         "-X",
         "-S",
-        start.strftime("%Y-%m-%dT%H:%M:%S"),
+        query_start.strftime("%Y-%m-%dT%H:%M:%S"),
         "-E",
         end.strftime("%Y-%m-%dT%H:%M:%S"),
         "-nP",
@@ -286,6 +292,7 @@ def render_report(
         "- Fleet override: `--job-name=u6gb-16-nodes --nodes=16 --time=23:59:00`",
         "- Effective fleet size: `16 nodes x 4 GPUs/node = 64 H100 GPUs`",
         "- Coverage includes `u6gb-16-nodes` and `u6gb-16-nodes-resumeN`.",
+        "- Accounting uses a 24-hour lookback, then clips runtime to this UTC day.",
         "",
         "## 1. Submitted Commands And Results",
         "",
@@ -424,7 +431,12 @@ def main() -> int:
     report_date = date.fromisoformat(args.date) if args.date else datetime.now(UTC).date() - timedelta(days=1)
     start = datetime.combine(report_date, time.min, tzinfo=UTC)
     end = start + timedelta(days=1)
-    jobs, sacct_command = run_sacct(manifest["fleet_job_name"], start, end)
+    jobs, sacct_command = run_sacct(
+        manifest["fleet_job_name"],
+        start,
+        end,
+        manifest["accounting_lookback_hours"],
+    )
     submissions = submissions_for_window(start, end)
     segments = build_segments(jobs, start, end)
     report, metrics = render_report(
