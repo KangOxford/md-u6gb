@@ -1,1 +1,8 @@
 {"event_id":"daily_summary:2026-07-16-baseline","ts":"2026-07-16T13:56:50Z","type":"daily_summary","window_start":"2026-07-15T13:56:50Z","window_end":"2026-07-16T13:56:50Z","submitted_jobs":0,"full_coverage_seconds":0,"partial_coverage_seconds":0,"zero_coverage_seconds":86400,"coverage_ratio":0.0,"notion_status":"updated","notion_page_id":"39f12c45-68fd-8106-a60b-e64bed63bd91"}
+{"ts":"2026-07-16T15:41:10Z","event_type":"self_chain_started","job_id":"111","job_name":"test-chain","chain_seq":"1","walltime":"00:01:00" ,"sleep_seconds":"0"}
+{"ts":"2026-07-16T15:41:10Z","event_type":"self_chain_successor_submitted","job_id":"111","job_name":"test-chain","chain_seq":"1","successor_job_id":"9999999" ,"successor_job_name":"test-chain-002" ,"dependency":"afterany:111"}
+{"ts":"2026-07-16T15:41:10Z","event_type":"self_chain_finished","job_id":"111","job_name":"test-chain","chain_seq":"1"}
+{"ts":"2026-07-16T15:41:10Z","event_type":"self_chain_started","job_id":"112","job_name":"test-chain","chain_seq":"2","walltime":"23:59:00" ,"sleep_seconds":"0"}
+{"ts":"2026-07-16T15:41:10Z","event_type":"self_chain_successor_skipped","job_id":"112","job_name":"test-chain","chain_seq":"2","reason":"max_generation_reached"}
+{"ts":"2026-07-16T15:41:10Z","event_type":"self_chain_finished","job_id":"112","job_name":"test-chain","chain_seq":"2"}
+{"ts":"2026-07-16T15:41:10Z","event_type":"local_validation_note","synthetic_job_ids":["111","112","9999999"],"result":"fleet_self_chain.sbatch validation only; no real Slurm job was submitted by this test"}

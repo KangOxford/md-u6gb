@@ -12,3 +12,4 @@
 - Test pure winner-selection and cancellation-scope logic before starting the live monitor.
 - Poll no faster than once per 60 seconds, write only state changes, and exit as soon as one winner is selected.
 - Replace the live monitor with a new invocation containing every explicit ID whenever the candidate set changes.
+- Add a thin self-chain payload for future 16-node fleet jobs: submit the `afterany:$SLURM_JOB_ID` successor at job start, keep the payload simple, and leave duplicate-candidate cancellation to the outer monitor.

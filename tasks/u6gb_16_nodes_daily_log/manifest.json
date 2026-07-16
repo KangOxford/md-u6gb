@@ -27,5 +27,12 @@
   "monitor_candidate_name_prefix": "u6gb-16-nodes-18-jluy-",
   "monitor_steady_state_allocations": 1,
   "monitor_active_candidate_job_ids": ["5678750"],
-  "monitor_allow_cancel_explicit_candidates": true
+  "monitor_allow_cancel_explicit_candidates": true,
+  "self_chain_script": "/lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/fleet_self_chain.sbatch",
+  "self_chain_dependency": "afterany:${SLURM_JOB_ID}",
+  "self_chain_submit_timing": "submit successor at job start before sleeping",
+  "self_chain_submit_helper": "/lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/submit_self_chain.sh",
+  "self_chain_default_walltime": "23:59:00",
+  "self_chain_default_sleep_seconds": 86100,
+  "self_chain_priority_caveat": "Current Slurm PriorityWeightAge=0, so chain age does not currently add priority score; it still keeps the successor queued early."
 }

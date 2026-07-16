@@ -12,3 +12,5 @@
 - 2026-07-16: Added `monitor_fleet.py`, focused unit tests, and explicit monitor authority in the manifest.
 - 2026-07-16: First live start exited safely because `wait_job` rejected the PENDING job; no cancellations occurred. Replaced the trigger with a 60-second interval.
 - 2026-07-16: Started corrected monitor PID `48640` on `login40`; verified it remained alive after 65 seconds and Job `5678750` stayed PENDING.
+- 2026-07-16: Added `fleet_self_chain.sbatch` so future 16-node fleet jobs can submit an `afterany` successor immediately at job start and record successor IDs in `events.jsonl`.
+- 2026-07-16: Added `submit_self_chain.sh` to submit the first self-chain generation through the existing submission logger.
