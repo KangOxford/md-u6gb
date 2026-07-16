@@ -393,7 +393,8 @@ PG094 UTC 2026-07-08T23:38:44Z: settings.json 两条 superpowers 置 false 完�
 
 ## 2026-07-16 Isambard experiment reserve progress
 
-- Updated the exact Notion page in place: renamed it for the 4-node experiment fleet, struck the bracketed request, added first-principles fleet and cost callouts, and verified the rendered page.
+- Updated the exact Notion page in place: renamed it for the 16-node experiment fleet, struck both bracketed requests, added first-principles fleet/cost callouts plus a concise command callout, and verified the rendered page.
 - Archived the referenced allocation screenshot with SHA256, generated PNG/SVG Matplotlib capacity figures, uploaded the final SVG to Notion, and verified it directly below the 24-node calculation.
 - Recorded live scheduler evidence and the 24-node quota ceiling. No Slurm job was submitted because the experiment payload is still unspecified.
 - Artifact commits: `888d4bf`, `eb55d53`, `c380089`, `8ed2c23`, `fe162a2`, and `7a52a90`.
+- Regenerated and uploaded the `16/17/20/22/24/25` comparison figure; local figure commit is `2c0b511`. The queue remained empty, so no experiment job was submitted.

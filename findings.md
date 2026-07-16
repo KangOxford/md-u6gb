@@ -395,3 +395,5 @@ F084 UTC 2026-07-08T23:38:44Z: settings.json enabledPlugins 有两条 superpower
 - The award screenshot shows 150,000 GPUHr allocated, 15,126.26 GPUHr used, 134,873.73 GPUHr remaining by the conservative usable-balance interpretation, and an end date of 2026-09-10.
 - Across a conservative 57-day window, one full node costs 5,472 GPUHr. The quota-only ceiling is 24 full nodes; 25 nodes would exceed the balance by 1,926.27 GPUHr. A practical buffered range is 20-22 nodes.
 - No reserve jobs were submitted because no real experiment payload was supplied; idle `sleep` jobs do not satisfy the revised requirement.
+- Final fleet decision is `16+1`: 16 running full-node workers plus one handoff spare. Through 2026-09-10, 16 nodes cost 87,552 GPUHr and leave 47,321.73 GPUHr; 17 nodes cost 93,024 GPUHr and leave 41,849.73 GPUHr.
+- Notion now contains a concise `sbatch --array=0-15` command callout. It intentionally requires the real `EXPERIMENT_CMD` before submission.
