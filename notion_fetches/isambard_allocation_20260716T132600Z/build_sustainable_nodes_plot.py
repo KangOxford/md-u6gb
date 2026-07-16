@@ -8,6 +8,7 @@ import numpy as np
 
 
 OUTPUT = Path(__file__).parent / "assets" / "sustainable_nodes_to_award_end.png"
+OUTPUT_SVG = Path(__file__).parent / "assets" / "sustainable_nodes_to_award_end.svg"
 BALANCE_GPU_HOURS = 134_873.73
 HOURS = 57 * 24
 GPUS_PER_NODE = 4
@@ -89,6 +90,7 @@ def main() -> None:
     )
     fig.subplots_adjust(left=0.18, right=0.98, top=0.88, bottom=0.12)
     fig.savefig(OUTPUT, dpi=180, bbox_inches="tight", facecolor=fig.get_facecolor())
+    fig.savefig(OUTPUT_SVG, format="svg", bbox_inches="tight", facecolor=fig.get_facecolor())
     plt.close(fig)
 
 
