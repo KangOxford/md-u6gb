@@ -399,3 +399,9 @@ PG094 UTC 2026-07-08T23:38:44Z: settings.json 两条 superpowers 置 false 完�
 - Artifact commits: `888d4bf`, `eb55d53`, `c380089`, `8ed2c23`, `fe162a2`, and `7a52a90`.
 - Regenerated and uploaded the `16/17/20/22/24/25` comparison figure; local figure commit is `2c0b511`. The queue remained empty, so no experiment job was submitted.
 - Renamed all Notion command references and figure captions to `u6gb-16-nodes`; resource policy and payload gate were unchanged.
+
+## 2026-07-16 daily evidence progress
+
+- Created and verified the Notion child page `u6gb-16-nodes Daily Coverage Log`, including the real launcher path, SHA256, 16-node resource method, and Day 0 coverage.
+- Scheduled evidence-only logger job `5678626` for `2026-07-17 00:15 UTC`; committed launcher-aware accounting in `5fa6aa6`.
+

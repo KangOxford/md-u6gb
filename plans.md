@@ -331,3 +331,9 @@ P077 UTC 2026-07-08T23:38:44Z: 用户中断 Notion smaller-dataset (LOBS5) 任�
 - For capacity planning, treat 24 nodes as the quota-only ceiling and 20-22 as the buffered operational range through 2026-09-10.
 - Initial seed command uses array indices `0-15`; do not execute it until `EXPERIMENT_CMD` points to the real experiment entrypoint.
 - Use `u6gb-16-nodes` consistently for the Slurm job name, log directory, and queue filter.
+
+## 2026-07-16 daily evidence plan
+
+- Run an evidence-only logger at UTC 00:15 for the previous complete UTC day, using the real Mamba3 batch as read-only command provenance.
+- Do not let the logger submit, cancel, retry, or modify experiments.
+
