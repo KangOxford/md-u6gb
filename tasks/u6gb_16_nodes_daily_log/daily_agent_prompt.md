@@ -4,10 +4,10 @@ Report date: `{{DATE}}` UTC.
 
 Do only these steps, in order:
 
-1. Read the command-source section produced from `/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/exp_R1_Mamba3/train_full_autoreg.batch`, then run `python3 tasks/u6gb_16_nodes_daily_log/collect_daily.py --date {{DATE}}` without `--write` and read the complete report.
+1. Run `python3 tasks/u6gb_16_nodes_daily_log/collect_daily.py --date {{DATE}}` without `--write` and read the complete report. Start with actual 16-node RUNNING coverage and gap intervals; command-source detail is secondary.
 2. Fetch Notion page `39f12c45-68fd-8106-a60b-e64bed63bd91` (`u6gb-16-nodes Daily Coverage Log`).
 3. If the page already has a heading for `{{DATE}} UTC`, do not duplicate it. Otherwise append the report as a new daily section. Preserve every earlier day.
-4. Re-fetch the Notion page and verify the date heading, command/result section, coverage summary, full intervals, and gap intervals are visible.
+4. Re-fetch the Notion page and verify the date heading, coverage summary, full/gap intervals, Slurm results, and command source are visible in that priority order.
 5. Only after Notion verification, run `python3 tasks/u6gb_16_nodes_daily_log/collect_daily.py --date {{DATE}} --write --notion-status updated`.
 6. Update the four task records in `tasks/u6gb_16_nodes_daily_log/` with one concise line each. Stage only files under that task directory and commit immediately.
 
