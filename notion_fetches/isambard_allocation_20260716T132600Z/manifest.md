@@ -15,9 +15,9 @@
 - Source: locally generated Matplotlib analysis of the archived allocation screenshot
 - Local path: `assets/sustainable_nodes_to_award_end.png`
 - File type: `image/png`
-- Size: `199271` bytes
-- SHA256: `9640b0df0c448c578d8a3a230613b69fa10367b8705203be1397175fb7c0e492`
+- Size: `198878` bytes
+- SHA256: `a9de00b469f5a85009065c487763dcd0c2d45391e2f126278cfb73df86c40473`
 - Notion upload path: `assets/sustainable_nodes_to_award_end.svg`
 - Notion upload type: `image/svg+xml`
-- Notion upload size: `91076` bytes
-- Notion upload SHA256: `ba9f72e4df5521217573df9e0ca21b6c79cabfe882fa14930620e0f1d3179101`
+- Notion upload size: `91092` bytes
+- Notion upload SHA256: `36ed6d567d607797dccf8f09e0285141f7ea5fd8a2e312a29f579c6c3fb0ec6a`

@@ -12,7 +12,7 @@ OUTPUT_SVG = Path(__file__).parent / "assets" / "sustainable_nodes_to_award_end.
 BALANCE_GPU_HOURS = 134_873.73
 HOURS = 57 * 24
 GPUS_PER_NODE = 4
-NODE_COUNTS = np.array([4, 5, 20, 22, 24, 25])
+NODE_COUNTS = np.array([16, 17, 20, 22, 24, 25])
 COSTS = NODE_COUNTS * GPUS_PER_NODE * HOURS
 
 
