@@ -323,3 +323,9 @@ P081 UTC 2026-07-08T23:41:54Z: 计划完成——用户未给既有目标页而�
 P076 UTC 2026-07-08T01:30:00Z: 计划已执行——三个"需要做新实验"的 Notion 批注全部实跑完成 (不再停留在设计), 并把论文完整写入用户指定的 Overleaf repo (git.overleaf.com/6a45abc0a2fd90b8e04523f6)。用 /projects/public/s5e/quant_team/quant/miniforge3/bin/python (linearmodels 7.0) 直接从 Harmonized CHARLS D 重建纯 W1-W4 面板跑 TWFE。下一步 (可选, 未做): ①把结果也写回 Notion 页面的对应 callout + 删除线; ②补一个把既有5项稳健性检验整合成的汇总表 (数据来自未定位到的那次运行, 不编造); ③用户提醒 token 已暴露需 revoke。
 
 P077 UTC 2026-07-08T23:38:44Z: 用户中断 Notion smaller-dataset (LOBS5) 任务的 superpowers:brainstorming 流程, 升级指令为"卸载整个 superpowers 插件 + 逐一 review 全部 skills 决定还删哪些"。本轮: (1) settings.json 两条 superpowers 条目 (行163 superpowers@superpowers-marketplace, 行169 superpowers@claude-plugins-official) 均置 false; (2) 按来源分类列出全部 skills 交用户 review; (3) 等用户点名后处理其余。Notion 数据集任务暂停待恢复。
+
+## 2026-07-16 Isambard experiment reserve plan
+
+- Maintain 4 independent full-node experiment workers, tolerate a fifth worker for handoff redundancy, and reconcile every five minutes without a login-node daemon.
+- Submit only jobs that execute an explicit experiment payload. The implementation and first submission remain gated on the real experiment command or queue entrypoint.
+- For capacity planning, treat 24 nodes as the quota-only ceiling and 20-22 as the buffered operational range through 2026-09-10.

@@ -324,3 +324,10 @@ L085 UTC 2026-07-08T01:30:00Z: "做新实验"类任务的忠实度自检法: 在
 L086 UTC 2026-07-08T02:00:00Z: 与 Overleaf git 协作时, 若用户同时开着网页编辑器, 会持续产生 "Update on Overleaf." 自动提交(哪怕无实质改动, 重编译也会提交), 造成 push 反复被 non-fast-forward 拒绝的 race。不要 force-push 硬覆盖(会丢用户在编辑器里的实时手改)。稳妥循环: git fetch → git show origin/main:<file> 看清远端完整内容与用户改了什么 → 备份自己的版本 → git reset --hard origin/main → 恢复自己的内容(有意识地合并用户的合理改动, 如本例保留但其实是回补被误删的\author) → 普通 push。中文 LaTeX 上 Overleaf 的正确配方: \documentclass[UTF8]{ctexart} + 文件首行 % !TeX program = xelatex, 删掉 inputenc(与xelatex冲突); "英文骨架+中文正文"是中文作者面向双语评审的常用格式, 表格/图注保持英文利于跨语言单独复用。
 
 L087 UTC 2026-07-08T23:38:44Z: 用户强烈反感 superpowers:brainstorming 的 HARD-GATE(必须先产出并批准 design 才能动手)。教训: 当 Notion 页面已给出明确执行指令、仅有轻微参数歧义时, 不要机械走 brainstorming 全套多轮 gate; 用户偏好直接执行, 歧义用 1-2 个 AskUserQuestion 点澄清即可。禁用单个 plugin skill 正道 = enabledPlugins 置 false(整插件); 只删插件内某一个 skill 需重命名其 SKILL.md(在 versioned cache, 插件更新会复原, 属临时手段)。
+
+## 2026-07-16 Isambard capacity lessons
+
+- Distinguish physical nodes, GPUs, NHR, and GPU hours before sizing a fleet: one Isambard-AI node is four GPUs, so one full-node hour costs four GPU hours.
+- A dashboard's start-of-month balance is not the same as currently usable balance. Reconcile allocation minus used credits and prefer the conservative value when fields differ.
+- Always round a continuous concurrency estimate down to full nodes and retain budget for shared-account use, failed reruns, and an ambiguous award-end timestamp.
+- A submitted or sleeping job is not evidence that an experiment is running; availability claims must count RUNNING workers with real payloads.

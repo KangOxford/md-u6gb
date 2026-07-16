@@ -387,3 +387,11 @@ F083 UTC 2026-07-08T01:30:00Z: 三个新实验实跑结果 (Harmonized CHARLS D,
 ⑤ 副发现: 03_final_models.py 第30行 directions=[1,1,-1,1,1] 把 ADL 设成 +1 (与 findings.md Bug3 声称已修复矛盾); 我重建用正确的 ADL=-1。
 
 F084 UTC 2026-07-08T23:38:44Z: settings.json enabledPlugins 有两条 superpowers (均 true, 已改 false)。skills 来源分类: 插件类(可 enabledPlugins 整插件开关)= superpowers 14 + codex@openai-codex 5 + claude-hud@claude-hud 2 + frontend-design@claude-plugins-official 1; 用户自建(改 .claude/skills 下 SKILL.md, 单个粒度) 约22个; Claude Code 内置(不可卸) 约15个。注意 claude-hud 同时是 statusLine 渲染器, 禁用会影响状态栏。
+
+## 2026-07-16 Isambard experiment reserve capacity
+
+- Live checks on `login43`: Slurm 24.11.5, `scrontab` is disabled, `workq_qos` has a 24-hour maximum walltime, and `squeue --me` was empty.
+- The fleet name is `u6gb-exp-reserve`; a full physical node is requested as `--nodes=1 --gpus-per-node=4 --exclusive`.
+- The award screenshot shows 150,000 GPUHr allocated, 15,126.26 GPUHr used, 134,873.73 GPUHr remaining by the conservative usable-balance interpretation, and an end date of 2026-09-10.
+- Across a conservative 57-day window, one full node costs 5,472 GPUHr. The quota-only ceiling is 24 full nodes; 25 nodes would exceed the balance by 1,926.27 GPUHr. A practical buffered range is 20-22 nodes.
+- No reserve jobs were submitted because no real experiment payload was supplied; idle `sleep` jobs do not satisfy the revised requirement.

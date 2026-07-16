@@ -390,3 +390,10 @@ PG092 UTC 2026-07-08T01:30:00Z: 从"设计新实验"推进到"实跑新实验"�
 PG093 UTC 2026-07-08T02:00:00Z: 按用户连续4条细化指令 (中文正文/表格英文/标题英文/section英文) 把 Overleaf 论文改为"英文骨架+中文正文(重要名词英文对照)"格式: 文档类换 ctexart + 首行 % !TeX program = xelatex (中文排版), 标题/25个section标题/3个表格全英文, 正文中文且首现术语括注英文, 负数用数学模式排版, 遵守无破折号规则(仅表格内2处"无数据"---, CLAUDE.md豁免)。反复遇到 "Update on Overleaf." 远端提交(用户在网页编辑器实时看文件, Overleaf同步/重编译自动生成提交)导致 push 3次被拒; 每次都: git show origin/main:main.tex 看清远端 → 备份我的版本 → reset到远端 → 恢复 → 普通push, 最终 e6de99b。保留 \author{Kang Li}(远端误删)。
 
 PG094 UTC 2026-07-08T23:38:44Z: settings.json 两条 superpowers 置 false 完成 (可逆, 下次启动生效)。brainstorming 仅 ls 过未重命名, 无需回滚。Notion smaller-dataset 整页已读: 无字面方括号, 但含执行指令 (load+save 小训练集, 总集 2022-2025 SP500, train 约2%, 另建不重叠 val; codebase exp_R1_Mamba3 + train_full_autoreg.batch)。发现页面内部数值矛盾(讨论主张 quarter 约6% vs 指令 2%)待澄清。
+
+## 2026-07-16 Isambard experiment reserve progress
+
+- Updated the exact Notion page in place: renamed it for the 4-node experiment fleet, struck the bracketed request, added first-principles fleet and cost callouts, and verified the rendered page.
+- Archived the referenced allocation screenshot with SHA256, generated PNG/SVG Matplotlib capacity figures, uploaded the final SVG to Notion, and verified it directly below the 24-node calculation.
+- Recorded live scheduler evidence and the 24-node quota ceiling. No Slurm job was submitted because the experiment payload is still unspecified.
+- Artifact commits: `888d4bf`, `eb55d53`, `c380089`, `8ed2c23`, `fe162a2`, and `7a52a90`.
