@@ -1,0 +1,4 @@
+{"ts":"2026-07-16T14:43:52Z","event_type":"monitor_started","candidates":["5678750"],"queue":[{"job_id":"5678750","name":"u6gb-16-nodes-18-jluy-001","state":"PENDING","start":"N/A","nodes":"16"}]}
+{"ts":"2026-07-16T14:43:53Z","event_type":"waiter_returned","job_id":"5678750","returncode":1}
+{"ts":"2026-07-16T14:43:53Z","event_type":"reconcile_no_winner","candidates":["5678750"],"queue":[{"job_id":"5678750","name":"u6gb-16-nodes-18-jluy-001","state":"PENDING","start":"N/A","nodes":"16"}]}
+{"ts":"2026-07-16T14:43:53Z","event_type":"monitor_finished_without_winner","candidates":["5678750"]}

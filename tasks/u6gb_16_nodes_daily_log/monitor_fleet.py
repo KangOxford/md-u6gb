@@ -6,8 +6,8 @@ from __future__ import annotations
 import argparse
 import fcntl
 import json
-import os
 import subprocess
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
@@ -148,50 +148,66 @@ def reconcile(
     return winner_id
 
 
-def stop_waiters(waiters: dict[int, tuple[str, subprocess.Popen[bytes]]]) -> None:
-    for _, process in waiters.values():
-        if process.poll() is None:
-            process.terminate()
-    for _, process in waiters.values():
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
-
-
-def monitor(job_ids: list[str], name_prefix: str, events_path: Path, dry_run: bool) -> int:
+def monitor(
+    job_ids: list[str],
+    name_prefix: str,
+    events_path: Path,
+    dry_run: bool,
+    interval_seconds: int,
+) -> int:
     initial_rows = query_candidates(job_ids)
     validate_visible_names(initial_rows, name_prefix)
-    append_event(events_path, "monitor_started", candidates=job_ids, queue=initial_rows)
+    append_event(
+        events_path,
+        "monitor_started",
+        candidates=job_ids,
+        interval_seconds=interval_seconds,
+        queue=initial_rows,
+    )
 
-    waiters: dict[int, tuple[str, subprocess.Popen[bytes]]] = {}
-    for job_id in job_ids:
-        process = subprocess.Popen(
-            ["scontrol", "wait_job", job_id],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        waiters[process.pid] = (job_id, process)
-
-    try:
-        while waiters:
-            pid, raw_status = os.waitpid(-1, 0)
-            job_id, process = waiters.pop(pid)
-            process.returncode = os.waitstatus_to_exitcode(raw_status)
+    previous_queue = initial_rows
+    while True:
+        winner_id = choose_winner(previous_queue, name_prefix)
+        if winner_id is not None:
+            targets = cancellation_targets(
+                previous_queue, set(job_ids), winner_id, name_prefix
+            )
+            cancel_results = cancel_candidates(targets, dry_run)
             append_event(
                 events_path,
-                "waiter_returned",
-                job_id=job_id,
-                returncode=process.returncode,
+                "winner_selected",
+                winner_job_id=winner_id,
+                candidates=job_ids,
+                cancelled_job_ids=targets,
+                cancel_results=cancel_results,
+                dry_run=dry_run,
+                queue=previous_queue,
             )
-            winner_id = reconcile(job_ids, name_prefix, events_path, dry_run)
-            if winner_id is not None:
-                return 0
-        append_event(events_path, "monitor_finished_without_winner", candidates=job_ids)
-        return 1
-    finally:
-        stop_waiters(waiters)
+            print(f"winner={winner_id} cancelled={','.join(targets) if targets else 'none'}")
+            return 0
+
+        active_rows = [row for row in previous_queue if row["state"] in ACTIVE_STATES]
+        if not active_rows:
+            append_event(
+                events_path,
+                "monitor_finished_without_winner",
+                candidates=job_ids,
+                queue=previous_queue,
+            )
+            return 1
+
+        time.sleep(interval_seconds)
+        current_queue = query_candidates(job_ids)
+        validate_visible_names(current_queue, name_prefix)
+        if current_queue != previous_queue:
+            append_event(
+                events_path,
+                "queue_changed",
+                candidates=job_ids,
+                previous_queue=previous_queue,
+                queue=current_queue,
+            )
+        previous_queue = current_queue
 
 
 def parse_args() -> argparse.Namespace:
@@ -201,9 +217,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--events", type=Path, default=DEFAULT_EVENTS_PATH)
     parser.add_argument("--dry-run", action="store_true", help="never call scancel")
     parser.add_argument("--once", action="store_true", help="reconcile once without waiting")
+    parser.add_argument("--interval", type=int, default=60, help="queue check interval in seconds")
     args = parser.parse_args()
     if any(not job_id.isdigit() for job_id in args.job_ids):
         parser.error("every job ID must be numeric")
+    if not args.once and args.interval < 60:
+        parser.error("monitor interval must be at least 60 seconds")
     args.job_ids = list(dict.fromkeys(args.job_ids))
     return args
 
@@ -212,7 +231,13 @@ def main() -> int:
     args = parse_args()
     if args.once:
         return 0 if reconcile(args.job_ids, args.name_prefix, args.events, args.dry_run) else 3
-    return monitor(args.job_ids, args.name_prefix, args.events, args.dry_run)
+    return monitor(
+        args.job_ids,
+        args.name_prefix,
+        args.events,
+        args.dry_run,
+        args.interval,
+    )
 
 
 if __name__ == "__main__":

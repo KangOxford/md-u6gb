@@ -11,3 +11,4 @@
 - Job `5678750` has baseline priority `1`; all cluster priority weights are zero, hidden jobs/reservations prevent attribution beyond `Reason=Priority`, and no start estimate is available.
 - `scontrol wait_job` is available and blocks until a candidate's nodes are usable or the candidate terminates.
 - The monitor only cancels IDs explicitly passed on its command line whose names also match the fleet prefix.
+- Isambard's `scontrol wait_job` cannot wait for this PENDING job; it returned rc=1 immediately, so the monitor must use a 60-second state check.

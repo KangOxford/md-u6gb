@@ -355,3 +355,4 @@ P077 UTC 2026-07-08T23:38:44Z: 用户中断 Notion smaller-dataset (LOBS5) 任�
 - Treat partition-level idle counts as informational only; require RUNNING allocation evidence rather than inferring immediate schedulability.
 - Build the outer monitor around blocking `scontrol wait_job` processes, then perform one queue reconciliation when a waiter returns and exit after choosing one winner.
 - Unit-test winner selection and cancellation scoping before starting the monitor for Job `5678750`.
+- Enforce a minimum 60-second interval, log only queue changes, and stop immediately after winner selection or after all candidates become inactive.

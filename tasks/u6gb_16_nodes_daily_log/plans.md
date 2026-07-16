@@ -10,3 +10,4 @@
 - Do not interpret partition-wide idle nodes as guaranteed schedulable capacity for the 16-node gang job.
 - Implement the independent monitor with one blocking `scontrol wait_job` per candidate and a single reconciliation after the first waiter returns.
 - Test pure winner-selection and cancellation-scope logic before starting the live monitor.
+- Poll no faster than once per 60 seconds, write only state changes, and exit as soon as one winner is selected.

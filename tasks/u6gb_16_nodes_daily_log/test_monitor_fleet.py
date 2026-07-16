@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 
+import contextlib
+import io
+import sys
 import unittest
+from unittest import mock
 
+import monitor_fleet
 from monitor_fleet import cancellation_targets, choose_winner, parse_queue
 
 
@@ -32,6 +37,12 @@ class MonitorFleetTest(unittest.TestCase):
     def test_no_running_candidate_has_no_winner(self) -> None:
         rows = parse_queue("10|u6gb-16-nodes-18-jluy-001|PENDING|N/A|16\n")
         self.assertIsNone(choose_winner(rows, PREFIX))
+
+    def test_monitor_rejects_sub_minute_interval(self) -> None:
+        with mock.patch.object(sys, "argv", ["monitor_fleet.py", "--interval", "59", "10"]):
+            with contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    monitor_fleet.parse_args()
 
 
 if __name__ == "__main__":
