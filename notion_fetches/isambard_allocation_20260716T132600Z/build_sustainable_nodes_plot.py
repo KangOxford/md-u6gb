@@ -80,25 +80,6 @@ def main() -> None:
         fontweight="bold",
         bbox={"facecolor": "white", "edgecolor": "#c9d0d8", "boxstyle": "round,pad=0.35"},
     )
-    ax.text(
-        0.73,
-        0.06,
-        "24 nodes fits",
-        transform=ax.transAxes,
-        color="#8f530e",
-        fontweight="bold",
-        bbox={"facecolor": "#fff3e2", "edgecolor": "#e5b46f", "boxstyle": "round,pad=0.35"},
-    )
-    ax.text(
-        0.865,
-        0.06,
-        "25 nodes is over budget",
-        transform=ax.transAxes,
-        color="#9f302a",
-        fontweight="bold",
-        bbox={"facecolor": "#fbe9e7", "edgecolor": "#d99d98", "boxstyle": "round,pad=0.35"},
-    )
-
     fig.text(
         0.01,
         0.015,

@@ -15,5 +15,5 @@
 - Source: locally generated Matplotlib analysis of the archived allocation screenshot
 - Local path: `assets/sustainable_nodes_to_award_end.png`
 - File type: `image/png`
-- Size: `213513` bytes
-- SHA256: `f54abe51df04cc7b0d46a440bbbeab218a743f04ba6dc47b34f549907aab6c66`
+- Size: `199271` bytes
+- SHA256: `9640b0df0c448c578d8a3a230613b69fa10367b8705203be1397175fb7c0e492`
