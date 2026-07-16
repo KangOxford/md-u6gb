@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "system_name": "u6gb-16-nodes-daily-log",
+  "fleet_job_name": "u6gb-16-nodes",
+  "target_nodes": 16,
+  "gpus_per_node": 4,
+  "schedule_utc": "00:15",
+  "window": "previous_utc_day",
+  "notion_parent_page_id": "8abfa87e-7c48-4353-aa04-75b17b3500d8",
+  "notion_log_page_id": "39f12c45-68fd-8106-a60b-e64bed63bd91",
+  "notion_log_page_url": "https://app.notion.com/p/39f12c4568fd8106a60be64bed63bd91",
+  "coverage_denominator_node_minutes": 23040,
+  "allow_submit_experiments": false,
+  "allow_cancel_jobs": false,
+  "allow_modify_experiments": false,
+  "scheduled_log_job_id": null
+}
