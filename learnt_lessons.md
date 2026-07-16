@@ -353,3 +353,4 @@ L087 UTC 2026-07-08T23:38:44Z: 用户强烈反感 superpowers:brainstorming 的 
 
 - A disappeared PENDING candidate is not automatically a failed job; inspect `sacct` before interpreting queue absence.
 - Keep the submitted workload simple and isolate fleet convergence in an independently testable outer monitor.
+- `sinfo` idle-node totals do not expose hidden queue order or reservations when Slurm `PrivateData` is enabled.

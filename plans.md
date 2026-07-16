@@ -352,3 +352,4 @@ P077 UTC 2026-07-08T23:38:44Z: 用户中断 Notion smaller-dataset (LOBS5) 任�
 - Preserve one active 16-node allocation as the steady-state target.
 - If redundant candidates are reintroduced, compose them with a separate event-driven monitor that retains the first RUNNING job and cancels the other candidates.
 - Do not put locking, queue inspection, or sibling cancellation into the allocation payload.
+- Treat partition-level idle counts as informational only; require RUNNING allocation evidence rather than inferring immediate schedulability.

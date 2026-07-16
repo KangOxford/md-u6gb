@@ -8,3 +8,4 @@
 - `sbatch` acceptance proves only that the request is valid; `AllocTRES` and `NodeList` must be populated before claiming the 16 nodes are reserved.
 - Queue disappearance needs `sacct` attribution: `CANCELLED` with zero elapsed time is not a runtime failure.
 - Composition keeps the allocation script simple while allowing monitoring and cancellation policy to evolve independently.
+- Slurm `PrivateData` means a user-visible queue cannot explain all priority ordering or reservations.

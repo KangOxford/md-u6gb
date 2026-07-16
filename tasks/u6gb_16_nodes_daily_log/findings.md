@@ -8,3 +8,4 @@
 - Job `5678750` was accepted for 16 nodes / 64 GPUs / 23:59 and renamed in place to `u6gb-16-nodes-18-jluy-001`; it is still PENDING for Priority.
 - Jobs `5678908` and `5678913` were intentionally cancelled at `2026-07-16T14:33:13Z` with zero runtime; Job `5678750` is the only active candidate and has not failed.
 - Queue convergence is an outer-monitor responsibility; the submitted allocation payload must remain minimal.
+- Job `5678750` has baseline priority `1`; all cluster priority weights are zero, hidden jobs/reservations prevent attribution beyond `Reason=Priority`, and no start estimate is available.

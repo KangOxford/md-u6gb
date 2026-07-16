@@ -7,3 +7,4 @@
 - 2026-07-16: Submitted Job `5678750`, renamed it to `u6gb-16-nodes-18-jluy-001`, and verified the 16-node/64-GPU request is PENDING for Priority.
 - 2026-07-16: Cancelled PENDING candidates `5678908` and `5678913`, retained `5678750`, and verified none had run.
 - 2026-07-16: Updated and re-fetched the Notion daily log with the queue diagnosis and outer-monitor composition decision.
+- 2026-07-16: Added verified priority-weight, PrivateData, and unavailable-start-estimate evidence to the Notion diagnosis.

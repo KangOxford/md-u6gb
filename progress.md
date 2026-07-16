@@ -422,3 +422,4 @@ PG094 UTC 2026-07-08T23:38:44Z: settings.json 两条 superpowers 置 false 完�
 - Cancelled redundant PENDING candidates `5678908` and `5678913` at the user's direction; retained `5678750` as the sole active 16-node request.
 - Verified that all three jobs had zero runtime and that `5678750` remains PENDING rather than failed.
 - Updated and re-fetched the Notion daily log with the diagnosis and the simple-payload/outer-monitor boundary.
+- Verified `Priority=1`, all multifactor priority weights at zero, hidden jobs/reservations via `PrivateData`, and no estimated start time; wrote these facts to Notion.
