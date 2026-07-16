@@ -5,3 +5,4 @@
 - `train_full_autoreg.batch` uses one task per node and four GPUs per task; `--nodes=16` therefore means 16 nodes and 64 H100 GPUs.
 - Auto-resume renames jobs to `u6gb-16-nodes-resumeN`, so coverage must include that chain.
 - The primary daily fact is actual 16-node RUNNING coverage; command and hash provenance are secondary audit detail.
+- Job `5678750` was accepted for 16 nodes / 64 GPUs / 23:59 and renamed in place to `u6gb-16-nodes-18-jluy-001`; it is still PENDING for Priority.

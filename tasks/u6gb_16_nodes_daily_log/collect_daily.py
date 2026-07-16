@@ -282,7 +282,7 @@ def render_report(
     ]
 
     report = [
-        f"# {report_date.isoformat()} UTC - u6gb-16-nodes Daily Coverage",
+        f"# {report_date.isoformat()} UTC - {job_name} Daily Coverage",
         "",
         "## 1. First-Principles Coverage",
         "",
@@ -326,9 +326,9 @@ def render_report(
             f"- Batch: `{batch_source.path}`",
             f"- SHA256 observed today: `{batch_source.sha256}`",
             "- Header resource directives: `" + " ".join(batch_source.directives) + "`",
-            "- Fleet override: `--job-name=u6gb-16-nodes --nodes=16 --time=23:59:00`",
+            f"- Fleet override: `--job-name={job_name} --nodes=16 --time=23:59:00`",
             "- Effective fleet size: `16 nodes x 4 GPUs/node = 64 H100 GPUs`",
-            "- Coverage includes `u6gb-16-nodes` and `u6gb-16-nodes-resumeN`.",
+            f"- Coverage includes `{job_name}` and `{job_name}-resumeN`.",
             "- Accounting uses a 24-hour lookback, then clips runtime to this UTC day.",
             "",
             "This report is evidence-only. It did not submit, retry, cancel, or modify any experiment.",
@@ -395,7 +395,7 @@ def write_outputs(
     SUMMARY_PATH.write_text(
         "\n".join(
             [
-                "# u6gb-16-nodes Daily Coverage Summary",
+                f"# {manifest['fleet_job_name']} Daily Coverage Summary",
                 "",
                 f"- Updated: `{state['updated_at']}`",
                 f"- Window: `{state['last_window_start']}` to `{state['last_window_end']}`",
