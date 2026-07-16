@@ -14,3 +14,4 @@
 - 2026-07-16: Started corrected monitor PID `48640` on `login40`; verified it remained alive after 65 seconds and Job `5678750` stayed PENDING.
 - 2026-07-16: Added `fleet_self_chain.sbatch` so future 16-node fleet jobs can submit an `afterany` successor immediately at job start and record successor IDs in `events.jsonl`.
 - 2026-07-16: Added `submit_self_chain.sh` to submit the first self-chain generation through the existing submission logger.
+- 2026-07-16: Calculated the one-week 16-node reservation budget as 2,688 node-hours / 10,752 GPU-hours and prepared to frame it as an admin reservation request.

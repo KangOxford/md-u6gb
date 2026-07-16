@@ -14,3 +14,4 @@
 - A documented Slurm blocking command still needs live validation on the cluster's PENDING-state implementation.
 - Avoid heartbeat log spam: unchanged PENDING state should remain implicit between transition events.
 - Self-chain early submission reduces end-of-walltime gaps, but current `PriorityWeightAge=0` means it must not be treated as a confirmed priority-boost mechanism.
+- Ordinary backfill tactics improve opportunity but not SLA; fixed 16-node weekly coverage requires a reservation such as `sbatch --reservation=<name>` after admin approval.

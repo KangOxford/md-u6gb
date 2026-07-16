@@ -13,3 +13,4 @@
 - Poll no faster than once per 60 seconds, write only state changes, and exit as soon as one winner is selected.
 - Replace the live monitor with a new invocation containing every explicit ID whenever the candidate set changes.
 - Add a thin self-chain payload for future 16-node fleet jobs: submit the `afterany:$SLURM_JOB_ID` successor at job start, keep the payload simple, and leave duplicate-candidate cancellation to the outer monitor.
+- For a guaranteed one-week 16-node window, prepare an admin reservation request with dates, account, resource shape, quota budget, and the scientific reason for continuous fleet availability.

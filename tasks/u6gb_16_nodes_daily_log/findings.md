@@ -14,3 +14,4 @@
 - Isambard's `scontrol wait_job` cannot wait for this PENDING job; it returned rc=1 immediately, so the monitor must use a 60-second state check.
 - The corrected live monitor is PID `48640` on `login40`, scoped only to Job `5678750`.
 - 2026-07-16: Live Slurm priority config has `PriorityWeightAge=0`; an `afterany` self-chain can queue successors early but should not be described as guaranteed age-based priority gain on this cluster.
+- 2026-07-16: A one-week 16-node SLA should be requested as an admin reservation, not approximated with ordinary `workq` submissions; cost is 16 nodes x 4 GPUs x 24 h x 7 d = 10,752 GPU-hours.
