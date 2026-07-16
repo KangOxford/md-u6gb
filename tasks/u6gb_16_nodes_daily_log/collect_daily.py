@@ -4,7 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
+import re
+import shlex
 import subprocess
 from collections import defaultdict
 from dataclasses import dataclass
@@ -60,6 +64,13 @@ class Segment:
         return max(0, int((self.end - self.start).total_seconds()))
 
 
+@dataclass(frozen=True)
+class BatchSource:
+    path: str
+    sha256: str
+    directives: tuple[str, ...]
+
+
 def iso_z(value: datetime) -> str:
     return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -84,6 +95,25 @@ def load_jsonl(path: Path) -> list[dict]:
     return rows
 
 
+def load_batch_source(manifest: dict) -> BatchSource:
+    path = Path(manifest["batch_script"])
+    payload = path.read_bytes()
+    directives = []
+    for index, line in enumerate(payload.decode("utf-8").splitlines()):
+        stripped = line.strip()
+        if index == 0 and stripped.startswith("#!"):
+            continue
+        if stripped.startswith("#SBATCH "):
+            directives.append(stripped.removeprefix("#SBATCH "))
+        elif stripped and not stripped.startswith("#"):
+            break
+    return BatchSource(
+        path=str(path),
+        sha256=hashlib.sha256(payload).hexdigest(),
+        directives=tuple(directives),
+    )
+
+
 def run_sacct(job_name: str, start: datetime, end: datetime) -> tuple[list[Job], str]:
     command = [
         "sacct",
@@ -93,11 +123,14 @@ def run_sacct(job_name: str, start: datetime, end: datetime) -> tuple[list[Job],
         "-E",
         end.strftime("%Y-%m-%dT%H:%M:%S"),
         "-nP",
-        f"--name={job_name}",
         "-o",
         ",".join(SACCT_FIELDS),
     ]
+    user = os.environ.get("USER")
+    if user:
+        command.insert(1, f"--user={user}")
     completed = subprocess.run(command, check=True, capture_output=True, text=True)
+    job_name_pattern = re.compile(rf"^{re.escape(job_name)}(?:-resume[0-9]+)?$")
     jobs = []
     for line in completed.stdout.splitlines():
         if not line.strip():
@@ -105,6 +138,8 @@ def run_sacct(job_name: str, start: datetime, end: datetime) -> tuple[list[Job],
         values = line.split("|")
         if len(values) != len(SACCT_FIELDS):
             raise RuntimeError(f"Unexpected sacct row with {len(values)} fields: {line}")
+        if not job_name_pattern.fullmatch(values[1]):
+            continue
         alloc_nodes = int(values[7]) if values[7].isdigit() else 0
         jobs.append(
             Job(
@@ -120,7 +155,11 @@ def run_sacct(job_name: str, start: datetime, end: datetime) -> tuple[list[Job],
                 exit_code=values[9],
             )
         )
-    return jobs, " ".join(command)
+    evidence = (
+        shlex.join(command)
+        + f"\n# client-side JobName filter: ^{re.escape(job_name)}(?:-resume[0-9]+)?$"
+    )
+    return jobs, evidence
 
 
 def build_segments(jobs: Iterable[Job], start: datetime, end: datetime) -> list[Segment]:
@@ -190,6 +229,7 @@ def render_report(
     sacct_command: str,
     submissions: list[dict],
     segments: list[Segment],
+    batch_source: BatchSource,
 ) -> tuple[str, dict]:
     window_seconds = int((end - start).total_seconds())
     full_seconds = sum(segment.seconds for segment in segments if segment.running_nodes >= target_nodes)
@@ -214,6 +254,7 @@ def render_report(
     job_rows = [
         [
             job.job_id,
+            job.name,
             job.state,
             job.submit,
             iso_z(job.start) if job.start else "-",
@@ -237,6 +278,15 @@ def render_report(
     report = [
         f"# {report_date.isoformat()} UTC - u6gb-16-nodes Daily Coverage",
         "",
+        "## 0. Command Source",
+        "",
+        f"- Batch: `{batch_source.path}`",
+        f"- SHA256 observed today: `{batch_source.sha256}`",
+        "- Header resource directives: `" + " ".join(batch_source.directives) + "`",
+        "- Fleet override: `--job-name=u6gb-16-nodes --nodes=16 --time=23:59:00`",
+        "- Effective fleet size: `16 nodes x 4 GPUs/node = 64 H100 GPUs`",
+        "- Coverage includes `u6gb-16-nodes` and `u6gb-16-nodes-resumeN`.",
+        "",
         "## 1. Submitted Commands And Results",
         "",
     ]
@@ -246,7 +296,12 @@ def render_report(
         report.append("No experiment submission was recorded in this window.")
     report.extend(["", "### Slurm Results", ""])
     if job_rows:
-        report.append(markdown_table(job_rows, ["Job ID", "State", "Submit", "Start", "End", "Nodes", "Exit"]))
+        report.append(
+            markdown_table(
+                job_rows,
+                ["Job ID", "Name", "State", "Submit", "Start", "End", "Nodes", "Exit"],
+            )
+        )
     else:
         report.append(f"No `{job_name}` rows were returned by Slurm accounting.")
     report.extend(
@@ -280,6 +335,7 @@ def render_report(
         "partial_coverage_seconds": partial_seconds,
         "zero_coverage_seconds": zero_seconds,
         "coverage_ratio": coverage_ratio,
+        "batch_sha256": batch_source.sha256,
     }
     return "\n".join(report), metrics
 
@@ -324,6 +380,7 @@ def write_outputs(
         **metrics,
         "notion_status": notion_status,
         "scheduled_log_job_id": manifest.get("scheduled_log_job_id"),
+        "batch_script": manifest["batch_script"],
         "alert": None if metrics["coverage_ratio"] >= 1.0 else "Coverage below 100%; see daily gap intervals.",
     }
     STATE_PATH.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -363,6 +420,7 @@ def main() -> int:
     args = parser.parse_args()
 
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    batch_source = load_batch_source(manifest)
     report_date = date.fromisoformat(args.date) if args.date else datetime.now(UTC).date() - timedelta(days=1)
     start = datetime.combine(report_date, time.min, tzinfo=UTC)
     end = start + timedelta(days=1)
@@ -379,6 +437,7 @@ def main() -> int:
         sacct_command,
         submissions,
         segments,
+        batch_source,
     )
     if args.write:
         write_outputs(report_date, report, metrics, start, end, args.notion_status, manifest)

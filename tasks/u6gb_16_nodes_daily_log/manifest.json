@@ -9,9 +9,14 @@
   "notion_parent_page_id": "8abfa87e-7c48-4353-aa04-75b17b3500d8",
   "notion_log_page_id": "39f12c45-68fd-8106-a60b-e64bed63bd91",
   "notion_log_page_url": "https://app.notion.com/p/39f12c4568fd8106a60be64bed63bd91",
+  "experiment_root": "/projects/public/s5e/quant_team/quant/AlphaTrade/experiments",
+  "experiment_dir": "/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/exp_R1_Mamba3",
+  "batch_script": "/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/exp_R1_Mamba3/train_full_autoreg.batch",
+  "batch_sha256_observed_2026_07_16": "2eb4d6f424457650f349bc4a069d6f91cf17d869e62df2d8f8d0ae84bdeb14f6",
+  "fleet_job_name_match": "^u6gb-16-nodes(?:-resume[0-9]+)?$",
   "coverage_denominator_node_minutes": 23040,
   "allow_submit_experiments": false,
   "allow_cancel_jobs": false,
   "allow_modify_experiments": false,
-  "scheduled_log_job_id": null
+  "scheduled_log_job_id": "5678626"
 }

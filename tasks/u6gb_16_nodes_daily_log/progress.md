@@ -1,4 +1,4 @@
 # Progress
 
 - 2026-07-16: Created the Notion child page and wrote the 0/16 Day 0 baseline.
-- Local collector, submission recorder, and daily agent launcher are implemented but not yet scheduled.
+- 2026-07-16: Daily logger job `5678626` is scheduled for `2026-07-17 00:15 UTC` and uses the real Mamba3 batch as read-only command provenance.
