@@ -405,3 +405,8 @@ PG094 UTC 2026-07-08T23:38:44Z: settings.json 两条 superpowers 置 false 完�
 - Created and verified the Notion child page `u6gb-16-nodes Daily Coverage Log`, including the real launcher path, SHA256, 16-node resource method, and Day 0 coverage.
 - Scheduled evidence-only logger job `5678626` for `2026-07-17 00:15 UTC`; committed launcher-aware accounting in `5fa6aa6`.
 
+## 2026-07-16 first-principles reporting progress
+
+- Updated and verified the Notion child page and local reporter so every daily entry starts with actual RUNNING coverage and meaningful gaps.
+- Coverage-first implementation commit: `516ed3e`.
+

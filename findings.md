@@ -348,6 +348,10 @@ F070 UTC 2026-07-06T20:25:07Z: 现场实测(job 5525176)证实之前的诊断有
 - The coverage name set must include both `u6gb-16-nodes` and `u6gb-16-nodes-resumeN`; exact base-name filtering would omit auto-resumed runtime.
 - Daily logger job `5678626` is scheduled for `2026-07-17T00:15:00Z`.
 
+## 2026-07-16 first-principles reporting priority
+
+- The primary daily result is whether 16 nodes were materially RUNNING and where meaningful gaps occurred; commands, hashes, and second-level boundaries are supporting evidence.
+
 F071 UTC 2026-07-06T20:49:34Z: 用户提供的 Isambard 官方文档(docs.isambard.ac.uk/user-documentation/guides/slurm/ 与 .../slurm-advanced/)确认三件事,均已写入 Notion 最终答案:(1) 每个节点是 4 个独立 superchip(1 Grace CPU 72 核/115GB 可用内存 + 1 H100 96GB,NVLink-C2C 绑定),不是共享大池;官方示例命令是 `srun --nodes=1 --gpus=1 --time=00:15:00 --pty /bin/bash --login`,不带 --cpus-per-task/--mem,文档原话"requesting one GPU allocates one complete GH200 Superchip"——推翻了本会话早前基于 LOBS5 项目记忆给出的"改用 --gres=gpu:1"建议,该记忆实际是另一个项目里针对多卡 sbatch 训练场景的经验,不能跨场景套用。(2) --exclusive 小节明确:不加 --exclusive 时,--gpus=1 只占 1 个 superchip,同一物理节点其余 3 个 superchip 可被其他用户作业使用,不计入整节点;只有显式加 --exclusive 才会把整节点(4 个 superchip)都分配并计费给你,哪怕只用 1 个 GPU——直接回应了用户"会不会因为写了 cpus/mem 就被算成整节点"的顾虑,原命令的 72 核/120G 也没有超过单 superchip 上限,不会触发多 superchip 拼凑。(3) 文档另外提供专用的 interactive reservation 池(`srun --gpus=1 --reservation=interactive --pty bash -i`),不与普通 workq 队列竞争,默认 30 分钟/最长 8 小时/1.5 倍节点小时计费,可能比我们反复测试卡住的普通队列更适合这个交互调试场景。
 
 F072 UTC 2026-07-06T20:58:46Z: 用户指出 --account=brics.u6gb / --partition=workq 两个参数也是多余的。现场核实(sacctmgr show user kangli.u6gb withassoc):Def Acct = brics.u6gb,即该账号本身默认账户就是它;sinfo 里 workq* 的星号是 SLURM 标记默认分区的约定写法。两者都是默认值,与官方文档全部示例命令均不带这两个参数的事实一致。真正最简最终命令确认为:`srun --nodes=1 --gpus=1 --time=23:59:59 --pty /bin/bash --login`。

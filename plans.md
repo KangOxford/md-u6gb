@@ -337,3 +337,7 @@ P077 UTC 2026-07-08T23:38:44Z: 用户中断 Notion smaller-dataset (LOBS5) 任�
 - Run an evidence-only logger at UTC 00:15 for the previous complete UTC day, using the real Mamba3 batch as read-only command provenance.
 - Do not let the logger submit, cancel, retry, or modify experiments.
 
+## 2026-07-16 first-principles report order
+
+- Present coverage and gap intervals first, Slurm state/results second, and command provenance last.
+
