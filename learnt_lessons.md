@@ -355,3 +355,4 @@ L087 UTC 2026-07-08T23:38:44Z: 用户强烈反感 superpowers:brainstorming 的 
 - Keep the submitted workload simple and isolate fleet convergence in an independently testable outer monitor.
 - `sinfo` idle-node totals do not expose hidden queue order or reservations when Slurm `PrivateData` is enabled.
 - Composition is simplest here: keep candidate jobs policy-free and let a short-lived outer process own observation, cancellation, and audit logging.
+- Cancellation must be bounded by both an explicit candidate-ID set and the expected job-name prefix.

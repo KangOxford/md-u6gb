@@ -422,3 +422,4 @@ F084 UTC 2026-07-08T23:38:44Z: settings.json enabledPlugins 有两条 superpower
 - Keep the allocation payload minimal. Any future redundant-candidate convergence belongs in a separate outer monitor, not inside the experiment submission script.
 - Cluster priority weights are all zero, so Job `5678750` has the baseline priority `1`; `PrivateData` hides other jobs and reservations, and `squeue --start` returns no estimate.
 - Slurm 24.11.5 provides `scontrol wait_job <job_id>`, which blocks until allocated nodes are usable or the job reaches a terminal state; it can drive an outer monitor without changing the allocation payload.
+- The monitor safety boundary is explicit job IDs plus the `u6gb-16-nodes-18-jluy-` prefix; it never performs a broad name-based cancellation.

@@ -19,5 +19,12 @@
   "allow_submit_experiments": false,
   "allow_cancel_jobs": false,
   "allow_modify_experiments": false,
-  "scheduled_log_job_id": "5678626"
+  "scheduled_log_job_id": "5678626",
+  "monitor_script": "/lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/monitor_fleet.py",
+  "monitor_event_log": "/lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/monitor_events.jsonl",
+  "monitor_trigger": "scontrol wait_job",
+  "monitor_candidate_name_prefix": "u6gb-16-nodes-18-jluy-",
+  "monitor_steady_state_allocations": 1,
+  "monitor_active_candidate_job_ids": ["5678750"],
+  "monitor_allow_cancel_explicit_candidates": true
 }

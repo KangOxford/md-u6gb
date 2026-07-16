@@ -10,3 +10,4 @@
 - Composition keeps the allocation script simple while allowing monitoring and cancellation policy to evolve independently.
 - Slurm `PrivateData` means a user-visible queue cannot explain all priority ordering or reservations.
 - The monitor should terminate after winner selection rather than become a general-purpose polling daemon.
+- Require both explicit candidate membership and a name-prefix match before issuing `scancel`.

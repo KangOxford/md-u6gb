@@ -9,3 +9,4 @@
 - Implement any future redundant-candidate convergence as a separate event-driven monitor, without modifying the allocation payload.
 - Do not interpret partition-wide idle nodes as guaranteed schedulable capacity for the 16-node gang job.
 - Implement the independent monitor with one blocking `scontrol wait_job` per candidate and a single reconciliation after the first waiter returns.
+- Test pure winner-selection and cancellation-scope logic before starting the live monitor.

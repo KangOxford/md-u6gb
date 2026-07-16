@@ -9,3 +9,4 @@
 - 2026-07-16: Updated and re-fetched the Notion daily log with the queue diagnosis and outer-monitor composition decision.
 - 2026-07-16: Added verified priority-weight, PrivateData, and unavailable-start-estimate evidence to the Notion diagnosis.
 - 2026-07-16: Verified `scontrol wait_job` and documented the minimal-payload/outer-monitor event trigger in Notion.
+- 2026-07-16: Added `monitor_fleet.py`, focused unit tests, and explicit monitor authority in the manifest.
