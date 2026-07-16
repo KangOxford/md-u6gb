@@ -414,3 +414,9 @@ F084 UTC 2026-07-08T23:38:44Z: settings.json enabledPlugins 有两条 superpower
 - No reserve jobs were submitted because no real experiment payload was supplied; idle `sleep` jobs do not satisfy the revised requirement.
 - Final fleet decision is `16+1`: 16 running full-node workers plus one handoff spare. Through 2026-09-10, 16 nodes cost 87,552 GPUHr and leave 47,321.73 GPUHr; 17 nodes cost 93,024 GPUHr and leave 41,849.73 GPUHr.
 - Notion now contains a concise `sbatch --array=0-15` command callout. It intentionally requires the real `EXPERIMENT_CMD` before submission.
+
+## 2026-07-16 queue diagnosis and composition boundary
+
+- Job `5678750` remains `PENDING (Priority)` with `Start=Unknown`, empty `AllocTRES`, and no `NodeList`; it has not failed or consumed nodes.
+- Jobs `5678908` and `5678913` were intentionally cancelled at `2026-07-16T14:33:13Z`, both with zero elapsed runtime, to leave one active 16-node request.
+- Keep the allocation payload minimal. Any future redundant-candidate convergence belongs in a separate outer monitor, not inside the experiment submission script.

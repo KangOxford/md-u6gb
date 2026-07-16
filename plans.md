@@ -346,3 +346,9 @@ P077 UTC 2026-07-08T23:38:44Z: 用户中断 Notion smaller-dataset (LOBS5) 任�
 - Keep the single Job `5678750` request in queue under `u6gb-16-nodes-18-jluy-001`; do not submit a duplicate while it is PENDING or RUNNING.
 - Mark success only when Slurm reports RUNNING with a populated 16-node `NodeList`; PENDING time contributes zero coverage.
 
+
+## 2026-07-16 monitor composition plan
+
+- Preserve one active 16-node allocation as the steady-state target.
+- If redundant candidates are reintroduced, compose them with a separate event-driven monitor that retains the first RUNNING job and cancels the other candidates.
+- Do not put locking, queue inspection, or sibling cancellation into the allocation payload.
