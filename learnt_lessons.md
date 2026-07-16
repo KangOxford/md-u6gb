@@ -337,6 +337,11 @@ L087 UTC 2026-07-08T23:38:44Z: 用户强烈反感 superpowers:brainstorming 的 
 
 - Do not let second-level precision displace the operational question; minute-level reporting is sufficient when the real concern is continuous 16-node coverage.
 
+## 2026-07-16 allocation-state lesson
+
+- `sbatch` acceptance proves that the resource request is syntactically and administratively valid, not that resources are allocated; require RUNNING plus `NodeList`/`AllocTRES` evidence.
+- Follow the user's latest scope correction directly: this request holds a 16-node allocation and does not launch training.
+
 - Distinguish physical nodes, GPUs, NHR, and GPU hours before sizing a fleet: one Isambard-AI node is four GPUs, so one full-node hour costs four GPU hours.
 - A dashboard's start-of-month balance is not the same as currently usable balance. Reconcile allocation minus used credits and prefer the conservative value when fields differ.
 - Always round a continuous concurrency estimate down to full nodes and retain budget for shared-account use, failed reruns, and an ambiguous award-end timestamp.

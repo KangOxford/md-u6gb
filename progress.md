@@ -410,3 +410,9 @@ PG094 UTC 2026-07-08T23:38:44Z: settings.json 两条 superpowers 置 false 完�
 - Updated and verified the Notion child page and local reporter so every daily entry starts with actual RUNNING coverage and meaningful gaps.
 - Coverage-first implementation commit: `516ed3e`.
 
+## 2026-07-16 live allocation progress
+
+- Submitted Job `5678750` for 16 nodes, 64 GPUs, and 23:59 walltime; renamed it to `u6gb-16-nodes-18-jluy-001` without cancelling or duplicating it.
+- Updated and verified the parent Notion page and daily coverage child page with the live PENDING state and exact resource request.
+- Local audit commits: `aca53d0` and `df710ff`.
+
