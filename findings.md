@@ -421,3 +421,4 @@ F084 UTC 2026-07-08T23:38:44Z: settings.json enabledPlugins 有两条 superpower
 - Jobs `5678908` and `5678913` were intentionally cancelled at `2026-07-16T14:33:13Z`, both with zero elapsed runtime, to leave one active 16-node request.
 - Keep the allocation payload minimal. Any future redundant-candidate convergence belongs in a separate outer monitor, not inside the experiment submission script.
 - Cluster priority weights are all zero, so Job `5678750` has the baseline priority `1`; `PrivateData` hides other jobs and reservations, and `squeue --start` returns no estimate.
+- Slurm 24.11.5 provides `scontrol wait_job <job_id>`, which blocks until allocated nodes are usable or the job reaches a terminal state; it can drive an outer monitor without changing the allocation payload.

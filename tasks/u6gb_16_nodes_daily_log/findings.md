@@ -9,3 +9,4 @@
 - Jobs `5678908` and `5678913` were intentionally cancelled at `2026-07-16T14:33:13Z` with zero runtime; Job `5678750` is the only active candidate and has not failed.
 - Queue convergence is an outer-monitor responsibility; the submitted allocation payload must remain minimal.
 - Job `5678750` has baseline priority `1`; all cluster priority weights are zero, hidden jobs/reservations prevent attribution beyond `Reason=Priority`, and no start estimate is available.
+- `scontrol wait_job` is available and blocks until a candidate's nodes are usable or the candidate terminates.
