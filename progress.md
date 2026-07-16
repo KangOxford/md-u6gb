@@ -426,3 +426,4 @@ PG094 UTC 2026-07-08T23:38:44Z: settings.json 两条 superpowers 置 false 完�
 - Verified the local `scontrol wait_job` interface and updated/re-fetched Notion with the outer-monitor trigger design.
 - Added the independent fleet monitor, its unit tests, and manifest policy without changing the allocation payload.
 - The first live monitor exited safely without a winner after `wait_job` returned rc=1; no job was cancelled. Reworked the trigger to a minimum 60-second queue interval.
+- Started the corrected monitor at `2026-07-16T14:46:38Z` on `login40` as PID `48640`; verified it remained alive after 65 seconds and updated/re-fetched Notion.

@@ -424,3 +424,4 @@ F084 UTC 2026-07-08T23:38:44Z: settings.json enabledPlugins 有两条 superpower
 - Slurm 24.11.5 provides `scontrol wait_job <job_id>`, which blocks until allocated nodes are usable or the job reaches a terminal state; it can drive an outer monitor without changing the allocation payload.
 - The monitor safety boundary is explicit job IDs plus the `u6gb-16-nodes-18-jluy-` prefix; it never performs a broad name-based cancellation.
 - Live testing disproved the `wait_job` design for PENDING jobs: it returns rc=1 with `Job 5678750 no longer running`; the viable outer monitor uses a 60-second `squeue` interval.
+- The corrected monitor is live on `login40` as PID `48640`, watching only Job `5678750`; it remained alive after a full interval while the job stayed PENDING.

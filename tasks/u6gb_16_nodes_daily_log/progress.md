@@ -11,3 +11,4 @@
 - 2026-07-16: Verified `scontrol wait_job` and documented the minimal-payload/outer-monitor event trigger in Notion.
 - 2026-07-16: Added `monitor_fleet.py`, focused unit tests, and explicit monitor authority in the manifest.
 - 2026-07-16: First live start exited safely because `wait_job` rejected the PENDING job; no cancellations occurred. Replaced the trigger with a 60-second interval.
+- 2026-07-16: Started corrected monitor PID `48640` on `login40`; verified it remained alive after 65 seconds and Job `5678750` stayed PENDING.

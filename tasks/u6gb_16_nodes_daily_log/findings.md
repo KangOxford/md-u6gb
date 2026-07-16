@@ -12,3 +12,4 @@
 - `scontrol wait_job` is available and blocks until a candidate's nodes are usable or the candidate terminates.
 - The monitor only cancels IDs explicitly passed on its command line whose names also match the fleet prefix.
 - Isambard's `scontrol wait_job` cannot wait for this PENDING job; it returned rc=1 immediately, so the monitor must use a 60-second state check.
+- The corrected live monitor is PID `48640` on `login40`, scoped only to Job `5678750`.
