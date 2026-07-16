@@ -9,3 +9,11 @@
 - Size: `297054` bytes
 - SHA256: `846c3fb548fd4160a832b0ad2d5ec986791d8846b4572452d917ba2f0e48ff32`
 - Archived UTC: `2026-07-16T13:26:00Z`
+
+## Derived Figure
+
+- Source: locally generated Matplotlib analysis of the archived allocation screenshot
+- Local path: `assets/sustainable_nodes_to_award_end.png`
+- File type: `image/png`
+- Size: `228900` bytes
+- SHA256: `119e7b01c48e45c283b2b3d232ad6a145159a7733c2ac84ef065a3f0f5c084d4`
