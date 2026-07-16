@@ -398,3 +398,4 @@ PG094 UTC 2026-07-08T23:38:44Z: settings.json 两条 superpowers 置 false 完�
 - Recorded live scheduler evidence and the 24-node quota ceiling. No Slurm job was submitted because the experiment payload is still unspecified.
 - Artifact commits: `888d4bf`, `eb55d53`, `c380089`, `8ed2c23`, `fe162a2`, and `7a52a90`.
 - Regenerated and uploaded the `16/17/20/22/24/25` comparison figure; local figure commit is `2c0b511`. The queue remained empty, so no experiment job was submitted.
+- Renamed all Notion command references and figure captions to `u6gb-16-nodes`; resource policy and payload gate were unchanged.

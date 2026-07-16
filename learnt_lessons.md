@@ -332,3 +332,4 @@ L087 UTC 2026-07-08T23:38:44Z: 用户强烈反感 superpowers:brainstorming 的 
 - Always round a continuous concurrency estimate down to full nodes and retain budget for shared-account use, failed reruns, and an ambiguous award-end timestamp.
 - A submitted or sleeping job is not evidence that an experiment is running; availability claims must count RUNNING workers with real payloads.
 - For 16 independent workers, the Slurm array range is `0-15`. Keep the payload explicit in a short command surface so a capacity decision cannot silently become 16 idle allocations.
+- When the user supplies an exact neutral job name, use it verbatim across submission, logging, and monitoring instead of inventing another label.

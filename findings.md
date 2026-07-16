@@ -391,7 +391,7 @@ F084 UTC 2026-07-08T23:38:44Z: settings.json enabledPlugins 有两条 superpower
 ## 2026-07-16 Isambard experiment reserve capacity
 
 - Live checks on `login43`: Slurm 24.11.5, `scrontab` is disabled, `workq_qos` has a 24-hour maximum walltime, and `squeue --me` was empty.
-- The fleet name is `u6gb-exp-reserve`; a full physical node is requested as `--nodes=1 --gpus-per-node=4 --exclusive`.
+- The fleet name is `u6gb-16-nodes`; a full physical node is requested as `--nodes=1 --gpus-per-node=4 --exclusive`.
 - The award screenshot shows 150,000 GPUHr allocated, 15,126.26 GPUHr used, 134,873.73 GPUHr remaining by the conservative usable-balance interpretation, and an end date of 2026-09-10.
 - Across a conservative 57-day window, one full node costs 5,472 GPUHr. The quota-only ceiling is 24 full nodes; 25 nodes would exceed the balance by 1,926.27 GPUHr. A practical buffered range is 20-22 nodes.
 - No reserve jobs were submitted because no real experiment payload was supplied; idle `sleep` jobs do not satisfy the revised requirement.

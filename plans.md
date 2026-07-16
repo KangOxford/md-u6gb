@@ -330,3 +330,4 @@ P077 UTC 2026-07-08T23:38:44Z: 用户中断 Notion smaller-dataset (LOBS5) 任�
 - Submit only jobs that execute an explicit experiment payload. The implementation and first submission remain gated on the real experiment command or queue entrypoint.
 - For capacity planning, treat 24 nodes as the quota-only ceiling and 20-22 as the buffered operational range through 2026-09-10.
 - Initial seed command uses array indices `0-15`; do not execute it until `EXPERIMENT_CMD` points to the real experiment entrypoint.
+- Use `u6gb-16-nodes` consistently for the Slurm job name, log directory, and queue filter.
