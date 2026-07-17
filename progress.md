@@ -469,5 +469,6 @@ PG066 UTC 2026-07-09T00:50:00Z: User said 'Follow-up(vanilla)的权重是直接�
 - Confirmed that vanilla contains no U or V factor heads.
 - Explained the difference between parameter output $y_{\text{hyper}}$ and downstream block execution ($Output = W \cdot h + b$).
 - Clarified that soft_prompt and norms still use dynamic OutputHead generation under vanilla mode.
+- Created implementation plan for updating the vanilla mode definition to use OutputHead ($y_{\text{hyper}} = W_{\text{head}} \cdot x_{\text{hyper}} + b_{\text{head}}$) and requested user review.
 PG067 UTC 2026-07-17T12:16:12Z: 回答用户'如何 attach 并使用 16 节点 fleet'。先更正了初始误判(该 job 非训练,是占位)。验证:srun --overlap 单节点 + 16 节点 fan-out 均通,64 GPU 全空闲。交付 recipe:交互 srun --jobid=5678750 --overlap --nodes=1 --gpus-per-node=4 --pty bash;分布式 srun --jobid=5678750 --overlap --nodes=16 --ntasks-per-node=1 --gpus-per-node=4 <payload>。全程未 scancel 任何 job(用户明确选'忽略停任务,只要 attach 方法')。allocation 剩 ~8h。
 PG068 UTC 2026-07-17T12:21:52Z: 用户确认 mode A 从 login attach 成功(prompt 到 nid010266);mode B 因嵌套在 mode A 内失败,已给出'从 login 发起'的修复。用户要求把 attach 方法记入 Notion,但 fleet 页树未共享给 cc(两页均 404),记录阻塞;已备好 runbook 内容,待用户共享页给 cc 后一键 append,或用户手动粘贴。allocation 剩 ~5:41。
