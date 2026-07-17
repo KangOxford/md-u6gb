@@ -357,3 +357,10 @@ P077 UTC 2026-07-08T23:38:44Z: 用户中断 Notion smaller-dataset (LOBS5) 任�
 - Unit-test winner selection and cancellation scoping before starting the monitor for Job `5678750`.
 - Enforce a minimum 60-second interval, log only queue changes, and stop immediately after winner selection or after all candidates become inactive.
 - When new redundant candidates are submitted, launch a replacement monitor with the complete explicit candidate-ID set; the current process intentionally knows only `5678750`.
+
+## 2026-07-17 allocation use plan
+
+- Treat `5678750` as the active 16-node allocation and do not submit a duplicate while it remains RUNNING.
+- For a shell, start a new one-node job step inside the allocation with `srun --jobid=5678750 --overlap --nodes=1 --ntasks=1 --gres=gpu:4 --pty bash -l`.
+- For multi-node checks or payload commands, run explicit `srun --jobid=5678750 --overlap --nodes=16 --ntasks-per-node=1 --gpus-per-node=4 ...` commands from the login shell.
+- If Slurm refuses a large job step, verify the allocation with a one-node step first, then scale back to 16 nodes once step creation is confirmed.

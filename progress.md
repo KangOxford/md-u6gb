@@ -427,3 +427,10 @@ PG094 UTC 2026-07-08T23:38:44Z: settings.json 两条 superpowers 置 false 完�
 - Added the independent fleet monitor, its unit tests, and manifest policy without changing the allocation payload.
 - The first live monitor exited safely without a winner after `wait_job` returned rc=1; no job was cancelled. Reworked the trigger to a minimum 60-second queue interval.
 - Started the corrected monitor at `2026-07-16T14:46:38Z` on `login40` as PID `48640`; verified it remained alive after 65 seconds and updated/re-fetched Notion.
+
+## 2026-07-17 attach/use progress
+
+- Verified live Slurm state for `5678750` and `5685480` from `squeue` and `scontrol show job`.
+- Confirmed `fleet_self_chain.sbatch` is a sleep/chain holder, so current use should happen through new `srun --jobid=5678750 --overlap` job steps.
+- Appended attach/use commands to the Notion parent fleet page `8abfa87e-7c48-4353-aa04-75b17b3500d8`.
+- Updated the workspace `findings.md`, `plans.md`, `learnt_lessons.md`, and `progress.md` records for this round.

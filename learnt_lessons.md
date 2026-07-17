@@ -358,3 +358,9 @@ L087 UTC 2026-07-08T23:38:44Z: 用户强烈反感 superpowers:brainstorming 的 
 - Cancellation must be bounded by both an explicit candidate-ID set and the expected job-name prefix.
 - Verify blocking scheduler commands against a real PENDING job; local man-page semantics did not match Isambard's observed `wait_job` behavior.
 - An unchanged queue should produce no repeated audit rows; process liveness plus one start event is sufficient between state transitions.
+
+## 2026-07-17 allocation attach lesson
+
+- A RUNNING sbatch allocation that is sleeping is not itself an interactive session. The practical attach pattern is to start new `srun --jobid=<job>` steps inside the allocation.
+- Distinguish a fleet allocation job from its follow-on logger: a `BeginTime` PENDING logger can be queued while the real 16-node allocation is already RUNNING.
+- Include `--overlap` in reuse commands for this sleeping-allocation pattern so Slurm can create concurrent steps instead of treating existing batch resources as unavailable.

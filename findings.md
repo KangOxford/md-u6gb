@@ -425,3 +425,10 @@ F084 UTC 2026-07-08T23:38:44Z: settings.json enabledPlugins 有两条 superpower
 - The monitor safety boundary is explicit job IDs plus the `u6gb-16-nodes-18-jluy-` prefix; it never performs a broad name-based cancellation.
 - Live testing disproved the `wait_job` design for PENDING jobs: it returns rc=1 with `Job 5678750 no longer running`; the viable outer monitor uses a 60-second `squeue` interval.
 - The corrected monitor is live on `login40` as PID `48640`, watching only Job `5678750`; it remained alive after a full interval while the job stayed PENDING.
+
+## 2026-07-17 active allocation attach guidance
+
+- Live Slurm check on `login40` shows Job `5678750` is `RUNNING` as `u6gb-16-nodes-18-jluy-001` on 16 nodes with `BatchHost=nid010266`, 64 GPUs allocated, and end time `2026-07-17T17:53:03Z`.
+- Job `5685480` is not the 16-node allocation; it is a 1-GPU daily logger with `Reason=BeginTime`, `EligibleTime=2026-07-18T00:15:00`, and command `daily_agent.sbatch`.
+- The running 16-node payload is `fleet_self_chain.sbatch`: it submits its successor and then sleeps for `86100` seconds. Use the allocation by creating new Slurm steps with `srun --jobid=5678750 --overlap ...`, not by attaching to an existing interactive shell.
+- The parent Notion fleet page `8abfa87e-7c48-4353-aa04-75b17b3500d8` now has an appended `2026-07-17 attach/use notes` section with single-node interactive and all-node command examples.
