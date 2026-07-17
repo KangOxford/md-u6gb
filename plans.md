@@ -388,3 +388,5 @@ P082 UTC 2026-07-09T00:38:11Z: [smaller-dataset] 用户再定两处:抽样单元
 - Draft training recipes with corresponding learning rates: 1e-4 with 4-group unfreezing for vanilla, and 5e-6 with frozen VLM for lora.
 - Note: For vanilla, weight matrix, paired bias, and pos_emb are static parameter heads; soft_prompt and norm weight/bias are context-generated.
 - Present codebase module snippet details directly in the chat interface.
+- Present vanilla formulas matching user's format.
+P083 UTC 2026-07-17T12:16:12Z: 用户将用 srun --jobid=5678750 --overlap 直接在占位 allocation 上跑实验(免排队)。约束:8h 窗口上限,需更长时长的实验须另开 sbatch,不能靠这个占位窗口续命;checkpoint/log 写 $TMPDIR 结束再 rsync。除非用户要求,我不再对该 job 做任何操作。

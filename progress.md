@@ -465,3 +465,5 @@ PG066 UTC 2026-07-09T00:50:00Z: User said 'Follow-up(vanilla)的权重是直接�
 
 - Responded to user's request for the exact code implementation of the `StaticParameterHead` (vanilla) and `LowRankDeltaHead` (lora) parameter generation heads.
 - Provided detailed walkthrough of their initialization, forward pass, and parent class integration.
+- Presented vanilla HyperNetwork equations matching delta-lora's syntax style in the conversation.
+PG067 UTC 2026-07-17T12:16:12Z: 回答用户'如何 attach 并使用 16 节点 fleet'。先更正了初始误判(该 job 非训练,是占位)。验证:srun --overlap 单节点 + 16 节点 fan-out 均通,64 GPU 全空闲。交付 recipe:交互 srun --jobid=5678750 --overlap --nodes=1 --gpus-per-node=4 --pty bash;分布式 srun --jobid=5678750 --overlap --nodes=16 --ntasks-per-node=1 --gpus-per-node=4 <payload>。全程未 scancel 任何 job(用户明确选'忽略停任务,只要 attach 方法')。allocation 剩 ~8h。
