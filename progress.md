@@ -452,6 +452,7 @@ PG066 UTC 2026-07-09T00:50:00Z: User said 'Follow-up(vanilla)的权重是直接�
 - Appended attach/use commands to the Notion parent fleet page `8abfa87e-7c48-4353-aa04-75b17b3500d8`.
 - Updated the workspace `findings.md`, `plans.md`, `learnt_lessons.md`, and `progress.md` records for this round.
 - Created the corrected persistent tmux shell with explicit socket path, verified it is live on `nid010597` as Slurm step `5678750.3`, and appended the corrected attach command to the Notion parent page.
+- After the user reached `login45`, diagnosed `tmux ... attach` returning `no sessions` as a login-node-local tmux limitation; confirmed the user's direct `srun` path created step `5678750.5` on `nid010266` and wrote the correction to Notion.
 
 ## 2026-07-17 dual hypervla pretrain progress
 

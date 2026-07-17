@@ -446,6 +446,7 @@ F089 UTC 2026-07-09T00:38:11Z: [smaller-dataset] 规模换算:pool≈1000 交易
 - The running 16-node payload is `fleet_self_chain.sbatch`: it submits its successor and then sleeps for `86100` seconds. Use the allocation by creating new Slurm steps with `srun --jobid=5678750 --overlap ...`, not by attaching to an existing interactive shell.
 - The parent Notion fleet page `8abfa87e-7c48-4353-aa04-75b17b3500d8` now has an appended `2026-07-17 attach/use notes` section with single-node interactive and all-node command examples.
 - The first default-socket tmux shell did not persist. The corrected persistent shell uses socket `/lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/tmux/u6gb-5678750-shell.sock`, session `u6gb-5678750-shell`, Slurm step `5678750.3`, and node `nid010597`; `hostname` and `nvidia-smi -L` verified 4 visible GH200 GPUs.
+- Follow-up from user on `login45`: tmux sessions are login-node local, so a tmux server created from another login node is not a reliable cross-login attach target even with a shared-filesystem socket path. Direct `srun --jobid=5678750 --overlap --nodes=1 --ntasks=1 --gpus-per-node=4 --pty bash` from `login45` succeeded and created step `5678750.5` on `nid010266`.
 
 ## 2026-07-17 dual hypervla training direction
 

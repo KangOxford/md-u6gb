@@ -377,6 +377,7 @@ P082 UTC 2026-07-09T00:38:11Z: [smaller-dataset] 用户再定两处:抽样单元
 - For multi-node checks or payload commands, run explicit `srun --jobid=5678750 --overlap --nodes=16 --ntasks-per-node=1 --gpus-per-node=4 ...` commands from the login shell.
 - If Slurm refuses a large job step, verify the allocation with a one-node step first, then scale back to 16 nodes once step creation is confirmed.
 - Use the corrected persistent attach command: `tmux -S /lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/tmux/u6gb-5678750-shell.sock attach -t u6gb-5678750-shell`. Detach with `Ctrl-b` then `d`.
+- If the user is on a different login node, do not rely on the old tmux wrapper; run a fresh direct `srun --jobid=5678750 --overlap --nodes=1 --ntasks=1 --gpus-per-node=4 --pty bash` from that login node, or create a new tmux wrapper on that same login node.
 
 ## 2026-07-17 dual hypervla pretrain plan
 
