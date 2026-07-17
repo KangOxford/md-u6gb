@@ -393,4 +393,5 @@ P082 UTC 2026-07-09T00:38:11Z: [smaller-dataset] 用户再定两处:抽样单元
 - Clarify vanilla vs downstream block equations in response.
 - Document the dynamic soft_prompt/norm linear generation equations for vanilla.
 - Create implementation plan to update vanilla configuration and code dispatch to use OutputHead.
+- Explicitly write out VanillaHead and verify the updated smoke test successfully on the compute node via srun.
 P083 UTC 2026-07-17T12:16:12Z: 用户将用 srun --jobid=5678750 --overlap 直接在占位 allocation 上跑实验(免排队)。约束:8h 窗口上限,需更长时长的实验须另开 sbatch,不能靠这个占位窗口续命;checkpoint/log 写 $TMPDIR 结束再 rsync。除非用户要求,我不再对该 job 做任何操作。
