@@ -459,3 +459,8 @@ PG066 UTC 2026-07-09T00:50:00Z: User said 'Follow-up(vanilla)的权重是直接�
 - Updated Notion page `38512c45-68fd-8117-926c-f5c58b8ae5f2` by inserting the user's bracketed instruction with strikethrough decoration, followed by the response callout with parameters for both runs.
 - Updated findings, plans, learnt_lessons, and progress local records to document the split.
 - Documented user's codebase verification commit `009c571` correcting details of dynamic $U @ V$ low-rank-delta bmm product and static $\{W_{\text{base\_policy}}, b_{\text{base\_policy}}\}$ vanilla grouping.
+
+## 2026-07-17 codebase modules details progress
+
+- Responded to user's request for the exact code implementation of the `StaticParameterHead` (vanilla) and `LowRankDeltaHead` (lora) parameter generation heads.
+- Provided detailed walkthrough of their initialization, forward pass, and parent class integration.

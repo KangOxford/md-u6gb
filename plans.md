@@ -386,3 +386,4 @@ P082 UTC 2026-07-09T00:38:11Z: [smaller-dataset] 用户再定两处:抽样单元
 - Perform a 1-node GPU smoke-test inside the active allocation `5678750` for both runs to verify memory and step-time health.
 - Draft training recipes with corresponding learning rates: 1e-4 with 4-group unfreezing for vanilla, and 5e-6 with frozen VLM for lora.
 - Note: For vanilla, weight matrix, paired bias, and pos_emb are static parameter heads; soft_prompt and norm weight/bias are context-generated.
+- Present codebase module snippet details directly in the chat interface.
