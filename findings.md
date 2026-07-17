@@ -445,6 +445,7 @@ F089 UTC 2026-07-09T00:38:11Z: [smaller-dataset] 规模换算:pool≈1000 交易
 - Job `5685480` is not the 16-node allocation; it is a 1-GPU daily logger with `Reason=BeginTime`, `EligibleTime=2026-07-18T00:15:00`, and command `daily_agent.sbatch`.
 - The running 16-node payload is `fleet_self_chain.sbatch`: it submits its successor and then sleeps for `86100` seconds. Use the allocation by creating new Slurm steps with `srun --jobid=5678750 --overlap ...`, not by attaching to an existing interactive shell.
 - The parent Notion fleet page `8abfa87e-7c48-4353-aa04-75b17b3500d8` now has an appended `2026-07-17 attach/use notes` section with single-node interactive and all-node command examples.
+- The first default-socket tmux shell did not persist. The corrected persistent shell uses socket `/lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/tmux/u6gb-5678750-shell.sock`, session `u6gb-5678750-shell`, Slurm step `5678750.3`, and node `nid010597`; `hostname` and `nvidia-smi -L` verified 4 visible GH200 GPUs.
 
 ## 2026-07-17 dual hypervla training direction
 

@@ -451,6 +451,7 @@ PG066 UTC 2026-07-09T00:50:00Z: User said 'Follow-up(vanilla)的权重是直接�
 - Confirmed `fleet_self_chain.sbatch` is a sleep/chain holder, so current use should happen through new `srun --jobid=5678750 --overlap` job steps.
 - Appended attach/use commands to the Notion parent fleet page `8abfa87e-7c48-4353-aa04-75b17b3500d8`.
 - Updated the workspace `findings.md`, `plans.md`, `learnt_lessons.md`, and `progress.md` records for this round.
+- Created the corrected persistent tmux shell with explicit socket path, verified it is live on `nid010597` as Slurm step `5678750.3`, and appended the corrected attach command to the Notion parent page.
 
 ## 2026-07-17 dual hypervla pretrain progress
 

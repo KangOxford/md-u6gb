@@ -376,6 +376,7 @@ P082 UTC 2026-07-09T00:38:11Z: [smaller-dataset] 用户再定两处:抽样单元
 - For a shell, start a new one-node job step inside the allocation with `srun --jobid=5678750 --overlap --nodes=1 --ntasks=1 --gres=gpu:4 --pty bash -l`.
 - For multi-node checks or payload commands, run explicit `srun --jobid=5678750 --overlap --nodes=16 --ntasks-per-node=1 --gpus-per-node=4 ...` commands from the login shell.
 - If Slurm refuses a large job step, verify the allocation with a one-node step first, then scale back to 16 nodes once step creation is confirmed.
+- Use the corrected persistent attach command: `tmux -S /lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/tmux/u6gb-5678750-shell.sock attach -t u6gb-5678750-shell`. Detach with `Ctrl-b` then `d`.
 
 ## 2026-07-17 dual hypervla pretrain plan
 

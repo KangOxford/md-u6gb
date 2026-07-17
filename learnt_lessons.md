@@ -378,6 +378,7 @@ L059 UTC 2026-07-09T00:50:00Z: P0 - when a user says 'this is wrong' about somet
 - A RUNNING sbatch allocation that is sleeping is not itself an interactive session. The practical attach pattern is to start new `srun --jobid=<job>` steps inside the allocation.
 - Distinguish a fleet allocation job from its follow-on logger: a `BeginTime` PENDING logger can be queued while the real 16-node allocation is already RUNNING.
 - Include `--overlap` in reuse commands for this sleeping-allocation pattern so Slurm can create concurrent steps instead of treating existing batch resources as unavailable.
+- For user-facing attach sessions, prefer an explicit tmux socket path under the task directory; the default `/tmp/tmux-<uid>/default` socket may disappear or be unavailable across login-node context changes.
 
 ## 2026-07-17 dual hypervla lesson
 
