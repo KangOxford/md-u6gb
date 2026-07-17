@@ -325,8 +325,29 @@ L086 UTC 2026-07-08T02:00:00Z: 与 Overleaf git 协作时, 若用户同时开着
 
 L087 UTC 2026-07-08T23:38:44Z: 用户强烈反感 superpowers:brainstorming 的 HARD-GATE(必须先产出并批准 design 才能动手)。教训: 当 Notion 页面已给出明确执行指令、仅有轻微参数歧义时, 不要机械走 brainstorming 全套多轮 gate; 用户偏好直接执行, 歧义用 1-2 个 AskUserQuestion 点澄清即可。禁用单个 plugin skill 正道 = enabledPlugins 置 false(整插件); 只删插件内某一个 skill 需重命名其 SKILL.md(在 versioned cache, 插件更新会复原, 属临时手段)。
 
+L088 UTC 2026-07-08T23:46:32Z: "卸载插件"三层含义按需全做: (a) 禁用 enabledPlugins=false 可逆留文件; (b) 物理删除 rm 缓存 + 清登记 + 清 settings, 彻底须重装恢复。删多版本插件注意 cache/<plugin>/ 下可能有多个版本子目录(6.1.0 + 6.1.1), rm 父目录一次清掉。改 JSON 删末尾条目要同时处理前一条尾逗号, 改完必须 python json.load 验证防启动失败。
+
+L089 UTC 2026-07-08T23:57:22Z: [smaller-dataset] 两条教训。(1) Notion 页面即使 0 个字面 [...] 括号,只要是 Notion 来源任务且含执行指令,仍必须把答案/结果落回 Notion 页面(见 memory feedback_notion_answer_must_land_in_notion),不能只在 chat 里回。(2) 用户 spec 出现内部数值矛盾(train 大小"2%" vs "一个季度")时,按第一性原理应主动指出并询问,不能静默挑一个——采样规模是后续全部数据代码的前提,猜错=全部返工。
+L055 UTC 2026-07-09T00:01:59Z: P0 - when a user hands a NEW Notion page that duplicates an OLD page's content, do NOT assume the carried-over answers are still authoritative. Check for a newer human-authored section (here: '蓝色可见版'/'最终决定') that may CONTRADICT earlier AI-written conclusions on the same page. Same-day timestamps can still have a real ordering; when two 'final' decisions conflict, surface the conflict explicitly (with a reconciliation callout) rather than silently picking one or averaging them.
+L056 UTC 2026-07-09T00:04:09Z: STANDING RULE from user: never write bare 'base' when discussing HyperXVLA weight init - always say base_policy (self.base/self.param, live trainable hypernet param) or base_model (args.xvla_model, real pretrained XVLA checkpoint loaded only under --seed_hyper_from_xvla_transformer). Applies to all future chat/Notion/code-comment writing on this codebase. Also watch for the false-friend base_model_prefix HF attribute (modeling_hyper_xvla.py:78), unrelated.
+
+L090 UTC 2026-07-09T00:07:21Z: [smaller-dataset] 教训:用户给的路径可能错标,落地前必须验证。此次 "lob_pipeline_squashfs" 实为打包的 conda 环境(unsquashfs -s → no valid superblock),非 LOB 数据;真实数据靠 grep 训练/eval 脚本里的 SQUASHFS_DIR 才定位到。规则:拿到"数据路径"先确认它 resolve 到真实数据(读 index.json / unsquashfs -s 验证 superblock),再在其上做设计,避免整套方案建在错误前提上。
+L057 UTC 2026-07-09T00:24:04Z: When a user asks 'why do X and Y differ', check whether the two plans differ on MULTIPLE axes simultaneously - if so, surface that as a methodology risk (echoes the exact 5285200 too-many-variables failure mode this whole project is trying to avoid), don't just explain the individual rationale for each and move on.
+L058 UTC 2026-07-09T00:25:14Z: When a user's follow-up message reads like a correction ('我记得wd设置为0'), check whether they're right BEFORE explaining further - here WD genuinely was 0 in both table cells, the apparent 'difference' was an artifact of bundling LR+WD into one table row. Validate/confirm their memory explicitly rather than just answering the surface question.
+
+L091 UTC 2026-07-09T00:27:39Z: [smaller-dataset] 教训:中文无标点句 "这个 train 数据集 2% 左右 做 validation" 有两种解读(train 占总量 2% vs val 占 train 2%),用户实为后者。用"哪种读法自洽"(val-of-train 让 train>收敛点)先形成推荐 + 主动问,而非静默猜,命中正确解读。
+
+L092 UTC 2026-07-09T00:38:11Z: [smaller-dataset] 教训:把小比例(2%)作用在本就不大的集合(一个季度)上,绝对结果可能退化(val 塌到 ~1–2 天)。凡"比例×小集合"务必回算绝对规模,识别退化 case 并向用户标注(可上调比例或对该子集改用更细抽样单元),而非闷头按比例执行产出一个几乎单一日期的 val。
+L059 UTC 2026-07-09T00:50:00Z: P0 - when a user says 'this is wrong' about something confirmed across MULTIPLE prior rounds (formula they wrote themselves + explicit '这两个就是我想要用的' approval + original design doc wording), do NOT immediately rebuild. Surface the exact prior evidence back to them and ask for explicit reconciliation before touching code - this is the 2nd time in this HyperXVLA thread a snap correction turned out to need disambiguation rather than blind action (1st was the delta-lora vs vanilla run-1 direction conflict). Also: if AskUserQuestion errors (permission stream closed), fall back to a direct plain-text question immediately rather than silently retrying or guessing.
+
 ## 2026-07-16 Isambard capacity lessons
 
+- Distinguish physical nodes, GPUs, NHR, and GPU hours before sizing a fleet: one Isambard-AI node is four GPUs, so one full-node hour costs four GPU hours.
+- A dashboard's start-of-month balance is not the same as currently usable balance. Reconcile allocation minus used credits and prefer the conservative value when fields differ.
+- Always round a continuous concurrency estimate down to full nodes and retain budget for shared-account use, failed reruns, and an ambiguous award-end timestamp.
+- A submitted or sleeping job is not evidence that an experiment is running; availability claims must count RUNNING workers with real payloads.
+- For 16 independent workers, the Slurm array range is `0-15`. Keep the payload explicit in a short command surface so a capacity decision cannot silently become 16 idle allocations.
+- When the user supplies an exact neutral job name, use it verbatim across submission, logging, and monitoring instead of inventing another label.
 
 ## 2026-07-16 daily evidence lessons
 
@@ -341,13 +362,6 @@ L087 UTC 2026-07-08T23:38:44Z: 用户强烈反感 superpowers:brainstorming 的 
 
 - `sbatch` acceptance proves that the resource request is syntactically and administratively valid, not that resources are allocated; require RUNNING plus `NodeList`/`AllocTRES` evidence.
 - Follow the user's latest scope correction directly: this request holds a 16-node allocation and does not launch training.
-
-- Distinguish physical nodes, GPUs, NHR, and GPU hours before sizing a fleet: one Isambard-AI node is four GPUs, so one full-node hour costs four GPU hours.
-- A dashboard's start-of-month balance is not the same as currently usable balance. Reconcile allocation minus used credits and prefer the conservative value when fields differ.
-- Always round a continuous concurrency estimate down to full nodes and retain budget for shared-account use, failed reruns, and an ambiguous award-end timestamp.
-- A submitted or sleeping job is not evidence that an experiment is running; availability claims must count RUNNING workers with real payloads.
-- For 16 independent workers, the Slurm array range is `0-15`. Keep the payload explicit in a short command surface so a capacity decision cannot silently become 16 idle allocations.
-- When the user supplies an exact neutral job name, use it verbatim across submission, logging, and monitoring instead of inventing another label.
 
 ## 2026-07-16 composition lesson
 
@@ -364,3 +378,8 @@ L087 UTC 2026-07-08T23:38:44Z: 用户强烈反感 superpowers:brainstorming 的 
 - A RUNNING sbatch allocation that is sleeping is not itself an interactive session. The practical attach pattern is to start new `srun --jobid=<job>` steps inside the allocation.
 - Distinguish a fleet allocation job from its follow-on logger: a `BeginTime` PENDING logger can be queued while the real 16-node allocation is already RUNNING.
 - Include `--overlap` in reuse commands for this sleeping-allocation pattern so Slurm can create concurrent steps instead of treating existing batch resources as unavailable.
+
+## 2026-07-17 dual hypervla lesson
+
+- When the user clarifies a training split (vanilla vs lora), maintain distinct configuration flags (`weight_head_type="vanilla"` vs `"low_rank_delta"`) and document their different optimizer grouping behaviors (StaticParameterHead splits parameters into static vs generator groups, whereas LowRankDeltaHead uses a single optimizer group).
+- If a bracketed user instruction in chat does not exist on the target Notion page, insert it with strikethrough decoration in its correct context on the page, and then place the callout response directly below it, to preserve page integrity and formatting rules.

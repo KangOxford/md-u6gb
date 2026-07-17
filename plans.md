@@ -324,6 +324,19 @@ P076 UTC 2026-07-08T01:30:00Z: 计划已执行——三个"需要做新实验"�
 
 P077 UTC 2026-07-08T23:38:44Z: 用户中断 Notion smaller-dataset (LOBS5) 任务的 superpowers:brainstorming 流程, 升级指令为"卸载整个 superpowers 插件 + 逐一 review 全部 skills 决定还删哪些"。本轮: (1) settings.json 两条 superpowers 条目 (行163 superpowers@superpowers-marketplace, 行169 superpowers@claude-plugins-official) 均置 false; (2) 按来源分类列出全部 skills 交用户 review; (3) 等用户点名后处理其余。Notion 数据集任务暂停待恢复。
 
+P078 UTC 2026-07-08T23:46:32Z: 用户对 superpowers 追加"直接删掉"(物理删除, 非仅 false)。已定位 superpowers 仅一份真实缓存在 cache/claude-plugins-official/superpowers/ (含 6.1.0 + 6.1.1 两版); settings 里 superpowers@superpowers-marketplace 为孤儿(无缓存无登记)。三步执行: rm 缓存 -> 清 settings enabledPlugins 两键 -> 清 installed_plugins.json 一块。
+
+P079 UTC 2026-07-08T23:57:22Z: [smaller-dataset Notion task] 目标:为 exp_R1_Mamba3 构建一个"小的固定训练子集"。总池=2022-2025 SP500(月度 SquashFS shards,位于 /projects/public/s5e/quant_team/lob_pipeline_squashfs)。采样方案倾向 option B(跨 4 年窗口池随机打乱抽样,让子集覆盖多 regime),而非 option A(连续 3 个月)。需产出:train 子集 + 一个"分开且无重叠"的 validation 子集。当前处于 brainstorming/探索阶段:已派 Explore agent 摸清 shard 布局/dataloader/split 机制/如何持久化子集。待用户澄清关键歧义后再定 spec→plan→执行。
+P051 UTC 2026-07-09T00:01:59Z: SUPERSEDES P049/P050. Run-1 launch target (pending user confirm of orange reconciliation callout): weight_head_type=low_rank_delta rank=4, h1024/d6/16h share_transformer_heads=false, NO --train_vlm (VLM stays frozen), lr=5e-6, wd=0.0, freeze_steps=1000, warmup_steps=1000, iters=200000, eff.batch 1024 (world16 x batch4 x accum16), use_cosine_decay, min_lr_ratio matches history. This needs NO new code (delta-lora path was already correct pre-this-session's changes). NEXT: user confirms direction -> init_hyper_xvla.py (no head_hidden_dim, weight_head_type=low_rank_delta) -> 30min GPU smoke -> 200k submission (user confirm, >12h rule).
+
+P080 UTC 2026-07-09T00:07:21Z: [smaller-dataset] 探索后更新计划。真实数据确认在 /lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs/shard_YYYY-MM.squashfs(50 个月度 shard,2022-01..2026-02,488 ticker)。代码库用 index.json(manifest)+ env 元组来"定义一个数据集",glob 已禁用。拟定路线:(1) 先与用户敲定 train 规模("2%"歧义)、抽样单元、保存形式;(2) option B 操作化 = 从 48 个月池按 (ticker,交易日) 随机抽、固定 seed;(3) 主产物 = manifest(train + 分开无重叠的 val,复用现成 val_split 全天 holdout 机制),必要时再物理落地。阻碍:shard-build 工具在无权限 group 路径(brics.s5e vs 当前 aramis.u6gb)。
+P052 UTC 2026-07-09T00:09:21Z: New Run-1/Follow-up comparison table posted to Notion 39712c45. Still waiting on user to confirm: (a) reconciliation direction (blue governs run-1, red demoted - asked last round), (b) the 2 flagged schedule assumptions (iters=200000, min_lr_ratio=0.2) for run-1. Once confirmed: init v2 model (near-exact 4853407 reproduction, no new code needed) + 30min GPU smoke -> 200k submission needs separate user confirm (>12h rule).
+P053 UTC 2026-07-09T00:24:04Z: Pending user decision: split Follow-up column into 2 clean independent ablations (isolate architecture-change from VLM-unfreeze-change) vs keep as one bundled follow-up. Still also pending: reconciliation direction confirm + schedule-param assumptions confirm (P052).
+
+P081 UTC 2026-07-09T00:27:39Z: [smaller-dataset] 规模决策已由用户敲定:train = 一个季度(≈48 月跨年池的 6.25%,随机抽样),validation = train 的 2%(分开、无重叠)。接下来只剩两处需确认(抽样单元 / 保存形式),之后进 writing-plans → 实现。
+
+P082 UTC 2026-07-09T00:38:11Z: [smaller-dataset] 用户再定两处:抽样单元=整交易日随机(每个被抽中日取全 488 ticker),跨 48 月池;保存形式=子集 index.json manifest(train/val + 配方)。设计定稿。构建路径:抽 48 个 shard 的 /index.json(unsquashfs,不挂 FUSE)→ 按交易日聚合窗口数 → 固定 seed 打乱交易日 → 贪心累加到池的 6.25%(=一个季度,≈63 个交易日)→ 从中整天 holdout 2% 作 val(不重叠)→ 写 train_index.json + val_index.json + manifest.json。⚠️ val=季度的 2% ⇒ 仅约 1–2 个交易日(~126k 窗口,统计量足但日期多样性低),默认从不同年份各取 1 天;已向用户标注可上调。
+
 ## 2026-07-16 Isambard experiment reserve plan
 
 - Maintain 16 independent full-node experiment workers, tolerate a seventeenth worker for handoff redundancy, and reconcile every five minutes without a login-node daemon.
@@ -346,7 +359,6 @@ P077 UTC 2026-07-08T23:38:44Z: 用户中断 Notion smaller-dataset (LOBS5) 任�
 - Keep the single Job `5678750` request in queue under `u6gb-16-nodes-18-jluy-001`; do not submit a duplicate while it is PENDING or RUNNING.
 - Mark success only when Slurm reports RUNNING with a populated 16-node `NodeList`; PENDING time contributes zero coverage.
 
-
 ## 2026-07-16 monitor composition plan
 
 - Preserve one active 16-node allocation as the steady-state target.
@@ -364,3 +376,11 @@ P077 UTC 2026-07-08T23:38:44Z: 用户中断 Notion smaller-dataset (LOBS5) 任�
 - For a shell, start a new one-node job step inside the allocation with `srun --jobid=5678750 --overlap --nodes=1 --ntasks=1 --gres=gpu:4 --pty bash -l`.
 - For multi-node checks or payload commands, run explicit `srun --jobid=5678750 --overlap --nodes=16 --ntasks-per-node=1 --gpus-per-node=4 ...` commands from the login shell.
 - If Slurm refuses a large job step, verify the allocation with a one-node step first, then scale back to 16 nodes once step creation is confirmed.
+
+## 2026-07-17 dual hypervla pretrain plan
+
+- Prepare two HyperXVLA configurations: (1) vanilla (bias-only HyperNet) and (2) lora (delta-lora reproduction).
+- Initialize vanilla model with `--weight_head_type vanilla --head_hidden_dim 50` and target dimensions matching the 10M HyperNet specification.
+- Initialize lora model with `--weight_head_type low_rank_delta --weight_head_rank 4` matching 4853407 (673M).
+- Perform a 1-node GPU smoke-test inside the active allocation `5678750` for both runs to verify memory and step-time health.
+- Draft training recipes with corresponding learning rates: 1e-4 with 4-group unfreezing for vanilla, and 5e-6 with frozen VLM for lora.

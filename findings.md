@@ -341,23 +341,6 @@ F075 UTC 2026-07-06T20:44:50Z: 确认存在并行session——`/proc`显示两�
 
 F070 UTC 2026-07-06T20:25:07Z: 现场实测(job 5525176)证实之前的诊断有误:`—cpus=72`(em dash)并不会让 srun 立即报 `unrecognized option` 拒绝请求。命令 `srun --account=brics.u6gb --partition=workq --nodes=1 --gpus=1 —cpus=72 --mem=120G --time=00:01:00 hostname` 实际被当成合法请求提交,拿到真实 job ID 5525176 并进入 PD(`queued and waiting for resources`),与 SchedMD 官方 srun.html 文档描述的机制一致:"第一个不以 `-` 开头的 token 被当成待执行命令,之后所有 token 原样传给该命令,不再被 srun 解析为自己的选项"(文档例子 `srun -N2 uptime -pdebug`→`-pdebug` 变成传给 uptime 的参数,而非 srun 自己的选项)。因集群持续排队(与更早的 job 5524891 同一模式),20 秒外层 `timeout` 触发强制终止,`srun: Job allocation 5525176 has been revoked` + `squeue` 确认无残留。未继续等待观察最终"尝试执行 —cpus=72 本身会报什么"这一步,判断为不值得为此继续占用共享集群排队位置。
 
-
-## 2026-07-16 u6gb-16-nodes daily evidence
-
-- Verified `train_full_autoreg.batch` as the real launcher: a 16-node override yields 64 H100 GPUs with one `srun` task per node and four GPUs per task.
-- The coverage name set must include both `u6gb-16-nodes` and `u6gb-16-nodes-resumeN`; exact base-name filtering would omit auto-resumed runtime.
-- Daily logger job `5678626` is scheduled for `2026-07-17T00:15:00Z`.
-
-## 2026-07-16 first-principles reporting priority
-
-- The primary daily result is whether 16 nodes were materially RUNNING and where meaningful gaps occurred; commands, hashes, and second-level boundaries are supporting evidence.
-
-## 2026-07-16 live 16-node allocation request
-
-- Job `5678750` was accepted and renamed in place to `u6gb-16-nodes-18-jluy-001`.
-- Live Slurm evidence is `PENDING (Priority)`, `NumNodes=16-16`, `ReqTRES gres/gpu=64`, and no `NodeList`; the request is valid but zero nodes are allocated yet.
-- Official Isambard guidance confirms that full-node jobs combine `--nodes` with four GPUs per node and that maximum walltime is 24 hours.
-
 F071 UTC 2026-07-06T20:49:34Z: 用户提供的 Isambard 官方文档(docs.isambard.ac.uk/user-documentation/guides/slurm/ 与 .../slurm-advanced/)确认三件事,均已写入 Notion 最终答案:(1) 每个节点是 4 个独立 superchip(1 Grace CPU 72 核/115GB 可用内存 + 1 H100 96GB,NVLink-C2C 绑定),不是共享大池;官方示例命令是 `srun --nodes=1 --gpus=1 --time=00:15:00 --pty /bin/bash --login`,不带 --cpus-per-task/--mem,文档原话"requesting one GPU allocates one complete GH200 Superchip"——推翻了本会话早前基于 LOBS5 项目记忆给出的"改用 --gres=gpu:1"建议,该记忆实际是另一个项目里针对多卡 sbatch 训练场景的经验,不能跨场景套用。(2) --exclusive 小节明确:不加 --exclusive 时,--gpus=1 只占 1 个 superchip,同一物理节点其余 3 个 superchip 可被其他用户作业使用,不计入整节点;只有显式加 --exclusive 才会把整节点(4 个 superchip)都分配并计费给你,哪怕只用 1 个 GPU——直接回应了用户"会不会因为写了 cpus/mem 就被算成整节点"的顾虑,原命令的 72 核/120G 也没有超过单 superchip 上限,不会触发多 superchip 拼凑。(3) 文档另外提供专用的 interactive reservation 池(`srun --gpus=1 --reservation=interactive --pty bash -i`),不与普通 workq 队列竞争,默认 30 分钟/最长 8 小时/1.5 倍节点小时计费,可能比我们反复测试卡住的普通队列更适合这个交互调试场景。
 
 F072 UTC 2026-07-06T20:58:46Z: 用户指出 --account=brics.u6gb / --partition=workq 两个参数也是多余的。现场核实(sacctmgr show user kangli.u6gb withassoc):Def Acct = brics.u6gb,即该账号本身默认账户就是它;sinfo 里 workq* 的星号是 SLURM 标记默认分区的约定写法。两者都是默认值,与官方文档全部示例命令均不带这两个参数的事实一致。真正最简最终命令确认为:`srun --nodes=1 --gpus=1 --time=23:59:59 --pty /bin/bash --login`。
@@ -405,6 +388,20 @@ F083 UTC 2026-07-08T01:30:00Z: 三个新实验实跑结果 (Harmonized CHARLS D,
 
 F084 UTC 2026-07-08T23:38:44Z: settings.json enabledPlugins 有两条 superpowers (均 true, 已改 false)。skills 来源分类: 插件类(可 enabledPlugins 整插件开关)= superpowers 14 + codex@openai-codex 5 + claude-hud@claude-hud 2 + frontend-design@claude-plugins-official 1; 用户自建(改 .claude/skills 下 SKILL.md, 单个粒度) 约22个; Claude Code 内置(不可卸) 约15个。注意 claude-hud 同时是 statusLine 渲染器, 禁用会影响状态栏。
 
+F084 UTC 2026-07-08T02:30:00Z: 稳健性套件实跑 (robustness.py, W1-W4, 12设定)。全部12项养老金→Q系数为正且p<0.05: 基线0.002823, 熵值0.001826, 剔除收入维度0.001117, 剔除收入+住房0.001226, 是否领取养老金(0/1)0.021091, 99%缩尾0.002823, 不含转移控制0.002837, 删轮次0.002711-0.003107(4项), 独居子样本0.002823。剔除收入维度仍0.0011***→排除"养老金→收入→Q机械关系"。删轮次区间极紧→非单轮驱动。基线0.002823 vs 逐项重建0.002795差异源于CES-D构造(协调预算cesd10 vs 逐项重建), 均≈0.0028。另: 应用户要求给论文补回Notion原稿的机制模型/异质性模型两个回归公式(此前重写只留了基准公式), 并全文"波/波次"→"轮/轮次"(用户指"波"非学术词)。
+
+F085 UTC 2026-07-08T23:46:32Z: 插件"删干净"需清三处状态源: (1) 物理缓存 cache/<marketplace>/<plugin>/<version>/ 是 skill 实际加载处; (2) settings.json enabledPlugins 控制启用; (3) plugins/installed_plugins.json 安装登记表。注: installed_plugins 里 installPath 混用 /home/u6gb/kangli.u6gb/.claude 与 /projects/public/u6gb/.claude 两前缀(同一 config dir)。另: pua@pua-skills 已装但不在 enabledPlugins(休眠, 不在可用 skill 列表)。
+
+F086 UTC 2026-07-08T23:57:22Z: [smaller-dataset Notion 页] 读完整页(无字面 [...] 括号,但含明确执行指令)。要点:(1) 模型在 1 个 epoch(2022-2025 SP500)约 5% 处收敛 ≈ 约 2 个月数据量;(2) 用户想换成固定小数据集,让每次实验完整过完、token 数固定;(3) 两方案:A=连续 3 个月,B=全年窗口池随机打乱抽 1/4(一个季度);用户偏好 B(理由:逐年 regime 差异大,连续月锁死单一行情;季度大小留余量);(4) 执行指令:train 子集约总量 2%,外加一个"分开、无重叠"的 validation 子集。⚠️ 内部数值矛盾:执行段的"2%"(≈1 个月)与讨论段的"一个季度"(≈3 个月 / 全 4 年的 ~6%)不一致,需用户澄清。数据物理位置=/projects/public/s5e/quant_team/lob_pipeline_squashfs(月度 SquashFS shards,SQUASHFS_MULTI_MODE=1 / SQUASHFS_MONTHS 月份列表 / FORBID_RAW_NPYZST=1)。
+F054 UTC 2026-07-09T00:01:59Z: Confirmed via grep: assert weight_head_type in ("direct","low_rank_delta","vanilla") - literally 3 legal values, 2 live strategies (direct = legacy/unused going forward). User's verbal question 'is it mainly 2 types now' answered TRUE for the 2 active strategies. Separately, user's Notion page reveals the REAL decision for run-1 differs from what I'd been tracking: reproduce 4853407 almost exactly (low_rank_delta rank4, h1024/d6/16h, VLM frozen whole run, lr=5e-6/wd=0.0/freeze_steps=1000 adapter-only), NOT the bias_only/vanilla architecture I'd built code for. Vanilla code is still correct/tested but is now a FOLLOW-UP ablation, not run-1.
+
+F087 UTC 2026-07-09T00:07:21Z: [smaller-dataset] Explore agent 验证结论。🔴 更正:用户给的 /projects/public/s5e/quant_team/lob_pipeline_squashfs 不是数据,是被拆包的 conda/pip 环境(unsquashfs -s 报 "no valid superblock")。真实数据 = /lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs/shard_YYYY-MM.squashfs(50 shard=48 月 train + 2026 Jan/Feb test;每 shard 488 ticker、~164GB 解压)。样本 = 500 条消息的窗口 = 13000 token(26tok 模式,非重叠平铺);~27B token/月,全 train ~1.3T token(量级)。val 机制已存在:val_split 比例 → 按 ticker 随机抽整天、seed 固定、与 train 天不重叠(lobster_dataloader.py:1497-1503)。子集持久化惯用法 = env 元组(SQUASHFS_MONTHS/TICKERS/TRAIN_DATE_RANGE/VAL_SPLIT/JAX_SEED)+ index.json;无 per-window manifest 格式。收敛点参照:5% 总量 ≈ 2 个月;故"一个季度"(6.25%)>收敛,"2%"(~1 月)<收敛。阻碍:build 工具组权限不可达。
+F055 UTC 2026-07-09T00:09:21Z: Notion API constraint confirmed empirically: table.table_width is immutable after block creation (API-update-a-block on a table block with {table:{table_width:N}} -> 400 validation_error 'should be not present'). Adding columns to an existing table requires creating a brand new table block; there is no in-place column-append path via the public API.
+
+F088 UTC 2026-07-09T00:27:39Z: [smaller-dataset] 用户澄清:"2%" 指 validation 占 train(一个季度)的比例,不是 train 占总量。解决 F086 矛盾。量级:train≈6.25%×1.3T≈~81B token(~6.3M 窗口);val≈2%×81B≈~1.6B token(~126k 窗口)。self-consistent 读法(val-of-train)正确,因它让 train(6.25%)>收敛点(5%)。
+
+F089 UTC 2026-07-09T00:38:11Z: [smaller-dataset] 规模换算:pool≈1000 交易日/~100M 窗口/~1.3T token;每交易日(全 488 ticker)≈100k 窗口。train=6.25%≈63 交易日/~6.3M 窗口;val=2%×train≈1.25 交易日→取整 ~2 天/~126k 窗口。窗口数/文件=(rows−max_offset)//msg_seq_len(msg_seq_len=500,26tok→13000 token/样本),实现时以 lobster_dataloader.py 精确公式为准。日期来自文件名 <TICKER>_<YYYY-MM-DD>_...,index.json 的 key=相对路径,可解析日期并按日聚合窗口。
+
 ## 2026-07-16 Isambard experiment reserve capacity
 
 - Live checks on `login43`: Slurm 24.11.5, `scrontab` is disabled, `workq_qos` has a 24-hour maximum walltime, and `squeue --me` was empty.
@@ -414,6 +411,22 @@ F084 UTC 2026-07-08T23:38:44Z: settings.json enabledPlugins 有两条 superpower
 - No reserve jobs were submitted because no real experiment payload was supplied; idle `sleep` jobs do not satisfy the revised requirement.
 - Final fleet decision is `16+1`: 16 running full-node workers plus one handoff spare. Through 2026-09-10, 16 nodes cost 87,552 GPUHr and leave 47,321.73 GPUHr; 17 nodes cost 93,024 GPUHr and leave 41,849.73 GPUHr.
 - Notion now contains a concise `sbatch --array=0-15` command callout. It intentionally requires the real `EXPERIMENT_CMD` before submission.
+
+## 2026-07-16 u6gb-16-nodes daily evidence
+
+- Verified `train_full_autoreg.batch` as the real launcher: a 16-node override yields 64 H100 GPUs with one `srun` task per node and four GPUs per task.
+- The coverage name set must include both `u6gb-16-nodes` and `u6gb-16-nodes-resumeN`; exact base-name filtering would omit auto-resumed runtime.
+- Daily logger job `5678626` is scheduled for `2026-07-17T00:15:00Z`.
+
+## 2026-07-16 first-principles reporting priority
+
+- The primary daily result is whether 16 nodes were materially RUNNING and where meaningful gaps occurred; commands, hashes, and second-level boundaries are supporting evidence.
+
+## 2026-07-16 live 16-node allocation request
+
+- Job `5678750` was accepted and renamed in place to `u6gb-16-nodes-18-jluy-001`.
+- Live Slurm evidence is `PENDING (Priority)`, `NumNodes=16-16`, `ReqTRES gres/gpu=64`, and no `NodeList`; the request is valid but zero nodes are allocated yet.
+- Official Isambard guidance confirms that full-node jobs combine `--nodes` with four GPUs per node and that maximum walltime is 24 hours.
 
 ## 2026-07-16 queue diagnosis and composition boundary
 
@@ -432,3 +445,10 @@ F084 UTC 2026-07-08T23:38:44Z: settings.json enabledPlugins 有两条 superpower
 - Job `5685480` is not the 16-node allocation; it is a 1-GPU daily logger with `Reason=BeginTime`, `EligibleTime=2026-07-18T00:15:00`, and command `daily_agent.sbatch`.
 - The running 16-node payload is `fleet_self_chain.sbatch`: it submits its successor and then sleeps for `86100` seconds. Use the allocation by creating new Slurm steps with `srun --jobid=5678750 --overlap ...`, not by attaching to an existing interactive shell.
 - The parent Notion fleet page `8abfa87e-7c48-4353-aa04-75b17b3500d8` now has an appended `2026-07-17 attach/use notes` section with single-node interactive and all-node command examples.
+
+## 2026-07-17 dual hypervla training direction
+
+- User confirmed training two versions of HyperXVLA: (1) vanilla (bias-only HyperNet) and (2) lora (delta-lora).
+- Vanilla mode (weight_head_type="vanilla") generates only soft prompt and norm weight/bias, while weights/biases are directly learned (Z=50 head bottleneck, ~9.7M HyperNet).
+- Lora mode (weight_head_type="low_rank_delta") keeps the 4853407 architecture (rank=4 delta-lora matrix heads, h1024/d6/16h unshared).
+- Updated Notion page `38512c45-68fd-8117-926c-f5c58b8ae5f2` by striking through the bracketed direction line and inserting a callout detailing the parameters for both runs.
