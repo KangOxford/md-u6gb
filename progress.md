@@ -1,6 +1,13 @@
 # Progress
 
-## 2026-07-05 HyperXVLA table-answer blue formatting fix
+## 2026-07-20 Code analysis and comparison of cross_entropy_loss in LOBS5 vs s5e_mamba3
+
+- Located `cross_entropy_loss` implementation in both `/projects/public/u6gb/FLAIROx/LOBS5/lob/train_helpers.py` (L600) and `/projects/public/u6gb/s5e_mamba3/lob/train_helpers.py` (L733).
+- Detailed the mathematical logic (`log_softmax` + NLL) and why `-np.sum(logits[label])` calculates negative log-likelihood.
+- Explained performance issues (XLA lowering to `DynamicSlice` ops per token under `jnp.vectorize`).
+- Constructed a comparison table summarizing configuration, code location, tokenizer support, and hardware implications between LOBS5 and s5e_mamba3.
+- Maintained local markdown records (`findings.md`, `plans.md`, `learnt_lessons.md`, `progress.md`).
+
 
 - Fetched the user-provided reference anchor and confirmed it is a visible Notion image block.
 - Downloaded the reference image attachment and saved a manifest under `notion_fetches/hyperxvla_blue_reference_20260705T1405Z/`.
@@ -474,3 +481,25 @@ PG066 UTC 2026-07-09T00:50:00Z: User said 'Follow-up(vanilla)的权重是直接�
 PG067 UTC 2026-07-17T12:16:12Z: 回答用户'如何 attach 并使用 16 节点 fleet'。先更正了初始误判(该 job 非训练,是占位)。验证:srun --overlap 单节点 + 16 节点 fan-out 均通,64 GPU 全空闲。交付 recipe:交互 srun --jobid=5678750 --overlap --nodes=1 --gpus-per-node=4 --pty bash;分布式 srun --jobid=5678750 --overlap --nodes=16 --ntasks-per-node=1 --gpus-per-node=4 <payload>。全程未 scancel 任何 job(用户明确选'忽略停任务,只要 attach 方法')。allocation 剩 ~8h。
 PG068 UTC 2026-07-17T12:21:52Z: 用户确认 mode A 从 login attach 成功(prompt 到 nid010266);mode B 因嵌套在 mode A 内失败,已给出'从 login 发起'的修复。用户要求把 attach 方法记入 Notion,但 fleet 页树未共享给 cc(两页均 404),记录阻塞;已备好 runbook 内容,待用户共享页给 cc 后一键 append,或用户手动粘贴。allocation 剩 ~5:41。
 PG069 UTC 2026-07-17T12:35:07Z: 用户共享 fleet 页给 cc 后,Notion 主页(8abfa87e)可访问。发现该页已有大量 attach 文档(追问4 + 底部 2026-07-17 修正日志,含 tmux login-node-local 说明与 login45 srun --overlap 验证)。为避免重复,仅追加本会话新发现的 nested-srun 陷阱(6 个 block:标题+2 段+2 代码块,含 WRONG/RIGHT 对照),已成功写入页尾。附带效果:cc 共享同时修复了 daily logger 的 notion_status=failed(下次 UTC 00:15 运行应恢复)。
+PG070 UTC 2026-07-17T12:52:17Z: 交付 mode B 16 节点验证阶梯;用户实测——Step1(16 hostname)通过,Step3(bash node_wrapper.sh)机制成功但应用层因缺 batch env 崩溃。读 train_full_autoreg.batch 定位全部缺失 env。待用户选择:复用模板/跑自有实验/复现 R1_Mamba3。
+PG071 UTC 2026-07-17T16:39:00Z: 已提交 1 节点 24h 占位 5694130(PENDING Priority);启动后台监控(轮询至 RUNNING 报节点名供 attach);派 Explore subagent 侦查 SP500 2022-2025 数据布局 + exp_R1_Mamba3 dataloader(SquashFS 分片/window 定义/token 计数/子集机制/train-val 切分)。待 recon 返回后定 train 季度体量的具体 window 数、不重叠 val 切分粒度、落盘格式与位置,再向用户确认并构建。
+PG072 UTC 2026-07-17T16:47:00Z: 用户澄清输出=SquashFS。检查打包工具可用性 + 更新任务规格为 SquashFS 输出。仍在等 Explore recon(分片内部结构)与节点监控(5694130 转 RUNNING)。
+PG073 UTC 2026-07-17T16:55:00Z: recon 数字算清,给出完整两阶段构建方案(采样+mksquashfs,均在 5694130)。物理写 ~430GB 前请用户确认"一个季度"口径(6.25%季度体量荐,vs 字面25%,vs 贴合收敛4.2%)。其余决策(ticker-day粒度/488ticker/train-val分目录/固定seed/落 /projects/public/u6gb)已定。
+PG010 UTC 2026-07-17T17:07:48Z: 完成代码勘查(hypernetwork.py make_head 分派/VanillaHead/LowRankDeltaHead、train_hyper_xvla.py build_optimizer 4组逻辑、init argparse、meta路径)。squeue 去重:仅 allocation 5678750 + pending log job,无 hyper 训练在跑。下一步:写 train_hyper_recipe.sh + commit + 提交 lora/vanilla 两个 smoke。
+PG074 UTC 2026-07-17T17:11:44Z: 完成 sigma-0 自训三版本任务的全链路勘查(训练入口/checkpoint 逻辑/数据格式/单GPU支持/推理对接),确定方案与配置。下一步:建 selftrain_b43 数据目录+index.json,写三个 config yaml,squeue 去重后错峰提交 1gpu→1node→2nodes,各 job 完成后 check_checkpoint.py+GPU 推理验证,最后写回 Notion。
+PG011 UTC 2026-07-17T17:12:22Z: allocation 5678750 已结束(不在队列);走 fresh sbatch 到 workq=正确的'直接排队'。squeue 去重通过(无 hyper 训练在跑)。两个 smoke PENDING。启动后台监控 5694543/5694544 直至 terminal, 检 sacct 退出码 + 扫 .out/.err 关键行(init/step/ckpt/error)。
+PG075 UTC 2026-07-17T17:04:00Z: 脚本应用 2025-only 更正;写好构建 sbatch(自选节点本地 WORK≥200GB,可续跑,phase all)。下一步交短构建作业。task#3(定规格)完成,task#4(构建)in_progress。
+PG076 UTC 2026-07-17T17:17:00Z: 监控轮询构建至 RUNNING 后 tail 日志(PHASE A SUMMARY + 逐月 + exit)。存 memory feedback-timestamp-data-never-overwrite。5694130(24h 占位)仍单独 PENDING 供 attach。
+PG012 UTC 2026-07-17T17:27:30Z: lora 全量 200k 已提交 job 5694855 (4节点/eff1024, 时间戳输出目录)。vanilla 全量 HOLD 待用户定架构修复方向。启动 lora 启动健康监控。
+PG013 UTC 2026-07-17T17:36:02Z: vanilla 3M smoke 已提交 job 5694940 (HIDDEN_SIZE=192, INIT_DIR=hyper_init_vanilla_h192)。等 smoke 验证无OOM+分组+存盘, pass 则自动发 vanilla 3M 全量。
+PG014 UTC 2026-07-17T17:59:22Z: 集群饱和。workq 296节点mixed(他人占用)/0空闲, interactive 也仅2空闲。my jobs 5694940(van3m smoke,1N)+5694855(lora full,4N) 均 PENDING reason=Priority, START_TIME=N/A。队列顶部全是 u6gb 自家 job 但都在等他人释放节点。不换分区(都满,换=丢队位)。监控 b1lolrmba(van smoke 起跑即唤醒)+bx9ezvnrb(lora startup)。节点释放自动: van smoke pass->发 van 3M full; lora 起跑->验证。
+PG015 UTC 2026-07-18T17:49:22Z: 已在 /home/u6gb/kangli.u6gb/.bashrc:45 添加 alias cc='claude --resume' (紧跟 ca/cb 双账号别名区块)。bash -ic 'type cc' 验证输出 aliased to claude --resume。
+PG077 UTC 2026-07-18T05:55:00Z: 向用户汇报状态,未经确认不继续。时间戳数据集目录已有 Phase A 产物(train/val 的 manifest.json + BUILD_INFO.json),尚无 .squashfs 分片。
+PG015 UTC 2026-07-18T18:05:26Z: 交代整体进展给用户(原计划/已提交/未完成)。给出 lora wandb URL https://wandb.ai/FlowFM/HyperXVLA-Training/runs/vgd34byv。诊断 loss peak 并写回 Notion。vanilla 3M 全量仍未发(待用户)。
+PG079 UTC 2026-07-18T06:15:00Z: 流式构建已在 5694130 上启动(bg bm41a5pxp,log build_stream_20260717T171634Z.out);排队预测器 subagent 已派(bg);建 task#7。等两者返回。
+PG016 UTC 2026-07-18T18:19:42Z: per-dataset loss 代码完成+提交(2456042), 验证 smoke 5705909 提交+监控 bt8mi4vw5。运行中的 lora full 5694855 不受影响(启动时已import旧代码)。smoke 通过后, 下次 lora resume 自动带 per-dataset loss。vanilla 3M full 仍待用户。
+PG080 UTC 2026-07-18T18:22:45Z: 提交继任占位 5705920。待其 RUNNING 后记入 queue_predictor 测本轮排队。授权已存 memory。
+PG075 UTC 2026-07-18T18:24:32Z: sigma-0 三版本闭环验证完成(30步训练→ckpt 10/20/30/31→check_checkpoint 参数量精确对齐→GPU 推理生成合理消息),restore-R1 三 job 判定数值失败并给出根因链。响应用户:12h×3 长训已提交(5705912/13/14, wandb online oxford-lob/sigma0-selftrain),监控 b76byb7qx 挂起(启动/URL/Timing/2h更新/错误/退出)。待:12h 结果 vs R1 轨迹对比、Notion 增量写回(注意并行会话已划线+写 plan callout,防双写)。
+PG017 UTC 2026-07-18T19:51:56Z: TMPDIR 修复提交, 重交 per-dataset 验证 smoke v2 5707215。lora full 5694855 仍 RUNNING(step~10500, ckpt-10000存盘)。
+PG018 UTC 2026-07-18T20:21:36Z: per-dataset loss 任务完成(代码2456042 + TMPDIR修复676f8f8 + GPU验证5707215通过)。lora full 5694855 仍RUNNING。vanilla 3M full 仍待用户。
+PG019 UTC 2026-07-20T15:39:49Z: 完成 3 个 symlink 创建: /projects/public/u6gb/{s5e_alphatrade,s5e_mamba3,s5e_scalinglaw}, ln -sT + 穿透验证全部 RESOLVES OK。git status 会显示 3 个未跟踪的 symlink(未提交, 待用户决定是否 gitignore)。

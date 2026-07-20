@@ -1,6 +1,10 @@
 # Learnt Lessons
 
-## 2026-07-05 Notion table answer color correction
+## 2026-07-20 Avoiding Dynamic Slicing in JAX Vectorized Loss Functions
+
+- Avoid using `jnp.vectorize` with scalar dynamic indexing (`logits[label]`) over batch/sequence dimensions. While syntactically concise, XLA lowers dynamic indexing into elementwise `DynamicSlice`/`Gather` nodes, creating trace slowdowns and kernel launch bottlenecks on GPU/TPU v5p.
+- Prefer fully tensorized vectorization such as `jnp.take_along_axis(logits, labels[..., None], axis=-1)` or `optax` loss routines, which compile to unified matrix gather ops without scalar dynamic slice overhead.
+
 
 - If a user says the modified text itself should be colored and provides a screenshot anchor, update the original table-cell rich text rather than adding a separate colored paragraph.
 - For this HyperXVLA page, the existing visible answer fragments were stored as `red`; converting those rich-text annotations to `blue` matches the user's requested formatting without changing content.
@@ -395,3 +399,18 @@ L059 UTC 2026-07-09T00:50:00Z: P0 - when a user says 'this is wrong' about somet
 - When running CPU or GPU smoke tests that load/instantiate large neural network models on QoS-limited login nodes, they may be OOM-killed due to strict resource limits. Always run such tests on compute node allocations (e.g. srun --jobid=5678750 --overlap) to ensure sufficient RAM.
 L060 UTC 2026-07-17T12:16:12Z: 教训——不要把 state.json.batch_script 字段(它只是 logger 每日读取的 'command provenance',见 plans.md 第 3 行)当成 job 实际执行的命令。判断一个 SLURM job 是真训练还是空占位,先查两个信号:(1) sacct step 名(python/run_train/node_wrapper vs 裸 bash/sleep);(2) StdOut 文件大小(真训练 MB 级 vs 空转 0 字节)。本轮我据 batch_script 字段误报 5678750 '正在跑 R1_Mamba3 训练、16 节点 x 4 GPU 全在算',被用户当场纠正。断言 job 活动状态前必须先看这两项。
 L061 UTC 2026-07-17T12:21:52Z: 在已存在的 allocation 上跑分布式,srun 必须从'能看到完整 allocation'的上下文发起(login,或 job 的 batch 上下文),不能嵌套在一个 --nodes=1 的 --pty step 里——嵌套 srun 继承外层的 SLURM_NNODES,把池子锁成 1 节点。mode A(交互单节点)与 mode B(16 节点分布式)是并列的两条 login 命令,不是父子关系。
+L062 UTC 2026-07-17T16:39:00Z: 用户"把 16 节点改成 1 节点"的请求不是孤立的占位缩容,它与中途发来的 smaller-dataset 页耦合:1 节点是构建固定小数据集这一重预处理任务的算力载体(load+采样+保存 48 个月 SP500 SquashFS 不能在 login 节点跑)。教训:收到看似简单的"缩容"请求时,先看是否有伴随的科学目标改变了 job 的用途(占位 vs 真跑数据/训练)。
+L063 UTC 2026-07-17T16:47:00Z: 构造派生数据集时,输出格式应匹配下游消费管线(此处 SquashFS 分片)而非另发明 manifest/散 npy——既省 dataloader 改动,又符合 Lustre "1 分片=1 inode" 的元数据安全模式。选格式先问"谁来读它、怎么读"。
+L064 UTC 2026-07-17T16:55:00Z: subagent 的体量"估算"可能差 100 倍(此处 1-2GB vs 实测 143GB/分片),任何据此定 sizing 的 materialize 作业前必须 stat 真实文件核实。另:同一数据集不同月份的 index 布局可能不一致(仅 test 月有 sidecar,其余在分片内),不要假设布局统一。
+L008 UTC 2026-07-17T17:07:48Z: 现有 run_*.sh (根目录) 指向 s5j 账户路径且是单节点/h192/无 weight_head_type,是过时副本;真正 u6gb 生产脚本在 scripts/ (train_hyper_200k.sh 等)。教训:提交前必须核实脚本的账户路径+init配置+mode参数,'直接sbatch现成脚本'会跑错实验。另:代码 help 文本可能滞后于实现(vanilla 语义),以 forward 代码为准,并用 smoke 实测分组。
+L065 UTC 2026-07-17T17:11:44Z: 判断 checkpoint 能否在 CURTAIL 短训练里落盘,不能只看 CHECKPOINT_EVERY 语义,要读训练循环里 break 与 ckpt 检查的先后顺序(此处 break 在前,末步 ckpt 依赖整除关系)。另:模型输入维度未必等于原始数据列数(book 503=volume image 变换后),判断数据兼容性要看 encoder 第一层参数形状而不是数据文件列数。
+L066 UTC 2026-07-17T17:04:00Z: 定 sizing 前先确认数据 SCOPE(哪些年/月),不只是 fraction——"1/4"在用户点明池=2025 前一直有歧义;分数脱离分母无意义。另:把一次性重构建与长期占位 allocation 解耦,别把交付物卡在最难调度的 job 上,短作业 backfill 容易得多。
+L067 UTC 2026-07-17T17:17:00Z: 生成的构建脚本提交前在 login 做 py_compile + bash -n 语法自检——比在排到的节点上因一个 typo 白烧便宜得多。数据集时间戳在 SUBMIT 时生成并 --export 传入,让 resume 复用同一目录而非另 fork 一个。
+L068 UTC 2026-07-18T17:49:22Z: Edit 工具会拒绝写 symlink 目标 ('Refusing to write through symlink'), 必须先 realpath 解析再对真实路径 Read+Edit。另: alias 名与系统命令同名(cc=C编译器)仅遮蔽交互 shell, 脚本/Makefile/sbatch 的非交互 shell 不展开 alias, 不受影响。
+L068 UTC 2026-07-18T05:55:00Z: 别把大块数据暂存到 tmpfs(/dev/shm):df 报的是 tmpfs SIZE 而非 RAM 余量,所以"≥200G"校验会通过、拷到一半 ENOSPC。子集分片构建应用 mksquashfs pseudo-file(-pf,cat 从源挂载点流式喂)彻底免暂存,与节点本地盘大小无关。另:很多 GH200 节点本地只有 tmpfs,提交重 I/O 前先确认真实本地磁盘。
+L069 UTC 2026-07-18T06:02:00Z: 本集群 $HOME 是 Lustre 项目目录(/projects/public/<proj>),不是 VAST /home/<proj>/<user>(后者放 conda、配额仅 ~100G)。"存到 home"有歧义——先解析 $HOME 再定数据位置;大数据集属于 Lustre 项目($HOME),不属于 VAST /home。
+L066 UTC 2026-07-18T18:10:55Z: 把仓库里恰好存在的 mamba3_smoke.yaml 的 USE_WANDB=False/WANDB_MODE=offline 抄进 selftrain 配置并对用户称之为"惯例"——错误归因,且违反 CLAUDE.md 明文规则(训练 job 应 WANDB_DIR=$TMPDIR + WANDB_MODE=online)。后果:三个 selftrain 训练 job 无 wandb URL/曲线可查(offline run 落在计算节点本地盘,job 结束即不可 sync)。教训:(1)复用仓库现成配置前必须对照 CLAUDE.md 成文规则逐项校验;(2)向用户解释配置选择时必须给出处,不得把"某文件恰好这么写"说成"惯例"。
+L070 UTC 2026-07-18T06:15:00Z: mksquashfs -pf(pseudo-file: 目标路径 f 权限 uid gid cat "源")把源文件流式喂进分片,零 bulk staging——tmpfs-only 节点上打包大子集的正解。上真机前先用 2 个假文件在 login 上跑 mksquashfs→unsquashfs 往返验证 pseudo-file 语法。
+L071 UTC 2026-07-18T18:22:45Z: 连续占位覆盖,继任者必须无 --dependency 提交(afterany 会把整段排队推到当前 job 结束之后→巨大缺口),应在 end−predicted_wait 提交让排队与当前运行重叠;若 predicted_wait>剩余则立即提交(已逾期)并接受残余缺口,或缩短 walltime 缩短排队。
+L067 UTC 2026-07-18T18:24:32Z: (1)"job COMPLETED 0:0"≠训练成功:restore 组 6 job 全 COMPLETED 但 loss≈71(数值失败),判训练成败必须看 loss,且要区分"训练时 loss"与"load 后 loss"两种口径。(2)sbatch 命令行 --time 不会传导到 batch 内的 SBATCH_TIMELIMIT/SLURM_TIMELIMIT,MAX_JOB_HOURS 会 fallback 默认值导致超时保存窗口错位,长训 job 必须显式传 MAX_JOB_HOURS。(3)并行 Claude 会话同做一个任务时:checkpoint 按 job ID 隔离天然防冲突,但 Notion 写回/git commit/yaml 文件是共享冲突面,动笔前必须重读现场。
+L072 UTC 2026-07-20T15:39:49Z: 建 symlink 用 ln -sT(不解引用+已存在即失败)防经典陷阱: 若链接名已存在且指向目录, 裸 ln -s 会把新链接建到目标目录内部而非报错。symlink 目标有包含关系不构成冲突, 仅是多入口同 inode; 唯一行为差异是 shell 逻辑模式 cd .. 沿链接名回退, cd -P 沿物理路径回退。
