@@ -8,7 +8,8 @@
 - Explained performance issues (XLA lowering to `DynamicSlice` ops per token under `jnp.vectorize`).
 - Constructed a comparison table summarizing configuration, code location, tokenizer support, and hardware implications between LOBS5 and s5e_mamba3.
 - Directly added the commented efficient tensorized `cross_entropy_loss_fast` code block to `FLAIROx/LOBS5/lob/train_helpers.py` (L604) and committed to git.
-- Identified that `s5e_mamba3` is a symlink pointing to shared directory `/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/exp_R1_Mamba3` owned by group/user `brics.s5e` (`1483803536`) with read-only permissions for current user `kangli.u6gb`.
+- Verified directory permission difference between root `exp_R1_Mamba3` and subdirectory `lob/`, explaining why `touch` works at root but fails inside `lob/`.
+
 
 
 
