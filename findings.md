@@ -7,7 +7,8 @@
 - Identified why `-np.sum(logits[label])` works: `logits` output from model decoders are already normalized via `jax.nn.log_softmax(..., axis=-1)`, so `logits[label]` extracts the target class log-probability, making `-logits[label]` equal to Negative Log-Likelihood (NLL).
 - Identified performance bottleneck: `@partial(np.vectorize, signature="(c),()->()")` applies dynamic 1D slicing (`logits[label]`) per scalar element, which XLA lowers into thousands of tiny `DynamicSlice`/`Gather` operations across batch and sequence dimensions ($B \times L$), causing heavy CPU/TPU kernel launch latency and trace overhead before SSM ops.
 - Formulated optimization alternative: replace `np.vectorize` dynamic indexing with native tensor operation `jnp.take_along_axis(logits, labels[..., None], axis=-1).squeeze(-1)`.
-- Compared configuration differences between `FLAIROx/LOBS5` and `s5e_mamba3` (float32 softmax cast in s5e_mamba3, expanded 26tok/23tok/1tok multi-field decoding, Mamba3 state scan support).
+- Provided detailed line-by-line explanation of `@partial(np.vectorize, signature="(c),()->()") def cross_entropy_loss(logits, label): return -np.sum(logits[label])` focusing on `log_softmax` log-probabilities, NLL loss equivalence, and `jnp.vectorize` core dimension signatures.
+
 
 
 

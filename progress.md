@@ -7,7 +7,8 @@
 - Detailed the mathematical logic (`log_softmax` + NLL) and why `-np.sum(logits[label])` calculates negative log-likelihood.
 - Explained performance issues (XLA lowering to `DynamicSlice` ops per token under `jnp.vectorize`).
 - Constructed a comparison table summarizing configuration, code location, tokenizer support, and hardware implications between LOBS5 and s5e_mamba3.
-- Maintained local markdown records (`findings.md`, `plans.md`, `learnt_lessons.md`, `progress.md`).
+- Provided line-by-line explanation of `cross_entropy_loss` syntax, vectorization signature, and log-softmax NLL mechanics.
+
 
 
 
