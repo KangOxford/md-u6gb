@@ -7,7 +7,8 @@
 - Detailed the mathematical logic (`log_softmax` + NLL) and why `-np.sum(logits[label])` calculates negative log-likelihood.
 - Explained performance issues (XLA lowering to `DynamicSlice` ops per token under `jnp.vectorize`).
 - Constructed a comparison table summarizing configuration, code location, tokenizer support, and hardware implications between LOBS5 and s5e_mamba3.
-- Provided line-by-line explanation of `cross_entropy_loss` syntax, vectorization signature, and log-softmax NLL mechanics.
+- Provided exact commented implementation code block for tensorized `cross_entropy_loss` using `np.take_along_axis`.
+
 
 
 
@@ -506,3 +507,4 @@ PG075 UTC 2026-07-18T18:24:32Z: sigma-0 三版本闭环验证完成(30步训练�
 PG017 UTC 2026-07-18T19:51:56Z: TMPDIR 修复提交, 重交 per-dataset 验证 smoke v2 5707215。lora full 5694855 仍 RUNNING(step~10500, ckpt-10000存盘)。
 PG018 UTC 2026-07-18T20:21:36Z: per-dataset loss 任务完成(代码2456042 + TMPDIR修复676f8f8 + GPU验证5707215通过)。lora full 5694855 仍RUNNING。vanilla 3M full 仍待用户。
 PG019 UTC 2026-07-20T15:39:49Z: 完成 3 个 symlink 创建: /projects/public/u6gb/{s5e_alphatrade,s5e_mamba3,s5e_scalinglaw}, ln -sT + 穿透验证全部 RESOLVES OK。git status 会显示 3 个未跟踪的 symlink(未提交, 待用户决定是否 gitignore)。
+PG020 UTC 2026-07-20T15:53:00Z: 完成 FLAIROx/LOBS5 vs s5e_mamba3 三层配置对比(batch/wrapper/argparse), 表格已输出给用户。无代码改动。
