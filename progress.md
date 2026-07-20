@@ -7,7 +7,9 @@
 - Detailed the mathematical logic (`log_softmax` + NLL) and why `-np.sum(logits[label])` calculates negative log-likelihood.
 - Explained performance issues (XLA lowering to `DynamicSlice` ops per token under `jnp.vectorize`).
 - Constructed a comparison table summarizing configuration, code location, tokenizer support, and hardware implications between LOBS5 and s5e_mamba3.
-- Provided exact commented implementation code block for tensorized `cross_entropy_loss` using `np.take_along_axis`.
+- Directly added the commented efficient tensorized `cross_entropy_loss_fast` code block to `FLAIROx/LOBS5/lob/train_helpers.py` (L604) and committed to git.
+- Identified that `s5e_mamba3` is a symlink pointing to shared directory `/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/exp_R1_Mamba3` owned by group/user `brics.s5e` (`1483803536`) with read-only permissions for current user `kangli.u6gb`.
+
 
 
 
@@ -508,3 +510,4 @@ PG017 UTC 2026-07-18T19:51:56Z: TMPDIR 修复提交, 重交 per-dataset 验证 s
 PG018 UTC 2026-07-18T20:21:36Z: per-dataset loss 任务完成(代码2456042 + TMPDIR修复676f8f8 + GPU验证5707215通过)。lora full 5694855 仍RUNNING。vanilla 3M full 仍待用户。
 PG019 UTC 2026-07-20T15:39:49Z: 完成 3 个 symlink 创建: /projects/public/u6gb/{s5e_alphatrade,s5e_mamba3,s5e_scalinglaw}, ln -sT + 穿透验证全部 RESOLVES OK。git status 会显示 3 个未跟踪的 symlink(未提交, 待用户决定是否 gitignore)。
 PG020 UTC 2026-07-20T15:53:00Z: 完成 FLAIROx/LOBS5 vs s5e_mamba3 三层配置对比(batch/wrapper/argparse), 表格已输出给用户。无代码改动。
+PG020 UTC 2026-07-20T15:54:26Z: 完成 collaborator vs FLAIROx-360M 生产 vs s5e_mamba3-R1 对比表并逐项判定: 其 3 组修改全部无问题(hierarchical=False/local_steps_k=0 恰为生产真实行为, random_offsets_train=False 为合成数据下必要), 主要 gap 是代码线分叉(S5-360M-24tok-AdamW vs Mamba3-78M-26tok-muon-SP500)。纯只读调查, 无代码改动。
