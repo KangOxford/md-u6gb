@@ -3,10 +3,12 @@
 ## 2026-07-20 Analysis of cross_entropy_loss logic in LOBS5 and s5e_mamba3
 
 - Located `cross_entropy_loss` definition in `FLAIROx/LOBS5/lob/train_helpers.py` (L600-L602) and `s5e_mamba3/lob/train_helpers.py` (L733-L735).
+- Confirmed that the `cross_entropy_loss` dynamic slicing performance issue exists in **BOTH** the early version (`FLAIROx/LOBS5`) and the latest version (`s5e_mamba3`). The latest version inherited the exact unoptimized `@partial(np.vectorize, signature="(c),()->()")` implementation.
 - Identified why `-np.sum(logits[label])` works: `logits` output from model decoders are already normalized via `jax.nn.log_softmax(..., axis=-1)`, so `logits[label]` extracts the target class log-probability, making `-logits[label]` equal to Negative Log-Likelihood (NLL).
 - Identified performance bottleneck: `@partial(np.vectorize, signature="(c),()->()")` applies dynamic 1D slicing (`logits[label]`) per scalar element, which XLA lowers into thousands of tiny `DynamicSlice`/`Gather` operations across batch and sequence dimensions ($B \times L$), causing heavy CPU/TPU kernel launch latency and trace overhead before SSM ops.
 - Formulated optimization alternative: replace `np.vectorize` dynamic indexing with native tensor operation `jnp.take_along_axis(logits, labels[..., None], axis=-1).squeeze(-1)`.
 - Compared configuration differences between `FLAIROx/LOBS5` and `s5e_mamba3` (float32 softmax cast in s5e_mamba3, expanded 26tok/23tok/1tok multi-field decoding, Mamba3 state scan support).
+
 
 
 - User clarified that the requested text itself should be blue inside the Notion table, using the screenshot/image block `39412c45-68fd-80e1-9f7c-ca9258e68d86` as the formatting reference.

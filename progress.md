@@ -3,10 +3,12 @@
 ## 2026-07-20 Code analysis and comparison of cross_entropy_loss in LOBS5 vs s5e_mamba3
 
 - Located `cross_entropy_loss` implementation in both `/projects/public/u6gb/FLAIROx/LOBS5/lob/train_helpers.py` (L600) and `/projects/public/u6gb/s5e_mamba3/lob/train_helpers.py` (L733).
+- Verified that this performance issue exists in **BOTH** early (`FLAIROx/LOBS5`) and latest (`s5e_mamba3`) versions without modification.
 - Detailed the mathematical logic (`log_softmax` + NLL) and why `-np.sum(logits[label])` calculates negative log-likelihood.
 - Explained performance issues (XLA lowering to `DynamicSlice` ops per token under `jnp.vectorize`).
 - Constructed a comparison table summarizing configuration, code location, tokenizer support, and hardware implications between LOBS5 and s5e_mamba3.
 - Maintained local markdown records (`findings.md`, `plans.md`, `learnt_lessons.md`, `progress.md`).
+
 
 
 - Fetched the user-provided reference anchor and confirmed it is a visible Notion image block.
