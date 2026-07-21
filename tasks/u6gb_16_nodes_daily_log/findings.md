@@ -15,3 +15,6 @@
 - The corrected live monitor is PID `48640` on `login40`, scoped only to Job `5678750`.
 - 2026-07-16: Live Slurm priority config has `PriorityWeightAge=0`; an `afterany` self-chain can queue successors early but should not be described as guaranteed age-based priority gain on this cluster.
 - 2026-07-16: A one-week 16-node SLA should be requested as an admin reservation, not approximated with ordinary `workq` submissions; cost is 16 nodes x 4 GPUs x 24 h x 7 d = 10,752 GPU-hours.
+- 2026-07-17: For report date 2026-07-16, Slurm accounting evidence shows `5678750` RUNNING 16/16 from `2026-07-16T17:54:03Z` to midnight, but the Notion update failed with `user cancelled MCP tool call`.
+- 2026-07-19: Collector report shows 0/16 RUNNING coverage for the full UTC day; Notion append failed with `user cancelled MCP tool call`.
+- 2026-07-20: Captured accounting for the 2026-07-19..2026-07-21 query showed no fleet/resume rows, so the 2026-07-20 UTC coverage report is 24h at 0/16; Notion append failed with `user cancelled MCP tool call`.

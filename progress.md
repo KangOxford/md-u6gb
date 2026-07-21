@@ -512,3 +512,5 @@ PG018 UTC 2026-07-18T20:21:36Z: per-dataset loss 任务完成(代码2456042 + TM
 PG019 UTC 2026-07-20T15:39:49Z: 完成 3 个 symlink 创建: /projects/public/u6gb/{s5e_alphatrade,s5e_mamba3,s5e_scalinglaw}, ln -sT + 穿透验证全部 RESOLVES OK。git status 会显示 3 个未跟踪的 symlink(未提交, 待用户决定是否 gitignore)。
 PG020 UTC 2026-07-20T15:53:00Z: 完成 FLAIROx/LOBS5 vs s5e_mamba3 三层配置对比(batch/wrapper/argparse), 表格已输出给用户。无代码改动。
 PG020 UTC 2026-07-20T15:54:26Z: 完成 collaborator vs FLAIROx-360M 生产 vs s5e_mamba3-R1 对比表并逐项判定: 其 3 组修改全部无问题(hierarchical=False/local_steps_k=0 恰为生产真实行为, random_offsets_train=False 为合成数据下必要), 主要 gap 是代码线分叉(S5-360M-24tok-AdamW vs Mamba3-78M-26tok-muon-SP500)。纯只读调查, 无代码改动。
+PG021 UTC 2026-07-20T15:58:42Z: 已向用户解释 random_offsets_train 行: 三列取值各自来源(node_wrapper 硬编码 True vs collaborator 合成数据下被迫 False)。
+PG022 UTC 2026-07-21T11:10:54Z: Notion 页面(8abfa87e7c484353aa0475b17b3500d8)已完成: 21-july 指令下方插入绿色回答 callout(最简 sbatch 命令 + 要点 + attach 命令, block 3a412c45-68fd-8175), 17-july 指令下方插入指向 callout(3a412c45-68fd-81d1), 两条原指令均已 strikethrough。未提交任何 SLURM job(用户明确要自行提交), 命令已在会话回复中交付。

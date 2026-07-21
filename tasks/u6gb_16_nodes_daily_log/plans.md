@@ -14,3 +14,6 @@
 - Replace the live monitor with a new invocation containing every explicit ID whenever the candidate set changes.
 - Add a thin self-chain payload for future 16-node fleet jobs: submit the `afterany:$SLURM_JOB_ID` successor at job start, keep the payload simple, and leave duplicate-candidate cancellation to the outer monitor.
 - For a guaranteed one-week 16-node window, prepare an admin reservation request with dates, account, resource shape, quota budget, and the scientific reason for continuous fleet availability.
+- 2026-07-17: Stop this daily-log run after persisting `--notion-status failed`; do not retry Notion or touch experiment jobs/configuration.
+- 2026-07-19: Stop after the failed-status collector write and local error record; do not retry Notion or touch experiment jobs/configuration.
+- 2026-07-20: Stop after marking `notion_status=failed` locally because the Notion append was cancelled; do not retry Notion or touch experiment jobs/configuration.

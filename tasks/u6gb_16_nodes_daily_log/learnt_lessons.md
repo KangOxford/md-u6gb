@@ -15,3 +15,6 @@
 - Avoid heartbeat log spam: unchanged PENDING state should remain implicit between transition events.
 - Self-chain early submission reduces end-of-walltime gaps, but current `PriorityWeightAge=0` means it must not be treated as a confirmed priority-boost mechanism.
 - Ordinary backfill tactics improve opportunity but not SLA; fixed 16-node weekly coverage requires a reservation such as `sbatch --reservation=<name>` after admin approval.
+- 2026-07-17: If the Notion update tool is cancelled, mark the collector write as failed locally and stop instead of attempting a second Notion edit.
+- 2026-07-19: Python-spawned Slurm accounting can be socket-denied while direct `sacct` works, so record that workaround provenance when the collector needs a shim.
+- 2026-07-20: When SlurmDBD socket access is unstable, only use a confirmed zero-exit accounting capture for the collector shim and record any Notion cancellation as failed.

@@ -15,3 +15,6 @@
 - 2026-07-16: Added `fleet_self_chain.sbatch` so future 16-node fleet jobs can submit an `afterany` successor immediately at job start and record successor IDs in `events.jsonl`.
 - 2026-07-16: Added `submit_self_chain.sh` to submit the first self-chain generation through the existing submission logger.
 - 2026-07-16: Calculated the one-week 16-node reservation budget as 2,688 node-hours / 10,752 GPU-hours and prepared to frame it as an admin reservation request.
+- 2026-07-17: Rendered the 2026-07-16 UTC coverage report, attempted the exact Notion page update, received `user cancelled MCP tool call`, and wrote local daily/state/summary outputs with `notion_status=failed`.
+- 2026-07-19: Rendered the 2026-07-19 UTC report as 24h zero coverage, attempted the exact Notion append, received `user cancelled MCP tool call`, and wrote local outputs with `notion_status=failed`.
+- 2026-07-20: Rendered the 2026-07-20 UTC report as 24h zero coverage, attempted the exact Notion append, received `user cancelled MCP tool call`, and wrote local outputs with `notion_status=failed`.

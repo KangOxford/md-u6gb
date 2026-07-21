@@ -1,15 +1,14 @@
 # u6gb-16-nodes-18-jluy-001 Daily Coverage Summary
 
-- Updated: `2026-07-16T13:56:50Z`
-- Window: `2026-07-15T13:56:50Z` to `2026-07-16T13:56:50Z`
+- Updated: `2026-07-21T00:17:47Z`
+- Window: `2026-07-20T00:00:00Z` to `2026-07-21T00:00:00Z`
 - Submitted jobs: `0`
-- Full 16/16 coverage: `0 seconds`
-- Partial coverage: `0 seconds`
-- Zero coverage: `86,400 seconds`
-- Node-minute coverage: `0%`
-- Notion: [Daily Coverage Log](https://app.notion.com/p/39f12c4568fd8106a60be64bed63bd91)
-- Command source: `/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/exp_R1_Mamba3/train_full_autoreg.batch`
-- Daily logger job: `5678626` (`BeginTime=2026-07-17T00:15:00Z`)
-- Live allocation request: `5678750`, `PENDING (Priority)`, 16 nodes / 64 GPUs / 23:59
+- Slurm rows: `0`
+- Full coverage: `0h 0m 0s`
+- Partial coverage: `0h 0m 0s`
+- Zero coverage: `24h 0m 0s`
+- Node-minute coverage: `0.0000%`
+- Notion status: `failed`
+- Daily report: `daily/2026-07-20.md`
 
 No experiment action was taken. This system only records evidence.
