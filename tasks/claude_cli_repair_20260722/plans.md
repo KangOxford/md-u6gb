@@ -4,3 +4,5 @@
 - [x] Verify the resolved executable, reported version, and global package state from a fresh login shell.
 - [x] Preserve all `~/.claude*` configuration and session data.
 - [ ] With explicit confirmation received, uninstall only the Miniforge Claude Code npm package and reinstall the npm `stable` release; do not touch `~/.claude*`.
+- [x] Uninstall the Miniforge Claude Code npm package through npm.
+- [ ] Verify removal, then reinstall and verify the npm `stable` release.

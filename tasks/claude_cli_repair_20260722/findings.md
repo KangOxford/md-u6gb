@@ -8,3 +8,4 @@
 - 2026-07-22T11:17:56Z: A fresh login shell resolves `claude` to the Miniforge path and reports `2.1.206 (Claude Code)`; npm lists the same version and `claude.exe` is restored as an executable 255,376,112-byte file.
 - 2026-07-22T11:33:20Z: The user requested a delete-and-reinstall cycle after the verified repair. This requires explicit confirmation of the exact package and launcher paths before deletion under workspace policy.
 - 2026-07-22T11:50:00Z: The user explicitly confirmed deletion of the documented package and launcher paths. No user-owned `claude` or `node` process is active, so the clean uninstall can proceed without an NFS-held executable.
+- 2026-07-22T11:51:07Z: `npm uninstall -g @anthropic-ai/claude-code` completed successfully and reported `removed 2 packages`.
