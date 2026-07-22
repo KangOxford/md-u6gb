@@ -5,3 +5,4 @@
 - Reinstalling the pinned package is sufficient when no live process or NFS placeholder holds the missing executable; no package-tree deletion is needed.
 - Verification should cover shell resolution, CLI self-reported version, npm package state, and the final symlink target rather than relying on install exit status alone.
 - Even when the user asks for a clean reinstall, deletion must wait for explicit path-level confirmation; an in-place pinned reinstall is the available non-deleting alternative and is already verified healthy.
+- Before an npm uninstall on NFS-backed storage, confirm no old Claude process holds the package executable open.
