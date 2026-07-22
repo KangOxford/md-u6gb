@@ -18,3 +18,4 @@
 - 2026-07-19: Stop after the failed-status collector write and local error record; do not retry Notion or touch experiment jobs/configuration.
 - 2026-07-20: Stop after marking `notion_status=failed` locally because the Notion append was cancelled; do not retry Notion or touch experiment jobs/configuration.
 - 2026-07-21: Stop after marking `notion_status=failed` locally because the Notion append was cancelled; do not retry Notion or touch experiment jobs/configuration.
+- 2026-07-22: 手动轮(非 cron):回答 Notion 22july [...] 问题;record 5740627→1n_24h EMA 11h39m;立即提交继任者 5748696 并以 --begin=2026-07-22T13:31Z 对齐 when-to-submit 推荐点。

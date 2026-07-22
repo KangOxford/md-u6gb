@@ -5342,3 +5342,19 @@ W&B:   n/a (placeholder)
 Log:   /lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/u6gb-1-node-21-july-001-5740627.out
 
 Updated: 2026-07-21 11:15:38 UTC
+
+Job:   5748696 (u6gb-1-node-22-july-001)
+User:  kangli.u6gb
+Step:  placeholder — no training steps
+Model: none (full-node keep-alive, bare sleep 86100s)
+Data:  none
+Infra: 1N / 4 GPU (GH200 full node, --gpus-per-node=4 --mem=0)
+LR:    n/a
+Loss:  n/a
+Speed: n/a
+Time:  submitted 2026-07-22 09:58 UTC | --begin=2026-07-22T13:31:00Z (= 5740627 End 01:41:07 - EMA 11h39m - buffer 30m)
+ETA:   eligible 13:31Z; predicted start ~2026-07-23T01:1x (1n_24h EMA wait 11h39m, 2 samples); relays 5740627
+W&B:   n/a (placeholder)
+Log:   /lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/u6gb-1-node-22-july-001-5748696.out
+
+Updated: 2026-07-22 09:58 UTC
