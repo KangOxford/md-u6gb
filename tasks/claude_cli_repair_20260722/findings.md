@@ -1,0 +1,6 @@
+# Findings
+
+- 2026-07-22T11:16:22Z: On `login42`, `PATH` already includes `/home/u6gb/kangli.u6gb/miniforge3/bin`, so this is not a shell initialization problem.
+- `/home/u6gb/kangli.u6gb/miniforge3/bin/claude` is a broken symlink to `../lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe`; the target is absent and the package directory contains only an empty `bin/` directory.
+- No user-owned `claude` or `node` process and no `.nfs*` placeholder currently blocks repair.
+- npm reports `stable=2.1.206` and `latest/next=2.1.217`.
