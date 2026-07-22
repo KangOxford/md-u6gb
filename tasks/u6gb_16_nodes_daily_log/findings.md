@@ -18,3 +18,4 @@
 - 2026-07-17: For report date 2026-07-16, Slurm accounting evidence shows `5678750` RUNNING 16/16 from `2026-07-16T17:54:03Z` to midnight, but the Notion update failed with `user cancelled MCP tool call`.
 - 2026-07-19: Collector report shows 0/16 RUNNING coverage for the full UTC day; Notion append failed with `user cancelled MCP tool call`.
 - 2026-07-20: Captured accounting for the 2026-07-19..2026-07-21 query showed no fleet/resume rows, so the 2026-07-20 UTC coverage report is 24h at 0/16; Notion append failed with `user cancelled MCP tool call`.
+- 2026-07-21: The exact collector query initially failed under Python SlurmDBD socket access, but the shell-observed accounting snapshot for 2026-07-20..2026-07-22 had no fleet/resume rows, so the report is 24h at 0/16; Notion append failed with `user cancelled MCP tool call`.

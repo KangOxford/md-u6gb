@@ -18,3 +18,4 @@
 - 2026-07-17: If the Notion update tool is cancelled, mark the collector write as failed locally and stop instead of attempting a second Notion edit.
 - 2026-07-19: Python-spawned Slurm accounting can be socket-denied while direct `sacct` works, so record that workaround provenance when the collector needs a shim.
 - 2026-07-20: When SlurmDBD socket access is unstable, only use a confirmed zero-exit accounting capture for the collector shim and record any Notion cancellation as failed.
+- 2026-07-21: If the Notion connector returns `user cancelled MCP tool call`, treat it as the terminal Notion-update failure path and persist `notion_status=failed` locally.

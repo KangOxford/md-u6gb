@@ -424,3 +424,9 @@ P095 UTC 2026-07-20T15:53:00Z: 用户要求对比"他"的配置(/projects/public
 P095 UTC 2026-07-20T15:54:26Z: 对比 collaborator(TPU v5p-8, 用 FLAIROx/LOBS5)的配置修改与 /projects/public/u6gb/s5e_mamba3(exp_R1_Mamba3)最新生产配置, 输出三列对比表。方法: 以 node_wrapper.sh 实际 CLI + train_full_autoreg.batch env 默认为准(不信 argparse 默认), 交叉 scaling_law_sweep.sh 78M 行与 R1 配方。
 P096 UTC 2026-07-20T15:58:42Z: 用户没看懂对比表中 random_offsets_train 一行, 计划用窗口切分示意图 + aed 公式解释 True/False 语义及'合成数据强制'的含义。
 P097 UTC 2026-07-21T11:10:54Z: Notion 21-july 指令(16nodes 占位改 1 node × 24h, 用户自行提交): 复用 daily/2026-07-16.md 中实测成功的占位命令模式(jluy-002/003 裸 sleep 形态), 改 --nodes=1, 保留 --gpus-per-node=4 --mem=0(整节点关键), 回答写入 Notion(callout+strikethrough)后把最简命令交给用户。
+P098 UTC 2026-07-21T11:14:30Z: 用户改为要求代提交 → 走 submit-job skill 全流程: squeue dedup → git commit(dirty 记录文件) → sbatch 1-node 占位 → live_jobs/active_monitors 落账 → 1/5/15/30min 后台监控 → Notion 补实测标记。
+P099 UTC 2026-07-21T11:49:00Z: 强制 30min 四检查点窗口结束后转入低频 until-RUNNING 监控(Monitor bwh17duix, 300s 轮询 squeue, persistent), RUNNING 或异常消失时事件通知并附 attach 命令。
+P1784638779 UTC 2026-07-21T12:59:39Z: 本轮为 SLURM 调度机制咨询(不提交任何 job):回答"1min 短 job + 接续 1h job 是否因链式而更好 backfill"。计划 = scontrol show config + sprio + squeue --start 实测 workq 调度参数后给结论。
+P1784639433 UTC 2026-07-21T13:10:33Z: 回答"排队有什么小技巧":基于上轮实测(priority 全平 + sched/backfill)推导技巧清单;补测 sinfo -p workq -s / 节点态分布 / PrivateData 配置。仅咨询,无提交。
+P100 UTC 2026-07-21T13:14:40Z: 诊断 login44 'claude: command not found' → /proc 进程树定位真实二进制(npm 装在 ~kangli.u6gb/miniforge3) → 发现 auto-update 半损(包空壳+.nfs 幽灵文件) → mv ghost 目录绕开 EBUSY → npm 重装 → 端到端验证。
+P101 UTC 2026-07-22T09:52:10Z: 用户给 Notion 深链 lob-mae?...#3a512c4568fd8076bc04d1e11d45b60b(带 #block-id 锚点)。按最高优先级规则=只读该单个 block,不展开整页。计划:retrieve-a-block → 若 404 则按 reference_notion_page_share_404 memory 交叉验证(retrieve-a-page 元数据 + post-search 标题搜索)判定是"未分享"还是"坏 ID",再据实回复。

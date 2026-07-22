@@ -514,3 +514,9 @@ PG020 UTC 2026-07-20T15:53:00Z: 完成 FLAIROx/LOBS5 vs s5e_mamba3 三层配置�
 PG020 UTC 2026-07-20T15:54:26Z: 完成 collaborator vs FLAIROx-360M 生产 vs s5e_mamba3-R1 对比表并逐项判定: 其 3 组修改全部无问题(hierarchical=False/local_steps_k=0 恰为生产真实行为, random_offsets_train=False 为合成数据下必要), 主要 gap 是代码线分叉(S5-360M-24tok-AdamW vs Mamba3-78M-26tok-muon-SP500)。纯只读调查, 无代码改动。
 PG021 UTC 2026-07-20T15:58:42Z: 已向用户解释 random_offsets_train 行: 三列取值各自来源(node_wrapper 硬编码 True vs collaborator 合成数据下被迫 False)。
 PG022 UTC 2026-07-21T11:10:54Z: Notion 页面(8abfa87e7c484353aa0475b17b3500d8)已完成: 21-july 指令下方插入绿色回答 callout(最简 sbatch 命令 + 要点 + attach 命令, block 3a412c45-68fd-8175), 17-july 指令下方插入指向 callout(3a412c45-68fd-81d1), 两条原指令均已 strikethrough。未提交任何 SLURM job(用户明确要自行提交), 命令已在会话回复中交付。
+PG023 UTC 2026-07-21T11:14:30Z: Job 5740627(u6gb-1-node-21-july-001, 1N 完整节点, 23:59:00, sleep 86100)已提交。前置 commit 46d5467; live_jobs.md + active_monitors.jsonl 已落账; 后台监控 bhpnm0e17 运行中(1/5/15/30min 检查点, 含 sacct exit 检查); Notion 回答 callout 已补绿色实测标记(Job ID + commit)。
+PG024 UTC 2026-07-21T11:49:00Z: 强制四检查点监控(bhpnm0e17)完成, 结果全 PENDING 属正常; 已启动 until-RUNNING persistent 监控(bwh17duix), 覆盖 RUNNING 与"队列中消失"两类终态(后者触发 sacct 定性)。
+PG1784638779 UTC 2026-07-21T12:59:39Z: 咨询轮,已回答用户关于"短 job 链式提交是否更好 fill queue"的问题。执行了 scontrol show config / sprio -l / squeue --start 三个轻量 controller 查询,无 sbatch,无文件改动(除本记录)。
+PG1784639433 UTC 2026-07-21T13:10:33Z: 咨询轮 2,已输出排队技巧清单(--time 写准 / --time-min 弹性时限 / 小资源请求塞 mixed 节点 / 早提交+--begin 锁 FIFO 位置 / 1-min 探针测队列 / sinfo 侦察);执行 sinfo×2 + scontrol grep PrivateData,无 sbatch。
+PG025 UTC 2026-07-21T13:14:40Z: claude 已修复并验证(2.1.216), 用户在 login44 任意新 shell 直接 claude 即可; 遗留清理项: ~/.claude-code-ghost-FEZSYFJI 需在本会话结束后手动 rm(当前进程仍持有其 .nfs 文件, 不可现在删)。另回答了用户 backfill 排队策略问题(短 job 接长 job 无连续性加成)。
+PG026 UTC 2026-07-22T09:52:10Z: 本轮为 Notion 深链解析,受阻于访问权限。已完成诊断(block+page 双 404 + 标题搜索交叉验证),未做任何页面写入(无 callout/无 strikethrough,因页面不可读)。待用户在 Notion 端把 lob-mae 页面用 Connections 菜单加上集成 cc 后,即可重发链接继续解析该 block。

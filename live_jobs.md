@@ -5326,3 +5326,19 @@ Recovers: ~2.3 TB after old inode released by unmount
 Time:  90min limit
 
 Updated: 2026-05-09 08:30 UTC
+
+Job:   5740627 (u6gb-1-node-21-july-001)
+User:  kangli.u6gb
+Step:  placeholder — no training steps
+Model: none (full-node keep-alive, bare sleep 86100s)
+Data:  none
+Infra: 1N / 4 GPU (GH200 full node, --gpus-per-node=4 --mem=0)
+LR:    n/a
+Loss:  n/a
+Speed: n/a
+Time:  0:00 elapsed  |  23h55m payload  |  23:59:00 limit
+ETA:   ends ~24h after start
+W&B:   n/a (placeholder)
+Log:   /lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/u6gb-1-node-21-july-001-5740627.out
+
+Updated: 2026-07-21 11:15:38 UTC

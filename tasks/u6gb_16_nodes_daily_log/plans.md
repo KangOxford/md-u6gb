@@ -17,3 +17,4 @@
 - 2026-07-17: Stop this daily-log run after persisting `--notion-status failed`; do not retry Notion or touch experiment jobs/configuration.
 - 2026-07-19: Stop after the failed-status collector write and local error record; do not retry Notion or touch experiment jobs/configuration.
 - 2026-07-20: Stop after marking `notion_status=failed` locally because the Notion append was cancelled; do not retry Notion or touch experiment jobs/configuration.
+- 2026-07-21: Stop after marking `notion_status=failed` locally because the Notion append was cancelled; do not retry Notion or touch experiment jobs/configuration.
