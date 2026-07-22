@@ -6,3 +6,5 @@
 - [ ] With explicit confirmation received, uninstall only the Miniforge Claude Code npm package and reinstall the npm `stable` release; do not touch `~/.claude*`.
 - [x] Uninstall the Miniforge Claude Code npm package through npm.
 - [ ] Verify removal, then reinstall and verify the npm `stable` release.
+- [x] Verify complete removal and reinstall npm stable `2.1.206`.
+- [ ] Run final fresh-shell executable, version, package, and config-preservation checks.

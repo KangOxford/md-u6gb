@@ -7,3 +7,4 @@
 - Even when the user asks for a clean reinstall, deletion must wait for explicit path-level confirmation; an in-place pinned reinstall is the available non-deleting alternative and is already verified healthy.
 - Before an npm uninstall on NFS-backed storage, confirm no old Claude process holds the package executable open.
 - The clean uninstall completed through npm without manual filesystem deletion.
+- A clean uninstall necessarily creates a brief command-unavailable window; communicate the phase boundary before the user retries the command.
