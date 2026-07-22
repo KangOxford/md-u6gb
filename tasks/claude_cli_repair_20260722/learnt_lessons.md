@@ -8,3 +8,4 @@
 - Before an npm uninstall on NFS-backed storage, confirm no old Claude process holds the package executable open.
 - The clean uninstall completed through npm without manual filesystem deletion.
 - A clean uninstall necessarily creates a brief command-unavailable window; communicate the phase boundary before the user retries the command.
+- After reinstall, the affected interactive shell should run `hash -r` before retrying, while a fresh login shell provides independent resolution verification.

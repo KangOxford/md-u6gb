@@ -8,3 +8,4 @@
 - [ ] Verify removal, then reinstall and verify the npm `stable` release.
 - [x] Verify complete removal and reinstall npm stable `2.1.206`.
 - [ ] Run final fresh-shell executable, version, package, and config-preservation checks.
+- [x] Run final fresh-shell executable, version, package, and config-preservation checks.

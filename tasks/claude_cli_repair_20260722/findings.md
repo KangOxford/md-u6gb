@@ -10,3 +10,4 @@
 - 2026-07-22T11:50:00Z: The user explicitly confirmed deletion of the documented package and launcher paths. No user-owned `claude` or `node` process is active, so the clean uninstall can proceed without an NFS-held executable.
 - 2026-07-22T11:51:07Z: `npm uninstall -g @anthropic-ai/claude-code` completed successfully and reported `removed 2 packages`.
 - 2026-07-22T12:01:07Z: Both confirmed paths were absent after uninstall. The user invoked `claude` during this intentional uninstall-to-reinstall gap and correctly received `command not found`. npm stable remained `2.1.206`, and clean reinstall then succeeded with `added 2 packages in 7s`.
+- 2026-07-22T12:01:40Z: Final verification on `login42` passed: fresh login shell resolution, `claude --version`, npm global package state, symlink target, executable mode/size, and Miniforge `PATH` entry all agree on a healthy `2.1.206` install.
