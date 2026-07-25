@@ -5358,3 +5358,18 @@ W&B:   n/a (placeholder)
 Log:   /lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/u6gb-1-node-22-july-001-5748696.out
 
 Updated: 2026-07-22 09:58 UTC
+
+Job:   5780968 (u6gb-1-node-chain, seq 1)
+User:  kangli.u6gb
+Step:  keep-alive placeholder (sleep 86100), no training payload
+Model: n/a — idle node, attach via: srun --jobid=5780968 --overlap --pty bash
+Data:  n/a
+Infra: 1N / 4 GPU | --mem=0 | workq | brics.u6gb
+Loss:  n/a
+Time:  submitted 2026-07-25 20:44 UTC | eligible immediately (no --begin, no --dependency)
+ETA:   predicted start ~2026-07-26 11:00-17:00 UTC (observed waits: 14h27m, 20h21m)
+Chain: SELF-CHAINING — submits successor at its own start; stop via tasks/u6gb_16_nodes_daily_log/stop_1node_chain.flag
+W&B:   n/a (placeholder)
+Log:   /lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/slurm_logs/u6gb-1-node-chain-5780968.out
+
+Updated: 2026-07-25 20:44 UTC

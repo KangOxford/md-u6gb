@@ -21,3 +21,4 @@
 - 2026-07-21: Rendered the 2026-07-21 UTC report as 24h zero coverage, attempted the exact Notion append, received `user cancelled MCP tool call`, and wrote local outputs with `notion_status=failed`.
 - 2026-07-22: 提交 5748696(1N keep-alive sleep 86100s,--begin=2026-07-22T13:31:00Z);更新 queue_history/queue_stats/pending_successor_jobid.txt;Notion callout 已落页并划线原指令;live_jobs.md 与 active_monitors.jsonl 已登记。
 - 2026-07-23: Rendered the zero-coverage report, received `user cancelled MCP tool call`, and wrote daily/state/summary outputs with `notion_status=failed`.
+- 2026-07-25: one_node_chain.sbatch 上线(启动自提继任者+EXIT trap 兜底+stop_1node_chain.flag+PD 查重);commit a2599ac;首棒 5780968 提交并 PD;submissions.jsonl/live_jobs.md/active_monitors.jsonl 登记;Notion 答案 callout + 原指令划线。待验证:首棒启动时 chain_successor_submitted 事件与 07-26 daily report 计数。

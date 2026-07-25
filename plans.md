@@ -435,3 +435,4 @@ P103 UTC 2026-07-22T10:06:27Z: 用户选"克隆并摸清 griffing52/lob-mae"。�
 P104 UTC 2026-07-22T10:19:36Z: 用户要 lob-mae 与 sigma-flow(KangOxford/sigma-flow)关系。计划:克隆 sigma-flow→读其 models/flow_dit.py 与 lob-mae src/lob_mae/models/flow.py 做代码级 diff→读 setup_libs.sh 判定依赖类型→产出三层关系(provenance/各自定位/移植 diff)。
 P105 UTC 2026-07-22T10:25:45Z: 用户问 WanDiT/VideoDiT 是否用了 sigma-flow 的东西。计划:在 flow.py 内追 WanDiT/VideoDiT 的类依赖链,区分 sigma-flow-ported 类 vs Wan2.2 类;读 sigma-flow flow_matching/{scheduler,solver} 对比目标函数实现,判定"共享目标"是共享代码还是仅共享范式。
 P106 UTC 2026-07-22T11:12:04Z: 22-july placeholder 轮:按 block 深链只读锚点 code block→回答"1跑+1排是否常态"→record 5740627 入 queue_predictor→when-to-submit 算设计提交点→立即提交继任者并用 --begin 对齐该点→Notion callout+划线→四文件记录+commit。
+P107 UTC 2026-07-25T20:47:00Z: 25-july 深链锚点轮:只读 block 3a812c45-68fd-80bd(为什么两头空)→sacct/squeue/state.json 取证→定位"续链依赖 agent 在场"单点故障(第3次发作)→按用户新约束(重叠OK/gap不行)重设计为自续链 one_node_chain.sbatch→提交首棒→Notion 答复+划线→四文件记录+commit。

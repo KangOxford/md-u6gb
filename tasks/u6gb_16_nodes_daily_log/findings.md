@@ -21,3 +21,4 @@
 - 2026-07-21: The exact collector query initially failed under Python SlurmDBD socket access, but the shell-observed accounting snapshot for 2026-07-20..2026-07-22 had no fleet/resume rows, so the report is 24h at 0/16; Notion append failed with `user cancelled MCP tool call`.
 - 2026-07-22: 5740627 实际排队 14h26m;集群 PriorityWeightAge=0;07-19~21 零覆盖根因=继任者未被提交;现队列 5740627 RUNNING + 5748696 PENDING(BeginTime 13:31Z),预计 ~07-23 01:1x-02:00 接棒。
 - 2026-07-23: Slurm accounting returned no fleet/resume rows, so actual 16-node coverage was 0h FULL and 24h at 0/16; the Notion append was cancelled.
+- 2026-07-25: 5748696 排队 20h21m(EMA 低估43%)后 07-23 09:51Z 启动,07-24 09:47Z 跑满结束,此后无会话→链断 ~35h(第3次同因)。coverage 0% 系假报(旧 16-node 名精确匹配+logger 只读无权补链)。修复:自续链立即排队无 begin/dependency,重叠换零 gap;manifest→u6gb-1-node-chain,分母 1440。07-28 06:00-20:00 BST 全机维护=必然 gap,链维护后自动恢复。
