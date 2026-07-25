@@ -20,3 +20,4 @@
 - 2026-07-20: When SlurmDBD socket access is unstable, only use a confirmed zero-exit accounting capture for the collector shim and record any Notion cancellation as failed.
 - 2026-07-21: If the Notion connector returns `user cancelled MCP tool call`, treat it as the terminal Notion-update failure path and persist `notion_status=failed` locally.
 - 2026-07-22: 用 sbatch --begin 解耦提交与生效:PriorityWeightAge=0 时推迟生效零成本,立即提交消除"到点没人提交"的覆盖断点;每轮继任者启动后必须立刻 record 进 queue_predictor。
+- 2026-07-23: A cancelled Notion call is terminal for the daily logger; preserve the verified accounting snapshot and mark the local report failed.

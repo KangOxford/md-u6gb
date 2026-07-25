@@ -20,3 +20,4 @@
 - 2026-07-20: Captured accounting for the 2026-07-19..2026-07-21 query showed no fleet/resume rows, so the 2026-07-20 UTC coverage report is 24h at 0/16; Notion append failed with `user cancelled MCP tool call`.
 - 2026-07-21: The exact collector query initially failed under Python SlurmDBD socket access, but the shell-observed accounting snapshot for 2026-07-20..2026-07-22 had no fleet/resume rows, so the report is 24h at 0/16; Notion append failed with `user cancelled MCP tool call`.
 - 2026-07-22: 5740627 实际排队 14h26m;集群 PriorityWeightAge=0;07-19~21 零覆盖根因=继任者未被提交;现队列 5740627 RUNNING + 5748696 PENDING(BeginTime 13:31Z),预计 ~07-23 01:1x-02:00 接棒。
+- 2026-07-23: Slurm accounting returned no fleet/resume rows, so actual 16-node coverage was 0h FULL and 24h at 0/16; the Notion append was cancelled.
