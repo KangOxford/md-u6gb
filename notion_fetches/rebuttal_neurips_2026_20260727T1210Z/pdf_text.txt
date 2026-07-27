@@ -1,0 +1,3410 @@
+===== PAGE 1 =====
+
+Neural Scaling Laws for Order Flow Generation
+Anonymous Author(s)
+Affiliation
+Address
+email
+Abstract
+Industry-scale order-flow foundation models, including TradeFM [Kawawa-
+1
+Beaudan et al., 2026] and MarS [Li et al., 2025a], are now being trained with
+2
+token counts comparable to large language models, yet without a well-defined rule
+3
+for how parameters and data should be jointly scaled. We show that importing
+4
+language-model data-budget heuristics into order-flow modelling can lead to severe
+5
+under-training. Fitting an additive Chinchilla-style scaling law to a Mamba-3 width
+6
+sweep on tokenised order-flow message streams, we recover a markedly different
+7
+compute-optimal allocation: near C ≈1020 profiled FLOPs, the optimum lies
+8
+at tens of order messages per parameter – about 30 messages or 780 tokens per
+9
+parameter. The fitted data exponent, β ≈1.33, is nearly five times the Chinchilla
+10
+value for natural language (β ≈0.28), producing a highly asymmetric loss surface
+11
+in which under-sampling data is penalised sharply. These results suggest that data
+12
+budgets for order-flow foundation models cannot be inherited from language-model
+13
+heuristics, even though the compute-optimal path still couples more data with rapid
+14
+parameter growth.
+15
+1
+Introduction
+16
+Limit-order-book (LOB) data is one of the most abundant high-resolution sources of sequential data
+17
+outside natural language. NASDAQ data [Huang and Polak, 2011] alone records hundreds of billions
+18
+of order messages across the listed US equity universe, and the totals across other exchanges and
+19
+other asset classes extend the picture further. Once tokenised, these corpora can reach into the trillions
+20
+of tokens, comparable in scale to the data budgets used to pretrain modern open-weight language
+21
+models, opening the door to training very large autoregressive models on order-flow streams.
+22
+Large autoregressive models for this area face the same allocation question that motivated language-
+23
+model scaling laws: at a fixed training compute budget, how much should be spent on model
+24
+parameters and how much on additional observed tokens? The answer cannot be imported directly
+25
+from natural language. LOB data has stronger local syntax constraints, heavy temporal autocorre-
+26
+lation, long-tail noise, and a hardware cost profile that is not well captured by the textbook 6ND
+27
+approximation, especially for Mamba-style state-space kernels and multi-node training.
+28
+This paper reports a Mamba-3 logged-loss scaling law. The analysis uses ten Mamba-3 SISO logged-
+29
+loss curves, maps each checkpoint to Cij = q(Ni)Dij using a profiled FLOPs/token curve, and fits
+30
+the additive Hoffmann-style surface Lij = E + A/N α
+i + B/Dβ
+ij. The key technical distinction is
+31
+that Dij is the recorded tokens seen for checkpoint j of run i, not a fixed multiple of step count, so
+32
+runs with different batch sizes or tokens per step remain correctly placed.
+33
+Concretely, the logged-loss fit over 1,846 retained checkpoints from these ten Mamba-3 runs (8M–
+34
+197M parameters) is
+35
+L(N, D) = 0.506 + 27.84 N −0.370 + 2.18 × 1012 D−1.333,
+Submitted to 40th Conference on Neural Information Processing Systems (NeurIPS 2026). Do not distribute.
+
+===== PAGE 2 =====
+
+and this surface underlies every parametric projection reported in the rest of the paper.
+36
+We separate the fitted scaling law from the empirical frontier it summarises. A global additive surface
+37
+is fit to logged training loss, its compute-optimal projection is compared with the best observed
+38
+checkpoints, and reconstructed IsoFLOP valleys provide a local check on the same allocation trend.
+39
+The three views agree on the broad direction of the frontier, while exposing where the smooth fit is
+40
+only an approximation.
+41
+The main conclusion is that order-flow foundation models require their own scaling law. The fitted
+42
+Mamba-3 frontier differs sharply from the standard Chinchilla allocation for natural language: it
+43
+is not a universal tokens-per-parameter rule, but a compute-profiled allocation for this architecture,
+44
+tokeniser, corpus, and observed range.
+45
+This paper makes four contributions. We introduce a compute-profiled scaling-law analysis for
+46
+autoregressive full-book order-flow generation; fit the law on ten Mamba-3 SISO runs spanning
+47
+8M–197M parameters and 1,846 logged checkpoints; show that the resulting allocation departs
+48
+sharply from language-model Chinchilla heuristics; and validate the fitted frontier against empirical
+49
+best-so-far curves and reconstructed IsoFLOP valleys. We also release the code, FLOPs/token profiles,
+50
+fitting scripts, and trained checkpoints required to reproduce the analysis using licensed LOBSTER
+51
+data.
+52
+2
+Background
+53
+Limit order book and LOBSTER.
+A limit order book records every active resting buy and
+54
+sell order at one equity on an electronic exchange. Orders at each price level are matched in
+55
+price-then-time priority, with the best bid and best ask defining the bid–offer spread. Under the
+56
+continuous double-auction protocol used by NASDAQ, the book evolves through a stream of typed
+57
+message events: a new limit order (Type 1) added to the book if it is non-marketable; a partial
+58
+cancellation (Type 2) reducing the size of an existing resting order; a full deletion (Type 3) removing
+59
+an existing resting order; and an execution (Type 4) matching a resting order against incoming
+60
+liquidity. Hidden executions, trading halts, and cross trades are excluded following Nagy et al. [2023].
+61
+The LOBSTER reconstruction [Huang and Polak, 2011] of NASDAQ TotalView–ITCH provides a
+62
+publicly distributed canonical form of this stream at nanosecond resolution per ticker per day, and the
+63
+eight-equity sub-corpus used in this paper (Section 3.1) contains roughly 3.09 × 1010 such messages
+64
+over 2022–2025.
+65
+From a raw LOBSTER record to a 26-token block.
+Each raw LOBSTER record carries a typed
+66
+mixture of categorical fields (event type, side) and numerical fields (price, size, timestamps, optional
+67
+reference order ID), so an LOB stream cannot be tokenised in the byte-pair sense used for text. We
+68
+adopt the field-disjoint tokenisation of Nagy et al. [2023], originally an LOBS5 22-token block over a
+69
+vocabulary of |V | = 2,112 IDs, and extend it to 26 tokens per message via two sequential digit-splits
+70
+that remove the deep-book price truncation of the original scheme; only a negligible fraction of size
+71
+clipping remains, and it is disclosed in the preprocessing notes. The resulting per-message layout
+72
+is shown in Appendix Figure 6, with positions grouped into core message fields, inter-arrival time,
+73
+absolute time, and reference fields used by cancel/modify/execute messages; the full vocabulary
+74
+structure and the position-wise field decomposition are deferred to Appendix C. Throughout the paper
+75
+the data axis D is therefore counted in these 26-token units, not in raw messages or optimiser steps.
+76
+Scaling-law functional form and the profiled compute axis.
+Following Hoffmann et al. [2022]
+77
+we describe the per-token cross-entropy as
+78
+L(N, D) = E + A N −α + B D−β,
+with N the total parameter count including embeddings (the convention reconciled by Pearce and
+79
+Song [2024]), D the number of tokens seen, E the irreducible loss floor under our tokeniser,
+80
+context, and model family, and α, β > 0 the parameter- and data-side exponents. Turning this
+81
+surface into a compute-optimal allocation requires fixing a compute axis. The textbook closed
+82
+form C ≈6ND [Kaplan et al., 2020, Hoffmann et al., 2022] ignores tokeniser overhead, attention-
+83
+quadratic terms, and state-space kernels; we instead use a profiled compute axis C = q(N) D, where
+84
+q(N) is a FLOPs/token profile measured once per model size from GPU profiler counters (NVIDIA
+85
+dmon/GPM) during training (Appendix G). After this definition, all compute budgets are reported as
+86
+2
+
+===== PAGE 3 =====
+
+C in FLOPs. When q(N) is locally well approximated by kN γ, the compute optimum has closed
+87
+form N ⋆(C) ∝Cβ/(α+γβ) and D⋆(C) ∝Cα/(α+γβ) (Proposition 1; full derivation in Appendix F),
+88
+so the conventional Chinchilla numerics are recovered only in the special case γ = 1. Because D is
+89
+recorded as cumulative tokens seen rather than as optimiser steps, runs with different per-step token
+90
+budgets (different batch sizes, sequence lengths, or accumulation factors) are placed on the same
+91
+D-axis without rescaling.
+92
+Logged loss, validation CE, and IsoFLOP slices.
+The fitted loss in this paper is the logged
+93
+training loss, interpreted as a Chinchilla-style pretraining loss in the sub-epoch regime. Hoffmann et
+94
+al. explicitly model final pretraining loss using smoothed training loss, noting that it is an unbiased
+95
+estimate of test loss when the number of training tokens is smaller than the full corpus size [Hoffmann
+96
+et al., 2022]. Our sweep is in the same one-pass accounting regime: the largest run consumes fewer
+97
+encoded token occurrences than the 2022–2025 LOBSTER corpus contains. We therefore treat logged
+98
+training loss as the relevant same-distribution pretraining/test loss for the scaling fit. Chronological
+99
+and instrument-held-out cross-entropy are stricter deployment-shift checks, not prerequisites for
+100
+fitting the same-distribution scaling surface. An IsoFLOP valley, finally, is the locus of (N, L)
+101
+obtained by interpolating loss curves across runs at a fixed C = q(N)D; a parabola in log L over
+102
+log N then identifies the valley minimum N ⋆
+iso(C) and gives a slice-level cross-check on the global
+103
+additive fit [Czech et al., 2026]. The current paper reports the logged-loss fit and IsoFLOP analysis,
+104
+while keeping held-out CE as a deployment validation target.
+105
+Selective state-space models and Mamba-3.
+The architectural family used throughout this paper
+106
+is the selective state-space model line, in which a recurrent hidden state is updated by an input-
+107
+dependent transition rather than a fixed kernel. Mamba [Gu and Dao, 2023] introduces this selectivity
+108
+over diagonal SSMs; Mamba-2 [Dao and Gu, 2024] reformulates it through state-space duality so
+109
+that selective recurrences run as hardware-efficient blockwise matrix operations during training while
+110
+preserving constant-memory inference; and Mamba-3 [Lahoti et al., 2026], the variant fit in this paper,
+111
+additionally applies trapezoidal discretisation, rotary position embeddings on the input-dependent
+112
+B/C projections, and BCNorm. We use the SISO output variant exclusively (Section 3.2); the MIMO
+113
+variant and a Transformer counterpart are listed only in the FLOPs/MFU profile of Appendix G. The
+114
+Mamba-3 block is plugged into a dual-stream message/book/fused outer wrapper at depth allocation
+115
+(Nmsg, Nbook,pre, Nbook,post, Nfused) = (2, 1, 1, 6); the full schematic of the stream merge and shared
+116
+sequence-layer wrapper is given by Figure 4 in Appendix A.
+117
+3
+Methodology
+118
+3.1
+Training corpus and held-out evaluation
+119
+We train on 8 NASDAQ large-cap equities from LOBSTER [Huang and Polak, 2011]: GOOG, AAPL,
+120
+NVDA, AMZN, META, TSLA, MSFT, and AMD over 2022-01-01 to 2025-12-31. This corpus
+121
+contains approximately 3.09×1010 messages and, under the 26-token-per-message encoding adapted
+122
+from Nagy et al. [2023], approximately 800B (8.03 × 1011) tokens at a fixed context of 500 messages
+123
+(13,000 tokens) per sample.
+124
+The validation protocol is forward-in-time on January 2026 data, covering all eight in-distribution
+125
+equities and two out-of-distribution equities, MU and NFLX, that are held out by instrument.
+126
+This held-out stream defines the validation target for the planned scaling law. The fitted Eval would
+127
+estimate the per-token validation cross-entropy floor for the specified setting: NASDAQ LOBSTER
+128
+order flow, 500-message context, 26-token encoding, and the chosen Mamba-3 model family.
+129
+3.2
+Architectures and width sweep
+130
+The reproduced scaling analysis uses only Mamba-3 SISO. The available logged-loss curves comprise
+131
+10 long runs, ranging from 8M to 197M parameters, using the 26-token message encoding and a
+132
+500-message context. The Mamba-3 configuration matches the state-space backbone of Lahoti et al.
+133
+[2026] with SISO output, RoPE on the B/C projections with rope-fraction 0.5, expand factor 2, and
+134
+state dimension 128. We report the total parameter count N on every plot axis.
+135
+3
+
+===== PAGE 4 =====
+
+3.3
+Functional form and scaling fit
+136
+We fit the additive Chinchilla-style form
+137
+L(N, D) = E + AN −α + BD−β,
+(1)
+In this paper, L is logged training loss. Thus, E in this section is the asymptote of the logged-loss
+138
+scaling fit rather than a held-out entropy estimate. The parameter term AN −α and data term BD−β
+139
+keep the Hoffmann additive form [Hoffmann et al., 2022], and their fitted exponents describe the
+140
+Mamba-3 logged-loss surface under the profiled compute convention.
+141
+Sample and objective.
+The fit uses all retained Mamba-3 logged checkpoints after filtering out the
+142
+early high-loss transient with L > 1.0, giving 1,846 rows from ten runs. We minimise the log-Huber
+143
+objective
+144
+X
+i
+Huberδ
+
+log Li −log ˆLi
+
+,
+δ = 10−3,
+with ˆLi = E + AN −α
+i
++ BD−β
+i
+, over the box α, β ∈[0.1, 2.0], E ∈[0, mini Li], A, B ≥0. The
+145
+outer optimisation over (α, β, E) uses grid initialisation followed by L-BFGS-B polishing; A and B
+146
+are re-estimated inside the nonlinear objective. The fixed design points are (Ni, Dij), where Dij is
+147
+tokens seen at logged checkpoint j of run i.
+148
+IsoFLOP cross-check.
+For each populated slice, we fit a parabola log L = a + b(log N −c)2 on
+149
+its points and compare the empirical compute-optimal size ˆN ∗
+iso(C) = exp(c) against the parametric
+150
+prediction under the same profiled compute convention. Slice-versus-parametric mismatch is then
+151
+attributable to functional-form misspecification, valley noise, or profile error rather than to mixing a
+152
+profiled C-axis with the analytic C ∝ND convention.
+153
+3.4
+Uncertainty in the reported figures
+154
+The uncertainty bands in Figures 1 and 2 are percentile bootstrap intervals, not standard deviations,
+155
+standard errors of the mean, or symmetric Gaussian error bars. The grey parametric band resamples
+156
+temporally correlated logged-loss residuals along the observed training curves under a fixed (Ni, Dij)
+157
+design, while the red IsoFLOP band resamples retained fixed-compute valley rows. These bands
+158
+quantify sensitivity of the plotted fits to the observed logged-loss data; they do not include seed-
+159
+to-seed variation, new training runs, chronological or instrument-held-out validation-loss noise,
+160
+FLOPs-profile uncertainty, or misspecification of the additive Chinchilla form. We therefore interpret
+161
+disagreement between the global additive surface and local IsoFLOP valleys as model-specification
+162
+uncertainty rather than compressing it into a single headline combined CI. Appendix B gives the
+163
+bootstrap procedures.
+164
+3.5
+Scaling-law variables and empirical fit scope
+165
+The sweep starts from logged LOB training curves rather than from a pre-built scaling-law table.
+166
+Each retained checkpoint supplies a tuple (Ni, Dij, Lij), and the analysis is only interpretable once
+167
+the three axes have fixed meanings.
+168
+We therefore use total parameter count for N, cumulative encoded tokens for D, profiled compute
+169
+C = q(N)D, and logged training loss for L. These choices put all runs on the same axes while
+170
+keeping the claim scoped to the logged-loss surface, not to a held-out validation law.
+171
+The same accounting choices also determine how uncertainty should be read. The grey band resamples
+172
+within-run logged-loss residuals, whereas the IsoFLOP band resamples fitted valley rows; neither
+173
+band is a seed-replication or new-run interval. Appendix E gives the full checklist and explains how
+174
+these conventions connect to the methodology critiques in Section 5.
+175
+4
+Estimating the optimal parameter/training tokens allocation
+176
+This section reports the loss-optimal allocation between parameter count and training tokens for
+177
+Mamba-3 order-flow models. Given a profiled compute budget C, we seek the pair (N ⋆, D⋆) that
+178
+minimises the fitted logged training loss subject to the measured FLOPs/token curve q(N).
+179
+4
+
+===== PAGE 5 =====
+
+All experiments in this section use the Mamba-3 SISO variant only. The analysis uses logged training-
+180
+loss curves from 10 Mamba-3 runs spanning 8M–197M parameters, all trained with the 26-token
+181
+encoding and a 500-message context. Using the profiled FLOPs/token curve q(N) from Appendix G,
+182
+every logged checkpoint is placed at
+183
+Cij = q(Ni)Dij,
+where Dij is tokens seen by run i at checkpoint j. The results should therefore be interpreted as
+184
+an empirical logged-loss scaling law: it uses logged/training loss rather than strict chronological
+185
+or instrument-held-out validation CE, and the IsoFLOP valleys are sampled from existing long-
+186
+run checkpoints rather than from a dedicated matched-compute sweep. Large-scale out-of-sample
+187
+validation runs at Cval = 2 × 1022 FLOPs are deferred to a future strict-validation rerun rather than
+188
+reported here.
+189
+4.1
+Mamba-3 training-loss scaling fit
+190
+Each logged checkpoint contributes a tuple (Ni, Dij, Lij), where Ni is the parameter count of run i,
+191
+Dij is the cumulative number of tokens seen by checkpoint j, and Lij is the corresponding per-token
+192
+training cross-entropy. We use tokens seen, rather than optimiser steps, as the data axis. After
+193
+omitting the early high-loss transient with L > 1.0, the fit uses 1,846 checkpoints across ten runs.
+194
+We fit the additive Hoffmann-style surface
+195
+L(N, D) = E + A N −α + B D−β
+using a log-Huber objective on log-residuals. The resulting logged-loss fit is
+196
+Llogged(N, D) = 0.506 + 27.84 N −0.370 + 2.18 × 1012 D−1.333.
+Combining this surface with the profiled FLOPs/token curve q(N), under the compute constraint
+197
+C = q(N)D, gives the projected compute-optimal scaling
+198
+N ⋆(C) ∝C0.849,
+D⋆(C) ∝C0.236.
+1019
+1020
+Compute C (dmon-derived FLOPs)
+1
+0.6
+0.7
+0.8
+0.9
+Logged loss L
+Logged-loss frontier
+empirical frontier (best-so-far)
+log-huber: parametric fitted frontier
+95% bootstrap (parametric)
+1e19
+2e19
+5e19
+Compute C (dmon-derived FLOPs)
+2 × 107
+3 × 107
+4 × 107
+N
+ (params)
+Model-size projection
+logged-loss IsoFLOP optimum
+valley projection, slope=0.73
+dlog N
+/dlog C = 0.73
+1e19
+2e19
+5e19
+Compute C (dmon-derived FLOPs)
+2 × 1010
+3 × 1010
+4 × 1010
+D
+ (tokens)
+Data-budget projection
+logged-loss IsoFLOP optimum
+valley projection, slope=0.42
+dlog D
+/dlog C = 0.42
+7.0
+7.2
+7.4
+7.6
+7.8
+8.0
+8.2
+log10 N
+Figure 1: Mamba-3 logged-loss scaling fit under profiled compute. Left: logged training-loss
+curves as a function of C = q(N)D. The black dashed curve is the empirical best-so-far frontier over
+observed checkpoints, while the grey dotted curve is the frontier implied by the fitted additive surface
+under the same compute constraint. Centre/right: IsoFLOP valley estimates and their power-law
+projections for the loss-optimal parameter and data allocations.
+Figure 1 deliberately separates the observed frontier from the fitted one. The black curve is the best
+199
+loss reached by any logged checkpoint up to compute C. The grey curve is the optimum predicted by
+200
+the global additive fit under C = q(N)D.
+201
+The difference is evident in the reproduced fit: over roughly 12% of the plotted computational range,
+202
+the observed frontier lies below the fitted projection, with the largest gap of about 0.004 nats. We
+203
+therefore read the additive law as a smooth global approximation, not as a literal envelope of the runs.
+204
+The IsoFLOP valleys provide an independent empirical check of the same allocation trend.
+205
+5
+
+===== PAGE 6 =====
+
+4.2
+IsoFLOP valley analysis and uncertainty
+206
+As a second check on the allocation trend, we reconstruct fixed-compute slices directly from the
+207
+logged checkpoints. For each target compute budget Ck, and model size Ni, we compute the
+208
+corresponding data budget
+209
+Dik =
+Ck
+q(Ni).
+We then select the nearest logged checkpoint for that run and retain it only if its profiled compute is
+210
+within 2% of Ck. This gives an approximate fixed-compute slice across model sizes.
+211
+On each slice, we fit a local quadratic in log model size,
+212
+log L = a + b(log N −c)2.
+The fitted valley defines
+213
+N ⋆(Ck) = exp(c),
+D⋆(Ck) =
+Ck
+q(N ⋆(Ck)).
+The log-log projection lines in Figure 2 are fitted across the nine recovered valleys. Uncertainty bands
+214
+are obtained by resampling these nine valley rows 5,000 times and plotting the 2.5–97.5 percentile
+215
+envelope. These bands measure sensitivity to the recovered valleys only; they do not include new
+216
+training runs, validation-loss noise, error in the FLOPs/token profile, or misspecification of the
+217
+additive scaling form. Appendix Table 1 reports the underlying valley estimates and support counts.
+218
+10M
+100M
+Parameters N
+0.6
+0.7
+0.8
+0.9
+1.0
+Logged training loss L
+IsoFLOP curves
+Compute C
+9e18
+1.1e19
+1.2e19
+1.5e19
+1.8e19
+2e19
+2.5e19
+3.4e19
+4.2e19
+1e19
+2e19
+5e19
+Compute C (dmon-derived FLOPs)
+2 × 107
+3 × 107
+4 × 107
+6 × 107
+Parameters N
+dlog N
+/dlog C = 0.73
+Model-size projection
+logged-loss valleys
+valley bootstrap 95% CI
+power-law projection (slope=0.73)
+1e19
+2e19
+5e19
+Compute C (dmon-derived FLOPs)
+2 × 1010
+3 × 1010
+4 × 1010
+Tokens D
+dlog D
+/dlog C = 0.42
+Data-budget projection
+logged-loss valleys
+valley bootstrap 95% CI
+power-law projection (slope=0.42)
+Mamba3 IsoFLOP curves (nearest logged-loss points)
+Figure 2: Logged-loss IsoFLOP valley analysis. Left: approximate fixed-compute slices recon-
+structed from logged checkpoints, with local parabolas fit in logL versus logN. Centre/right:
+valley-implied N ⋆(C) and D⋆(C), with log-log projection slopes of approximately 0.73 and 0.42,
+respectively. Shaded bands are obtained by resampling the nine valley estimates and should be
+interpreted as valley-resampling uncertainty only.
+Each fixed-C slice in Figure 2 has 7–9 model-size points, the left side of several valleys is supported
+219
+by only two points, and D⋆(C) is not strictly monotone. The slopes should therefore be read as local
+220
+logged-loss allocation trends over the current run set.
+221
+4.3
+Held-out validation status
+222
+The scaling law above follows the Chinchilla convention: it models the same-distribution pretraining
+223
+loss using smoothed logged training loss in a regime where the consumed training tokens are fewer
+224
+than the corpus tokens available. Under this one-pass accounting, training loss is the scaling-law loss
+225
+for the cached pretraining distribution, as in the original compute-optimal language-model analysis
+226
+[Hoffmann et al., 2022]. The forward-time and instrument-held-out CE pass asks a different question:
+227
+whether the scaling shape and compute allocation survive the deployment shifts that matter for
+228
+order-flow modelling.
+229
+Those shifts are substantive. First, training examples drawn from the same trading day are highly
+230
+overlapping, so consecutive logged losses have a smaller effective sample size than the raw token
+231
+6
+
+===== PAGE 7 =====
+
+count suggests. Second, order-book states are strongly autocorrelated within a session, making a
+232
+uniform shuffle an optimistic deployment protocol; the stricter split is chronological and forward
+233
+in time. Third, the training corpus covers a finite set of instruments. Structure shared by those
+234
+instruments can reduce same-distribution pretraining loss while failing to transfer to unseen tickers.
+235
+The planned strict-validation pass is designed to measure this deployment gap directly. The saved
+236
+checkpoints on the same (Ni, Dij) grid will be re-evaluated on a forward-in-time January 2026
+237
+stream for the in-distribution tickers, and separately on instrument-held-out tickers such as MU and
+238
+NFLX. We will then refit the same additive form,
+239
+Lval(Ni, Dij) = Eval + AvalN −αval
+i
++ BvalD−βval
+ij
+,
+under the same profiled compute convention Cij = q(Ni)Dij. The comparison between (α, β) and
+240
+(αval, βval) will determine how much of the logged-loss allocation trend survives under deployment-
+241
+relevant validation.
+242
+1017
+1018
+1019
+FLOPs
+0.5
+1.0
+1.5
+2.0
+2.5
+3.0
+Test CE (nats/token)
+GOOG  (E=0.390, R²=0.965, MAE=0.0418)
+1017
+1018
+1019
+FLOPs
+0.5
+1.0
+1.5
+2.0
+2.5
+3.0
+Test CE (nats/token)
+NVDA  (E=0.484, R²=0.971, MAE=0.0385)
+1017
+1018
+1019
+FLOPs
+0.5
+1.0
+1.5
+2.0
+2.5
+3.0
+Test CE (nats/token)
+AMD  (E=0.327, R²=0.963, MAE=0.0468)
+1017
+1018
+1019
+FLOPs
+0.5
+1.0
+1.5
+2.0
+2.5
+3.0
+3.5
+Test CE (nats/token)
+META  (E=0.517, R²=0.976, MAE=0.0305)
+1017
+1018
+1019
+FLOPs
+0.5
+1.0
+1.5
+2.0
+2.5
+3.0
+3.5
+Test CE (nats/token)
+MU   (E=0.541, R²=0.973, MAE=0.0347)
+1017
+1018
+1019
+FLOPs
+0.5
+1.0
+1.5
+2.0
+2.5
+3.0
+Test CE (nats/token)
+Mean  (E=0.423, R²=0.965, MAE=0.0482)
+8m
+14m
+23m
+34m
+46m
+78m
+E = 0.390
+Figure 3: Per-ticker test-CE scaling trends for Mamba-3 SISO. The curves use a 500-message
+context and a January 2026 forward-in-time held-out window. Each panel shows iso-parameter
+test-CE curves for one evaluation ticker, with α and β locked from an earlier training-loss fit.
+Instrument-held-out tickers are marked with †. The fitted irreducible loss E varies substantially
+across tickers, from 0.327 on AMD to 0.541 on MU, reflecting differences in message rate and
+microstructural complexity. This figure documents the previous validation target and motivates the
+planned strict rerun; it is not part of the current reproduced logged-loss scaling law.
+The strict-validation rerun is not a minor numerical refinement. It tests the two shifts that matter for
+243
+deployment: forward in time and across instruments. An order-flow model is used on future trading
+244
+sessions and on instruments whose liquidity, volatility, and event-type composition may differ from
+245
+the training cache. A scaling law that transfers across time but not instruments, or across instruments
+246
+but not time, is therefore only a description of the cached training population. The logged-loss
+247
+exponents should be treated as deployment-relevant only if the held-out surfaces reproduce the same
+248
+allocation trend on both the forward in-distribution stream and the instrument-held-out stream.
+249
+4.4
+Marginal cost of loss reduction
+250
+Under the profiled compute convention C = q(N)D, the fitted logged-loss surface implies
+251
+N ⋆(C) ∝C0.849,
+D⋆(C) ∝C0.236,
+Lr(C) = L(C) −E ∝C−0.314.
+7
+
+===== PAGE 8 =====
+
+Thus the remaining reducible logged loss falls slowly with compute: halving it would require about
+252
+9× more compute, and a decade of additional compute would reduce it by only about a factor of two.
+253
+This is a local logged-training-loss estimate, not a held-out validation result.
+254
+The same frontier also shows why there is no fixed tokens-per-parameter rule. Since
+255
+D⋆(C)/N ⋆(C) ∝C−0.613,
+the fitted data-per-parameter ratio decreases with compute. Ratios such as “messages per parameter”
+256
+are therefore local summaries at a chosen compute budget, not constants of the scaling law.
+257
+All such statements refer to the fitted parametric surface. They should not be read as claims about the
+258
+empirical best-so-far frontier, which locally falls below the fitted projection in Figure 1.
+259
+5
+Related Work
+260
+The foundation model paradigm, which has transformed natural language processing, has begun to
+261
+be adapted for the financial domain. At the aggregated price-and-return level, this includes general
+262
+time-series foundation models [Ansari et al., 2024, Woo et al., 2024, Das et al., 2024, Liu et al., 2024,
+263
+Goswami et al., 2024, Garza et al., 2023, Rasul et al., 2024] and the finance-specific Kronos [Shi et al.,
+264
+2025]. The most granular level of market data, however, is the Limit Order Book (LOB) itself, where
+265
+the LOBSTER dataset [Huang and Polak, 2011] for the S&P 500 alone amounts to many billions of
+266
+order messages, which, once tokenised, is comparable in scale to the corpora used to train modern
+267
+foundation language models such as LLaMA-3 [Grattafiori et al., 2024]. Earlier deep-learning work
+268
+on LOB data spans CNN-based models [Zhang et al., 2019, Briola et al., 2025], GANs [Coletta et al.,
+269
+2021, Cont et al., 2023], diffusion models [Backhouse et al., 2025, Berti et al., 2025, Wang and Ventre,
+270
+2026], and recurrent networks [Hultin et al., 2023]. Recent work has increasingly focused on large
+271
+autoregressive foundation models trained on tokenised message sequences, which seem to outperform
+272
+alternative paradigms on the LOB-Bench distributional benchmark [Nagy et al., 2025]. LOBS5 [Nagy
+273
+et al., 2023] introduced token-level next-token prediction on tokenized LOBSTER data with an S5
+274
+backbone [Smith et al., 2023]; MarketGPT [Wheeler and Varner, 2024] and TradeFM [Kawawa-
+275
+Beaudan et al., 2026] adopt Transformer backbones, with TradeFM scaling to multi-asset-class trade
+276
+flow; ByteGen [Li and Chen, 2025] operates directly in byte space for a lossless representation; and
+277
+MarS [Li et al., 2025a] and LOBERT [Linna et al., 2025] both compress each message into a single
+278
+token to obtain longer effective contexts, the former within a market simulation engine, and the latter
+279
+via a BERT-style encoder.
+280
+How parameters and data should be scaled jointly is a central question for training such large models.
+281
+Kaplan et al. [2020] established power-law scaling for autoregressive language models, and Hoffmann
+282
+et al. [2022] introduced the now-standard additive functional form with an irreducible-loss floor.
+283
+The same form has since been shown to hold across a wide range of modalities: image, video, and
+284
+mathematical problem solving [Henighan et al., 2020]; general time-series tokens [Edwards et al.,
+285
+2024, Yao et al., 2025]; tokenized world-model data [Pearce et al., 2024]; symbolic music tokens [Qu
+286
+et al., 2024]; motion forecasting and planning [Baniodeh et al., 2025]; and genome-scale nucleotide
+287
+sequences [Nguyen et al., 2024], with exponents that depend strongly on tokenizer and architecture.
+288
+Analogous studies report scaling for selective state-space models [Gu and Dao, 2023, Dao and Gu,
+289
+2024], gated linear recurrences [De et al., 2024], and the xLSTM family [Beck et al., 2026]. The
+290
+fitting methodology has correspondingly been sharpened by replication and reconciliation work:
+291
+Besiroglu et al. [2024] critique overly narrow confidence intervals; Pearce and Song [2024] reconcile
+292
+Kaplan and Chinchilla by making parameter-counting conventions explicit; Porian et al. [2024] isolate
+293
+the cosine-LR-decay endpoint and warmup-scaling as dominant sources of the Kaplan–Chinchilla
+294
+discrepancy; Li et al. [2025b] survey reporting standards across the field; and Czech et al. [2026]
+295
+characterise structural biases in IsoFLOP parabola fits. We address these critiques in our methodology
+296
+(Section 3) and report the current Mamba-3 LOB-message scaling law as a reproducible step toward
+297
+a strict validation scaling law.
+298
+8
+
+===== PAGE 9 =====
+
+6
+Conclusion
+299
+This paper provides a first scaling-law estimate for tokenised order-flow generation under a measured
+300
+Mamba-3 compute model. Fitting an additive Chinchilla-style surface to logged training loss, we find
+301
+that order-flow scaling differs sharply from the language-model heuristic: the fitted data exponent is
+302
+much larger, and the local compute-optimal allocation corresponds to tens of order-flow messages
+303
+per parameter rather than a fixed token-per-parameter rule. This suggests that current order-flow
+304
+foundation models may be undertrained at their reported model scales, and that the optimal allocation
+305
+depends sensitively on the compute convention used to define the frontier.
+306
+The reproduced Mamba-3 sweep gives a coherent logged-loss scaling law, but its allocation frontier
+307
+is tied to the profiled compute model. With C = q(N)D, the fitted optimum scales as
+308
+N ⋆(C) ∝C0.849,
+D⋆(C) ∝C0.236,
+rather than following the standard Chinchilla allocation implied by C ∝ND. Thus, the main
+309
+empirical result is not a universal “tokens per parameter” constant, but a profiled allocation frontier
+310
+for this architecture, tokeniser, corpus, and compute range.
+311
+Deployment.
+This training-time prescription does not require serving the largest trained model
+312
+in a latency-sensitive trading stack. If inference speed, memory footprint, or co-location cost is the
+313
+binding deployment constraint, the natural follow-up is to train near the compute-optimal allocation
+314
+and then distill the resulting autoregressive order-flow policy into a smaller student model, including
+315
+online policy distillation while the teacher continues to generate or score market continuations. In
+316
+that use case, the scaling law specifies where to spend training compute, while distillation determines
+317
+the deployable inference footprint.
+318
+Limitations.
+Several limitations are important for interpreting the scaling figures. First, the
+319
+reproduced fit is based on the available eight-stock training corpus, corresponding to roughly 800B
+320
+encoded tokens. We have not yet tested whether the same law holds at larger token budgets, on later
+321
+forward-in-time streams, or across a broader universe of equities. In particular, the current exponents
+322
+may partly reflect the liquidity, volatility, event-rate, and tick-size regimes of the stocks used in the
+323
+sweep. Projections beyond this corpus should therefore be read as extrapolations from the current
+324
+logged-loss surface, not as validated large-scale or cross-instrument scaling predictions.
+325
+Second, the sweep covers only a limited range of model sizes. The current runs span 8M–197M
+326
+parameters, which is enough to reveal a local allocation trend but not enough to establish a broad
+327
+asymptotic scaling law over multiple decades of N. This matters especially for the projected compute-
+328
+optimal frontier, since the fitted exponents are being used to extrapolate beyond the densest region of
+329
+observed runs.
+330
+Third, the longest runs still do not fully populate the large-D regime needed to test the far end of the
+331
+fitted data exponent. Longer training runs, or a dedicated matched-compute sweep with more evenly
+332
+spaced checkpoints at high token counts, would be needed to check whether the same D-dependence
+333
+persists further out.
+334
+Finally, the current sweep does not include enough independent seeds at each model size to estimate
+335
+seed-to-seed or new-run variance. The bootstrap bands quantify within-run logged-loss residual
+336
+variation and IsoFLOP valley-row sensitivity, but they should not be interpreted as uncertainty over
+337
+fresh training runs, architecture choices, or new data samples.
+338
+Code and checkpoints.
+Open-source code and trained checkpoints are available at https:
+339
+//github.com/openreview-submission/anonymous. The eight-equity LOBSTER message
+340
+stream used in this paper is licensed for academic research under our LOBSTER agreement and
+341
+cannot be redistributed; reproducing the scaling analysis therefore requires obtaining LOBSTER
+342
+access directly from Huang and Polak [2011]. The released repository contains the tokeniser, the
+343
+FLOPs/token profile, the bootstrap and IsoFLOP fitting code, and the Mamba-3 checkpoints needed
+344
+to regenerate every figure in the paper from a user-provided LOBSTER snapshot.
+345
+9
+
+===== PAGE 10 =====
+
+References
+346
+Abdul Fatir Ansari, Lorenzo Stella, Ali Caner Turkmen, Xiyuan Zhang, Pedro Mercado, Huibin Shen,
+347
+Oleksandr Shchur, Syama Sundar Rangapuram, Sebastian Pineda Arango, Shubham Kapoor, Jasper
+348
+Zschiegner, Danielle C. Maddix, Hao Wang, Michael W. Mahoney, Kari Torkkola, Andrew Gordon
+349
+Wilson, Michael Bohlke-Schneider, and Bernie Wang. Chronos: Learning the language of time
+350
+series. Transactions on Machine Learning Research, 2024. ISSN 2835-8856. URL https:
+351
+//openreview.net/forum?id=gerNCVqqtR.
+352
+Alfred Backhouse, Kang Li, Jakob Foerster, Anisoara Calinescu, and Stefan Zohren. Painting the
+353
+market: generative diffusion models for financial limit order book simulation and forecasting.
+354
+arXiv preprint arXiv:2509.05107, 2025.
+355
+Mustafa Baniodeh, Kratarth Goel, Scott Ettinger, Carlos Fuertes, Ari Seff, Tim Shen, Cole Gulino,
+356
+Chenjie Yang, Ghassen Jerfel, Dokook Choe, Rui Wang, Benjamin Charrow, Vinutha Kallem,
+357
+Sergio Casas, Rami Al-Rfou, Benjamin Sapp, and Dragomir Anguelov. Scaling laws of motion
+358
+forecasting and planning – technical report, 2025. URL https://arxiv.org/abs/2506.08228.
+359
+Andrew R. Barron. Universal approximation bounds for superpositions of a sigmoidal function. IEEE
+360
+Transactions on Information Theory, 39(3):930–945, 1993.
+361
+Maximilian Beck, Kajetan Schweighofer, Sebastian Böck, Sebastian Lehner, and Sepp Hochreiter.
+362
+xlstm scaling laws: Competitive performance with linear time-complexity, 2026. URL https:
+363
+//arxiv.org/abs/2510.02228.
+364
+Leonardo Berti, Bardh Prenkaj, and Paola Velardi. Trades: Generating realistic market simulations
+365
+with diffusion models. arXiv preprint arXiv:2502.07071, 2025.
+366
+Tamay Besiroglu, Ege Erdil, Matthew Barnett, and Josh You. Chinchilla scaling: A replication
+367
+attempt. arXiv preprint arXiv:2404.10102, 2024.
+368
+Léon Bottou, Frank E. Curtis, and Jorge Nocedal. Optimization methods for large-scale machine
+369
+learning. SIAM Review, 60(2):223–311, 2018.
+370
+Antonio Briola, Silvia Bartolucci, and Tomaso Aste. Hlob–information persistence and structure in
+371
+limit order books. Expert Systems with Applications, 266:126078, 2025.
+372
+Andrea Coletta, Matteo Prata, Michele Conti, Emanuele Mercanti, Novella Bartolini, Aymeric
+373
+Moulin, Svitlana Vyetrenko, and Tucker Balch. Towards realistic market simulations: a generative
+374
+adversarial networks approach. In Proceedings of the Second ACM International Conference on AI
+375
+in Finance, pages 1–9, 2021.
+376
+Rama Cont, Mihai Cucuringu, Jonathan Kochems, and Felix Prenzel. Limit order book simulation
+377
+with generative adversarial networks. Available at SSRN 4512356, 2023.
+378
+Eric Czech, Zhiwei Xu, Yael Elmatad, Yixin Wang, and William Held. Problems with chinchilla
+379
+approach 2: Systematic biases in isoflop parabola fits, 2026. URL https://arxiv.org/abs/
+380
+2603.22339.
+381
+Tri Dao and Albert Gu. Transformers are SSMs: Generalized models and efficient algorithms through
+382
+structured state space duality, 2024. URL https://arxiv.org/abs/2405.21060.
+383
+Abhimanyu Das, Weihao Kong, Rajat Sen, and Yichen Zhou. A decoder-only foundation model for
+384
+time-series forecasting. In Proceedings of the 41st International Conference on Machine Learning,
+385
+ICML’24. JMLR.org, 2024.
+386
+Soham De, Samuel L. Smith, Anushan Fernando, Aleksandar Botev, George Cristian-Muraru, Albert
+387
+Gu, Ruba Haroun, Leonard Berrada, Yutian Chen, Srivatsan Srinivasan, Guillaume Desjardins,
+388
+Arnaud Doucet, David Budden, Yee Whye Teh, Razvan Pascanu, Nando De Freitas, and Caglar
+389
+Gulcehre. Griffin: Mixing gated linear recurrences with local attention for efficient language
+390
+models, 2024. URL https://arxiv.org/abs/2402.19427.
+391
+Alexandre Défossez and Francis Bach. Averaged least-mean-squares: Bias-variance trade-offs and
+392
+optimal sampling distributions. In Proceedings of the 18th International Conference on Artificial
+393
+Intelligence and Statistics (AISTATS), pages 205–213, 2015.
+394
+10
+
+===== PAGE 11 =====
+
+Ronald A. DeVore, Ralph Howard, and Charles A. Micchelli. Optimal nonlinear approximation.
+395
+Manuscripta Mathematica, 63(4):469–478, 1989.
+396
+Nolan
+Dey,
+Quentin
+Anthony,
+and
+Joel
+Hestness.
+The
+practitioner’s
+guide
+to
+397
+the
+maximal
+update
+parameterization.
+https://www.cerebras.ai/blog/
+398
+the-practitioners-guide-to-the-maximal-update-parameterization,
+399
+September
+2024.
+URL
+https://www.cerebras.ai/blog/
+400
+the-practitioners-guide-to-the-maximal-update-parameterization.
+401
+Thomas DP Edwards, James Alvey, Justin Alsing, Nam H Nguyen, and Benjamin D Wandelt.
+402
+Scaling-laws for large time-series models. arXiv preprint arXiv:2405.13867, 2024.
+403
+Azul Garza, Cristian Challu, and Max Mergenthaler-Canseco.
+Timegpt-1.
+arXiv preprint
+404
+arXiv:2310.03589, 2023.
+405
+Mononito Goswami, Konrad Szafer, Arjun Choudhry, Yifu Cai, Shuo Li, and Artur Dubrawski.
+406
+Moment: a family of open time-series foundation models. In Proceedings of the 41st International
+407
+Conference on Machine Learning, ICML’24. JMLR.org, 2024.
+408
+Aaron Grattafiori, Abhimanyu Dubey, Abhinav Jauhri, Abhinav Pandey, Abhishek Kadian, Ahmad
+409
+Al-Dahle, Aiesha Letman, Akhil Mathur, Alan Schelten, Alex Vaughan, et al. The llama 3 herd of
+410
+models. arXiv preprint arXiv:2407.21783, 2024.
+411
+Albert Gu and Tri Dao. Mamba: Linear-time sequence modeling with selective state spaces, 2023.
+412
+URL https://arxiv.org/abs/2312.00752.
+413
+Tom Henighan, Jared Kaplan, Mor Katz, Mark Chen, Christopher Hesse, Jacob Jackson, Heewoo
+414
+Jun, Tom B Brown, Prafulla Dhariwal, Scott Gray, et al. Scaling laws for autoregressive generative
+415
+modeling. arXiv preprint arXiv:2010.14701, 2020.
+416
+Jordan Hoffmann, Sebastian Borgeaud, Arthur Mensch, Elena Buchatskaya, Trevor Cai, Eliza
+417
+Rutherford, Diego de Las Casas, Lisa Anne Hendricks, Johannes Welbl, Aidan Clark, Tom
+418
+Hennigan, Eric Noland, Katie Millican, George van den Driessche, Bogdan Damoc, Aurelia
+419
+Guy, Simon Osindero, Karen Simonyan, Erich Elsen, Oriol Vinyals, Jack W. Rae, and Laurent
+420
+Sifre. Training compute-optimal large language models. In Proceedings of the 36th International
+421
+Conference on Neural Information Processing Systems, NIPS ’22, Red Hook, NY, USA, 2022.
+422
+Curran Associates Inc. ISBN 9781713871088.
+423
+Ruihong Huang and Tomas Polak. Lobster: Limit order book reconstruction system. Available at
+424
+SSRN 1977207, 2011.
+425
+Hanna Hultin, Henrik Hult, Alexandre Proutiere, Samuel Samama, and Ala Tarighati. A generative
+426
+model of a limit order book using recurrent neural networks. Quantitative Finance, 23(6):931–958,
+427
+2023.
+428
+Keller Jordan, Yuchen Jin, Vlado Boza, Jiacheng You, Franz Cesista, Laker Newhouse, and Jeremy
+429
+Bernstein. Muon: An optimizer for hidden layers in neural networks. https://kellerjordan.
+430
+github.io/posts/muon/, 2024. URL https://kellerjordan.github.io/posts/muon/.
+431
+Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B Brown, Benjamin Chess, Rewon Child, Scott
+432
+Gray, Alec Radford, Jeffrey Wu, and Dario Amodei. Scaling laws for neural language models.
+433
+arXiv preprint arXiv:2001.08361, 2020.
+434
+Maxime Kawawa-Beaudan, Srijan Sood, Kassiani Papasotiriou, Daniel Borrajo, and Manuela Veloso.
+435
+Tradefm: A generative foundation model for trade-flow and market microstructure. arXiv preprint
+436
+arXiv:2602.23784, 2026.
+437
+Aakash Lahoti, Kevin Y. Li, Berlin Chen, Caitlin Wang, Aviv Bick, J. Zico Kolter, Tri Dao, and
+438
+Albert Gu. Mamba-3: Improved sequence modeling using state space principles, 2026. URL
+439
+https://arxiv.org/abs/2603.15569.
+440
+Junjie Li, Yang Liu, Weiqing Liu, Shikai Fang, Lewen Wang, Chang Xu, and Jiang Bian. Mars: a
+441
+financial market simulation engine powered by generative foundation model. In The Thirteenth
+442
+International Conference on Learning Representations, 2025a. URL https://openreview.
+443
+net/forum?id=Yqk7EyT52H.
+444
+11
+
+===== PAGE 12 =====
+
+Margaret Li, Sneha Kudugunta, and Luke Zettlemoyer. (mis) fitting: A survey of scaling laws. arXiv
+445
+preprint arXiv:2502.18969, 2025b.
+446
+Yang Li and Zhi Chen. Bytegen: A tokenizer-free generative model for orderbook events in byte
+447
+space. arXiv preprint arXiv:2508.02247, 2025.
+448
+Eljas Linna, Kestutis Baltakys, Alexandros Iosifidis, and Juho Kanniainen. Lobert: Generative ai
+449
+foundation model for limit order book messages. arXiv preprint arXiv:2511.12563, 2025.
+450
+Jingyuan Liu, Jianlin Su, Xingcheng Yao, Zhejun Jiang, Guokun Lai, Yulun Du, Yidao Qin, Weixin
+451
+Xu, Enzhe Lu, Junjie Yan, Yanru Chen, Huabin Zheng, Yibo Liu, Shaowei Liu, Bohong Yin,
+452
+Weiran He, Han Zhu, Yuzhi Wang, Jianzhou Wang, Mengnan Dong, Zheng Zhang, Yongsheng
+453
+Kang, Hao Zhang, Xinran Xu, Yutao Zhang, Yuxin Wu, Xinyu Zhou, and Zhilin Yang. Muon is
+454
+scalable for llm training, 2025. URL https://arxiv.org/abs/2502.16982.
+455
+Yong Liu, Haoran Zhang, Chenyu Li, Xiangdong Huang, Jianmin Wang, and Mingsheng Long.
+456
+Timer: generative pre-trained transformers are large time series models. In Proceedings of the 41st
+457
+International Conference on Machine Learning, ICML’24. JMLR.org, 2024.
+458
+Peer Nagy, Sascha Frey, Silvia Sapora, Kang Li, Anisoara Calinescu, Stefan Zohren, and Jakob
+459
+Foerster. Generative ai for end-to-end limit order book modelling: A token-level autoregressive
+460
+generative model of message flow using a deep state space network. In Proceedings of the fourth
+461
+ACM international conference on AI in finance, pages 91–99, 2023.
+462
+Peer Nagy, Sascha Yves Frey, Kang Li, Bidipta Sarkar, Svitlana Vyetrenko, Stefan Zohren, Ani
+463
+Calinescu, and Jakob Nicolaus Foerster. LOB-bench: Benchmarking generative AI for finance
+464
+- an application to limit order book data. In Forty-second International Conference on Machine
+465
+Learning, 2025. URL https://openreview.net/forum?id=CXPpYJpYXQ.
+466
+Eric Nguyen, Michael Poli, Matthew G. Durrant, Brian Kang, Dhruva Katrekar, David B. Li, Liam J.
+467
+Bartie, Armin W. Thomas, Samuel H. King, Garyk Brixi, Jeremy Sullivan, Madelena Y. Ng, Ashley
+468
+Lewis, Aaron Lou, Stefano Ermon, Stephen A. Baccus, Tina Hernandez-Boussard, Christopher
+469
+Ré, Patrick D. Hsu, and Brian L. Hie. Sequence modeling and design from molecular to genome
+470
+scale with evo. Science, 386(6723):eado9336, 2024. doi: 10.1126/science.ado9336. URL
+471
+https://www.science.org/doi/abs/10.1126/science.ado9336.
+472
+Tim Pearce and Jinyeop Song. Reconciling kaplan and Chinchilla scaling laws. Transactions on
+473
+Machine Learning Research, 2024. ISSN 2835-8856. URL https://openreview.net/forum?
+474
+id=NLoaLyuUUF. Reproducibility Certification.
+475
+Tim Pearce, Tabish Rashid, Dave Bignell, Raluca Georgescu, Sam Devlin, and Katja Hofmann.
+476
+Scaling laws for pre-training agents and world models. arXiv preprint arXiv:2411.04434, 2024.
+477
+Tomer Porian, Mitchell Wortsman, Jenia Jitsev, Ludwig Schmidt, and Yair Carmon. Resolving
+478
+discrepancies in compute-optimal scaling of language models. Advances in Neural Information
+479
+Processing Systems, 37:100535–100570, 2024.
+480
+Xingwei Qu, Yuelin Bai, Yinghao Ma, Ziya Zhou, Ka Man Lo, Jiaheng Liu, Ruibin Yuan, Lejun
+481
+Min, Xueling Liu, Tianyu Zhang, Xinrun Du, Shuyue Guo, Yiming Liang, Yizhi Li, Shangda Wu,
+482
+Junting Zhou, Tianyu Zheng, Ziyang Ma, Fengze Han, Wei Xue, Gus Xia, Emmanouil Benetos,
+483
+Xiang Yue, Chenghua Lin, Xu Tan, Stephen W. Huang, Jie Fu, and Ge Zhang. Mupt: A generative
+484
+symbolic music pretrained transformer, 2024. URL https://arxiv.org/abs/2404.06393.
+485
+Kashif Rasul, Arjun Ashok, Andrew Robert Williams, Hena Ghonia, Rishika Bhagwatkar, Arian
+486
+Khorasani, Mohammad Javad Darvishi Bayazi, George Adamopoulos, Roland Riachi, Nadhir
+487
+Hassen, Marin Biloš, Sahil Garg, Anderson Schneider, Nicolas Chapados, Alexandre Drouin,
+488
+Valentina Zantedeschi, Yuriy Nevmyvaka, and Irina Rish. Lag-llama: Towards foundation models
+489
+for probabilistic time series forecasting, 2024. URL https://arxiv.org/abs/2310.08278.
+490
+Yu Shi, Zongliang Fu, Shuo Chen, Bohan Zhao, Wei Xu, Changshui Zhang, and Jian Li. Kronos: A
+491
+foundation model for the language of financial markets, 2025. URL https://arxiv.org/abs/
+492
+2508.02739.
+493
+12
+
+===== PAGE 13 =====
+
+Jimmy T.H. Smith, Andrew Warrington, and Scott Linderman. Simplified state space layers for
+494
+sequence modeling. In The Eleventh International Conference on Learning Representations, 2023.
+495
+URL https://openreview.net/forum?id=Ai8Hw3AXqks.
+496
+Vladimir N. Vapnik. The Nature of Statistical Learning Theory. Springer-Verlag, New York, 1995.
+497
+Zhuohan Wang and Carmine Ventre. Difflob: Diffusion models for counterfactual generation in limit
+498
+order books, 2026. URL https://arxiv.org/abs/2602.03776.
+499
+Aaron Wheeler and Jeffrey D Varner. Marketgpt: Developing a pre-trained transformer (gpt) for
+500
+modeling financial time series. arXiv preprint arXiv:2411.16585, 2024.
+501
+Gerald Woo, Chenghao Liu, Akshat Kumar, Caiming Xiong, Silvio Savarese, and Doyen Sahoo.
+502
+Unified training of universal time series forecasting transformers. In Forty-first International
+503
+Conference on Machine Learning, 2024.
+504
+Qingren Yao, Chao-Han Huck Yang, Renhe Jiang, Yuxuan Liang, Ming Jin, and Shirui Pan. Towards
+505
+neural scaling laws for time series foundation models. In The Thirteenth International Conference
+506
+on Learning Representations, 2025. URL https://openreview.net/forum?id=uCqxDfLYrB.
+507
+Dmitry Yarotsky. Error bounds for approximations with deep ReLU networks. Neural Networks, 94:
+508
+103–114, 2017.
+509
+Zihao Zhang, Stefan Zohren, and Stephen Roberts. Deeplob: Deep convolutional neural networks for
+510
+limit order books. IEEE Transactions on Signal Processing, 67(11):3001–3012, 2019.
+511
+13
+
+===== PAGE 14 =====
+
+A
+Model topology diagram
+512
+All models reported in this paper share a common outer dual-stream wrapper; only the sequence
+513
+layer within each block varies. The runs in the scaling-law sweep plug a Mamba-3 SISO block in
+514
+as the SSM core (Section 3.2) at the default depth allocation Nmsg = 2, Nbook,pre = Nbook,post = 1,
+515
+Nfused = 6.
+516
+Overall model topology.
+The generative model is a dual-stream encoder–decoder. The message
+517
+encoder embeds L integer tokens via a learned |V | × dmodel table and processes them through Nmsg
+518
+SequenceLayers (default 2). The book encoder processes the dbook-dimensional book-state vector —
+519
+the depth-Lbook price-volume snapshot of the order book at each message time — through Nbook,pre=1
+520
+SequenceLayer at native book dimension, projects to dmodel via a dense layer, and applies Nbook,post=1
+521
+further SequenceLayer at dmodel; operating the pre-layer at dbook avoids a costly up-projection. The
+522
+two streams are concatenated, projected from 2dmodel back to dmodel, and passed through Nfused=6
+523
+SequenceLayers in the fused encoder; a single output projection maps to next-token logits over |V |.
+524
+The default layer count is 2 + 1 + 1 + 6 = 10 in the message/fused path, plus the 2 book-side layers,
+525
+totalling 12. Figure 4 below shows the full schematic, including the message, book, and fused streams
+526
+and the shared sequence-layer wrapper.
+527
+m(t)
+message
+(L × 26)
+b(t)
+book state
+(L × dbook)
+Embed
+SSM
+· · ·
+SSM
+Message Encoder
+Nmsg sequence layers
+SSM
+Dense
+SSM
+· · ·
+SSM
+Book Encoder
+Npre
+Npost
+Concat
+Dense
+SSM
+· · ·
+SSM
+Dense
+Fused Encoder
+Nfused sequence layers
+σ(·)
+output proj.
+softmax
+(L, H)
+(L, dbook)
+(L, H)
+(L, 2H)
+(L, H)
+LN
+SSM
+GELU
+Drop
+x ⊙σ(W x)
+Drop
++
+x
+out
+Sequence Layer
+Figure 4: Dual-stream model architecture, adapted from Nagy et al. [2023]. The message encoder
+(cream) embeds the tokenised message sequence and processes it through Nmsg sequence layers at
+dimension H = dmodel. The book encoder (peach) processes the book-state vector through Npre layers
+at native dimension, a dense projection to H, and Npost layers at H. The two streams are concatenated
+along the feature dimension and passed through the fused encoder (rose-pink): a projection from 2H
+to H followed by Nfused sequence layers and an output projection to vocabulary logits. The yellow-
+tinted, thick-bordered SSM boxes mark the interchangeable SSM core slots; in this paper every such
+slot is populated by the same Mamba-3 SISO block (Section 3.2). Inset: the shared sequence layer
+wrapper — LayerNorm, interchangeable SSM core (yellow), GELU, multiplicative gate, dropout,
+and residual skip. Only the SSM core varies across architecture variants. The module-fill palette
+(cream / peach / rose-pink) is the same warm ramp as in Figure 6.
+B
+Bootstrap uncertainty procedures
+528
+Surface bootstrap.
+The grey parametric band in Figure 1 is based on a fixed-design residual
+529
+moving-block bootstrap, not on a label bootstrap over architectures, sizes, or seeds. Let ˆLij =
+530
+E + AN −α
+i
++ BD−β
+ij
+be the fitted surface at checkpoint j of run i, and define the log-space residual
+531
+rij = log Lij −log ˆLij.
+The design points (Ni, Dij) are held fixed. Within each run, we resample consecutive residual blocks
+532
+of length 20, concatenate and truncate them to the original run length, and form
+533
+L∗(b)
+ij
+= ˆLij exp(r∗(b)
+ij
+),
+then refit Equation 1. The reported surface band uses Bboot = 200 refits, with parameter intervals
+534
+and frontier bands given by the 2.5–97.5 percentiles. Figure 5 gives the visual summary. The band
+535
+14
+
+===== PAGE 15 =====
+
+captures sensitivity to temporally correlated logged-loss noise along the observed curves; it does not
+536
+estimate seed variance, new-run variance, validation-loss noise, or uncertainty in the FLOPs/token
+537
+profile q(N).
+538
+IsoFLOP projection bootstrap.
+The red band in Figure 2 uses a separate row bootstrap because its
+539
+primitive observations are the retained fixed-compute valley rows rather than individual checkpoints.
+540
+After fitting the nine valleys, each row is
+541
+(Ck, ˆN ⋆
+k, ˆD⋆
+k, ˆL⋆
+k).
+For each of 5,000 bootstrap draws, we sample nine valley rows with replacement, refit the two log-log
+542
+projection regressions
+543
+log ˆN ⋆= aN + sN log C,
+log ˆD⋆= aD + sD log C.
+and evaluate them on the plotted compute grid. The red-band envelope is the 2.5–97.5 percentile
+544
+range of these projection lines. Figure 5 gives the row-bootstrap construction. This is a valley-row
+545
+sampling band only; it should not be interpreted as a full confidence interval for the scaling law.
+546
+Interpretation.
+We do not assume normally distributed residuals. The surface band captures
+547
+temporally correlated logged-loss residual variation along the observed training curves under a fixed
+548
+(Ni, Dij) design. The IsoFLOP band captures sensitivity of the red projection line to resampling the
+549
+retained valley rows. Neither band includes seed-to-seed variation, new training runs, chronological
+550
+or instrument-held-out validation-loss noise, FLOPs-profile uncertainty, or misspecification of the
+551
+additive Chinchilla form; these factors are outside the uncertainty intervals reported here.
+552
+Systematic uncertainty.
+The methodology-critique motivation of Czech et al. [2026] remains
+553
+relevant: disagreement between the global additive surface and local IsoFLOP valleys is evidence of
+554
+model-specification uncertainty. In the current paper we expose that disagreement directly in the two
+555
+figures rather than compressing it into a single headline combined CI. A final validation paper should
+556
+add a joint prediction band that includes residual bootstrap, seed/new-run variance, FLOPs-profile
+557
+uncertainty, and surface-versus-IsoFLOP misspecification.
+558
+Figure 5 gives the visual summary of the two bootstrap constructions used for the reported uncertainty
+559
+bands.
+560
+C
+Tokenisation
+561
+This appendix records the technical breakdown of the 26-token encoding introduced in Section 2.
+562
+Figure 6 gives the raw-record-to-token diagram used by the encoding.
+563
+Vocabulary structure.
+The 2,112-token vocabulary is partitioned by field range, so that token
+564
+IDs are unambiguous about which field they encode and the per-position syntax masks (below) are
+565
+trivial to derive. IDs 0–3 are reserved for special tokens (BOS, EOS, PAD, MASK); IDs 4–1003
+566
+(1,000 values) form the base-1000 digit pool used by every time field, primary and reference; IDs
+567
+1004–1007 encode event type (4 categories: submission, cancellation, deletion, execution); IDs
+568
+1008–1107 (100 values) form the base-100 digit pool used by both digits of every size field; IDs
+569
+1108–2107 (1,000 values) form the base-1000 digit pool used by both digits of every price-magnitude
+570
+field; IDs 2108–2109 encode price sign; and IDs 2110–2111 encode buy/sell direction. The total
+571
+4 + 1,000 + 4 + 100 + 1,000 + 2 + 2 = 2,112 matches |V | exactly.
+572
+Field encoding.
+The 26 positions decompose as follows, matching the token labels in Figure 6.
+573
+Position 0 carries the event type. Position 1 carries direction. Positions 2–4 encode the signed relative
+574
+price as (∆P sign, ∆P mag high, ∆P mag low), with p = (−1)∆P sign · (1,000 ∆P mag high +
+575
+∆P mag low) ticks relative to mid-price, allowing p ∈±999,999 ticks. Positions 5–6 encode
+576
+order size as two base-100 digits (Size high, Size low), giving s = 100 Size high + Size low ∈0–
+577
+9,999 shares. Positions 7–10 encode the inter-arrival time as (∆ts, ∆tms, ∆tµs, ∆tns), where
+578
+∆ts ∈0–999 is the second component and the sub-second residual is decomposed into three
+579
+base-1000 digits at millisecond, microsecond, and nanosecond resolution (covering 0 to 109 −1
+580
+ns). Positions 11–15 encode the absolute timestamp as (tks, ts, tms, tµs, tns) — five base-1000
+581
+15
+
+===== PAGE 16 =====
+
+Observed fixed design
+(Ni, Dij, Lij)
+Fit surface
+ˆLij = fˆ
+θ(Ni, Dij)
+Log residuals
+rij = log Lij −log ˆLij
+Within-run
+length-20 residual blocks
+Synthetic response
+L∗(b)
+ij
+= ˆLij exp r∗(b)
+ij
+Refit surface
+grey percentile band
+Retained valley rows
+zk = (Ck, ˆ
+N ⋆
+k , ˆ
+D⋆
+k, ˆL⋆
+k)
+Sample K = 9 rows
+with replacement
+Refit log–log lines
+log ˆ
+N⋆= aN + sN log C
+log ˆ
+D⋆= aD + sD log C
+Evaluate on plotted
+compute grid
+Projection lines
+red percentile envelope
+Surface residual moving-block bootstrap
+IsoFLOP row bootstrap
+conditions on fixed checkpoint design
+conditions on retained valley rows
+Figure 5: Bootstrap procedures used for the reported uncertainty bands. The surface band resamples
+log residual blocks within each run and refits the additive surface; the IsoFLOP band resamples
+fixed-compute valley rows and refits the projection regressions. Colours follow the warm palette used
+in Figure 6.
+Raw LOBSTER message
+event
+type
+direction
+price
+size
+time
+order
+ID
+26-token encoded message
+Event
+Dir
+∆P sign
+∆P mag high
+∆P mag low
+Size high
+Size low
+∆ts
+∆tms
+∆tµs
+∆tns
+tks
+ts
+tms
+tµs
+tns
+Ref sign
+Ref P high
+Ref P low
+Ref Size high
+Ref Size low
+Ref tks
+Ref ts
+Ref tms
+Ref tµs
+Ref tns
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+core message fields
+inter-arrival time
+absolute time
+reference fields for cancel orders
+Figure 6: Mapping from a raw LOBSTER message to its 26-token encoding. The top row shows the
+six fields of a raw record (event type, direction, price, size, time, order ID); the bottom row shows
+the corresponding fixed-length 26-token block, with dashed connectors linking each raw field to the
+token positions it expands into. Colours match across the two representations, and the braces below
+the bottom row group tokens into core message fields, inter-arrival time, absolute time, and reference
+fields used for cancel orders.
+16
+
+===== PAGE 17 =====
+
+digits at kilosecond, second, millisecond, microsecond, and nanosecond resolution; redundant given
+582
+Positions 7–10 and the previous message but trained on regardless (see absolute-time paragraph
+583
+below). Positions 16–25 carry the reference fields used by cancel, modify, and execute messages
+584
+(LOBSTER types 2, 3, 4): the original order’s signed price (Ref sign, Ref P high, Ref P low), size
+585
+(Ref Size high, Ref Size low), and absolute timestamp (Ref tks, Ref ts, Ref tms, Ref tµs, Ref tns),
+586
+looked up by order ID at preprocessing time and zeroed for new submissions (type 1). Order ID itself
+587
+is not tokenised; it serves only as the join key for the reference lookup, and would otherwise be a
+588
+high-cardinality identifier with no transferable structure across days or tickers.
+589
+D
+Loss decomposition and the FLOP-loss frontier curvature
+590
+This section unpacks the formal risk decomposition behind the additive parametric form of Equation 1
+591
+and revisits Chinchilla’s own caveat about FLOP-loss frontier curvature [Hoffmann et al., 2022,
+592
+Appendix E], both of which underpin the methodological choices in Section 3.3 and the validation
+593
+logic of the planned strict-validation rerun.
+594
+The three-term decomposition.
+Following Hoffmann et al. [2022] (their Equation 9), the popula-
+595
+tion cross-entropy of an empirically-trained predictor ˆfN,D admits the orthogonal decomposition
+596
+L( ˆfN,D) = L(f ⋆)
+| {z }
+Bayes risk
++
+
+L(f ⋆
+N) −L(f ⋆)
+
+|
+{z
+}
+functional approximation
++
+
+L( ˆfN,D) −L(f ⋆
+N)
+
+|
+{z
+}
+stochastic approximation
+,
+(2)
+where f ⋆is the Bayes-optimal predictor (it outputs the true conditional distribution p of the next
+597
+token), f ⋆
+N is the population-risk minimiser within the N-parameter hypothesis class HN, and ˆfN,D
+598
+is the actual stochastic-gradient iterate after one streaming pass over D tokens. The three terms
+599
+are conceptually orthogonal as flagged in Section 3.3: the first is data-only, the second is capacity-
+600
+only, and the third absorbs everything that distinguishes a real training run from infinite-data exact
+601
+minimisation.
+602
+Information-theoretic form of the first two terms.
+Writing each L(·) as a cross-entropy under
+603
+the next-token conditional distribution p (under the protocol of Section 3.1: 26-token encoding, finite
+604
+context window, uniformly cycled 8-stock NASDAQ stream) gives
+605
+L(f ⋆) = H(p),
+L(f ⋆
+N) −L(f ⋆) = KL
+ p ∥q⋆
+HN
+
+,
+(3)
+where q⋆
+HN is the distribution induced by f ⋆
+N, equivalently the I-projection of p onto HN in KL
+606
+geometry. The functional-approximation term is therefore a KL divergence between the protocol-
+607
+restricted next-token distribution and the family, intrinsic to (architecture, tokeniser, context-length)
+608
+and independent of the optimiser. The Bayes risk H(p) is the conditional entropy under the same
+609
+protocol, not of the underlying market process; the latter is strictly smaller, and Section 3.1 flags this
+610
+distinction. In a completed held-out validation law, the constant Eval would target this protocol-level
+611
+Bayes-risk floor, with any residual family-restriction KL not captured by the AN −α term at finite N
+612
+imparting a small upward bias. The current logged-loss scaling fit reuses the same additive algebra,
+613
+but its fitted E is a training-loss floor and is not reported as a validated entropy estimate.
+614
+Mapping to the additive parametric form.
+For an ideal held-out validation law, Equation 1
+615
+parameterises the three-term decomposition as
+616
+Lval(N, D) ≈Eval
+|{z}
+L(f ⋆)
++
+AvalN −αval
+|
+{z
+}
+functional, depends on N
++
+BvalD−βval
+|
+{z
+}
+stochastic, depends on D only
+.
+(4)
+The current reproduced logged-loss fit uses the same separable form with un-subscripted
+617
+(E, A, α, B, β) as reported fit parameters. The functional power-law AN −α inherits its form from
+618
+approximation theory [Barron, 1993, Yarotsky, 2017, DeVore et al., 1989], with α set by the smooth-
+619
+ness of the target class via covering-dimension arguments. The stochastic power-law BD−β inherits
+620
+its form from the classical one-pass i.i.d. stochastic-approximation rate [Vapnik, 1995, Bottou et al.,
+621
+2018, Défossez and Bach, 2015], with β ∈[ 1
+2, 1] depending on margin and noise conditions. Both
+622
+forms are theoretical templates: in the LOB sweep we fit them as empirical power laws and treat the
+623
+exponents as free parameters (Section 3.3).
+624
+17
+
+===== PAGE 18 =====
+
+The hidden N-dependence in the third term.
+Strictly, the stochastic-approximation term
+625
+L( ˆfN,D) −L(f ⋆
+N) depends on both N and D: ˆfN,D is the SGD iterate inside the N-dimensional
+626
+landscape, so optimisation difficulty (Hessian conditioning, critical batch size, sensitivity to learning-
+627
+rate and warmup, occurrence of loss spikes) scales nontrivially with N. The additive separable
+628
+form BD−β in Equation 4 approximates this term as a function of D alone, implicitly assuming
+629
+that, at fixed setup, the residual N-dependence of L( ˆfN,D) −L(f ⋆
+N) is either negligible across the
+630
+sweep range or empirically absorbed into the fitted constants A, α, B, β. The simplification is not
+631
+invariant to setup choices: Hoffmann et al. [2022, Appendix G] demonstrate that AdamW with
+632
+an fp32 optimiser-state weight copy reduces the third term relative to plain Adam at fixed (N, D),
+633
+which corresponds to a smaller fitted B rather than a deeper E, confirming that the third term can be
+634
+sensitive to setup choices the additive form does not directly model. We adopt the same separable
+635
+form on the LOB grid (Section 3.3) under (i) a single optimiser-and-precision setup across the sweep
+636
+(Muon kernel + AdamW auxiliary, fp32 master weights, identical LR schedule shape) and (ii) the
+637
+empirical adequacy of the fit residuals on our (N, D) surface; the assumption is not invariant to
+638
+optimiser changes that target the µP or large-batch regimes.
+639
+Training-curve geometry of the curvature.
+A complementary reading recovers the same fixed-C
+640
+conclusion without further parametric assumptions. Each fixed-N training curve in the log C–log L
+641
+plane bends down toward its own loss floor E + AN −α as D →∞, and is tangent to the FLOP-loss
+642
+frontier at a single compute-optimal point. Whether a single training curve effectively contributes
+643
+a long or short segment to the frontier depends on the curvature of the frontier near that tangency:
+644
+when the frontier is locally flat (as a curved-frontier prediction approaches the asymptote) a single
+645
+curve’s tail tracks the frontier across a wider C window, since the loss penalty for departing from
+646
+N ⋆(C) along that window is small; when the frontier is locally steep, the same fixed-N curve falls
+647
+below the frontier rapidly off-tangency, and a larger N must take over to maintain tangency. A given
+648
+C range on the frontier is therefore approximated, in a slope-only picture, by a sequence of training
+649
+curves at increasing N (multiple model-scale-ups, each contributing a short segment), and, in the
+650
+curved-frontier picture, by fewer training curves at smaller N extended to larger D (each contributing
+651
+a longer segment). The shift in modal large-language-model practice from successive scale-ups (e.g.
+652
+GPT-2, GPT-3, MT-NLG) toward extended-token training of fixed-or-shrinking N [Hoffmann et al.,
+653
+2022, Grattafiori et al., 2024] tracks this geometric distinction; it is the same observation as the
+654
+Appendix-E remark, restated in the language of training-curve coverage rather than frontier-slope
+655
+arithmetic.
+656
+E
+Scaling-law variables and empirical fit scope
+657
+The object produced by the sweep is a collection of logged loss curves. For run i and checkpoint j,
+658
+the raw row is
+659
+(Ni, Dij, Lij),
+where Ni is the model size, Dij is the cumulative number of encoded tokens processed by that
+660
+checkpoint, and Lij is the logged per-token training loss. A scaling-law fit is therefore not just a
+661
+curve fit; it first requires deciding what each axis means.
+662
+Parameter axis.
+We report N as the total parameter count, including embeddings and unembedding.
+663
+This follows the accounting convention clarified by Pearce and Song [2024]. The choice matters
+664
+because the fitted surface and the compute-optimal allocation both place model size directly on the
+665
+horizontal axis.
+666
+Data and compute axes.
+The data coordinate is tokens seen, not optimizer steps. This matters
+667
+in the present sweep because different runs can have different batch sizes, sequence lengths, or
+668
+accumulation factors. Counting D as cumulative tokens keeps those checkpoints comparable without
+669
+an extra step-based rescaling.
+670
+The compute coordinate is then built from the profiled FLOPs/token curve,
+671
+C = q(N)D.
+Here q(N) is measured once per model size from GPU profiler counters during training (Appendix G).
+672
+This is the compute convention used in both the parametric frontier and the IsoFLOP slices.
+673
+18
+
+===== PAGE 19 =====
+
+Loss axis.
+The loss coordinate is logged training loss, specifically the checkpointed step_loss.
+674
+It is not strict chronological or instrument-held-out validation cross-entropy. Logged loss is useful
+675
+because it is available densely along every run, but it can carry learning-rate-schedule effects and
+676
+within-run autocorrelation [Porian et al., 2024]. The fitted E is therefore the asymptote of this
+677
+logged-loss surface, not a validated entropy floor.
+678
+Fit and uncertainty.
+The surface fit uses the additive Hoffmann form with a log-Huber objective
+679
+on log residuals, with δ = 10−3. This keeps the fit tied to the multiplicative scale on which the
+680
+residual bootstrap is later defined.
+681
+The uncertainty bands are percentile bootstrap bands [Besiroglu et al., 2024], but the bootstrap unit
+682
+differs by figure. For the grey surface band, the design points (Ni, Dij) are fixed and length-20
+683
+residual blocks are resampled within the same run. For the red IsoFLOP projection band, the primitive
+684
+observations are the nine retained valley rows, which are resampled with replacement.
+685
+These intervals should therefore be read narrowly. They capture variation induced by the observed
+686
+logged-loss residuals or retained valley rows, depending on the figure. They do not include seed
+687
+variance, new training runs, validation-loss noise, uncertainty in q(N), or full model-specification
+688
+uncertainty.
+689
+Role of the IsoFLOP cross-check.
+The local IsoFLOP parabolas are used as a diagnostic cross-
+690
+check rather than as a standalone final estimator. This follows the methodological concern in Czech
+691
+et al. [2026]: a global additive surface and local fixed-compute valleys need not agree perfectly.
+692
+We therefore show the disagreement directly, instead of folding it into a single headline confidence
+693
+interval.
+694
+F
+Profiled compute-optimal allocation
+695
+This appendix gives the closed-form derivation of the profiled compute-optimal exponents a, b, p
+696
+used in Section 4.4. The derivation makes the dependence on the FLOPs/token profile q(N) explicit,
+697
+so the analytic-compute Chinchilla closed form [Hoffmann et al., 2022, Equation 4] drops out as the
+698
+special case γ = 1. All variables are positive throughout.
+699
+Proposition 1 (Profiled compute-optimal allocation). Fix constants A, B, k > 0, exponents α, β, γ >
+700
+0, and an irreducible loss E ≥0. Assume the additive parametric loss
+701
+L(N, D) = E + A N −α + B D−β,
+N, D > 0,
+(5)
+and the locally power-law profiled-compute relation
+702
+C = q(N) D,
+q(N) = k N γ.
+(6)
+For each C > 0, the unique minimiser of L(N, D) subject to Equation 6 is
+703
+N ⋆(C) = G Ca,
+D⋆(C) = 1
+k G−γ Cb,
+(7)
+with closed-form exponents and prefactor
+704
+a =
+β
+α + γβ ,
+b =
+α
+α + γβ ,
+G =
+
+α A
+γβ B kβ
+1/(α+γβ)
+.
+(8)
+The compute-optimal reducible loss therefore decays as
+705
+L⋆
+r(C) := L
+ N ⋆(C), D⋆(C)
+
+−E =
+
+1 + α
+γβ
+
+A G−α C−p,
+p =
+αβ
+α + γβ .
+(9)
+Recovery of the analytic Chinchilla case.
+Setting γ = 1 and k = 6 (the textbook C ≈6ND
+706
+assumption) reduces a to β/(α + β), b to α/(α + β), and p to αβ/(α + β), matching Hoffmann
+707
+et al. [2022, Equation 4] after absorbing the constant 6 into G.
+708
+19
+
+===== PAGE 20 =====
+
+Proof of Proposition 1. Use Equation 6 to write D = C/(kN γ) and reduce the constrained problem
+709
+to a single-variable minimisation in N. Set eL(N; C) := L(N, C/(kNγ)) −E. Then
+710
+eL(N; C) = A N −α + B
+ C
+k N γ
+−β
+= A N −α + B kβ C−β N γβ.
+(10)
+The pink factor N γβ is the only place γ enters the calculation: in the analytic-compute case γ = 1 it
+711
+collapses to N β and the rest is the textbook Chinchilla derivation. Differentiating Equation 10 in N
+712
+at fixed C,
+713
+∂eL
+∂N = −α A N −α−1 + γβ B kβ C−β N γβ−1.
+(11)
+Setting Equation 11 to zero and multiplying through by N rearranges to the profiled balance condition
+714
+α A N −α = γβ B kβ C−β N γβ
+= γβ B
+ C
+k N γ
+−β
+=
+γβ B D−β
+|
+{z
+}
+data-side, weighted by γβ
+.
+(12)
+The third line undoes the D-substitution and exposes the structural content of the optimum: along
+715
+the profiled frontier the parameter-side reducible term A N −α and the data-side reducible term
+716
+B D−β are tied in the fixed ratio γβ : α at every C; the extra factor γ is what is missing from the
+717
+analytic-compute case (γ = 1).
+718
+To extract N ⋆(C) in closed form, divide Equation 11 (set to zero) through by N −α−1 to isolate
+719
+N α+γβ:
+720
+α A = γβ B kβ C−β N α+γβ
+=⇒
+N α+γβ =
+α A
+γβ B kβ Cβ.
+(13)
+Taking the (α + γβ)-th root of both sides gives
+721
+N ⋆(C) =
+
+α A
+γβ B kβ
+1/(α+γβ)
+C β/(α+γβ) = G Ca,
+(14)
+where G is defined in Equation 8 and a = β/(α + γβ).
+722
+Recovering D⋆(C) from the constraint D = C/(kN γ),
+723
+D⋆(C) = 1
+k (N ⋆)−γ C = 1
+k G−γ C 1−γa
+= 1
+k G−γ C (α+γβ−γβ)/(α+γβ) = 1
+k G−γ Cα/(α+γβ),
+(15)
+which is Equation 7 with b = α/(α + γβ). The identity γa + b = 1 used in passing from line one to
+724
+line two is just the constraint Equation 6 in exponent form: C = q(N ⋆) D⋆becomes C ∝Cγa Cb.
+725
+For the reducible-loss exponent p, substitute the balance condition Equation 12 into the reducible
+726
+loss along the optimum:
+727
+L⋆
+r(C) = A (N ⋆)−α + B (D⋆)−β
+Eq.12
+=
+A (N ⋆)−α +
+α
+γβ A (N ⋆)−α
+=
+
+1 + α
+γβ
+
+A (N ⋆)−α.
+(16)
+Combining Equation 16 with N ⋆∝Ca from Equation 14 yields L⋆
+r(C) ∝C−αa, and αa =
+728
+αβ/(α + γβ) = p is Equation 9.
+729
+20
+
+===== PAGE 21 =====
+
+Uniqueness of the minimiser: Equation 10 diverges as N ↓0 and as N →∞, so any critical point
+730
+is a global minimiser. Moreover, after multiplying Equation 11 by the positive factor N α+1, the
+731
+critical-point equation is equivalent to
+732
+γβ B kβ C−β N α+γβ −αA = 0,
+whose left-hand side is strictly increasing from −αA to +∞on (0, ∞). Hence there is exactly one
+733
+critical point, and it is the unique global minimiser. The recovered D⋆is then determined by the
+734
+constraint Equation 6.
+735
+Specialisation to the Mamba-3 logged-loss fit.
+Plugging α = 0.370, β = 1.333, γ = 0.90 from
+736
+Section 4.4 into Equation 8 gives
+737
+a =
+1.333
+0.370 + 0.90 · 1.333 ≈0.849,
+b =
+0.370
+0.370 + 0.90 · 1.333 ≈0.236,
+and Equation 9 gives p ≈0.314, recovering the numerical profiled exponents N ⋆(C) ∝C0.849,
+738
+D⋆(C) ∝C0.236, L⋆
+r(C) ∝C−0.314 reported there.
+739
+G
+Training protocol
+740
+This appendix consolidates the training-protocol details (shared schedule, two-track Muon-AdamW
+741
+optimiser, compute-axis measurement, and IsoFLOP-slice construction) that the scaling-law analysis
+742
+of Section 3.3 treats as fixed inputs. The current analysis assumes these optimiser choices transfer
+743
+across the width sweep; it has not verified an optimiser-invariance window with learning-rate
+744
+ablations.
+745
+Shared schedule and token budget.
+The reproduced runs use global batch size 128 sequences,
+746
+weight decay 5×10−3, and a 1%-warmup cosine learning-rate schedule whose denominator coincides
+747
+with each run’s target step count. The fit itself uses recorded tokens seen, Dij, so differences in
+748
+effective tokens per step are handled through the data column rather than through a fixed step
+749
+multiplier.
+750
+Two-track Muon-AdamW optimiser.
+2D weight matrices are trained with Muon [Liu et al.,
+751
+2025, Jordan et al., 2024] at a fixed ηMuon = 10−2 across the entire width grid; embeddings, the
+752
+unembedding/decoder, layer-norm gains, and biases (the AdamW auxiliary path, ≤5% of total
+753
+parameters and shrinking with d) use a flat ηAdamW = 5 × 10−4.
+754
+Width invariance of Muon.
+Muon orthogonalizes the gradient by Newton-Schulz iteration and
+755
+rescales by
+p
+max(fan-in, fan-out), producing a per-step activation update bounded independently
+756
+of matrix dimensions at fixed depth. A single fixed Muon kernel learning rate therefore matches
+757
+optimization dynamics across the whole width grid without µP-style scaling on the kernel path [Liu
+758
+et al., 2025].
+759
+AdamW auxiliary path and µP fallback.
+On the AdamW auxiliary path the standard µP prescrip-
+760
+tion [Dey et al., 2024] (input-embedding LR constant, decoder LR ∝1/dmodel if untied, layer-norm
+761
+and biases constant, AdamW ϵ ∝1/√dmodel) is documented as the conditional fallback to be activated
+762
+if the flat setting falls outside the invariance window at any width.
+763
+LR ablation at dmodel = 1024.
+A future validation run should include or cite a width-local LR
+764
+ablation before treating the fitted loss surface as optimizer-invariant. The current analysis keeps
+765
+optimizer settings fixed and does not use LR retuning to improve the plotted frontier.
+766
+Compute axis.
+The profiled compute axis defined in Section 2 converts steady-state GPU through-
+767
+put into a FLOPs/token profile q(N). We do not use the textbook 6N approximation as the plotted
+768
+compute axis because for Mamba-3 the SSM scan, conv1d, gating, rope-fraction position encoding,
+769
+optimizer overhead, and multi-node communication all contribute real GPU work that 6N can miss.
+770
+The long-run checkpoints are placed at Cij = q(Ni)Dij.
+771
+21
+
+===== PAGE 22 =====
+
+IsoFLOP slices.
+The current IsoFLOP slices are constructed from existing logged check-
+772
+points rather than from dedicated matched-compute runs.
+For each target Ck
+∈
+773
+{9.0, 10.5, 12, 15, 17.5, 20, 25, 34, 42} × 1018 FLOPs and each model size Ni, we compute Dik =
+774
+Ck/q(Ni) and select the nearest logged checkpoint within the relative-compute tolerance. Each
+775
+retained slice has 7–9 model-size points, with at least two points on each side of the fitted parabola
+776
+minimum. This procedure characterises the current loss curves; the final validation law should replace
+777
+it with validation-loss slices or dedicated fixed-compute runs whose valley minima are well bracketed.
+778
+Table 1: Fixed-compute valley points used for the IsoFLOP projection. Each row is one IsoFLOP
+slice from existing logged checkpoints. The “left/right” column reports how many selected model-size
+points fall below and above the fitted valley in log N; all slices are therefore weakly bracketed on the
+small-model side.
+Ck
+points
+left/right
+N ⋆
+D⋆
+L⋆
+(1018 FLOPs)
+(M params)
+(B tokens)
+9.0
+7
+2/5
+15.1
+19.0
+0.607
+10.5
+8
+2/6
+17.6
+20.0
+0.592
+12.0
+8
+2/6
+17.5
+23.0
+0.580
+15.0
+8
+2/6
+20.8
+25.6
+0.574
+17.5
+9
+2/7
+21.2
+29.5
+0.568
+20.0
+8
+2/6
+26.4
+28.4
+0.554
+25.0
+7
+2/5
+36.6
+26.8
+0.550
+34.0
+7
+2/5
+41.0
+33.1
+0.542
+42.0
+7
+2/5
+42.4
+39.7
+0.539
+Per-row profiled FLOPs/token and MFU.
+Table 2 reports the per-row FLOPs/token, per-GPU
+779
+sustained throughput during SM-busy windows, and model FLOPs utilisation (MFU) against the
+780
+H100 SXM 989 TFLOP/s BF16 peak, separately for the Mamba-3 SISO and Transformer sweeps
+781
+at our production topology (gBSZ = 128, 26-token encoding, msg_seq_len = 500). The reported
+782
+FLOPs/token grows super-linearly with dmodel on both architectures because the AllReduce overhead,
+783
+Muon Newton-Schulz step, and (for Mamba-3) the SSM scan and conv1d kernels contribute compute
+784
+that the textbook 6N analytic omits, with the gap widening as node count grows. MFU rises with scale
+785
+on both backbones — from ≈8% at the smallest Mamba-3 row to ≈27% at 350M, and from ≈17%
+786
+to ≈47% on the Transformer side — reflecting the larger arithmetic-intensity-to-bandwidth ratio
+787
+of dense matmuls at wider dmodel. Cluster-total throughput during SM-busy windows is recovered
+788
+as per-GPU TFLOP/s × nodes ×4; e.g. Mamba-3 350M at 32 nodes sustains 268 × 128 = 34.3
+789
+PFLOP/s, and Transformer 200M at 8 nodes sustains 463 × 32 = 14.8 PFLOP/s.
+790
+22
+
+===== PAGE 23 =====
+
+Table 2: Per-row profiled FLOPs/token, per-GPU sustained throughput during SM-busy win-
+dows, and MFU versus the H100 SXM 989 TFLOP/s BF16 peak. Production topology, gBSZ
+= 128, 26-token encoding, msg_seq_len = 500.
+Mamba-3 SISO
+Size
+dmodel
+Nodes
+BSZ/GPU
+FLOPs/tok
+TFLOP/s (per-GPU, busy)
+MFU vs 989 peak
+0.2M
+64
+2
+16
+9.84 × 107
+80
+8.1%
+1M
+128
+2
+16
+1.57 × 108
+82
+8.3%
+4M
+192
+4
+8
+2.34 × 108
+88
+8.9%
+6M
+256
+4
+8
+2.73 × 108
+88
+8.9%
+10M
+320
+4
+8
+4.20 × 108
+106
+10.7%
+14M
+384
+4
+8
+4.59 × 108
+103
+10.4%
+23M
+512
+4
+8
+6.25 × 108
+105
+10.6%
+46M
+768
+4
+8
+1.144 × 109
+122
+12.3%
+78M
+1024
+8
+4
+1.809 × 109
+133
+13.5%
+120M
+1280
+16
+2
+2.891 × 109
+168
+17.0%
+200M
+1664
+32
+1
+5.552 × 109
+220
+22.2%
+350M
+2048
+32
+1
+8.701 × 109
+268
+27.1%
+Transformer
+Size
+dmodel
+Nodes
+BSZ/GPU
+FLOPs/tok
+TFLOP/s (per-GPU, busy)
+MFU vs 989 peak
+0.2M
+64
+2
+16
+1.56 × 108
+172
+17.4%
+1M
+128
+2
+16
+2.42 × 108
+215
+21.7%
+4M
+192
+4
+8
+3.51 × 108
+239
+24.1%
+6M
+256
+4
+8
+4.79 × 108
+273
+27.6%
+10M
+320
+4
+8
+6.16 × 108
+297
+30.1%
+14M
+384
+4
+8
+7.54 × 108
+320
+32.4%
+23M
+512
+4
+8
+1.032 × 109
+328
+33.1%
+46M
+768
+4
+8
+1.719 × 109
+382
+38.6%
+78M
+1024
+8
+4
+2.528 × 109
+422
+42.7%
+120M
+1280
+16
+2
+3.374 × 109
+404
+40.9%
+200M
+1664
+8
+1
+4.635 × 109
+463
+46.9%
+23
+
+===== PAGE 24 =====
+
+NeurIPS Paper Checklist
+791
+1. Claims
+792
+Question: Do the main claims made in the abstract and introduction accurately reflect the
+793
+paper’s contributions and scope?
+794
+Answer: [Yes]
+795
+Justification: The abstract and introduction state that the paper reports a reproduced Mamba-
+796
+3 logged-loss scaling law, gives the fitted surface and profiled-compute allocation, and
+797
+explicitly scopes the claim to logged training loss rather than a completed held-out validation
+798
+law. The main evidence appears in Section 4, with limitations stated in the conclusion.
+799
+Guidelines:
+800
+• The answer [N/A] means that the abstract and introduction do not include the claims
+801
+made in the paper.
+802
+• The abstract and/or introduction should clearly state the claims made, including the
+803
+contributions made in the paper and important assumptions and limitations. A [No] or
+804
+[N/A] answer to this question will not be perceived well by the reviewers.
+805
+• The claims made should match theoretical and experimental results, and reflect how
+806
+much the results can be expected to generalize to other settings.
+807
+• It is fine to include aspirational goals as motivation as long as it is clear that these goals
+808
+are not attained by the paper.
+809
+2. Limitations
+810
+Question: Does the paper discuss the limitations of the work performed by the authors?
+811
+Answer: [Yes]
+812
+Justification: The conclusion includes a limitations paragraph that states the current scaling
+813
+law is fit on the available eight-stock, approximately 800B-token corpus and has not yet been
+814
+validated on a 5T-token held-out or expanded stream. It also states that the current sweep has
+815
+too few independent seeds per model size to estimate seed-to-seed or new-run variance, so
+816
+the reported bootstrap bands should not be read as replicated-training confidence intervals.
+817
+Guidelines:
+818
+• The answer [N/A] means that the paper has no limitation while the answer [No] means
+819
+that the paper has limitations, but those are not discussed in the paper.
+820
+• The authors are encouraged to create a separate “Limitations” section in their paper.
+821
+• The paper should point out any strong assumptions and how robust the results are to
+822
+violations of these assumptions (e.g., independence assumptions, noiseless settings,
+823
+model well-specification, asymptotic approximations only holding locally). The authors
+824
+should reflect on how these assumptions might be violated in practice and what the
+825
+implications would be.
+826
+• The authors should reflect on the scope of the claims made, e.g., if the approach was
+827
+only tested on a few datasets or with a few runs. In general, empirical results often
+828
+depend on implicit assumptions, which should be articulated.
+829
+• The authors should reflect on the factors that influence the performance of the approach.
+830
+For example, a facial recognition algorithm may perform poorly when image resolution
+831
+is low or images are taken in low lighting. Or a speech-to-text system might not be
+832
+used reliably to provide closed captions for online lectures because it fails to handle
+833
+technical jargon.
+834
+• The authors should discuss the computational efficiency of the proposed algorithms
+835
+and how they scale with dataset size.
+836
+• If applicable, the authors should discuss possible limitations of their approach to
+837
+address problems of privacy and fairness.
+838
+• While the authors might fear that complete honesty about limitations might be used by
+839
+reviewers as grounds for rejection, a worse outcome might be that reviewers discover
+840
+limitations that aren’t acknowledged in the paper. The authors should use their best
+841
+judgment and recognize that individual actions in favor of transparency play an impor-
+842
+tant role in developing norms that preserve the integrity of the community. Reviewers
+843
+will be specifically instructed to not penalize honesty concerning limitations.
+844
+24
+
+===== PAGE 25 =====
+
+3. Theory assumptions and proofs
+845
+Question: For each theoretical result, does the paper provide the full set of assumptions and
+846
+a complete (and correct) proof?
+847
+Answer: [Yes]
+848
+Justification: The only closed-form theoretical result that feeds the headline numbers is
+849
+the profiled compute-optimal allocation (the exponents a, b, p and the prefactor G used in
+850
+Section 4.4). Its assumptions (q(N) = kN γ with k > 0, γ > 0; L(N, D) = E + AN −α +
+851
+BD−β with A, B > 0 and α, β > 0; E ≥0) and the full closed form a = β/(α +γβ), b =
+852
+α/(α + γβ), p = αβ/(α + γβ), G = (γβB/(αAkβ))1/(α+γβ) are stated as Proposition 1,
+853
+with a step-by-step proof in Appendix F that recovers the analytic Chinchilla closed form
+854
+[Hoffmann et al., 2022, Equation 4] as the special case γ = 1. All other quantitative claims
+855
+in the paper (the surface fit and bootstrap CIs, the IsoFLOP valley projections, the off-
+856
+frontier penalty inequality) are empirical or one-line algebraic consequences of definitions,
+857
+not independent theorems.
+858
+Guidelines:
+859
+• The answer [N/A] means that the paper does not include theoretical results.
+860
+• All the theorems, formulas, and proofs in the paper should be numbered and cross-
+861
+referenced.
+862
+• All assumptions should be clearly stated or referenced in the statement of any theorems.
+863
+• The proofs can either appear in the main paper or the supplemental material, but if
+864
+they appear in the supplemental material, the authors are encouraged to provide a short
+865
+proof sketch to provide intuition.
+866
+• Inversely, any informal proof provided in the core of the paper should be complemented
+867
+by formal proofs provided in appendix or supplemental material.
+868
+• Theorems and Lemmas that the proof relies upon should be properly referenced.
+869
+4. Experimental result reproducibility
+870
+Question: Does the paper fully disclose all the information needed to reproduce the main ex-
+871
+perimental results of the paper to the extent that it affects the main claims and/or conclusions
+872
+of the paper (regardless of whether the code and data are provided or not)?
+873
+Answer: [Yes]
+874
+Justification: Sections 3.1–3.5 disclose the corpus, tokenisation, architecture, fitting ob-
+875
+jective, profiled compute convention, and bootstrap procedures, and Appendices C, G,
+876
+and G give the implementation-level details. The code-and-checkpoints paragraph states
+877
+that the released repository contains the tokeniser, FLOPs/token profile, fitting code, boot-
+878
+strap/IsoFLOP scripts, and checkpoints, while the LOBSTER data must be obtained under a
+879
+separate license.
+880
+Guidelines:
+881
+• The answer [N/A] means that the paper does not include experiments.
+882
+• If the paper includes experiments, a [No] answer to this question will not be perceived
+883
+well by the reviewers: Making the paper reproducible is important, regardless of
+884
+whether the code and data are provided or not.
+885
+• If the contribution is a dataset and/or model, the authors should describe the steps taken
+886
+to make their results reproducible or verifiable.
+887
+• Depending on the contribution, reproducibility can be accomplished in various ways.
+888
+For example, if the contribution is a novel architecture, describing the architecture fully
+889
+might suffice, or if the contribution is a specific model and empirical evaluation, it may
+890
+be necessary to either make it possible for others to replicate the model with the same
+891
+dataset, or provide access to the model. In general. releasing code and data is often
+892
+one good way to accomplish this, but reproducibility can also be provided via detailed
+893
+instructions for how to replicate the results, access to a hosted model (e.g., in the case
+894
+of a large language model), releasing of a model checkpoint, or other means that are
+895
+appropriate to the research performed.
+896
+25
+
+===== PAGE 26 =====
+
+• While NeurIPS does not require releasing code, the conference does require all submis-
+897
+sions to provide some reasonable avenue for reproducibility, which may depend on the
+898
+nature of the contribution. For example
+899
+(a) If the contribution is primarily a new algorithm, the paper should make it clear how
+900
+to reproduce that algorithm.
+901
+(b) If the contribution is primarily a new model architecture, the paper should describe
+902
+the architecture clearly and fully.
+903
+(c) If the contribution is a new model (e.g., a large language model), then there should
+904
+either be a way to access this model for reproducing the results or a way to reproduce
+905
+the model (e.g., with an open-source dataset or instructions for how to construct
+906
+the dataset).
+907
+(d) We recognize that reproducibility may be tricky in some cases, in which case
+908
+authors are welcome to describe the particular way they provide for reproducibility.
+909
+In the case of closed-source models, it may be that access to the model is limited in
+910
+some way (e.g., to registered users), but it should be possible for other researchers
+911
+to have some path to reproducing or verifying the results.
+912
+5. Open access to data and code
+913
+Question: Does the paper provide open access to the data and code, with sufficient instruc-
+914
+tions to faithfully reproduce the main experimental results, as described in supplemental
+915
+material?
+916
+Answer: [Yes]
+917
+Justification: The code, tokeniser, FLOPs/token profile, fitting scripts, bootstrap/IsoFLOP
+918
+scripts, and checkpoints are released through the anonymized repository described in the
+919
+conclusion. The eight-equity LOBSTER message stream cannot be redistributed under the
+920
+authors’ LOBSTER agreement, but the paper states that users can reproduce the analysis by
+921
+obtaining LOBSTER access directly from the dataset provider.
+922
+Guidelines:
+923
+• The answer [N/A] means that paper does not include experiments requiring code.
+924
+• Please see the NeurIPS code and data submission guidelines (https://neurips.cc/
+925
+public/guides/CodeSubmissionPolicy) for more details.
+926
+• While we encourage the release of code and data, we understand that this might not
+927
+be possible, so [No] is an acceptable answer. Papers cannot be rejected simply for not
+928
+including code, unless this is central to the contribution (e.g., for a new open-source
+929
+benchmark).
+930
+• The instructions should contain the exact command and environment needed to run to
+931
+reproduce the results. See the NeurIPS code and data submission guidelines (https:
+932
+//neurips.cc/public/guides/CodeSubmissionPolicy) for more details.
+933
+• The authors should provide instructions on data access and preparation, including how
+934
+to access the raw data, preprocessed data, intermediate data, and generated data, etc.
+935
+• The authors should provide scripts to reproduce all experimental results for the new
+936
+proposed method and baselines. If only a subset of experiments are reproducible, they
+937
+should state which ones are omitted from the script and why.
+938
+• At submission time, to preserve anonymity, the authors should release anonymized
+939
+versions (if applicable).
+940
+• Providing as much information as possible in supplemental material (appended to the
+941
+paper) is recommended, but including URLs to data and code is permitted.
+942
+6. Experimental setting/details
+943
+Question: Does the paper specify all the training and test details (e.g., data splits, hyperpa-
+944
+rameters, how they were chosen, type of optimizer) necessary to understand the results?
+945
+Answer: [Yes]
+946
+Justification: Section 3.1 specifies the LOBSTER training corpus (8 NASDAQ tickers,
+947
+2022-01-01 to 2025-12-31, 26-token-per-message encoding, 500-message context) and the
+948
+forward-in-time January 2026 held-out evaluation, including the two fully held-out OOD
+949
+tickers (MU, NFLX). Section 3.2 fixes the Mamba-3 SISO architecture (state-space backbone
+950
+26
+
+===== PAGE 27 =====
+
+of Lahoti et al. [2026], RoPE on the B/C projections with rope-fraction 0.5, expand factor 2,
+951
+state dimension 128) and the 8M–197M parameter sweep. Section 3.3 states the fit objective
+952
+(log-Huber on log-residuals, δ = 10−3), the parameter box, the optimizer (two-track Muon
+953
+kernel + AdamW auxiliary), the early-transient L > 1.0 filter, and the compute conven-
+954
+tion Cij = q(Ni)Dij with Dij recorded tokens-seen rather than step count. Section 3.4
+955
+documents the residual moving-block bootstrap (B = 200 surface, 5,000 IsoFLOP-valley
+956
+resamples, block length 20). Section 3.5 restates the optimizer/loss-column/parameter-
+957
+accounting/compute-convention reporting checklist. The full FLOPs/MFU profile q(N) and
+958
+per-run total parameter counts are reported in Appendix G.
+959
+Guidelines:
+960
+• The answer [N/A] means that the paper does not include experiments.
+961
+• The experimental setting should be presented in the core of the paper to a level of detail
+962
+that is necessary to appreciate the results and make sense of them.
+963
+• The full details can be provided either with the code, in appendix, or as supplemental
+964
+material.
+965
+7. Experiment statistical significance
+966
+Question: Does the paper report error bars suitably and correctly defined or other appropriate
+967
+information about the statistical significance of the experiments?
+968
+Answer: [Yes]
+969
+Justification: Section 3.4 defines the uncertainty bands used for the scaling experiments.
+970
+The grey surface band is a fixed-design residual moving-block bootstrap over logged-loss
+971
+residuals within each run: the (Ni, Dij) design is held fixed, residual blocks of length 20
+972
+are resampled within each run, and the surface is refit for B = 200 bootstrap samples. This
+973
+captures temporally correlated logged-loss noise along the observed training curves, but not
+974
+seed variance, new-run variance, validation-loss noise, or uncertainty in the FLOPs/token
+975
+profile q(N). The IsoFLOP projection band separately bootstraps the nine retained fixed-
+976
+compute valley rows 5,000 times and refits the log-log projection lines for N ⋆(C) and
+977
+D⋆(C); it captures valley-row sampling sensitivity only. The plotted bands are 2.5–97.5
+978
+percentile bootstrap envelopes, not standard deviations, not standard errors of the mean, and
+979
+not symmetric Gaussian error bars; the paper states that no Normality assumption is made
+980
+and that these intervals cover the reported logged-loss scaling analysis rather than a separate
+981
+held-out validation law.
+982
+Guidelines:
+983
+• The answer [N/A] means that the paper does not include experiments.
+984
+• The authors should answer [Yes] if the results are accompanied by error bars, confidence
+985
+intervals, or statistical significance tests, at least for the experiments that support the
+986
+main claims of the paper.
+987
+• The factors of variability that the error bars are capturing should be clearly stated (for
+988
+example, train/test split, initialization, random drawing of some parameter, or overall
+989
+run with given experimental conditions).
+990
+• The method for calculating the error bars should be explained (closed form formula,
+991
+call to a library function, bootstrap, etc.)
+992
+• The assumptions made should be given (e.g., Normally distributed errors).
+993
+• It should be clear whether the error bar is the standard deviation or the standard error
+994
+of the mean.
+995
+• It is OK to report 1-sigma error bars, but one should state it. The authors should
+996
+preferably report a 2-sigma error bar than state that they have a 96% CI, if the hypothesis
+997
+of Normality of errors is not verified.
+998
+• For asymmetric distributions, the authors should be careful not to show in tables or
+999
+figures symmetric error bars that would yield results that are out of range (e.g., negative
+1000
+error rates).
+1001
+• If error bars are reported in tables or plots, the authors should explain in the text how
+1002
+they were calculated and reference the corresponding figures or tables in the text.
+1003
+8. Experiments compute resources
+1004
+27
+
+===== PAGE 28 =====
+
+Question: For each experiment, does the paper provide sufficient information on the com-
+1005
+puter resources (type of compute workers, memory, time of execution) needed to reproduce
+1006
+the experiments?
+1007
+Answer: [Yes]
+1008
+Justification: All Mamba-3 training and FLOPs/MFU profiling runs reported in the paper
+1009
+were carried out on the Isambard-AI national AI research resource (University of Bris-
+1010
+tol), using NVIDIA GH200 Grace Hopper Superchip nodes (each pairing a 72-core Arm
+1011
+Neoverse-V2 Grace CPU with an H100-class Hopper GPU and 96 GB HBM3 + 480 GB
+1012
+LPDDR5X over NVLink-C2C). Per-run model size, batch size, context length, tokens-
+1013
+seen budget, and the profiled FLOPs/token curve q(N) used to build the compute axis
+1014
+C = q(N)D are reported in the methodology section and Appendix G, which together fix
+1015
+the wall-clock and aggregate GPU-hour cost of every fitted scaling-law point. Bootstrap
+1016
+and surface-fitting compute (CPU-bound SciPy under Ray with 256 workers and 5 GPUs
+1017
+registered as Ray resources) was run on the same shared internal Linux node described in
+1018
+the project compute notes.
+1019
+Guidelines:
+1020
+• The answer [N/A] means that the paper does not include experiments.
+1021
+• The paper should indicate the type of compute workers CPU or GPU, internal cluster,
+1022
+or cloud provider, including relevant memory and storage.
+1023
+• The paper should provide the amount of compute required for each of the individual
+1024
+experimental runs as well as estimate the total compute.
+1025
+• The paper should disclose whether the full research project required more compute
+1026
+than the experiments reported in the paper (e.g., preliminary or failed experiments that
+1027
+didn’t make it into the paper).
+1028
+9. Code of ethics
+1029
+Question: Does the research conducted in the paper conform, in every respect, with the
+1030
+NeurIPS Code of Ethics https://neurips.cc/public/EthicsGuidelines?
+1031
+Answer: [Yes]
+1032
+Justification: The authors have reviewed the NeurIPS Code of Ethics. The work uses
+1033
+licensed historical market data, does not involve human subjects or private personal data,
+1034
+and the submission uses an anonymized repository for review.
+1035
+Guidelines:
+1036
+• The answer [N/A] means that the authors have not reviewed the NeurIPS Code of
+1037
+Ethics.
+1038
+• If the authors answer [No], they should explain the special circumstances that require a
+1039
+deviation from the Code of Ethics.
+1040
+• The authors should make sure to preserve anonymity (e.g., if there is a special consid-
+1041
+eration due to laws or regulations in their jurisdiction).
+1042
+10. Broader impacts
+1043
+Question: Does the paper discuss both potential positive societal impacts and negative
+1044
+societal impacts of the work performed?
+1045
+Answer: [No]
+1046
+Justification: The paper focuses on a methodological scaling-law analysis for order-flow
+1047
+foundation models and does not include a dedicated broader-impact discussion. It does
+1048
+state that any deployment in latency-sensitive trading systems would require a separate
+1049
+distillation/deployment analysis, and the released data path is constrained by the LOBSTER
+1050
+license.
+1051
+Guidelines:
+1052
+• The answer [N/A] means that there is no societal impact of the work performed.
+1053
+• If the authors answer [N/A] or [No], they should explain why their work has no societal
+1054
+impact or why the paper does not address societal impact.
+1055
+28
+
+===== PAGE 29 =====
+
+• Examples of negative societal impacts include potential malicious or unintended uses
+1056
+(e.g., disinformation, generating fake profiles, surveillance), fairness considerations
+1057
+(e.g., deployment of technologies that could make decisions that unfairly impact specific
+1058
+groups), privacy considerations, and security considerations.
+1059
+• The conference expects that many papers will be foundational research and not tied
+1060
+to particular applications, let alone deployments. However, if there is a direct path to
+1061
+any negative applications, the authors should point it out. For example, it is legitimate
+1062
+to point out that an improvement in the quality of generative models could be used to
+1063
+generate Deepfakes for disinformation. On the other hand, it is not needed to point out
+1064
+that a generic algorithm for optimizing neural networks could enable people to train
+1065
+models that generate Deepfakes faster.
+1066
+• The authors should consider possible harms that could arise when the technology is
+1067
+being used as intended and functioning correctly, harms that could arise when the
+1068
+technology is being used as intended but gives incorrect results, and harms following
+1069
+from (intentional or unintentional) misuse of the technology.
+1070
+• If there are negative societal impacts, the authors could also discuss possible mitigation
+1071
+strategies (e.g., gated release of models, providing defenses in addition to attacks,
+1072
+mechanisms for monitoring misuse, mechanisms to monitor how a system learns from
+1073
+feedback over time, improving the efficiency and accessibility of ML).
+1074
+11. Safeguards
+1075
+Question: Does the paper describe safeguards that have been put in place for responsible
+1076
+release of data or models that have a high risk for misuse (e.g., pre-trained language models,
+1077
+image generators, or scraped datasets)?
+1078
+Answer: [N/A]
+1079
+Justification: The paper does not release a scraped dataset, personal-data resource, or general-
+1080
+purpose generative model of the high-risk type contemplated by this question. The raw
+1081
+LOBSTER stream is not redistributed, and reproduction requires users to obtain the licensed
+1082
+data directly.
+1083
+Guidelines:
+1084
+• The answer [N/A] means that the paper poses no such risks.
+1085
+• Released models that have a high risk for misuse or dual-use should be released with
+1086
+necessary safeguards to allow for controlled use of the model, for example by requiring
+1087
+that users adhere to usage guidelines or restrictions to access the model or implementing
+1088
+safety filters.
+1089
+• Datasets that have been scraped from the Internet could pose safety risks. The authors
+1090
+should describe how they avoided releasing unsafe images.
+1091
+• We recognize that providing effective safeguards is challenging, and many papers do
+1092
+not require this, but we encourage authors to take this into account and make a best
+1093
+faith effort.
+1094
+12. Licenses for existing assets
+1095
+Question: Are the creators or original owners of assets (e.g., code, data, models), used in
+1096
+the paper, properly credited and are the license and terms of use explicitly mentioned and
+1097
+properly respected?
+1098
+Answer: [Yes]
+1099
+Justification: We cannot distribute the LOBSTER data, which is our training data.
+1100
+Guidelines:
+1101
+• The answer [N/A] means that the paper does not use existing assets.
+1102
+• The authors should cite the original paper that produced the code package or dataset.
+1103
+• The authors should state which version of the asset is used and, if possible, include a
+1104
+URL.
+1105
+• The name of the license (e.g., CC-BY 4.0) should be included for each asset.
+1106
+• For scraped data from a particular source (e.g., website), the copyright and terms of
+1107
+service of that source should be provided.
+1108
+29
+
+===== PAGE 30 =====
+
+• If assets are released, the license, copyright information, and terms of use in the
+1109
+package should be provided. For popular datasets, paperswithcode.com/datasets
+1110
+has curated licenses for some datasets. Their licensing guide can help determine the
+1111
+license of a dataset.
+1112
+• For existing datasets that are re-packaged, both the original license and the license of
+1113
+the derived asset (if it has changed) should be provided.
+1114
+• If this information is not available online, the authors are encouraged to reach out to
+1115
+the asset’s creators.
+1116
+13. New assets
+1117
+Question: Are new assets introduced in the paper well documented and is the documentation
+1118
+provided alongside the assets?
+1119
+Answer: [Yes]
+1120
+Justification: The released repository described in the conclusion provides the tokeniser,
+1121
+FLOPs/token profile, fitting and bootstrap code, IsoFLOP scripts, and Mamba-3 checkpoints.
+1122
+The paper documents the corpus assumptions, architecture, training protocol, compute
+1123
+convention, and limitations needed to interpret those assets.
+1124
+Guidelines:
+1125
+• The answer [N/A] means that the paper does not release new assets.
+1126
+• Researchers should communicate the details of the dataset/code/model as part of their
+1127
+submissions via structured templates. This includes details about training, license,
+1128
+limitations, etc.
+1129
+• The paper should discuss whether and how consent was obtained from people whose
+1130
+asset is used.
+1131
+• At submission time, remember to anonymize your assets (if applicable). You can either
+1132
+create an anonymized URL or include an anonymized zip file.
+1133
+14. Crowdsourcing and research with human subjects
+1134
+Question: For crowdsourcing experiments and research with human subjects, does the paper
+1135
+include the full text of instructions given to participants and screenshots, if applicable, as
+1136
+well as details about compensation (if any)?
+1137
+Answer: [N/A]
+1138
+Justification: The paper does not involve crowdsourcing or research with human subjects.
+1139
+Guidelines:
+1140
+• The answer [N/A] means that the paper does not involve crowdsourcing nor research
+1141
+with human subjects.
+1142
+• Including this information in the supplemental material is fine, but if the main contribu-
+1143
+tion of the paper involves human subjects, then as much detail as possible should be
+1144
+included in the main paper.
+1145
+• According to the NeurIPS Code of Ethics, workers involved in data collection, curation,
+1146
+or other labor should be paid at least the minimum wage in the country of the data
+1147
+collector.
+1148
+15. Institutional review board (IRB) approvals or equivalent for research with human
+1149
+subjects
+1150
+Question: Does the paper describe potential risks incurred by study participants, whether
+1151
+such risks were disclosed to the subjects, and whether Institutional Review Board (IRB)
+1152
+approvals (or an equivalent approval/review based on the requirements of your country or
+1153
+institution) were obtained?
+1154
+Answer: [N/A]
+1155
+Justification: The paper does not involve crowdsourcing or research with human subjects, so
+1156
+IRB or equivalent human-subjects approval is not applicable.
+1157
+Guidelines:
+1158
+• The answer [N/A] means that the paper does not involve crowdsourcing nor research
+1159
+with human subjects.
+1160
+30
+
+===== PAGE 31 =====
+
+• Depending on the country in which research is conducted, IRB approval (or equivalent)
+1161
+may be required for any human subjects research. If you obtained IRB approval, you
+1162
+should clearly state this in the paper.
+1163
+• We recognize that the procedures for this may vary significantly between institutions
+1164
+and locations, and we expect authors to adhere to the NeurIPS Code of Ethics and the
+1165
+guidelines for their institution.
+1166
+• For initial submissions, do not include any information that would break anonymity (if
+1167
+applicable), such as the institution conducting the review.
+1168
+16. Declaration of LLM usage
+1169
+Question: Does the paper describe the usage of LLMs if it is an important, original, or
+1170
+non-standard component of the core methods in this research? Note that if the LLM is used
+1171
+only for writing, editing, or formatting purposes and does not impact the core methodology,
+1172
+scientific rigor, or originality of the research, declaration is not required.
+1173
+Answer: [Yes]
+1174
+Justification: LLMs were used to review and edit the manuscript text, including checklist
+1175
+wording, but not as an important, original, or non-standard component of the core methods.
+1176
+The experiments, scaling-law fit, data processing, and reported scientific claims do not rely
+1177
+on LLM-generated outputs.
+1178
+Guidelines:
+1179
+• The answer [N/A] means that the core method development in this research does not
+1180
+involve LLMs as any important, original, or non-standard components.
+1181
+• Please refer to our LLM policy in the NeurIPS handbook for what should or should not
+1182
+be described.
+1183
+31
