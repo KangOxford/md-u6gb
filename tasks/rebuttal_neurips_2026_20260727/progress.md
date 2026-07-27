@@ -11,4 +11,6 @@
   - `5652faa` — corrected IsoFLOP slice-identifiability reporting;
   - `a40358c` — refreshed the corrected audit outputs.
 - Updated Notion sequentially and verified every write. Final audit: 12 reviewer answers and 12 blue callouts, covering all pXiP, WHZQ, and 8P5h questions.
+- Replaced the earlier pXiP Q1 “common-D pending” text with the completed common-D, late-common-D, and run-balanced results, then re-fetched and verified that callout.
+- Corrected and regenerated the sensitivity figure so bracketed and unbracketed IsoFLOP deletion candidates are visually distinct (`1836c5f`, `0853c2f`).
 - Status: Notion-first answer phase complete. Next work is manuscript revision and compilation in the isolated `Overleaf_codex` branch.

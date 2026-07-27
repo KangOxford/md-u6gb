@@ -6,4 +6,5 @@
 - Raw token counts are not cross-model data units when tokenizers encode 26 tokens/message versus one token/event. Message semantics, repeated exposure, parameter convention, and architecture-specific compute must all be aligned before declaring a model data-limited.
 - A large fixed-`beta=0.28` fit penalty supports only a finite-range difference from that LM reference. The much smaller fixed-`beta=1.0` penalty prevents treating `beta>1` as tightly established.
 - IsoFLOP point-estimate stability and identifiability are distinct. A modest slope change on 5 retained slices does not rescue the loss of 4 unbracketed slices.
+- Generated figures must be checked against their CSV/JSON, not only viewed for plausibility. This caught a marker legend that contradicted the verified 5/9 bracketing count.
 - Throughput profiling supplies the compute function, not a loss surface. It cannot substitute for completed, matched Transformer trajectories.
