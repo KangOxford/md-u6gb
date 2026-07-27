@@ -2,5 +2,14 @@
 
 - 2026-07-27 12:05 UTC: The supplied Notion URL resolves to `⚖️ Rebuttal NeurIPS 2026 (1)` (page ID `3aa12c45-68fd-80ab-89b5-d0d597bad64c`).
 - The page asks for Chinese rebuttal work based on update material, with long answers in subpages and short answers in callouts; Codex text should be blue and Claude text red.
-- The current page contains the reviewer archive, a three-issue synthesis, and a rebuttal to-do list. No child update pages, file/PDF blocks, or unresolved page discussions were exposed by the page fetch/search.
-- The user supplied only the target URL in this round, so no Notion content was changed.
+- The supplied deep anchor `3aa12c45-68fd-8040-bca1-fc7613009b23` is the paper-source callout. It contains an Overleaf source URL, sensitive credentials that were not reproduced, and the attachment `quant_neurips26_clean_(18).pdf`.
+- The PDF bytes were preserved at `notion_fetches/rebuttal_neurips_2026_20260727T1210Z/assets/quant_neurips26_clean_(18).pdf`: 598,646 bytes, 31 pages, SHA256 `68bdf56e8a4b6f6247907aeb410309d1aa4bd1d7cfa28d99d71953ffb0ae045f`.
+- The paper was cloned into the requested conflict-isolated directory `/lus/lfs1aip2/projects/public/u6gb/Overleaf_codex` and checked out on branch `codex-rebuttal`.
+- Twelve reviewer answers were inserted and re-fetched one at a time as blue Notion callouts: pXiP Q1-Q5, WHZQ Q1-Q4, and 8P5h Q1-Q3. The final page audit found exactly 12 `Codex 回答` markers and 12 blue callouts.
+- Submitted-sweep sensitivity analysis uses the historical 10-run / 1,846-checkpoint blobs, not the later 0.2M-350M protocol. The baseline is `alpha=0.3711`, `beta=1.3325`, `E=0.50592`, with frontier slopes `0.8487/0.2364`.
+- A common-D refit on `[4.472e9, 2.817152e10]` tokens gives `alpha=0.9935`, `beta=1.4336`, `E=0.53115`; this is support sensitivity on logged training loss, not held-out validation.
+- Fixing `beta=0.28` increases the same log-Huber objective by 50.16%, raw-loss RMSE by 80.43%, and changes the frontier slopes to `0.1764/0.8413`. Fixing `beta=1.0` increases the objective by only 6.11%, so the submitted interval rejects 0.28 more clearly than it identifies `beta>1`.
+- The published TradeFM coordinate is 524.4M parameters and 42.8B cumulative trade-event tokens; MarS's largest order model is 1.02B parameters and 32B order tokens. Once message semantics are respected, these do not support a categorical “undertrained” claim; architecture-specific compute profiles and comparable tokenization are also unavailable.
+- The only verified LR sensitivity is a single 78M, seed-5 sweep. At step 10,800, CE for multipliers `0.25/0.5/1/2/4` is `0.572858/0.577215/0.570238/0.583513/0.594320`; the central range spans about 2.3%, not 0.5%.
+- No defensible matched Transformer scaling fit exists. Current held-out rows are Mamba-3 only, and the historical Transformer-v3 snapshot has zero valid completed scaling points.
+- Removing the lowest-N point from every IsoFLOP slice changes slopes from `0.7295/0.4234` to `0.6916/0.4055`, but only 5 of 9 slices remain bracketed by at least two points per side. The latter is a reduced-subset sensitivity, not a like-for-like robustness confirmation.

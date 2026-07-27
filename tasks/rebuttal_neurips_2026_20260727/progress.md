@@ -1,6 +1,14 @@
 # Progress
 
 - 2026-07-27 12:05 UTC: Target page fetched successfully and its structure/instructions inspected.
-- Confirmed that the page is accessible and currently has no exposed child update pages or attachments.
-- No Notion write was performed because the requested action was not specified.
-- Status: waiting for the user to identify the desired update or analysis.
+- Archived the source PDF and manifest locally; root-repository archival commit: `c68faae`.
+- Created the four task records; root-repository record commit: `cf511d5`.
+- Cloned the paper to `/lus/lfs1aip2/projects/public/u6gb/Overleaf_codex`, created branch `codex-rebuttal`, and added a submitted-protocol sensitivity runner.
+- Overleaf analysis commits through this round:
+  - `7783bad` — initial sensitivity runner and README;
+  - `8c04bab` — safe dynamic import of the historical fit engine;
+  - `6851621` — generated sensitivity JSON/CSV/PNG/PDF outputs;
+  - `5652faa` — corrected IsoFLOP slice-identifiability reporting;
+  - `a40358c` — refreshed the corrected audit outputs.
+- Updated Notion sequentially and verified every write. Final audit: 12 reviewer answers and 12 blue callouts, covering all pXiP, WHZQ, and 8P5h questions.
+- Status: Notion-first answer phase complete. Next work is manuscript revision and compilation in the isolated `Overleaf_codex` branch.
