@@ -20,3 +20,10 @@
 - Remaining scientific validation: evaluate the frozen submitted-grid checkpoints on the Jan-2026 stream and freely refit all five scaling-law parameters. Do not describe the current partial result as that matched experiment.
 - Keep `/lus/lfs1aip2/projects/public/u6gb/Overleaf_codex` isolated and do not push until the user explicitly requests it.
 - Recommend rotating the plaintext Overleaf credentials visible on the Notion source block; never reproduce them in chat or records.
+
+## Gamma clarification plan — 2026-07-27 13:31 UTC
+
+- Completed: trace `gamma=0.90` to the exact historical profiler CSV, reproduce the log-log OLS fit, and record its input range, coefficient, intercept-derived prefactor, `R^2`, and SHA256.
+- Completed: update and re-fetch the existing pXiP Q3 blue Notion callout with this provenance.
+- No manuscript edit was required for the user’s explanatory question; the current paper already reports the 12-point profile and rounded exponent.
+- If a measurement-error interval is required, collect repeated profiler measurements per size. The existing residual bootstrap and leave-one-profile-point-out checks quantify fit/design sensitivity, not repeated-measurement uncertainty.

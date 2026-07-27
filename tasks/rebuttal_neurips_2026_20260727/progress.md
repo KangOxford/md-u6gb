@@ -30,3 +30,10 @@
 - Re-ran the submitted-protocol sensitivity analysis; verified baseline/common-D/fixed-beta/LOO/profile/IsoFLOP outputs and committed the regenerated PDF as `f49dba1`.
 - Final static checks: no active missing/duplicate labels, missing references/citations/graphics, environment imbalance, brace imbalance, or unmatched active math delimiters; both audit JSON files pass `jq`.
 - Local compile remains unavailable because `latexmk`, `pdflatex`, `xelatex`, `lualatex`, and `tectonic` are absent. The branch has not been pushed.
+
+## Gamma provenance round — 2026-07-27 13:31 UTC
+
+- Recomputed the 12-point Mamba-3 log-log profile regression directly from the historical CSV: `gamma=0.899728665943256`, `k=170.6179807715654`, and `R^2=0.991824295393419`.
+- Updated the existing pXiP Q3 blue Notion callout to explain the regression, input ranges, source Git object/SHA256, unit dependence, and distinction from `alpha/beta`; re-fetch verification succeeded.
+- The first exact-match attempt found no match because Notion stored `N\^gamma` with an escaped caret; it made no change. The second fetch-derived targeted replacement succeeded.
+- No paper source or analysis code was modified in this round.

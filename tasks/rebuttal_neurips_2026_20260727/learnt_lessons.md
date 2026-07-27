@@ -17,3 +17,10 @@
 - Review the NeurIPS checklist after manuscript revisions. It contained both a stale held-out description and an inverted prefactor formula even though the main proposition was correct.
 - Generated audit JSON should use standard `null`, not implementation-specific `NaN`, so strict parsers can validate the artifact.
 - When two agent tracks report incompatible held-out exponents, preserve both provenance trails and do not silently average or substitute one result for the other.
+
+## Gamma clarification lessons — 2026-07-27 13:31 UTC
+
+- In `q(N)=kN^gamma`, `gamma` is the slope of a log-log compute-profile regression; it must not be confused with the loss exponents `alpha` and `beta`.
+- Rescaling the units of `N` or `q` changes `k` but not `gamma`, which is why the slope is the portable quantity.
+- A high in-sample log-log `R^2` does not establish profiler measurement precision. With one measurement per size, repeated-measurement uncertainty remains unobserved.
+- Notion exact-match updates must preserve stored escape characters such as `N\^gamma`; a failed no-match update is non-mutating and should be followed by a fetch-derived exact replacement.

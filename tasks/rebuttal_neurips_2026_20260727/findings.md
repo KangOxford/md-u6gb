@@ -28,3 +28,11 @@ F106 UTC 2026-07-27T13:12:03Z: unseen-val 方案代码级验证（回应用户�
 - The pXiP Q2 blue Notion callout now states all three evidence layers explicitly and was re-fetched successfully: earlier locked six-size diagnostic, later different-sweep free refit, and missing checkpoint-matched refit of the submitted ten-run surface.
 - The external-model figure uses open descriptive markers for TradeFM and MarS and a counterfactual Mamba-3 allocation curve; it makes no undertrained/overtrained classification.
 - A full rerun of `rebuttal_analysis/run_sensitivity.py` reproduced the common-D, fixed-beta, LOO, profile, joint-propagation, and 5/9 IsoFLOP-deletion results without numerical drift.
+
+## Gamma provenance clarification — 2026-07-27 13:31 UTC
+
+- `gamma=0.899728665943256` is the slope from an ordinary least-squares regression with intercept, `log(q_i)=log(k)+gamma log(N_i)`, implemented by `np.polyfit(log_n, log_q, 1)`.
+- The inputs are 12 unique Mamba-3 profiler rows from historical Git object `b661f145...:reproduce_with_codex/flops_profile.csv`: `N=2,625,923` to `293,283,039` parameters and `q=98.4M` to `8.701B` FLOPs/token.
+- The same regression gives `k=170.6179807715654` and log-log `R^2=0.991824295393419`. The paper rounds the dimensionless slope to `gamma=0.90`; `k` is unit-dependent.
+- Source CSV SHA256 is `bb09af777f4ce2ddcc79137d7d9855c4b8f48835d16bd766ac4e322cfaf8a2e9`. The reproducing code is `Overleaf_codex/rebuttal_analysis/run_sensitivity.py:253-305`.
+- `gamma` is a compute-profile exponent, not a network training parameter and not either loss-surface exponent `alpha` or `beta`.
