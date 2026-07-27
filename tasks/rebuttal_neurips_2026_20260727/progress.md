@@ -14,3 +14,5 @@
 - Replaced the earlier pXiP Q1 “common-D pending” text with the completed common-D, late-common-D, and run-balanced results, then re-fetched and verified that callout.
 - Corrected and regenerated the sensitivity figure so bracketed and unbracketed IsoFLOP deletion candidates are visually distinct (`1836c5f`, `0853c2f`).
 - Status: Notion-first answer phase complete. Next work is manuscript revision and compilation in the isolated `Overleaf_codex` branch.
+
+- 2026-07-27T13:04:27Z: Full rebuttal answered on Notion page (Claude red track): 3 common issues + 11 to-dos + 4 follow-up Q&As + strikethrough of both [...] lines. New fits this round: held-out test-CE refit (beta=0.978 last-ckpt), LORO 10-fold, forced-beta. Paper cloned (overleaf_paper/, HEAD 9d69139) + PDF v18 archived.

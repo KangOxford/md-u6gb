@@ -21,3 +21,5 @@
 - 2026-07-22: 手动轮(非 cron):回答 Notion 22july [...] 问题;record 5740627→1n_24h EMA 11h39m;立即提交继任者 5748696 并以 --begin=2026-07-22T13:31Z 对齐 when-to-submit 推荐点。
 - 2026-07-23: Stop after persisting `notion_status=failed`; do not retry Notion or touch experiment jobs/configuration.
 - 2026-07-25: 深链锚点问答轮:断链取证→按新约束(重叠OK/gap不行)改自续链 one_node_chain.sbatch→提交首棒 5780968→Notion 答复+划线;机制目标从"agent 每轮续链"改为"链自续,agent 只审计"。
+- 2026-07-26 daily log for 2026-07-25: stop after recording the cancelled Notion append and failed local write; do not retry or touch Slurm jobs or experiment files.
+- 2026-07-27 daily log for 2026-07-26: stop after persisting `notion_status=failed`; do not retry Notion or touch Slurm jobs or experiment files.

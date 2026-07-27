@@ -436,3 +436,9 @@ P104 UTC 2026-07-22T10:19:36Z: 用户要 lob-mae 与 sigma-flow(KangOxford/sigma
 P105 UTC 2026-07-22T10:25:45Z: 用户问 WanDiT/VideoDiT 是否用了 sigma-flow 的东西。计划:在 flow.py 内追 WanDiT/VideoDiT 的类依赖链,区分 sigma-flow-ported 类 vs Wan2.2 类;读 sigma-flow flow_matching/{scheduler,solver} 对比目标函数实现,判定"共享目标"是共享代码还是仅共享范式。
 P106 UTC 2026-07-22T11:12:04Z: 22-july placeholder 轮:按 block 深链只读锚点 code block→回答"1跑+1排是否常态"→record 5740627 入 queue_predictor→when-to-submit 算设计提交点→立即提交继任者并用 --begin 对齐该点→Notion callout+划线→四文件记录+commit。
 P107 UTC 2026-07-25T20:47:00Z: 25-july 深链锚点轮:只读 block 3a812c45-68fd-80bd(为什么两头空)→sacct/squeue/state.json 取证→定位"续链依赖 agent 在场"单点故障(第3次发作)→按用户新约束(重叠OK/gap不行)重设计为自续链 one_node_chain.sbatch→提交首棒→Notion 答复+划线→四文件记录+commit。
+P108 UTC 2026-07-25T20:56:05Z: miao-2nd-quality 深链轮:只读锚点 callout block→按《方法论补充建议》子页+两篇 sample PDF(Appleton 2024 HE / Chen 2019 SSM)重构养老质量论文→05_revised_models.py 全套新模型→main_v2.tex 十节重写→Notion callout 回写+strikethrough。
+P109 UTC 2026-07-25T21:08:54Z: 用户提供第二篇 Overleaf git 地址 6a45abc0a2fd90b8e04523f6→clone 到 second/第二篇 养老质量/overleaf/→发现已有中文双语旧稿(4波旧口径 0.002949)→按用户指示不改旧 main.tex,新写 main_v2.tex(中文正文+英文标题表格 ctexart 风格,修订版全部数字)→push。
+P110 UTC 2026-07-26T10:32:44Z: Overleaf 26-july 三条【】指令轮:pull 定位指令→修 ADL 方向 bug(困难计数被当正向)→05/06 全量重跑→main_v2.tex 扩写 604 行(literature review+23 refs+逐符号公式解释+shift-share IV 节)→push 3ba97d3。
+P111 UTC 2026-07-27T10:58:30Z: 27-july Overleaf 七条【】指令轮:pull→定位七条指令(文献缺口句补完整/删全部前稿引用×5/结论重写贡献导向+limitations压缩)→逐一 Edit→静态检查(指令清除/前稿清零/env平衡)→push e839b60。
+P112 UTC 2026-07-27T11:58:12Z: 翻译轮:以 e839b60 中文版为源,新建 main_v2_en.tex 全文英译(结构/数字/方程/表格逐一对应,underbrace 与表注译出,双语括注改纯英文),push e274179。
+P113 UTC 2026-07-27T13:04:27Z: NeurIPS 26911 rebuttal 作答（Notion 页 3aa12c45-68fd-80ab，Claude 红字轨）。计划=定位 "my updates"（Overleaf 论文 69d6482b + s5e_scalinglaw 提交后实验）→ 补跑缺口拟合（held-out CE refit、LORO、forced-β）→ 按"答一个更新一次"逐条写回 Notion（3 共性问题 + 11 To-Do + 4 追问）→ 两个 [...] callout+删除线。

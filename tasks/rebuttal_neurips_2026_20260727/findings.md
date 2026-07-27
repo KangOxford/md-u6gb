@@ -15,3 +15,5 @@
 - No defensible matched Transformer scaling fit exists. Current held-out rows are Mamba-3 only, and the historical Transformer-v3 snapshot has zero valid completed scaling points.
 - Removing the lowest-N point from every IsoFLOP slice changes slopes from `0.7295/0.4234` to `0.6916/0.4055`, but only 5 of 9 slices remain bracketed by at least two points per side. The latter is a reduced-subset sensitivity, not a like-for-like robustness confirmation.
 - The sensitivity figure now distinguishes the five bracketed drop-lowest candidates from the four unbracketed candidates; the earlier figure legend had incorrectly labelled every red candidate as unbracketed.
+
+- 2026-07-27T13:04:27Z: beta panorama across protocols: 1.333 (full-curve) / 0.944 (cutoff) / 0.616 (tail-25) / 0.917 (SP500 v6 interim, long-D) / 0.978 (Jan-2026 held-out CE, new fit). Conclusion for rebuttal: beta>1 is a fitting-protocol artifact; corrected range 0.9-1.0 stays ~3x LM value; core claim survives, headline toned down.

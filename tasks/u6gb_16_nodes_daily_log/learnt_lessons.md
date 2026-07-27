@@ -22,3 +22,5 @@
 - 2026-07-22: 用 sbatch --begin 解耦提交与生效:PriorityWeightAge=0 时推迟生效零成本,立即提交消除"到点没人提交"的覆盖断点;每轮继任者启动后必须立刻 record 进 queue_predictor。
 - 2026-07-23: A cancelled Notion call is terminal for the daily logger; preserve the verified accounting snapshot and mark the local report failed.
 - 2026-07-25: 续链逻辑必须在 sbatch 载体内部自提(logger 活一周 vs 实验链死三次的唯一差别);用户约束"重叠可接受"反转设计方向,先采约束再定机制;update-a-block PATCH 生效但响应是旧状态,retrieve 复核后再下结论。
+- 2026-07-26 daily log for 2026-07-25: a retargeted manifest plus sandbox-denied Python-child SlurmDBD access prevents the exact collector from persisting the requested historical 16-node report.
+- 2026-07-27 daily log for 2026-07-26: use a runtime-only historical-fleet overlay when the current logger manifest has been retargeted; never reinterpret 1-node RUNNING time as 16-node coverage.
