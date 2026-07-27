@@ -18,3 +18,13 @@
 
 - 2026-07-27T13:04:27Z: beta panorama across protocols: 1.333 (full-curve) / 0.944 (cutoff) / 0.616 (tail-25) / 0.917 (SP500 v6 interim, long-D) / 0.978 (Jan-2026 held-out CE, new fit). Conclusion for rebuttal: beta>1 is a fitting-protocol artifact; corrected range 0.9-1.0 stays ~3x LM value; core claim survives, headline toned down.
 F106 UTC 2026-07-27T13:12:03Z: unseen-val 方案代码级验证（回应用户复问）：s5e_mamba3 证据链 lob/train.py:94-96 create_lobster_prediction_dataset(seed=args.jax_seed) → dataloading.py:178/199 DistributedSampler(seed=seed)——数据顺序 seed 就是 --jax_seed(5/42/137)，同 seed run 的 seen 集严格嵌套（=该 seed 最长 run 前缀），三 seed 为三条独立序列；seen 全集按全局 batch 前缀 perm[0:S×128] 重放（per-rank 交错合并恰为前缀）；window→ticker-day 由 seqs_per_file 累积索引确定，per-file offset 由同 seed 链播种；train/val split 独立 seed(lobster_dataloader.py:1441 默认42)在 VAL_SPLIT=0.0 下不生效。结论：方案由纸面可行升级为代码级确认。已写入 Notion 解答 3 补充 callout（3aa12c45-68fd-817a）。
+
+## Codex evidence update — 2026-07-27 13:19 UTC
+
+- “有 test loss”与“投稿主 surface 已被独立验证”不是同一件事。历史提交 `77c9228`/`4ff719a` 证明旧 `test_ce_scaling_presentation` 来自更早的 six-size 8M--78M sweep，锁定该 sweep 的 `alpha=1.178, beta=1.054`；它不是最终投稿 8M--197M / ten-run surface 的 checkpoint-matched test-CE refit。
+- Test-set evaluation does not update neural-network weights. Saved checkpoints are frozen, test CE is measured, and only the five-parameter scaling surface `(E,A,B,alpha,beta)` is fitted to `(N,D,L_test)`.
+- A later but different Mamba-3 sweep supplies partial forward evidence: 44 runs, 254 retained checkpoints, 487 tickers, approximately 2.625M--293M parameters. The all-checkpoint free fit is `(E,alpha,beta)=(0.4467,2.1037,0.1558)`; the run-final 44-point fit is `(0.5080,2.0008,0.3017)`. These do not reproduce the submitted logged-loss `beta≈1.33`, but cannot substitute for a matched refit of the submitted grid.
+- The separate Claude-track note above reporting `beta≈0.978` refers to a different claimed artifact/protocol and is not reconciled with the Codex-verified 254-checkpoint artifact. It was not merged into the Codex manuscript.
+- The pXiP Q2 blue Notion callout now states all three evidence layers explicitly and was re-fetched successfully: earlier locked six-size diagnostic, later different-sweep free refit, and missing checkpoint-matched refit of the submitted ten-run surface.
+- The external-model figure uses open descriptive markers for TradeFM and MarS and a counterfactual Mamba-3 allocation curve; it makes no undertrained/overtrained classification.
+- A full rerun of `rebuttal_analysis/run_sensitivity.py` reproduced the common-D, fixed-beta, LOO, profile, joint-propagation, and 5/9 IsoFLOP-deletion results without numerical drift.

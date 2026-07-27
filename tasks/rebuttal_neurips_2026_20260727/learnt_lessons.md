@@ -8,3 +8,12 @@
 - IsoFLOP point-estimate stability and identifiability are distinct. A modest slope change on 5 retained slices does not rescue the loss of 4 unbracketed slices.
 - Generated figures must be checked against their CSV/JSON, not only viewed for plausibility. This caught a marker legend that contradicted the verified 5/9 bracketing count.
 - Throughput profiling supplies the compute function, not a loss surface. It cannot substitute for completed, matched Transformer trajectories.
+
+## Additional lessons — 2026-07-27 13:19 UTC
+
+- A test-loss figure can still fail to validate scaling exponents when the exponents are locked; even a free fit does not validate the submitted result if it comes from a different sweep. Checkpoint-grid provenance is part of the estimand.
+- “Training on the test set” is the wrong description here: network weights stay frozen during evaluation, while the low-dimensional scaling-law surface may be fitted to test CE afterward.
+- Historical Git commits can resolve figure provenance that the current caption no longer contains. Here they established that the locked test-CE plot used an earlier 8M--78M six-size sweep.
+- Review the NeurIPS checklist after manuscript revisions. It contained both a stale held-out description and an inverted prefactor formula even though the main proposition was correct.
+- Generated audit JSON should use standard `null`, not implementation-specific `NaN`, so strict parsers can validate the artifact.
+- When two agent tracks report incompatible held-out exponents, preserve both provenance trails and do not silently average or substitute one result for the other.
