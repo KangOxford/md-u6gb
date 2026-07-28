@@ -36,3 +36,13 @@ F106 UTC 2026-07-27T13:12:03Z: unseen-val 方案代码级验证（回应用户�
 - The same regression gives `k=170.6179807715654` and log-log `R^2=0.991824295393419`. The paper rounds the dimensionless slope to `gamma=0.90`; `k` is unit-dependent.
 - Source CSV SHA256 is `bb09af777f4ce2ddcc79137d7d9855c4b8f48835d16bd766ac4e322cfaf8a2e9`. The reproducing code is `Overleaf_codex/rebuttal_analysis/run_sensitivity.py:253-305`.
 - `gamma` is a compute-profile exponent, not a network training parameter and not either loss-surface exponent `alpha` or `beta`.
+
+## Sequential Q1 anchor update — 2026-07-28 00:12 UTC
+
+- The user-supplied anchor `3aa12c45-68fd-8072-b6d4-ef5b09d2f9ad` resolves to the nested gray task-list callout, not an independently updatable Notion page. The targeted write therefore used the parent page `3aa12c45-68fd-80ab-89b5-d0d597bad64c` and an exact replacement of the unique pXiP Q1 checklist line.
+- A new blue callout titled `Codex 回答｜第 1 项：D-restricted β 与三个“0.90”口径` now sits directly under the unchecked Q1 line. Re-fetching the exact anchor found one marker and verified `beta=1.4336`, `beta=0.6161`, `beta=0.9438`, and `gamma=0.899729`.
+- The common-D result remains the literal answer to Q1: full support gives `(alpha,beta)=(0.3711,1.3325)`, common-D gives `(0.9935,1.4336)`, and late common-D gives `(1.2132,1.1405)`. Common-D restriction alone does not force `beta<1`, but the movement across window and weighting choices rules out treating `1.33` as a universal or identified causal exponent.
+- `beta=0.6161` is a nonlinear log-Huber loss-surface fit on tail-25% logged training losses (9 runs, 90 points); `beta=0.9438` is the analogous fit on near-mature logged training-loss checkpoints selected by `loss <= 1.2 * terminal_loss` (10 runs, 1,448 points). Neither is a test-loss result or the literal common-D refit.
+- `gamma=0.899729` is a separate ordinary least-squares log-log fit of FLOPs/token against parameter count over 12 profiler points, with `k=170.618` and `R^2=0.991824`. It contains no loss observations and has no train/test split.
+- The Jan-2026 forward stream is an evaluation protocol: neural-network checkpoints remain frozen, test CE is computed, and only the five-parameter scaling surface may be freely refit. The earlier six-size paper diagnostic locked exponents; the later 44-run free fit is a different sweep. Neither is the requested checkpoint-matched free refit of the submitted ten-run grid.
+- Primary hashes recorded in the callout: submitted sensitivity JSON `88e895...c7176`, tail fit `8ee578...8a2`, near-mature fit `7608eb...669`, profiler CSV `bb09af...a2e9`, and later interim long-D fit `8fb4c6...4fce`.

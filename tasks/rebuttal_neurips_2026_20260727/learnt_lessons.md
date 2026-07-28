@@ -24,3 +24,10 @@
 - Rescaling the units of `N` or `q` changes `k` but not `gamma`, which is why the slope is the portable quantity.
 - A high in-sample log-log `R^2` does not establish profiler measurement precision. With one measurement per size, repeated-measurement uncertainty remains unobserved.
 - Notion exact-match updates must preserve stored escape characters such as `N\^gamma`; a failed no-match update is non-mutating and should be followed by a fetch-derived exact replacement.
+
+## Exact-anchor lessons — 2026-07-28 00:12 UTC
+
+- A Notion block anchor can be fetchable as an entity while still rejecting page-update operations. For a nested callout, fetch the parent page, identify the unique stored Markdown line, perform the smallest additive `update_content`, and then re-fetch the original block anchor.
+- Rounded values are unsafe identifiers. Here `0.90` can mean the rounded compute-profile exponent `gamma=0.899729`, the near-mature training-loss exponent `beta=0.9438`, or the later interim long-D exponent `beta=0.9169`; every answer must name the symbol, data, and selection protocol.
+- Fitting a low-dimensional scaling surface to frozen-checkpoint test CE is not training the neural network on the test set. It is still a test-set model-selection step and must be reported separately from an untouched final evaluation.
+- “D-restricted,” “tail-25%,” “loss-cutoff,” and “long-D interim” are distinct estimands. Their numerical proximity or disagreement does not license substituting one for another in a reviewer response.

@@ -37,3 +37,10 @@
 - Updated the existing pXiP Q3 blue Notion callout to explain the regression, input ranges, source Git object/SHA256, unit dependence, and distinction from `alpha/beta`; re-fetch verification succeeded.
 - The first exact-match attempt found no match because Notion stored `N\^gamma` with an escaped caret; it made no change. The second fetch-derived targeted replacement succeeded.
 - No paper source or analysis code was modified in this round.
+
+## Exact task-anchor Q1 round — 2026-07-28 00:12 UTC
+
+- Fetched anchor `3aa12c45-68fd-8072-b6d4-ef5b09d2f9ad` and confirmed it is the nested checklist callout requested by the user.
+- Inserted one blue Codex callout directly below pXiP Q1 via a minimal parent-page update. It distinguishes the literal common-D refit from the tail-25%, near-mature loss-cutoff, long-D interim, compute-profile gamma, and Jan-2026 held-out protocols.
+- Re-fetched the exact anchor and verified one title marker, all four identifying values, the Jan-2026 clarification, and the still-unchecked Q1 checkbox.
+- No `Overleaf_codex` file was changed or pushed. Work is paused before Q2 pending the user’s confirmation that Q1 is understood.

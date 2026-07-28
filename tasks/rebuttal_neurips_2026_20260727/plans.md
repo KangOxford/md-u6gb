@@ -27,3 +27,10 @@
 - Completed: update and re-fetch the existing pXiP Q3 blue Notion callout with this provenance.
 - No manuscript edit was required for the user’s explanatory question; the current paper already reports the 12-point profile and rounded exponent.
 - If a measurement-error interval is required, collect repeated profiler measurements per size. The existing residual bootstrap and leave-one-profile-point-out checks quantify fit/design sensitivity, not repeated-measurement uncertainty.
+
+## Sequential-answer plan — 2026-07-28 00:12 UTC
+
+- Completed: write the consolidated Q1/common-D explanation into the exact task-list anchor and verify the rendered anchor rather than relying on the parent-page update response.
+- Keep the Q1 checkbox unchecked until the user explicitly confirms understanding.
+- Wait before starting pXiP Q2. The next experiment remains the checkpoint-matched free refit on Jan-2026 test CE, and its absence must not be hidden by the earlier locked-exponent figure or the later different-sweep fit.
+- Make no further `Overleaf_codex` manuscript edits and do not push while this sequential Notion clarification is awaiting user review.
