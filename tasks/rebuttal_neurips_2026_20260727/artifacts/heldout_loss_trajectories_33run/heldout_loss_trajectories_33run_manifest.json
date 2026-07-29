@@ -1,16 +1,16 @@
 {
   "artifacts": {
     "heldout_loss_trajectories_33run_composite.pdf": {
-      "bytes": 92253,
-      "sha256": "833f81fc9e9c29ddaa23ac6f5be8057a1bd99c9b1215f058bc8adf9ae91e2536"
+      "bytes": 92392,
+      "sha256": "99e6a7268a697b0233e99ee520ad35941d9af23a5e0cf9d8a29d43904ef98064"
     },
     "heldout_loss_trajectories_33run_composite.png": {
-      "bytes": 1091163,
-      "sha256": "4d8f3ee54b1532b4cb109fad38c558baff160ecfe372ddefa703069dcdc57330"
+      "bytes": 1158637,
+      "sha256": "71488ef4d7ad103726ddcb48d160347e62953d86d9240e9a08614d5665c82927"
     },
     "heldout_loss_trajectories_33run_composite.svg": {
-      "bytes": 477108,
-      "sha256": "3966d5ee85077f1b751dc14be32264b8c58bd2626a334544e82a154b40ce7387"
+      "bytes": 478811,
+      "sha256": "aea4820892792641054dfc171ea0682673c6fed76e4866c6171e96577e15f585"
     },
     "heldout_loss_trajectories_33run_points.csv": {
       "bytes": 34323,
@@ -182,7 +182,7 @@
     "points_per_run_median": 8.0,
     "points_per_run_min": 3
   },
-  "created_utc": "2026-07-29T19:03:41.781991+00:00",
+  "created_utc": "2026-07-29T19:06:23.136832+00:00",
   "figure_title": "Current 33-run cohort: Jan-2026 held-out loss trajectories",
   "inputs": {
     "/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/scaling_law_plots/aramis/results/canonical_test.csv": {
