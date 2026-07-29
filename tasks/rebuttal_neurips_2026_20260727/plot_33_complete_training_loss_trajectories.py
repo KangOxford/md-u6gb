@@ -537,6 +537,7 @@ def plot_run(
     *,
     compact: bool,
 ) -> None:
+    run_id = str(run_summary.get("run_id", run_summary.name))
     grouped = list(
         run_points.groupby("observed_segment_rank", sort=True, observed=True)
     )
@@ -575,7 +576,7 @@ def plot_run(
             str(segment["jid"].iloc[-1]),
         )
         if previous is not None:
-            is_cross = str(run_summary["run_id"]) in CROSS_SEED
+            is_cross = run_id in CROSS_SEED
             ax.plot(
                 [previous[0], start[0]],
                 [previous[1], start[1]],
@@ -693,7 +694,6 @@ def plot_run(
         fontsize=6.3 if compact else 8,
         color="#455a64",
     )
-    run_id = str(run_summary["run_id"])
     if run_id in CROSS_SEED:
         cross = CROSS_SEED[run_id]
         ax.text(
