@@ -1,0 +1,417 @@
+{
+ "V": 5367734,
+ "N48": 323221385,
+ "pct": 1.6607,
+ "messages": 2683867000,
+ "tokens": 69780542000,
+ "tickers_covered": "488/488",
+ "ticker_share_corr": 0.986124,
+ "top10": [
+  {
+   "ticker": "TSLA",
+   "val_n": 140047,
+   "val_share": 2.609,
+   "dom_share": 3.374,
+   "v1_flag": true
+  },
+  {
+   "ticker": "NVDA",
+   "val_n": 139854,
+   "val_share": 2.605,
+   "dom_share": 3.353,
+   "v1_flag": true
+  },
+  {
+   "ticker": "AAPL",
+   "val_n": 125949,
+   "val_share": 2.346,
+   "dom_share": 2.372,
+   "v1_flag": true
+  },
+  {
+   "ticker": "GOOGL",
+   "val_n": 119141,
+   "val_share": 2.22,
+   "dom_share": 2.803,
+   "v1_flag": false
+  },
+  {
+   "ticker": "GOOG",
+   "val_n": 102185,
+   "val_share": 1.904,
+   "dom_share": 2.444,
+   "v1_flag": true
+  },
+  {
+   "ticker": "MSFT",
+   "val_n": 100678,
+   "val_share": 1.876,
+   "dom_share": 1.889,
+   "v1_flag": true
+  },
+  {
+   "ticker": "AMD",
+   "val_n": 97544,
+   "val_share": 1.817,
+   "dom_share": 2.426,
+   "v1_flag": true
+  },
+  {
+   "ticker": "AMZN",
+   "val_n": 94293,
+   "val_share": 1.757,
+   "dom_share": 2.098,
+   "v1_flag": true
+  },
+  {
+   "ticker": "MU",
+   "val_n": 50128,
+   "val_share": 0.934,
+   "dom_share": 0.975,
+   "v1_flag": false
+  },
+  {
+   "ticker": "META",
+   "val_n": 46983,
+   "val_share": 0.875,
+   "dom_share": 0.639,
+   "v1_flag": true
+  }
+ ],
+ "top10_share_val": 18.94,
+ "top10_share_dom": 23.03,
+ "flag_v1_total": 847533,
+ "flag_v1_pct": 15.79,
+ "goog": {
+  "val_n": 102185,
+  "dec2025_val": 0,
+  "dom_share": 2.444,
+  "val_share": 1.904
+ },
+ "files_domain": 472442,
+ "files_touched_by_val": 434842,
+ "windows_per_file_p": {
+  "p10": 118,
+  "p50": 377,
+  "p90": 1241,
+  "max": 92306
+ },
+ "val_per_file_p": {
+  "p50": 5.0,
+  "p90": 26.0,
+  "max": 866
+ },
+ "monthly": [
+  {
+   "month": "2022-01",
+   "dom": 5845099,
+   "val": 218410,
+   "ratio_pct": 3.737
+  },
+  {
+   "month": "2022-02",
+   "dom": 5293620,
+   "val": 197488,
+   "ratio_pct": 3.731
+  },
+  {
+   "month": "2022-03",
+   "dom": 6869184,
+   "val": 257481,
+   "ratio_pct": 3.748
+  },
+  {
+   "month": "2022-04",
+   "dom": 5971694,
+   "val": 224514,
+   "ratio_pct": 3.76
+  },
+  {
+   "month": "2022-05",
+   "dom": 8981918,
+   "val": 335771,
+   "ratio_pct": 3.738
+  },
+  {
+   "month": "2022-06",
+   "dom": 7279583,
+   "val": 271902,
+   "ratio_pct": 3.735
+  },
+  {
+   "month": "2022-07",
+   "dom": 6102580,
+   "val": 228228,
+   "ratio_pct": 3.74
+  },
+  {
+   "month": "2022-08",
+   "dom": 7128899,
+   "val": 267167,
+   "ratio_pct": 3.748
+  },
+  {
+   "month": "2022-09",
+   "dom": 8105074,
+   "val": 303429,
+   "ratio_pct": 3.744
+  },
+  {
+   "month": "2022-10",
+   "dom": 7159750,
+   "val": 268046,
+   "ratio_pct": 3.744
+  },
+  {
+   "month": "2022-11",
+   "dom": 5136553,
+   "val": 192656,
+   "ratio_pct": 3.751
+  },
+  {
+   "month": "2022-12",
+   "dom": 5346509,
+   "val": 200552,
+   "ratio_pct": 3.751
+  },
+  {
+   "month": "2023-01",
+   "dom": 5236851,
+   "val": 51534,
+   "ratio_pct": 0.984
+  },
+  {
+   "month": "2023-02",
+   "dom": 5706539,
+   "val": 55923,
+   "ratio_pct": 0.98
+  },
+  {
+   "month": "2023-03",
+   "dom": 7904385,
+   "val": 77550,
+   "ratio_pct": 0.981
+  },
+  {
+   "month": "2023-04",
+   "dom": 4632510,
+   "val": 45402,
+   "ratio_pct": 0.98
+  },
+  {
+   "month": "2023-05",
+   "dom": 5513682,
+   "val": 54240,
+   "ratio_pct": 0.984
+  },
+  {
+   "month": "2023-06",
+   "dom": 5233980,
+   "val": 51433,
+   "ratio_pct": 0.983
+  },
+  {
+   "month": "2023-07",
+   "dom": 4555740,
+   "val": 44892,
+   "ratio_pct": 0.985
+  },
+  {
+   "month": "2023-08",
+   "dom": 4993676,
+   "val": 49445,
+   "ratio_pct": 0.99
+  },
+  {
+   "month": "2023-09",
+   "dom": 4118925,
+   "val": 41075,
+   "ratio_pct": 0.997
+  },
+  {
+   "month": "2023-10",
+   "dom": 9287894,
+   "val": 91628,
+   "ratio_pct": 0.987
+  },
+  {
+   "month": "2023-11",
+   "dom": 8271972,
+   "val": 81620,
+   "ratio_pct": 0.987
+  },
+  {
+   "month": "2023-12",
+   "dom": 8168537,
+   "val": 80655,
+   "ratio_pct": 0.987
+  },
+  {
+   "month": "2024-01",
+   "dom": 10509480,
+   "val": 103779,
+   "ratio_pct": 0.987
+  },
+  {
+   "month": "2024-02",
+   "dom": 8031883,
+   "val": 79269,
+   "ratio_pct": 0.987
+  },
+  {
+   "month": "2024-03",
+   "dom": 7101726,
+   "val": 69701,
+   "ratio_pct": 0.981
+  },
+  {
+   "month": "2024-04",
+   "dom": 7555865,
+   "val": 74411,
+   "ratio_pct": 0.985
+  },
+  {
+   "month": "2024-05",
+   "dom": 6115042,
+   "val": 59913,
+   "ratio_pct": 0.98
+  },
+  {
+   "month": "2024-06",
+   "dom": 5136923,
+   "val": 50421,
+   "ratio_pct": 0.982
+  },
+  {
+   "month": "2024-07",
+   "dom": 6225611,
+   "val": 61381,
+   "ratio_pct": 0.986
+  },
+  {
+   "month": "2024-08",
+   "dom": 6273478,
+   "val": 61367,
+   "ratio_pct": 0.978
+  },
+  {
+   "month": "2024-09",
+   "dom": 6254568,
+   "val": 61506,
+   "ratio_pct": 0.983
+  },
+  {
+   "month": "2024-10",
+   "dom": 7476228,
+   "val": 73767,
+   "ratio_pct": 0.987
+  },
+  {
+   "month": "2024-11",
+   "dom": 6051690,
+   "val": 59147,
+   "ratio_pct": 0.977
+  },
+  {
+   "month": "2024-12",
+   "dom": 5673910,
+   "val": 55986,
+   "ratio_pct": 0.987
+  },
+  {
+   "month": "2025-01",
+   "dom": 6395491,
+   "val": 62986,
+   "ratio_pct": 0.985
+  },
+  {
+   "month": "2025-02",
+   "dom": 6042642,
+   "val": 59671,
+   "ratio_pct": 0.987
+  },
+  {
+   "month": "2025-03",
+   "dom": 8000892,
+   "val": 79210,
+   "ratio_pct": 0.99
+  },
+  {
+   "month": "2025-04",
+   "dom": 9845461,
+   "val": 97318,
+   "ratio_pct": 0.988
+  },
+  {
+   "month": "2025-05",
+   "dom": 6230533,
+   "val": 61517,
+   "ratio_pct": 0.987
+  },
+  {
+   "month": "2025-06",
+   "dom": 5836068,
+   "val": 57876,
+   "ratio_pct": 0.992
+  },
+  {
+   "month": "2025-07",
+   "dom": 6591337,
+   "val": 65684,
+   "ratio_pct": 0.997
+  },
+  {
+   "month": "2025-08",
+   "dom": 6001029,
+   "val": 59153,
+   "ratio_pct": 0.986
+  },
+  {
+   "month": "2025-09",
+   "dom": 7742968,
+   "val": 76589,
+   "ratio_pct": 0.989
+  },
+  {
+   "month": "2025-10",
+   "dom": 9448786,
+   "val": 93033,
+   "ratio_pct": 0.985
+  },
+  {
+   "month": "2025-11",
+   "dom": 8885447,
+   "val": 87203,
+   "ratio_pct": 0.981
+  },
+  {
+   "month": "2025-12",
+   "dom": 6949173,
+   "val": 65805,
+   "ratio_pct": 0.947
+  }
+ ],
+ "yearly_ratio_pct": {
+  "2022": 3.744,
+  "2023": 0.985,
+  "2024": 0.984,
+  "2025": 0.984
+ },
+ "seed_positions": {
+  "5": {
+   "min": 0.20000034032401662,
+   "p50": 0.7929885997487449,
+   "frac_in_tail": 0.34207581821304855
+  },
+  "42": {
+   "min": 0.2000003557932901,
+   "p50": 0.7926256101526203,
+   "frac_in_tail": 0.3418919417392889
+  },
+  "137": {
+   "min": 0.20000015778658953,
+   "p50": 0.792228953229688,
+   "frac_in_tail": 0.34152921884728266
+  }
+ }
+}
