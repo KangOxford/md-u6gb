@@ -559,3 +559,5 @@ PG097 UTC 2026-07-29T17:42:00Z: 物化作业已启动（srun --overlap CPU-only�
 PG098 UTC 2026-07-29T17:31:23Z: 已输出 session ID 表+resume 命令(claude --resume 7426231f-793e-4210-b056-dcb6044b8bca);本轮无实验、无 Notion 写入。
 PG098 UTC 2026-07-29T18:32:00Z: 30720 档 L1 逐字节 2048/2048 全过；L2 断言 bug 修复后经 resume 流程重校验+落盘中；307200 档随后。r5 泄漏实验（BSZ 16/4 + fraction 0.92 + 禁 Triton GEMM）与之并行。MD 已完成对外汇报版润色（36cf048/1840ea5）。
 PG099 UTC 2026-07-29T17:39:00Z: 第一档实体验证集交付：shard_valset_v1_30720.squashfs 359MB，L1 2048样本逐字节全过、L2 loader 30720样本+487 tickers 探针过，SHA256 已登记；307200 档提取接续中。
+PG1785346820 UTC 2026-07-29T17:40:20Z: 已提交并启用 sigma-0 attached runner commit 9faa62d；no-delete SquashFS helper 替换了会执行禁止删除命令的 cleanup。5790795.30 已在现有节点运行 GPU gate；5825434-5825437 全部取消并双重核验。Notion refactoring page 已就地更新并 fetch 验证为 WAITING_FOR_GPU，而非已有 bench 结果。
+PG100 UTC 2026-07-29T19:40:00Z: 第二档实体验证集交付：shard_valset_v1_307200.squashfs 3.51GB（154,247 源文件组提取、L1 2048 逐字节全过、L2 loader 307,200 样本 + 488 tickers 全覆盖），SHA256 c344f4c8…。两档物化全部完成（MATERIALIZE_WRAPPER_OK）。r6 泄漏实验独立推进中。

@@ -160,11 +160,11 @@ mkdir -p /tmp/valset && squashfuse shard_valset_v1_30720.squashfs /tmp/valset
 | Tier | File | Size | Status |
 |---|---|---:|---|
 | 30,720 | `squashfs/output/shard_valset_v1_30720.squashfs` | 359 MB | **verified & delivered** (sha256 `ffcb71d90d96…`) |
-| 307,200 | `squashfs/output/shard_valset_v1_307200.squashfs` | ~3.6 GB (est.) | building |
+| 307,200 | `squashfs/output/shard_valset_v1_307200.squashfs` | 3.51 GB | **verified & delivered** (sha256 `c344f4c84cd0…`) |
 | 3,232,213 (1% N) | on demand | ~38 GB (est.) | not built |
 | full pool (5,367,734) | on demand | ~63 GB (est.) | not built |
 
-30,720 档覆盖 487 只股票（唯一例外是低活跃的 Q，在该档恰好无样本；更大档位覆盖全部 488 只）。质检为两层：L1 抽 2,048 个样本，把包内数据与源数据对应行**逐字节比对**；L2 用训练同款数据加载器把整个包挂载读一遍（样本总数核对与三点抽读）。两层全部通过后才登记 SHA-256 交付。
+30,720 档覆盖 487 只股票（唯一例外是低活跃的 Q，在该档恰好无样本）；307,200 档覆盖全部 488 只。两档均通过双层质检（各抽 2,048 个样本逐字节比对，dataloader 全量读取核对）。质检为两层：L1 抽 2,048 个样本，把包内数据与源数据对应行**逐字节比对**；L2 用训练同款数据加载器把整个包挂载读一遍（样本总数核对与三点抽读）。两层全部通过后才登记 SHA-256 交付。
 
 ## 7. 质量审计（对照业界标准）
 
