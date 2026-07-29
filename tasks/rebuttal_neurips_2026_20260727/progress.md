@@ -61,3 +61,13 @@
 - Verified from the live launcher and training code that `5`, `42`, and `137` are actual `jax_seed` values; each `(size, seed)` is one logical run, and the seed controls parameter initialization plus training-data shuffle order.
 - Applied a minimal in-place Notion update: renamed both headers to `纳入的实际 seed ID`, renamed `计划 seeds` to `计划 seed 数量`, and added a direct definition with a three-ID/three-run example.
 - Re-fetched the anchor after writing. Verification found the new seed-ID wording, the new count header, and no remaining `纳入 seeds` table header. No result value or experiment artifact was changed.
+
+## 33-run held-out trajectory-figure round — 2026-07-29
+
+- Read the exact Notion anchor and current rebuttal protocol, then audited the held-out and training trajectory sources. Chose the primary 285-row `canonical_test.csv`; the 10,727-row training-CE table remains a separate diagnostic.
+- Added and committed `plot_33_heldout_loss_trajectories.py`. Its assertions enforce 285 checkpoints, 33 runs, 12 sizes, 487 tickers, the expected three absent seed cells, endpoint equality, and `46M-s5` as the sole target-reaching exception.
+- Generated and committed 33 standalone PNGs plus the composite PNG/PDF/SVG, points CSV, summary CSV, and manifest. Visual inspection covered the full composite and the exceptional `46M-s5` standalone plot.
+- Independently re-read the generated CSVs and manifest: all 33 endpoint rows matched exactly, 38 artifact hashes verified, and the 33 standalone images were present.
+- Inserted one blue Notion callout immediately after the orange 33-run explanation. The composite PNG is the primary artifact; the vector PDF and both CSV audit files are downloadable beside it.
+- Re-fetched the exact anchor and verified one marker, correct placement, all audit text, the rendered image, and three file blocks. Re-downloaded the four Notion media files and matched their SHA256 values to local copies.
+- Plotter commits: `eb42ea5`, `dc77297`, `c3bdea0`; artifact commits: `cad8a33`, `c059ec2`. No experiment, fit, bootstrap, manuscript, or prior result value changed.

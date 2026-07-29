@@ -50,3 +50,11 @@
 - Completed: verify from the launcher, manifests, result builder, and training code that `5`, `42`, and `137` are actual per-run `jax_seed` values.
 - Completed: rename the ambiguous Notion headers to distinguish the actual seed IDs from the number of seeds/runs, then re-fetch the exact supplied anchor.
 - No experiment result, cohort membership, fit, manuscript source, or run state was changed in this clarification round.
+
+## 33-run trajectory-figure plan — 2026-07-29
+
+- Completed: identify `canonical_test.csv` as the 285-checkpoint held-out trajectory source for the exact 33-run endpoint cohort.
+- Completed: generate 33 standalone loss-curve PNGs and one composite overview/contact sheet, retaining the three missing size-seed cells and visibly flagging `46M-s5`.
+- Completed: validate run/size/checkpoint counts, endpoint equality, target-reaching status, 487-ticker coverage, output count, and all artifact hashes.
+- Completed: upload the composite PNG as the primary Notion figure and add PDF, 33-run summary CSV, and 285-point CSV audit attachments immediately after the existing 33-run explanation.
+- No loss fit, bootstrap, cohort selection, experiment, manuscript source, or prior Notion result value was changed.

@@ -65,3 +65,12 @@ F106 UTC 2026-07-27T13:12:03Z: unseen-val 方案代码级验证（回应用户�
 - The result pipeline treats each `(label, seed)` pair as one seed-specific logical run. Therefore `5, 42, 137` means three runs, while `5, 137` or `5, 42` means two runs.
 - In the current training code, `jax_seed` affects both the JAX parameter-initialization random stream and the shuffled training-data order. The production launcher sets dropout to zero, so no dropout-randomness claim is needed.
 - The supplied Notion anchor was updated in place: both result-table headers now say `纳入的实际 seed ID`, the explanatory table says `计划 seed 数量`, and the blue result callout explicitly distinguishes seed values from seed counts. A post-write fetch verified the new wording and confirmed the old `纳入 seeds` header is absent.
+
+## Current 33-run held-out loss trajectories — 2026-07-29
+
+- The figure must use Jan-2026 held-out CE rather than stochastic training CE because it accompanies the current held-out result table. `aramis/results/canonical_test.csv` is the authoritative trajectory table: 285 evaluated checkpoints, 33 logical runs, 12 nominal sizes, and uniform 487-ticker macro coverage.
+- `selected_test_endpoint.csv` supplies the exact 33-run cohort and terminal rows but cannot itself draw trajectories. Every plotted curve endpoint was independently matched to its endpoint-table `step`, `D`, and `L`.
+- There are 3–20 evaluated checkpoints per run (median 8). Exactly 32/33 runs reach the intended target; `46M-s5` ends at 53,970/63,407 and is shown with a red hollow endpoint plus target line.
+- The composite uses an all-33 overlay above a 12-size × 3-seed contact sheet. Its 33 populated cells are the actual runs; gray cells show `23M-s42` incomplete and no completed `200M-s137` or `350M-s137`.
+- Local deliverables are under `artifacts/heldout_loss_trajectories_33run/`: 33 standalone PNGs, composite PNG/PDF/SVG, a 285-point CSV, a 33-run summary CSV, and a manifest with 38 verified artifact hashes. Final composite PNG SHA256 is `71488ef4d7ad103726ddcb48d160347e62953d86d9240e9a08614d5665c82927`.
+- Notion callout block `3ac12c45-68fd-81af-8da4-dfac41f52592` was inserted immediately after orange 33-run block `6e3548a3-0fd3-40e0-8fa6-4f25b906fef9`. Re-fetch found exactly one marker, the rendered image, PDF, and both CSVs. Downloading all four media from Notion reproduced the local SHA256 values exactly.

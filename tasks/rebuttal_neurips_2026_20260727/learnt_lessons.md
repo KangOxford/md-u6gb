@@ -46,3 +46,12 @@
 - A column containing `5, 42, 137` should be labelled as actual seed IDs/values, not merely `seeds`; its cardinality, not the largest numeric value, gives the number of seed-specific runs.
 - Keep seed identity and seed count in separate columns when both appear in one audit table.
 - Prefer `seed-specific training runs` over `fully independent runs`: the code confirms different initialization and data-shuffle randomness, but that alone does not establish statistical independence.
+
+## 33-run trajectory-figure lessons — 2026-07-29
+
+- A terminal-row CSV cannot support learning curves. Use the cohort-matched canonical checkpoint table, then assert that each curve's last point exactly equals the terminal-row source.
+- A figure next to held-out results must say `held-out CE`; calling stochastic microbatch training CE the same “loss curve” would silently change the estimand.
+- A 12-size × 3-seed contact sheet is more auditable than an arbitrary 33-panel order: the three absent cells line up directly with the seed-count table.
+- “Terminal” in the marker legend must mean final available evaluation, with non-target-reaching runs visibly distinguished. Otherwise `46M-s5` looks falsely complete.
+- After uploading Notion media, re-fetch the exact anchor and download the stored files to compare SHA256. A successful upload/append response alone does not prove the displayed image and attachments are intact.
+- The first composite build failed because a multi-index lookup dropped the `seed` field. Keeping index columns with `drop=False` fixed it; the validation gate prevented an incomplete figure from reaching Notion.
