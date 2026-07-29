@@ -1,0 +1,74 @@
+wandb: [wandb.Api()] Loaded credentials for https://api.wandb.ai from /projects/public/u6gb/.netrc.
+== configs of key runs ==
+xbuaya9r | seed= 5 | curtail= 7438 | micro_bsz= 16 | proc_count= 2 | num_devices= 4 | n_months_in_dataroot= 36 | range= ['2023-01-01', '2025-12-31'] | n_tickers= 488 | book= True | tok= 26tok
+   dataroot head: /tmp/sp500_squashfs_4524395_0/2023-01,/tmp/sp500_squashfs_4524395_0/2023-02,/tmp/sp500_squashfs_4524395_0/2023-03,/tmp/s
+u52a0g05 | seed= 42 | curtail= 3906250 | micro_bsz= 1 | proc_count= 32 | num_devices= 4 | n_months_in_dataroot= 48 | range= ['2022-01-01', '2025-12-31'] | n_tickers= 488 | book= True | tok= None
+   dataroot head: /local/user/1483801542/sp500_squashfs_4559297_0/2022-01,/local/user/1483801542/sp500_squashfs_4559297_0/2022-02,/local/u
+n19hnqce | seed= 5 | curtail= 420000 | micro_bsz= 8 | proc_count= 4 | num_devices= 4 | n_months_in_dataroot= 48 | range= ['2022-01-01', '2025-12-31'] | n_tickers= 488 | book= True | tok= None
+   dataroot head: /local/user/1483803536/sp500_squashfs_4569525_0/2022-01,/local/user/1483803536/sp500_squashfs_4569525_0/2022-02,/local/u
+
+== extra suspicious projects (runs with steps>0) ==
+-- mamba3-squashfs-pilot
+  8feqc9me	j4485522	crashed	2026-05-08T16:44:42Z	seed=42	curtail=300	lastStep=195	months=0	range=['2026-01-01', '2026-01-15']	tickers=487
+  3cqipjf0	j4486972	crashed	2026-05-08T17:29:27Z	seed=42	curtail=300	lastStep=207	months=0	range=['2026-01-01', '2026-01-15']	tickers=487
+  p1qqvt0i	j4487190	crashed	2026-05-08T17:36:59Z	seed=42	curtail=300	lastStep=54	months=0	range=['2023-07-01', '2023-07-15']	tickers=473
+-- mamba3-squashfs-multi
+  on59wisk	j4497861	failed	2026-05-09T06:45:29Z	seed=42	curtail=300	lastStep=1	months=4	range=['2023-09-01', '2025-08-15']	tickers=477
+  ky23rrj5	j4498028	failed	2026-05-09T06:59:11Z	seed=42	curtail=300	lastStep=1	months=4	range=['2023-09-01', '2025-08-15']	tickers=477
+  9um633wt	j4498188	failed	2026-05-09T07:10:25Z	seed=42	curtail=300	lastStep=1	months=4	range=['2023-09-01', '2025-08-15']	tickers=477
+  qmux7skf	j4498269	crashed	2026-05-09T07:17:56Z	seed=42	curtail=300	lastStep=1	months=4	range=['2023-09-01', '2025-08-15']	tickers=477
+  8plu95a3	j4498658	finished	2026-05-09T08:21:24Z	seed=42	curtail=300	lastStep=300	months=48	range=['2022-01-01', '2026-02-15']	tickers=466
+-- neurips-mamba3-ablations
+-- neurips-transformer-ablations
+-- mamba3-phase-b-extended
+  1nbmkctu	j3727722	crashed	2026-04-10T09:15:22Z	seed=42	curtail=300	lastStep=190	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  ei9u39ly	j3728133	finished	2026-04-10T09:53:22Z	seed=42	curtail=None	lastStep=23840	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  qp7lvh54	j3739096	finished	2026-04-10T23:29:30Z	seed=42	curtail=None	lastStep=48210	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  z65jz92d	j3744292	crashed	2026-04-11T07:32:01Z	seed=42	curtail=None	lastStep=55210	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  dh0xciic	j3751338	crashed	2026-04-12T03:28:22Z	seed=42	curtail=None	lastStep=24690	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  g4py8axs	j3760036	crashed	2026-04-12T10:50:27Z	seed=42	curtail=None	lastStep=24520	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  3t4zhru3	j3763899	finished	2026-04-12T17:17:07Z	seed=42	curtail=None	lastStep=26312	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  9pcq1sv9	j3763900	finished	2026-04-12T17:17:22Z	seed=42	curtail=None	lastStep=11435	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  rxwvr0km	j3769735	crashed	2026-04-13T00:29:03Z	seed=42	curtail=3000	lastStep=2930	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  6jkdxoqd	j3769737	finished	2026-04-13T00:37:14Z	seed=42	curtail=3000	lastStep=2970	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  okrvgck6	j3770130	crashed	2026-04-13T01:34:40Z	seed=42	curtail=None	lastStep=45901	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  rg6iso3m	j3781723	crashed	2026-04-13T09:21:10Z	seed=42	curtail=3000	lastStep=2910	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  cejaj9pj	j3781724	crashed	2026-04-13T09:21:11Z	seed=42	curtail=3000	lastStep=2900	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  dr08jvpj	j3781722	crashed	2026-04-13T09:21:13Z	seed=42	curtail=3000	lastStep=2910	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  y5tiaqxu	j3781950	crashed	2026-04-13T09:24:44Z	seed=42	curtail=3000	lastStep=1380	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  h110fyia	j3784167	crashed	2026-04-13T10:05:30Z	seed=42	curtail=3000	lastStep=1380	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  gfttdjw6	j3784168	crashed	2026-04-13T10:05:56Z	seed=42	curtail=3000	lastStep=1380	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  xeyvkcmw	j3785451	crashed	2026-04-13T11:11:36Z	seed=42	curtail=None	lastStep=4880	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  k6riw5nu	j3786372	crashed	2026-04-13T11:24:22Z	seed=42	curtail=None	lastStep=1820	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  8d14gr5r	j3788987	finished	2026-04-13T12:42:33Z	seed=42	curtail=None	lastStep=31170	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  mxhkks63	j3789403	finished	2026-04-13T15:00:56Z	seed=42	curtail=35000	lastStep=12580	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  04x4mrx2	j3817596	finished	2026-04-15T02:00:30Z	seed=42	curtail=None	lastStep=79740	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  kzrc5cpg	j3825699	crashed	2026-04-15T10:02:36Z	seed=42	curtail=None	lastStep=57400	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  ymd383gp	j3837068	finished	2026-04-15T22:09:17Z	seed=42	curtail=None	lastStep=38120	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  dzvg5px0	j3837026	crashed	2026-04-16T03:04:00Z	seed=42	curtail=None	lastStep=14000	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  8zjy7j0s	j3843289	crashed	2026-04-16T03:33:50Z	seed=42	curtail=None	lastStep=63640	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  n3d21ltz	j3837027	crashed	2026-04-16T03:53:53Z	seed=42	curtail=None	lastStep=11050	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  zu75ac4u	j3848782	finished	2026-04-16T07:30:26Z	seed=42	curtail=120000	lastStep=110790	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  obqrdkeu	j3865273	finished	2026-04-16T19:29:25Z	seed=42	curtail=80000	lastStep=38990	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  n9fwqrjl	j3865272	finished	2026-04-16T19:29:40Z	seed=42	curtail=80000	lastStep=21830	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  r3fnei5y	j3865274	finished	2026-04-16T19:32:38Z	seed=42	curtail=80000	lastStep=50970	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  xb1bpgz0	j3865301	finished	2026-04-16T19:33:12Z	seed=42	curtail=80000	lastStep=37610	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  ac8ww5nm	j3865377	finished	2026-04-16T19:53:01Z	seed=42	curtail=80000	lastStep=41150	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+-- mamba3-phase-b-memory
+  39ifyzj9	j3703803	crashed	2026-04-09T09:53:44Z	seed=42	curtail=None	lastStep=32490	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  haislv0g	j3703796	crashed	2026-04-09T09:53:44Z	seed=42	curtail=None	lastStep=55820	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  w9cmkmrf	j3703800	crashed	2026-04-09T09:53:47Z	seed=42	curtail=None	lastStep=34750	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  os296u12	j3703791	crashed	2026-04-09T09:53:48Z	seed=42	curtail=None	lastStep=38570	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  69cc21ax	j3703799	crashed	2026-04-09T09:53:49Z	seed=42	curtail=None	lastStep=53890	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  b5hnvj1k	j3703794	crashed	2026-04-09T09:53:49Z	seed=42	curtail=None	lastStep=43110	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  hatwtr7s	j3703793	crashed	2026-04-09T09:53:51Z	seed=42	curtail=None	lastStep=450	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  mysq7uya	j3703790	crashed	2026-04-09T09:53:52Z	seed=42	curtail=None	lastStep=58540	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  lxjyvwfw	j3703984	crashed	2026-04-09T10:03:32Z	seed=42	curtail=None	lastStep=63310	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  hpxxr5mb	j3704065	crashed	2026-04-09T10:12:34Z	seed=42	curtail=None	lastStep=45910	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  2qztmsnp	j3704411	crashed	2026-04-09T10:36:45Z	seed=42	curtail=None	lastStep=46210	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  bmp7l150	j3704412	crashed	2026-04-09T10:36:48Z	seed=42	curtail=None	lastStep=51970	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  ri9x2wsp	j3704414	crashed	2026-04-09T10:36:48Z	seed=42	curtail=None	lastStep=51390	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+  xgloeib5	j3704413	crashed	2026-04-09T10:36:50Z	seed=42	curtail=None	lastStep=73540	months=0	range=['2022-01-01', '2025-12-31']	tickers=8
+-- neurips-mamba3-finetune
+  hxcamslh	j4775474	finished	2026-05-25T15:22:49Z	seed=42	curtail=None	lastStep=1	months=1	range=['2025-12-01', '2025-12-31']	tickers=1
+  arq1lyt0	j4776648	finished	2026-05-25T17:03:46Z	seed=42	curtail=None	lastStep=8457	months=1	range=['2025-12-01', '2025-12-31']	tickers=1

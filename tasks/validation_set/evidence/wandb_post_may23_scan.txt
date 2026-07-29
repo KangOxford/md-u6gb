@@ -1,0 +1,272 @@
+wandb: [wandb.Api()] Loaded credentials for https://api.wandb.ai from /projects/public/u6gb/.netrc.
+
+== oxford-lob/neurips-mamba3-scaling-runs  ==
+pya53xgd	j4428095	finished	2026-05-07T10:22:14Z	seed=5	curtail=300	lastStep=270	d=64	nw=12
+9soq10fx	j4498327	crashed	2026-05-09T07:33:46Z	seed=5	curtail=300	lastStep=150	d=768	nw=12
+drmwdofe	j4498657	crashed	2026-05-09T08:20:28Z	seed=5	curtail=None	lastStep=7310	d=768	nw=12
+b6hzllea	j4499062	crashed	2026-05-09T09:15:27Z	seed=5	curtail=10602	lastStep=9040	d=64	nw=12
+9itlcx0n	j4499068	finished	2026-05-09T09:17:30Z	seed=42	curtail=10602	lastStep=10450	d=64	nw=12
+1txg2mng	j4499073	crashed	2026-05-09T09:18:50Z	seed=137	curtail=10602	lastStep=10280	d=64	nw=12
+i2xv0x67	j4499264	crashed	2026-05-09T09:38:48Z	seed=5	curtail=18604	lastStep=13230	d=128	nw=12
+3e4ocoih	j4499272	crashed	2026-05-09T09:39:28Z	seed=42	curtail=18604	lastStep=17280	d=128	nw=12
+603k8e1b	j4499343	crashed	2026-05-09T09:48:07Z	seed=137	curtail=18604	lastStep=15990	d=128	nw=12
+xqjrw636	j4499345	crashed	2026-05-09T09:48:35Z	seed=5	curtail=57968	lastStep=39640	d=192	nw=12
+q2by04nw	j4499348	crashed	2026-05-09T09:49:15Z	seed=42	curtail=57968	lastStep=38220	d=192	nw=12
+2k9nv24i	j4499359	crashed	2026-05-09T09:49:37Z	seed=137	curtail=57968	lastStep=38560	d=192	nw=12
+6fnrblfy	j4499362	crashed	2026-05-09T09:50:06Z	seed=5	curtail=106909	lastStep=67160	d=256	nw=12
+01co8tcb	j4499364	crashed	2026-05-09T09:50:42Z	seed=42	curtail=106909	lastStep=66180	d=256	nw=12
+alyn9rxc	j4499369	crashed	2026-05-09T09:51:09Z	seed=137	curtail=106909	lastStep=66980	d=256	nw=12
+0qyrbrua	j4499543	finished	2026-05-09T10:11:38Z	seed=137	curtail=29959	lastStep=29880	d=1280	nw=12
+5vu8avcx	j4499538	finished	2026-05-09T10:11:40Z	seed=5	curtail=28728	lastStep=28710	d=1024	nw=12
+8mq3q1y8	j4499541	finished	2026-05-09T10:11:40Z	seed=5	curtail=29959	lastStep=29940	d=1280	nw=12
+h36erlbq	j4499542	finished	2026-05-09T10:11:40Z	seed=42	curtail=29959	lastStep=29860	d=1280	nw=12
+yyguxjwv	j4499539	finished	2026-05-09T10:11:41Z	seed=42	curtail=28728	lastStep=28720	d=1024	nw=12
+46lnqrsi	j4499540	finished	2026-05-09T10:11:42Z	seed=137	curtail=28728	lastStep=28710	d=1024	nw=12
+j8cfcraa	j4499580	finished	2026-05-09T10:19:32Z	seed=5	curtail=10670	lastStep=10590	d=2048	nw=12
+mfbok49j	j4499578	finished	2026-05-09T10:19:33Z	seed=5	curtail=16210	lastStep=16160	d=1664	nw=12
+ofa15p6s	j4499581	finished	2026-05-09T10:19:35Z	seed=42	curtail=10670	lastStep=10590	d=2048	nw=12
+aumzdbuh	j4499579	finished	2026-05-09T10:19:36Z	seed=42	curtail=16210	lastStep=16120	d=1664	nw=12
+w0cvc0sn	j4499372	crashed	2026-05-09T10:30:41Z	seed=5	curtail=84335	lastStep=54370	d=320	nw=12
+unnxqc4v	j4499377	crashed	2026-05-09T10:32:25Z	seed=42	curtail=84335	lastStep=37400	d=320	nw=12
+rg9kn3vm	j4499378	crashed	2026-05-09T10:34:06Z	seed=137	curtail=84335	lastStep=38020	d=320	nw=12
+8idsevip	j4499380	crashed	2026-05-09T11:54:07Z	seed=5	curtail=74486	lastStep=22720	d=384	nw=12
+yujtep7v	j4499394	crashed	2026-05-09T11:54:34Z	seed=42	curtail=74486	lastStep=49970	d=384	nw=12
+cdexu3at	j4499407	crashed	2026-05-09T12:03:33Z	seed=137	curtail=74486	lastStep=49540	d=384	nw=12
+jm6nzoh3	j4501060	crashed	2026-05-09T12:12:57Z	seed=5	curtail=420000	lastStep=35120	d=256	nw=12
+ygppbzq0	j4501061	crashed	2026-05-09T12:12:57Z	seed=5	curtail=90000	lastStep=48280	d=1024	nw=12
+wog6u6a3	j4501171	finished	2026-05-09T12:24:48Z	seed=5	curtail=28728	lastStep=28660	d=1024	nw=12
+ymtm1c15	j4501888	finished	2026-05-09T13:00:30Z	seed=5	curtail=28728	lastStep=28620	d=1024	nw=12
+culy6048	j4499408	crashed	2026-05-09T13:04:11Z	seed=5	curtail=93989	lastStep=72020	d=512	nw=12
+aa513ugu	j4499417	crashed	2026-05-09T13:04:38Z	seed=42	curtail=93989	lastStep=73340	d=512	nw=12
+onxq23b3	j4504836	crashed	2026-05-09T14:55:04Z	seed=5	curtail=34144	lastStep=31980	d=768	nw=12
+907r5gqk	j4504837	crashed	2026-05-09T14:55:05Z	seed=5	curtail=13517	lastStep=310	d=1280	nw=12
+hf0rxx7z	j4504838	finished	2026-05-09T14:55:06Z	seed=5	curtail=7036	lastStep=6950	d=1664	nw=12
+ogv6mnmt	j4505006	finished	2026-05-09T15:06:40Z	seed=5	curtail=12000	lastStep=11990	d=1024	nw=12
+vfk1817v	j4505005	finished	2026-05-09T15:06:40Z	seed=5	curtail=12000	lastStep=11990	d=1024	nw=12
+9o13kj41	j4499378	crashed	2026-05-09T15:09:16Z	seed=137	curtail=84335	lastStep=54330	d=320	nw=12
+3dq47cay	j4505007	finished	2026-05-09T15:29:17Z	seed=5	curtail=12000	lastStep=11960	d=1024	nw=12
+4xpni496	j4506444	crashed	2026-05-09T16:41:14Z	seed=5	curtail=420000	lastStep=61860	d=256	nw=12
+5imepg0x	j4506451	finished	2026-05-09T16:41:23Z	seed=5	curtail=12000	lastStep=11950	d=1024	nw=12
+ys0lu66w	j4506449	crashed	2026-05-09T16:41:23Z	seed=5	curtail=13517	lastStep=310	d=1280	nw=12
+t19wxwzr	j4506450	finished	2026-05-09T16:41:24Z	seed=5	curtail=12000	lastStep=11920	d=1024	nw=12
+viq1l1h6	j4507398	finished	2026-05-09T17:57:13Z	seed=5	curtail=10602	lastStep=10530	d=64	nw=12
+4ypok8xs	j4507403	finished	2026-05-09T17:57:40Z	seed=137	curtail=10602	lastStep=10470	d=64	nw=12
+9e77rm1m	j4507408	finished	2026-05-09T17:58:02Z	seed=5	curtail=18604	lastStep=18490	d=128	nw=12
+gurk6ie4	j4507416	finished	2026-05-09T17:58:34Z	seed=42	curtail=18604	lastStep=18530	d=128	nw=12
+ynkzaefa	j4507422	finished	2026-05-09T17:59:13Z	seed=137	curtail=18604	lastStep=18530	d=128	nw=12
+eeomvtk7	j4507437	crashed	2026-05-09T17:59:34Z	seed=5	curtail=57968	lastStep=38350	d=192	nw=12
+5xcmdkz3	j4507442	crashed	2026-05-09T18:00:11Z	seed=42	curtail=57968	lastStep=37010	d=192	nw=12
+wo8f7neh	j4507448	crashed	2026-05-09T18:09:55Z	seed=137	curtail=57968	lastStep=37330	d=192	nw=12
+53ne50pc	j4507453	crashed	2026-05-09T18:19:01Z	seed=5	curtail=106909	lastStep=66390	d=256	nw=12
+it0uggeo	j4507459	finished	2026-05-09T18:19:11Z	seed=42	curtail=106909	lastStep=106800	d=256	nw=12
+2i0wpbe9	j4507467	crashed	2026-05-09T18:19:35Z	seed=137	curtail=106909	lastStep=65850	d=256	nw=12
+w7onfwwq	j4507471	finished	2026-05-09T18:26:33Z	seed=5	curtail=84335	lastStep=84200	d=320	nw=12
+u5yg7cih	j4507579	finished	2026-05-09T18:29:26Z	seed=42	curtail=84335	lastStep=84310	d=320	nw=12
+tri6p9y2	j4507584	finished	2026-05-09T18:31:43Z	seed=5	curtail=74486	lastStep=74440	d=384	nw=12
+ccumxc4v	j4508591	crashed	2026-05-09T19:26:55Z	seed=42	curtail=13517	lastStep=460	d=1280	nw=12
+6ytq190d	j4508677	crashed	2026-05-09T19:45:52Z	seed=42	curtail=63407	lastStep=13180	d=768	nw=12
+mkfwf4td	j4508675	finished	2026-05-09T19:45:53Z	seed=137	curtail=93989	lastStep=93800	d=512	nw=12
+w3awke96	j4508676	finished	2026-05-09T19:45:53Z	seed=5	curtail=63407	lastStep=53970	d=768	nw=12
+jm7ls6ao	j4508678	finished	2026-05-09T19:45:54Z	seed=137	curtail=63407	lastStep=55280	d=768	nw=12
+kyipkqnz	j4508758	finished	2026-05-09T19:47:29Z	seed=5	curtail=57968	lastStep=57930	d=192	nw=12
+dena73zy	j4508764	crashed	2026-05-09T19:47:59Z	seed=42	curtail=57968	lastStep=37000	d=192	nw=12
+5ozzdmak	j4508776	crashed	2026-05-09T19:48:22Z	seed=137	curtail=57968	lastStep=37330	d=192	nw=12
+yuj9evnv	j4508786	finished	2026-05-09T19:48:48Z	seed=5	curtail=106909	lastStep=106840	d=256	nw=12
+wzmc9tln	j4508800	crashed	2026-05-09T19:49:19Z	seed=137	curtail=106909	lastStep=66200	d=256	nw=12
+fji7fbzv	j4508816	crashed	2026-05-09T19:49:48Z	seed=137	curtail=84335	lastStep=39920	d=320	nw=12
+mhaiily7	j4508823	finished	2026-05-09T20:01:28Z	seed=42	curtail=74486	lastStep=74370	d=384	nw=12
+baqhtzle	j4508836	crashed	2026-05-09T20:08:05Z	seed=137	curtail=74486	lastStep=55210	d=384	nw=12
+sr0txhxx	j4508846	finished	2026-05-09T20:22:44Z	seed=5	curtail=93989	lastStep=93790	d=512	nw=12
+a9mjdgg3	j4508854	crashed	2026-05-09T20:23:35Z	seed=42	curtail=93989	lastStep=72210	d=512	nw=12
+l4rbcmfd	j4509357	crashed	2026-05-09T20:48:31Z	seed=42	curtail=57968	lastStep=37010	d=192	nw=12
+c1rgccd9	j4509365	finished	2026-05-09T20:54:26Z	seed=137	curtail=106909	lastStep=106740	d=256	nw=12
+7aug5d3r	j4509382	crashed	2026-05-09T21:08:03Z	seed=42	curtail=93989	lastStep=72510	d=512	nw=12
+7kywkrwm	j4509383	finished	2026-05-09T21:23:17Z	seed=5	curtail=13517	lastStep=13490	d=1280	nw=12
+fggw1lql	j4509660	finished	2026-05-09T21:28:03Z	seed=137	curtail=57968	lastStep=57930	d=192	nw=12
+28bcfloa	j4508677	finished	2026-05-09T21:50:28Z	seed=42	curtail=63407	lastStep=55460	d=768	nw=12
+26xeayf3	j4510112	finished	2026-05-09T21:51:24Z	seed=137	curtail=84335	lastStep=84320	d=320	nw=12
+8jz1l24q	j4510296	finished	2026-05-09T22:11:13Z	seed=137	curtail=74486	lastStep=74410	d=384	nw=12
+9b6t65zy	j4512817	crashed	2026-05-10T02:13:58Z	seed=5	curtail=420000	lastStep=59700	d=256	nw=12
+pj1xo597	j4512826	crashed	2026-05-10T02:14:28Z	seed=5	curtail=90000	lastStep=47190	d=1024	nw=12
+v6u2djih	j4514354	finished	2026-05-10T04:27:42Z	seed=42	curtail=57968	lastStep=57840	d=192	nw=12
+wevh2eek	j4514367	crashed	2026-05-10T04:28:10Z	seed=42	curtail=93989	lastStep=72300	d=512	nw=12
+erzas9pi	j4514373	crashed	2026-05-10T04:28:43Z	seed=5	curtail=63407	lastStep=54260	d=768	nw=12
+sdhc3zqy	j4514385	finished	2026-05-10T04:29:12Z	seed=42	curtail=63407	lastStep=63320	d=768	nw=12
+3468722o	j4514395	finished	2026-05-10T04:29:42Z	seed=137	curtail=63407	lastStep=63370	d=768	nw=12
+j0fv6e81	j4523670	crashed	2026-05-10T12:42:24Z	seed=42	curtail=93989	lastStep=72300	d=512	nw=12
+aqisbrwh	j4523689	crashed	2026-05-10T12:43:08Z	seed=5	curtail=63407	lastStep=54400	d=768	nw=12
+i77p62w1	j4531956	crashed	2026-05-10T18:07:36Z	seed=42	curtail=93989	lastStep=72510	d=512	nw=12
+o1c1exfl	j4531958	crashed	2026-05-10T18:08:16Z	seed=5	curtail=63407	lastStep=54400	d=768	nw=12
+25sevqsy	j4532028	crashed	2026-05-10T18:33:58Z	seed=5	curtail=63407	lastStep=54400	d=768	nw=12
+cslj9nxz	j4532066	crashed	2026-05-10T18:42:02Z	seed=42	curtail=93989	lastStep=72300	d=512	nw=12
+wqc5r06p	j4532196	crashed	2026-05-10T19:06:32Z	seed=42	curtail=93989	lastStep=72480	d=512	nw=12
+maqcqewh	j4532206	crashed	2026-05-10T19:08:22Z	seed=5	curtail=63407	lastStep=54260	d=768	nw=12
+7gjbtya2	j4532318	crashed	2026-05-10T19:30:35Z	seed=42	curtail=93989	lastStep=72510	d=512	nw=12
+votfyhy4	j4532327	crashed	2026-05-10T19:32:42Z	seed=5	curtail=63407	lastStep=54260	d=768	nw=12
+o76jdkzm	j4532400	crashed	2026-05-10T19:55:00Z	seed=42	curtail=93989	lastStep=72300	d=512	nw=12
+efez7zw6	j4532506	finished	2026-05-10T20:11:31Z	seed=5	curtail=63407	lastStep=63310	d=768	nw=12
+g175syu9	j4532700	finished	2026-05-10T20:34:06Z	seed=42	curtail=93989	lastStep=93940	d=512	nw=12
+x97qvgtq	j4540647	finished	2026-05-11T09:18:17Z	seed=5	curtail=420000	lastStep=318440	d=256	nw=12
+bi3oydh3	j4560431	crashed	2026-05-12T09:03:05Z	seed=5	curtail=420000	lastStep=400910	d=256	nw=12
+n19hnqce	j4569525	finished	2026-05-12T16:45:08Z	seed=5	curtail=420000	lastStep=419930	d=256	nw=12
+
+== oxford-lob/neurips-mamba3-full-d  ==
+tzcobly9	j4523773	crashed	2026-05-10T12:45:35Z	seed=42	curtail=3906250	lastStep=16610	d=2048	nw=12
+mywxu95p	j4531440	crashed	2026-05-10T16:31:38Z	seed=42	curtail=1953125	lastStep=7765	d=2048	nw=12
+4kybwa4a	j4532053	finished	2026-05-10T18:39:06Z	seed=42	curtail=3906250	lastStep=44560	d=2048	nw=12
+bcayb0hh	j4535368	finished	2026-05-11T00:00:44Z	seed=42	curtail=3906250	lastStep=68870	d=2048	nw=12
+87udtbe4	j4538470	crashed	2026-05-11T05:20:39Z	seed=42	curtail=3906250	lastStep=69160	d=2048	nw=12
+qi3vuzfr	j4538716	crashed	2026-05-11T05:59:27Z	seed=42	curtail=3906250	lastStep=69070	d=2048	nw=12
+dwp0n5h2	j4538985	crashed	2026-05-11T06:38:10Z	seed=42	curtail=3906250	lastStep=69180	d=2048	nw=12
+doekqiq4	j4539329	crashed	2026-05-11T07:17:12Z	seed=42	curtail=3906250	lastStep=69170	d=2048	nw=12
+1puubh2r	j4539624	crashed	2026-05-11T07:55:52Z	seed=42	curtail=3906250	lastStep=69180	d=2048	nw=12
+1e5wz772	j4539988	finished	2026-05-11T08:34:55Z	seed=42	curtail=3906250	lastStep=93470	d=2048	nw=12
+6rx93808	j4544776	crashed	2026-05-11T13:54:58Z	seed=42	curtail=3906250	lastStep=93780	d=2048	nw=12
+8drsgc25	j4545392	crashed	2026-05-11T14:34:31Z	seed=42	curtail=3906250	lastStep=93770	d=2048	nw=12
+39c5tia4	j4546050	crashed	2026-05-11T15:13:49Z	seed=42	curtail=3906250	lastStep=93780	d=2048	nw=12
+ng17ypbj	j4546625	finished	2026-05-11T15:53:31Z	seed=42	curtail=3906250	lastStep=118290	d=2048	nw=12
+5saab28x	j4553166	crashed	2026-05-11T21:13:45Z	seed=42	curtail=3906250	lastStep=118600	d=2048	nw=12
+tz2tmn5z	j4553948	finished	2026-05-11T23:36:35Z	seed=42	curtail=3906250	lastStep=143150	d=2048	nw=12
+7nsnw5ja	j4558926	crashed	2026-05-12T04:58:36Z	seed=42	curtail=3906250	lastStep=143360	d=2048	nw=12
+u52a0g05	j4559297	finished	2026-05-12T05:37:52Z	seed=42	curtail=3906250	lastStep=168200	d=2048	nw=12
+
+== oxford-lob/mamba3-snp500-sweep-smoke  ==
+w7j1ovl0	j4499193	finished	2026-05-09T09:34:29Z	seed=42	curtail=300	lastStep=170	d=256	nw=12
+
+== oxford-lob/mamba3-flops-profile-v2  ==
+50ap0aj1	j4359025	finished	2026-04-26T12:16:56Z	seed=42	curtail=300	lastStep=1	d=64	nw=12
+
+== oxford-lob/neurips-transformer-scaling-runs  ==
+xbuaya9r	j4524395	finished	2026-05-10T14:21:30Z	seed=5	curtail=7438	lastStep=6120	d=64	nw=12
+
+== O2d 2D-RoPE (alexandre entity) ==
+cqo9qoit j4592117 finished 2026-05-14T00:37:57Z lastStep= 49000
+  cfg C_init = trunc_standard_normal
+  cfg USE_WANDB = True
+  cfg activation_fn = half_glu1
+  cfg batchnorm = False
+  cfg bidirectional = False
+  cfg blocks = 8
+  cfg bn_momentum = 0.95
+  cfg book_depth = 500
+  cfg book_transform = True
+  cfg checkpoint_every_n_steps = 200
+  cfg clip_eigs = True
+  cfg conj_sym = True
+  cfg cosine_anneal = True
+  cfg curtail_epochs = 49590
+  cfg d_ff = 1024
+  cfg d_model = 256
+  cfg data_root = /tmp/sp500_squashfs_4592117_0/2023-01,/tmp/sp500_squashfs_4592117_0/2023-02,/tmp/sp500_squashfs_4592117_0/2023-03,/tmp/sp500_squashfs_4592117_0/2023-04,/tmp/sp5
+  cfg dataset = lobster-prediction
+  cfg debug_loading = False
+  cfg debug_overfit = False
+  cfg dir_name = /lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500
+  cfg discretization = zoh
+  cfg dt_global = False
+  cfg dt_max = 0.1
+  cfg dt_min = 0.001
+  cfg dtype = bfloat16
+  cfg early_stop_patience = 1000
+  cfg enable_profiler = False
+  cfg epochs = 1
+  cfg grad_accum_steps = 1
+  cfg hierarchical = True
+  cfg ignore_times = False
+  cfg is_distributed = True
+  cfg jax_seed = 5
+  cfg local_steps_k = 10
+  cfg log_ce_tables = False
+  cfg lr_factor = 1
+  cfg lr_min = 0
+  cfg lr_patience = 4
+  cfg masking = none
+  cfg max_grad_norm = 1
+  cfg max_job_hours = 6.25
+  cfg merging = padded
+  cfg micro_bsz = 16
+  cfg mini_epochs = 1
+  cfg mode = none
+  cfg model_type = transformer
+  cfg msg_seq_len = 500
+  cfg muon_lr = 0.01
+  cfg muon_wd = None
+  cfg n_book_post_layers = 1
+  cfg n_book_pre_layers = 1
+  cfg n_data_workers = 12
+  cfg n_heads = 4
+  cfg n_layers = 6
+  cfg n_message_layers = 2
+  cfg no_validation = True
+  cfg num_devices = 4
+  cfg opt_config = muon
+  cfg p_dropout = 0
+  cfg partial_restore = False
+  cfg prefetch_factor = 2
+  cfg prenorm = True
+  cfg process_count = 2
+  cfg process_index = 0
+  cfg random_offsets_train = True
+  cfg reduce_factor = 0.9
+  cfg remat = False
+  cfg restore = None
+  cfg restore_step = None
+  cfg resume_from_step = None
+  cfg rope_base = 10000
+  cfg save_before_timeout_minutes = 30
+  cfg shuffle_train = True
+  cfg skip_test_eval = True
+  cfg ssm_lr_base = 0.002
+  cfg ssm_size_base = 256
+  cfg ssm_type = s5
+  cfg test_date_range = None
+  cfg test_dir_name = /lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500
+  cfg tickers = ['A', 'AAPL', 'ABBV', 'ABNB', 'ABT', 'ACGL', 'ACN', 'ADBE', 'ADI', 'ADM', 'ADP', 'ADSK', 'AEE', 'AEP', 'AES', 'AFL', 'AIG', 'AIZ', 'AJG', 'AKAM', 'ALB', 'ALGN',
+  cfg token_mode = 26tok
+  cfg train_date_range = ['2023-01-01', '2025-12-31']
+  cfg use_book_data = True
+  cfg use_flash = True
+  cfg use_rope = True
+  cfg use_simple_book = False
+  cfg val_split = 0
+  cfg wandb_entity = alexandre-bismuth-ecole-polytechnique
+  cfg wandb_project = 2D-RoPE
+  cfg warmup_end = 0.01
+  cfg weight_decay = 0.005
+
+== recent projects (name filter) ==
+PROJ mamba3-goog-pretrain
+PROJ neurips-mamba3-finetune
+PROJ mamba3-timerope-goog
+PROJ neurips-mamba3-full-d
+PROJ mamba3-snp500-sweep-smoke
+PROJ mamba3-squashfs-multi
+PROJ mamba3-squashfs-pilot
+PROJ neurips-transformer-ablations
+PROJ neurips-mamba3-ablations
+PROJ neurips-transformer-scaling-runs
+PROJ neurips-mamba3-scaling-runs
+PROJ mamba3-flops-profile-v2
+PROJ mamba3-cuda-kernel-bench
+PROJ transformer-scaling-law
+PROJ mamba3-diloco-46m-s2k
+PROJ mamba3-diloco-smoke
+PROJ mamba3-book-ablation
+PROJ mamba3-curriculum
+PROJ mamba3-R12-merge-verify
+PROJ mamba3-tp-phase2
+PROJ R1-mamba3-book-ablation
+PROJ mamba3-tp-smoke
+PROJ mamba3-phase-b-extended
+PROJ mamba3-remat-smoke
+PROJ R1-mamba3-data-ablation-v2
+PROJ mamba3-phase-b-memory
+PROJ R1-mamba3-data-ablation
+PROJ mamba3-phase-a-ablation
+PROJ book-ablation-mamba3
+PROJ mamba3-siso-scaling-law
+PROJ mamba3-mimo
+PROJ mamba3
+PROJ lobs5-gdn-scaling-law
+PROJ lobs5-scaling-law
+PROJ context-scaling

@@ -5373,3 +5373,15 @@ W&B:   n/a (placeholder)
 Log:   /lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/slurm_logs/u6gb-1-node-chain-5780968.out
 
 Updated: 2026-07-25 20:44 UTC
+
+Job:   5824495 (valset-build) [CANCELLED — 改用 srun --overlap 于 5790795]
+User:  kangli.u6gb
+Step:  metadata build (48mo/36mo/466tk domains + perms + assembly)
+Model: (none — CPU metadata job, no training)
+Data:  lob_preproc_sp500 SquashFS 48 shards, 488 tickers, 2022-2025
+Infra: 1N CPU-only | 72 cpus | 2.5h wall
+Loss:  n/a
+Log:   /lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/logs/valset_5824495.out
+Out:   /lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/artifacts_valset_v1_j5824495/
+
+Updated: $(date -u +%Y-%m-%d\ %H:%M:%S) UTC

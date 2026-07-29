@@ -1,0 +1,7 @@
+wandb: [wandb.Api()] Loaded credentials for https://api.wandb.ai from /projects/public/u6gb/.netrc.
+arq1lyt0 {"tickers": ["GOOG"], "micro_bsz": 4, "proc": 4, "ndev": 4, "seed": 42, "curtail": null, "epochs": 2, "range": ["2025-12-01", "2025-12-31"], "dataroot": "/local/user/1483804545/sp500_squashfs_4776648_0/2025-12", "last": 8457, "restore": "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/exp_R1"}
+hxcamslh {"tickers": ["GOOG"], "micro_bsz": 4, "proc": 1, "ndev": 4, "seed": 42, "curtail": null, "epochs": 1, "range": ["2025-12-01", "2025-12-31"], "dataroot": "/local/user/1483804545/sp500_squashfs_4775474_0/2025-12", "last": 1, "restore": "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/exp_R1"}
+8plu95a3 n_tickers= 466 micro_bsz= 16 proc= 1 range= ['2022-01-01', '2026-02-15']
+Traceback (most recent call last):
+  File "<stdin>", line 17, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/projects/public/u6gb/tasks/validation_set/pilot_8plu95a3_tickers.json'

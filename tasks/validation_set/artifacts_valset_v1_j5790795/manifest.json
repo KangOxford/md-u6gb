@@ -1,0 +1,185 @@
+{
+  "version": "valset_v1",
+  "built_utc": "2026-07-29T13:59:57.419385+00:00",
+  "purpose": "Frozen in-distribution validation set for the SP500 Mamba3/Transformer scaling-law cohort (NeurIPS 2026 rebuttal). No training run has touched any sample; immune by construction to the in-flight TF matrix rerun on the 36mo domain (per-seed budget 20% of N36).",
+  "domain": {
+    "corpus": "lob_preproc_sp500 via monthly SquashFS shards",
+    "months": [
+      "2022-01",
+      "2022-02",
+      "2022-03",
+      "2022-04",
+      "2022-05",
+      "2022-06",
+      "2022-07",
+      "2022-08",
+      "2022-09",
+      "2022-10",
+      "2022-11",
+      "2022-12",
+      "2023-01",
+      "2023-02",
+      "2023-03",
+      "2023-04",
+      "2023-05",
+      "2023-06",
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11",
+      "2023-12",
+      "2024-01",
+      "2024-02",
+      "2024-03",
+      "2024-04",
+      "2024-05",
+      "2024-06",
+      "2024-07",
+      "2024-08",
+      "2024-09",
+      "2024-10",
+      "2024-11",
+      "2024-12",
+      "2025-01",
+      "2025-02",
+      "2025-03",
+      "2025-04",
+      "2025-05",
+      "2025-06",
+      "2025-07",
+      "2025-08",
+      "2025-09",
+      "2025-10",
+      "2025-11",
+      "2025-12"
+    ],
+    "n_tickers": 488,
+    "constituents_csv": "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/scaling_law_plots/snp500_constituents_20260131.csv",
+    "train_date_range": [
+      "2022-01-01",
+      "2025-12-31"
+    ],
+    "token_mode": "26tok",
+    "msg_seq_len": 500,
+    "use_book_data": true,
+    "book_transform": true,
+    "N48": 323221385,
+    "N36": 244000922,
+    "N466": 317903344,
+    "files48": 472442
+  },
+  "recipe": {
+    "seeds": [
+      5,
+      42,
+      137
+    ],
+    "tail_frac": 0.02,
+    "excl_frac": 0.2,
+    "tail_len": 6464427,
+    "excl_len_48mo": 64644277,
+    "excl_len_36mo": 48800185,
+    "definition": "V = (∪_s perm_s48[-2%:]) \\ (∪_s perm_s48[:20%]) \\ map48(∪_s perm_s36[:20%], directional ±1 guard) \\ map48(perm42_466[:19200], directional guard) \\ (GOOG × 2025-12)",
+    "torch_version": "2.8.0+cu129",
+    "numpy_version": "2.3.3",
+    "python": "3.12.11",
+    "env": "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3 (training env)"
+  },
+  "consumed_caps_samples_48mo": {
+    "5": 53760000,
+    "42": 21529600,
+    "137": 13684352
+  },
+  "consumed_caps_note": "seed5=6M-700B chain curtail 420000*128 (16.6%N); seed42=full-d chain observed 168200*128 (6.7%N); seed137=primary curtail 106909*128 (4.2%N). All < 20%*N48. 36mo historical (TF xbuaya9r + O2d cqo9qoit, both seed5) = 6,347,520 ⊂ 20%*N36 zone.",
+  "cross_domain_treatment": {
+    "mo36": {
+      "rule": "exclude map48(perm_s36[:ceil(0.20*N36)]) for s in {5,42,137} with directional neighbor guard",
+      "reason": "TF matrix rerun in-flight on 36mo domain (squeue 2026-07-29: tf-0p2M-s{5,42,137} pending; TF sweep default months 2023-01..2025-12, max curtail 65,664 steps = 3.4% N36 << 20%)",
+      "dropped_from_V0": 6735581
+    },
+    "tk466": {
+      "runs": [
+        "oxford-lob/mamba3-squashfs-multi/8plu95a3"
+      ],
+      "samples": 19200,
+      "dropped_from_V0": 1347
+    },
+    "goog_dec": {
+      "runs": [
+        "oxford-lob/neurips-mamba3-finetune/arq1lyt0 (epochs=2)",
+        "oxford-lob/neurips-mamba3-finetune/hxcamslh"
+      ],
+      "rule": "excise entire (GOOG, 2025-12) slice",
+      "dropped_from_V0": 10377
+    }
+  },
+  "flags": {
+    "v1_8ticker": {
+      "tickers": [
+        "AAPL",
+        "AMD",
+        "AMZN",
+        "GOOG",
+        "META",
+        "MSFT",
+        "NVDA",
+        "TSLA"
+      ],
+      "n_flagged": 847533,
+      "note": "8-ticker-corpus era experiments (v1 sweep, phase-b-*, R1/O2 lines, GOOG projects) touched these tickers' raw messages under a different preproc. Flag only; do NOT evaluate 8-ticker-trained models on flagged samples."
+    }
+  },
+  "counts": {
+    "tail_union": 19007384,
+    "V0_recipe": 12106704,
+    "V_final": 5367734,
+    "V_pct_of_N": 1.6606989045604144,
+    "messages": 2683867000,
+    "tokens": 69780542000,
+    "subsets": {
+      "30720": 30720,
+      "307200": 307200,
+      "3232213": 3232213
+    },
+    "subset_seed": 20260729,
+    "subset_note": "nested: subset_30720 ⊂ subset_307200 ⊂ subset_1pct (prefixes of one fixed shuffle of V)"
+  },
+  "guarantees": [
+    "Index-exact (48mo): V ∩ perm_s48[:20%] = ∅ for all s ∈ {5,42,137}; every production run consumed a strict prefix ≤ curtail*128 ≤ 20%*N48 (verified against W&B step records of all runs incl. crashed, live scan 2026-07-29).",
+    "Message-exact within domain: per-file random offsets come from a fixed-seed RNG independent of JAX_SEED (lobster_dataloader init_defaults seed=42), so (file,j) maps to identical message ranges in every run and future eval.",
+    "36mo-immune: V excludes the 48mo images (with directional neighbor guard) of all three 36mo 20% zones, covering the historical TF/O2d prefix (≤49,590 steps) and any future 36mo run up to 381,251 steps per seed.",
+    "(GOOG, 2025-12) excised entirely (finetune consumed the slice over 2 epochs)."
+  ],
+  "residual_risks": [
+    "April raw-tree era short runs (TF/M3 config-iteration batches ~618 steps, dmon FLOPs profile jobs ~300 steps, pre-SquashFS smokes) ran on unreconstructable file orderings; expected ≤0.3% of V could share messages. All were discarded scaffolding models.",
+    "squashfs-pilot half-month run p1qqvt0i (54 steps, 473tk half-month domain) and 4 squashfs-multi 4-month runs (lastStep=1): expected <1e-4 of V.",
+    "O2d pilot runs (4x310 steps, 36mo domain, W&B records deleted): covered by the 36mo 20% zone if seeds ∈ {5,42,137}; an unknown other seed would contribute ~0.05% of V."
+  ],
+  "future_budget": {
+    "rule": "Future training with seeds {5,42,137} must keep per-seed total steps ≤ budget; training on any NEW index domain over this corpus requires a new purity audit.",
+    "budget_48mo_steps": 505033,
+    "used_48mo": {
+      "5": 420000,
+      "42": 168200,
+      "137": 106909
+    },
+    "budget_36mo_steps": 381251,
+    "used_36mo": {
+      "5": 49590,
+      "42": "pending TF rerun",
+      "137": "pending TF rerun"
+    }
+  },
+  "evidence": {
+    "wandb_scans": [
+      "scratchpad wandb_post_may23_scan.txt",
+      "wandb_scan2.txt (2026-07-29)"
+    ],
+    "log_anchors": {
+      "j4531958_8N_samples_per_node": 40402673,
+      "j4567612_2N_samples_per_node_36mo": 122000461
+    },
+    "squeue_snapshot": "2026-07-29: tf-0p2M-s{5,42,137} PENDING (jobs 5824382/85/88)"
+  }
+}
