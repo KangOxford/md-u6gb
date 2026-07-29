@@ -133,6 +133,19 @@ breadcrumb: tasks/validation_set/latest_valset.json
 复现: tasks/validation_set/{build_valset.py, build_valset.sbatch, valset_report_figs.py}
 ```
 
+### 8.1 实体化副本（squashfs shard，2026-07-29 追加）
+
+除索引形式外，valset_v1 另外物化为**与月度训练 shard 完全同构**的独立 squashfs 文件：目录布局为 `TICKER/TICKER_<date>_message_val<GLOBALIDX>.npy.zst` 与同名 `_orderbook_` 配对文件（每文件恰存一个 500 行窗口，切片行区间与训练管线逐字节一致），附同格式 in-shard `index.json`。现有 dataloader 把 `DATA_ROOT` 指向其挂载点即可直接使用，唯一差异是评测时传 `--random_offsets_train False`；文件名内嵌 global_idx 可溯源回索引产物。
+
+| Tier | File | Size | Status |
+|---|---|---:|---|
+| 30,720 | `squashfs/output/shard_valset_v1_30720.squashfs` | 360 MB | packed; byte-level verification in progress (0 failures so far) |
+| 307,200 | `squashfs/output/shard_valset_v1_307200.squashfs` | ~4 GB (est.) | queued |
+| 3,232,213 (1% N) | on demand | ~40–60 GB (est.) | not built |
+| full pool | on demand | ~70–100 GB (est.) | not built |
+
+质检为双层：L1 抽 2,048 个样本，把物化文件内容与源 shard 对应行区间逐字节比对；L2 用训练 dataloader 挂载物化 shard 冒烟（样本数断言 + 读取探针）。通过后连同 `provenance_*.npz`（每样本 ↔ 源文件行区间映射）与 SHA-256 一起落盘。构建脚本：`squashfs/{materialize_valset.py, verify_valset_squashfs.py, run_materialize.sh}`。
+
 **验证链**（构建时全部通过）：重建 N 与两条独立历史日志锚点吻合（8N `samples_per_node=40,402,673`、O2d 2N `=122,000,461`）→ torch `DistributedSampler` 等价性测试 → 最终 V 逐 seed 逆排列验证（图 3 即其可视化）。
 
 ## 9. 对照业界标准的审计
@@ -165,7 +178,7 @@ breadcrumb: tasks/validation_set/latest_valset.json
 
 统计量：每组平均 per-token CE（bootstrap 95% CI）与 Min-K% (k=20%) 平均对数概率。判据 H1（检测力）：CE(SEEN) 显著低于 CE(MID)；判据 H2（无泄漏）：CE(VAL) 与 CE(MID) 的差的置信区间包含 0。两个判据同时成立即为实验性无泄漏证据；若 H1 不成立，说明单次曝光的记忆效应低于检测限，此时任何残余泄漏对 CE 评测的影响同样低于检测限，结论同样支持 val 的可用性。
 
-**结果**：（实验进行中，完成后回填。）
+**结果**：（r4 运行中，完成后回填终值。）过程记录：r1 因 torch DataLoader 的 fork worker 与 JAX 多线程死锁（GPU 显存已上卡但利用率 0%、全节点 CPU 空闲的三联征）；改同步加载后，按效率要求把评测 batch 放大到训练值的 4–8 倍并改用 spawn worker，随即触发第二个故障：批量放大后的超大矩阵乘让 XLA Triton 自动调优器找不到有效配置（r3 崩溃），禁用 Triton GEMM 回落 cuBLAS 后（r4）恢复运行。两次故障与修复均已入库（commits 3bd38a7、1c3e192）。判据不变。
 
 ## 参考来源
 

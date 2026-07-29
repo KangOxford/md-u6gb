@@ -28,9 +28,8 @@ g_all = prov["global_idx"]
 rng = np.random.default_rng(20260731)
 pick = np.sort(rng.choice(len(g_all), min(A.n_check, len(g_all)), replace=False))
 
-# L1: 逐字节
-fail = 0
-for k, i in enumerate(pick):
+# L1: 逐字节（多进程——每样本需解压一个大源文件，单线程 2048 个要 ~1h）
+def _check_one(i):
     g = int(g_all[i]); s = int(prov["seq_start"][i])
     mp, bp = str(prov["msg_paths"][i]), str(prov["book_paths"][i])
     tk = Path(mp).parent.name
@@ -39,12 +38,17 @@ for k, i in enumerate(pick):
     b_new = np.asarray(_np_load_zst(f"{A.mount}/{tk}/{tk}_{date}_orderbook_val{g:08d}.npy.zst"))
     m_src = np.asarray(_np_load_zst(mp, mmap_mode='r'))[s:s + 500]
     b_src = np.asarray(_np_load_zst(bp, mmap_mode='r'))[s:s + 500]
-    if not (np.array_equal(m_new, m_src) and np.array_equal(b_new, b_src)):
-        fail += 1
-        print(f"[L1 FAIL] g={g}", flush=True)
-    if k % 500 == 0:
-        print(f"[L1] {k}/{len(pick)} checked", flush=True)
-assert fail == 0, f"L1 byte-compare failed on {fail} samples"
+    return int(g) if not (np.array_equal(m_new, m_src) and np.array_equal(b_new, b_src)) else -1
+
+from multiprocessing import Pool
+bad = []
+with Pool(32) as pool:
+    for k, g in enumerate(pool.imap_unordered(_check_one, pick.tolist(), chunksize=16)):
+        if g >= 0:
+            bad.append(g)
+        if k % 500 == 0:
+            print(f"[L1] {k}/{len(pick)} checked", flush=True)
+assert not bad, f"L1 byte-compare failed on {len(bad)} samples: {bad[:10]}"
 print(f"[L1] PASS: {len(pick)} samples byte-identical", flush=True)
 
 # L2: dataloader 兼容性
