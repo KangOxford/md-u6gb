@@ -31,12 +31,11 @@ echo "[squashfs] mounted 48 shards"
 nvidia-smi -L || true
 
 cd "$EXP_DIR"
+# forward-only 评测显存约束远松于训练：BSZ 放大（78M 32/GPU、350M 8/GPU）；
+# spawn workers 并行解压喂数据；两 checkpoint 共享一次数据集构建。
 python -u "$LEAK_DIR/leakage_test.py" \
-    --restore checkpoints/j4499538_5vu8avcx_4499538 --label 78M-s5 \
-    --micro_bsz 8 --data_root "$DR" --out_json "$LEAK_DIR/results/leak_78M_s5.json"
-echo "[done] 78M"
-python -u "$LEAK_DIR/leakage_test.py" \
-    --restore checkpoints/j4499580_j8cfcraa_4499580 --label 350M-s5 \
-    --micro_bsz 2 --data_root "$DR" --out_json "$LEAK_DIR/results/leak_350M_s5.json"
-echo "[done] 350M"
+    --restore checkpoints/j4499538_5vu8avcx_4499538,checkpoints/j4499580_j8cfcraa_4499580 \
+    --label 78M-s5,350M-s5 --micro_bsz 32,8 --n_data_workers 12 \
+    --data_root "$DR" --out_json "$LEAK_DIR/results/leak.json"
+echo "[done] both checkpoints"
 echo "LEAKAGE_WRAPPER_OK"
