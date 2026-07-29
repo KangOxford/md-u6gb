@@ -137,16 +137,16 @@
       "sha256": "534a7cef46b35f8f967da70d1367e4447c368134ccef6715970240534ff08b9b"
     },
     "training_loss_job_histories_33run_composite.pdf": {
-      "bytes": 251019,
-      "sha256": "e74ffdd09a71ea2a69298a388f6286d5a4618227ccc895bf73a443a30c7069f5"
+      "bytes": 250014,
+      "sha256": "e06d310361cef100fe439e55bc67d1940282702d6980327d7a87a74f4a1c9246"
     },
     "training_loss_job_histories_33run_composite.png": {
-      "bytes": 2946936,
-      "sha256": "bcbd727c8278d06c5dc4cdc558af21222dc6c4fa6d024139d867488b07d90d7a"
+      "bytes": 2900188,
+      "sha256": "ac73618dc60d21aab56fee23b803eb217f2b40ffef85af5a78983f712041d2c2"
     },
     "training_loss_job_histories_33run_composite.svg": {
-      "bytes": 844343,
-      "sha256": "0ef5e5605972d43aa0c3aef3cc22ba71289068a0be881f56090868a89d61b550"
+      "bytes": 841699,
+      "sha256": "04170f46c23933cfab3a7b435a572568b20fa34af04ae2a6e66b471a4f0105ad"
     },
     "training_loss_job_histories_33run_points.csv": {
       "bytes": 1208283,
@@ -191,7 +191,7 @@
       "46M-s5"
     ]
   },
-  "created_utc": "2026-07-29T19:42:36.949073+00:00",
+  "created_utc": "2026-07-29T19:43:46.225721+00:00",
   "figure_title": "33 training-loss job histories: failed to resume segments in the same subplot",
   "inputs": {
     "/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/scaling_law_plots/all_loss_curves.v2_clean.csv": {
