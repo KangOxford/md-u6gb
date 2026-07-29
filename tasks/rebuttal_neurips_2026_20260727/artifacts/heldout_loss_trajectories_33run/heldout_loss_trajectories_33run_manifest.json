@@ -1,0 +1,204 @@
+{
+  "artifacts": {
+    "heldout_loss_trajectories_33run_composite.pdf": {
+      "bytes": 92253,
+      "sha256": "833f81fc9e9c29ddaa23ac6f5be8057a1bd99c9b1215f058bc8adf9ae91e2536"
+    },
+    "heldout_loss_trajectories_33run_composite.png": {
+      "bytes": 1091163,
+      "sha256": "4d8f3ee54b1532b4cb109fad38c558baff160ecfe372ddefa703069dcdc57330"
+    },
+    "heldout_loss_trajectories_33run_composite.svg": {
+      "bytes": 477108,
+      "sha256": "3966d5ee85077f1b751dc14be32264b8c58bd2626a334544e82a154b40ce7387"
+    },
+    "heldout_loss_trajectories_33run_points.csv": {
+      "bytes": 34323,
+      "sha256": "2445f54dc50ff32e26209600112ceff912df72b7123c7ada2f7a0073375d22ed"
+    },
+    "heldout_loss_trajectories_33run_summary.csv": {
+      "bytes": 8713,
+      "sha256": "5c0465ae1492d09da965f0cebfd2c21c1551fa3e9e2e1fa031a670c3b37de99c"
+    },
+    "runs/01_0p2M-s5.png": {
+      "bytes": 75181,
+      "sha256": "d10dcc3a75504f04359aee7804006fc2199b6daff7e168f35a0309b229d1ee89"
+    },
+    "runs/02_0p2M-s42.png": {
+      "bytes": 75677,
+      "sha256": "995ca3ec64500a29208a86bf93eace1870f04b6825965ebf085df7f5aac571d5"
+    },
+    "runs/03_0p2M-s137.png": {
+      "bytes": 72620,
+      "sha256": "2f8c5748e2b0852dcaa4395bc7b2849e9fc7326e45a61d2882e2de4f5fe15045"
+    },
+    "runs/04_1M-s5.png": {
+      "bytes": 71082,
+      "sha256": "e97a6bb04c6b9d794f996af617b4ac227e1e88dc5efd7b8363c6b6a71f8803f9"
+    },
+    "runs/05_1M-s42.png": {
+      "bytes": 67687,
+      "sha256": "c1979ee6ee1795836ea548f626936e64021c25b6eb6506494e132046923b0530"
+    },
+    "runs/06_1M-s137.png": {
+      "bytes": 70834,
+      "sha256": "8e2529c089d9104ff7c779cfb5447c1a463da22eaea2fc77ac62ccf6a9731348"
+    },
+    "runs/07_4M-s5.png": {
+      "bytes": 72744,
+      "sha256": "a5ef27b2170cf170d8188d48a09dbb3205bf3adc6f32ffe755a5669da5223ac0"
+    },
+    "runs/08_4M-s42.png": {
+      "bytes": 71836,
+      "sha256": "3a0aa22441a1f6f6280bfe78494226dabd9e1ce720a01f5a9e3d3566c44af758"
+    },
+    "runs/09_4M-s137.png": {
+      "bytes": 72184,
+      "sha256": "6a25a4b4fa1e474ce05b2988242811218b99ba71888ecb5118683163a059425d"
+    },
+    "runs/10_6M-s5.png": {
+      "bytes": 75259,
+      "sha256": "32131ba88ef06f2f5874e8ffa78614f1bee3b48362f11eef0be45fd7ae0a8133"
+    },
+    "runs/11_6M-s42.png": {
+      "bytes": 71950,
+      "sha256": "a6ffdaaae9fc3b1df85240ca404796651e02cfecb404412e8dd6d33d15dd6d12"
+    },
+    "runs/12_6M-s137.png": {
+      "bytes": 72368,
+      "sha256": "70e7ab6e2027967dded568a97ab60ca303124ee990dc4bb4b1ceb038d0bfdc7c"
+    },
+    "runs/13_10M-s5.png": {
+      "bytes": 70222,
+      "sha256": "eb443a55567d6ac486f3e16a5b1c20b9612c2fa7c1580d8fd4fd7c5ca36d3cf4"
+    },
+    "runs/14_10M-s42.png": {
+      "bytes": 73011,
+      "sha256": "33f9537eb5c074c6b02f05047519169f5826dbe5d3d9734ef8558adf0b52693a"
+    },
+    "runs/15_10M-s137.png": {
+      "bytes": 72222,
+      "sha256": "d6ce2327b4c54b26ae7bc2506b1205de3d6b84817a92c673775ee50542f0eb78"
+    },
+    "runs/16_14M-s5.png": {
+      "bytes": 76757,
+      "sha256": "cda46f2f1df6fff7bb3fb896562d105b2e04a9916f217408209ed312846596c4"
+    },
+    "runs/17_14M-s42.png": {
+      "bytes": 69898,
+      "sha256": "fbe01fefd986249e7db24638bfd7a4273faa69d187d4da7af1052c6a8d9c632f"
+    },
+    "runs/18_14M-s137.png": {
+      "bytes": 72662,
+      "sha256": "3279d48194425730326ee20d1a12f125f5102b63d724762553acef173ac67188"
+    },
+    "runs/19_23M-s5.png": {
+      "bytes": 68362,
+      "sha256": "75d672f8d10e7d2907f61f2ea40ef83e271f2552a964824a4c35821fdab75340"
+    },
+    "runs/20_23M-s137.png": {
+      "bytes": 73740,
+      "sha256": "cd8ea38a365bf3fbc893672eb6b8eef3cc5ca211b6ece95add033f804ed6ea8b"
+    },
+    "runs/21_46M-s5.png": {
+      "bytes": 82853,
+      "sha256": "165ed163b214dda283cafa28e78a54a9290cd106dd6ea98cf982b15754aebbd1"
+    },
+    "runs/22_46M-s42.png": {
+      "bytes": 73112,
+      "sha256": "b290e2590d5ebaff149a6ed5424d241d75b2313dc94c48a3690314b6466ee420"
+    },
+    "runs/23_46M-s137.png": {
+      "bytes": 66813,
+      "sha256": "a2926bd6cd9194cf8ff944e3069a8e1cf09d3c23ef67a8915bef7268a05f2a93"
+    },
+    "runs/24_78M-s5.png": {
+      "bytes": 77895,
+      "sha256": "e5b4468f9b524022be879277857b1b416cc41984b048aac4d58cb4090fcdfe71"
+    },
+    "runs/25_78M-s42.png": {
+      "bytes": 77089,
+      "sha256": "5c33b6d552d3fb71229021075cf27d17c964f5c23b79c4f3516c067cca21cf51"
+    },
+    "runs/26_78M-s137.png": {
+      "bytes": 71145,
+      "sha256": "fc9fad60be21032926bef5ca74c3262338276b2a1cfaa00c8ee4e73fbeb61485"
+    },
+    "runs/27_120M-s5.png": {
+      "bytes": 74951,
+      "sha256": "4b78b72407bdd48875c94bec5ca17ba4089c1368e49969ff56ee1c8085b7688d"
+    },
+    "runs/28_120M-s42.png": {
+      "bytes": 72661,
+      "sha256": "91fd90957df2d1004ee326fdf733961edd6d0911f8c309042ca7fe79513ca622"
+    },
+    "runs/29_120M-s137.png": {
+      "bytes": 72504,
+      "sha256": "c35e87e3d01393552ce2d82d41fa47eeb10baaec5a9d6dcf8474eba20178401c"
+    },
+    "runs/30_200M-s5.png": {
+      "bytes": 75473,
+      "sha256": "8388b007d325346f16626e5b5377599d0218187c98d92f96068914e5cc77eeaf"
+    },
+    "runs/31_200M-s42.png": {
+      "bytes": 74155,
+      "sha256": "85c34a6df58988b908b07546efc2edb8c7c8511067a3b21a7109cea85403f0a1"
+    },
+    "runs/32_350M-s5.png": {
+      "bytes": 75780,
+      "sha256": "622a284af975fbd0644098fa358dfd5f6a02810235b3ddde50a5d57924e334a0"
+    },
+    "runs/33_350M-s42.png": {
+      "bytes": 77022,
+      "sha256": "70d41b4ccd9101d7743f54992b3eb087e19c1a019d7504bbe29df7180a3fbeed"
+    }
+  },
+  "audit": {
+    "missing_size_seed_cells": [
+      {
+        "label": "23M",
+        "reason": "incomplete; excluded",
+        "seed": 42
+      },
+      {
+        "label": "200M",
+        "reason": "no completed run",
+        "seed": 137
+      },
+      {
+        "label": "350M",
+        "reason": "no completed run",
+        "seed": 137
+      }
+    ],
+    "n_checkpoints": 285,
+    "n_runs": 33,
+    "n_sizes": 12,
+    "n_target_reaching_runs": 32,
+    "non_target_reaching_runs": [
+      "46M-s5"
+    ],
+    "points_per_run_max": 20,
+    "points_per_run_median": 8.0,
+    "points_per_run_min": 3
+  },
+  "created_utc": "2026-07-29T19:03:41.781991+00:00",
+  "figure_title": "Current 33-run cohort: Jan-2026 held-out loss trajectories",
+  "inputs": {
+    "/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/scaling_law_plots/aramis/results/canonical_test.csv": {
+      "bytes": 31789,
+      "sha256": "03d8b6742aedf8c582ed36e67d5a6dc2fcc045fc1defb04422bd10b553be5317"
+    },
+    "/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/scaling_law_plots/aramis/results/selected_test_endpoint.csv": {
+      "bytes": 4224,
+      "sha256": "fb5eb84dbc3dd2d9a2e7a16e4066f9c677787d87475968cef7a53789016499c2"
+    }
+  },
+  "protocol": {
+    "aggregation": "equal macro-average over 487 tickers",
+    "cohort": "manifest-selected current 33 logical runs",
+    "outcome": "Jan-2026 held-out CE",
+    "terminal_marker": "final available held-out evaluation",
+    "x_axis": "cumulative tokens D"
+  }
+}
