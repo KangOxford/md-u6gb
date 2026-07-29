@@ -1,0 +1,240 @@
+{
+  "artifacts": {
+    "runs_logx/01_0p2M-s5.png": {
+      "bytes": 172943,
+      "sha256": "046cef9f887b7482b99b4a6dc1860e07e1820d0f9c3f625d8d1cc13731c6c377"
+    },
+    "runs_logx/02_0p2M-s42.png": {
+      "bytes": 178110,
+      "sha256": "ea1601d2be0276b07a30dfc3ea5a2ef27fc3397a68c2e8758152f1e0ffee576b"
+    },
+    "runs_logx/03_0p2M-s137.png": {
+      "bytes": 179713,
+      "sha256": "1a2c3e462996bd65749ef6cad7d497e6551b626932c63a15eb6ed3dbbe410027"
+    },
+    "runs_logx/04_1M-s5.png": {
+      "bytes": 177039,
+      "sha256": "f891e873f66cf0111418d91d1b145210b39ae603b0f2e94645da40c2ec0390ef"
+    },
+    "runs_logx/05_1M-s42.png": {
+      "bytes": 188717,
+      "sha256": "c9cdc8fe92d09e7c3005a515c62ad13962667d7d3f993f5bd4fb79ac8b2ce124"
+    },
+    "runs_logx/06_1M-s137.png": {
+      "bytes": 178370,
+      "sha256": "7f4d178d93f0e2ab2d37c1c4afb4d05eba8a8fbe9043886d737274830b556152"
+    },
+    "runs_logx/07_4M-s5.png": {
+      "bytes": 202534,
+      "sha256": "cb118c6b6d5ee3787ed70d33a5d2b03d9f93dd870ca1a0adb32f1d0783dba498"
+    },
+    "runs_logx/08_4M-s42.png": {
+      "bytes": 201562,
+      "sha256": "6bcfbcc820be18f02a663018da98bd9ac748f107706816bae347f3e5d7403d90"
+    },
+    "runs_logx/09_4M-s137.png": {
+      "bytes": 203216,
+      "sha256": "1e9232a8f26db9a9669a54c5848c6471d4121f1284554826c9664e460cc52797"
+    },
+    "runs_logx/10_6M-s5.png": {
+      "bytes": 196065,
+      "sha256": "1388852213410c183480ad9daf929d84f673a5172775ab3f89ede72d71cf2c65"
+    },
+    "runs_logx/11_6M-s42.png": {
+      "bytes": 195951,
+      "sha256": "4fa30b3c68791e5018889cc4bea449af35035bd680edd87569d282cfce0eff75"
+    },
+    "runs_logx/12_6M-s137.png": {
+      "bytes": 202916,
+      "sha256": "80f4efbd2c3b86bcdd775c5207a747ea364f15ba4271f21b35bd00ad16d680e8"
+    },
+    "runs_logx/13_10M-s5.png": {
+      "bytes": 219344,
+      "sha256": "1a3eaf4b47e320a5fdf2b9608363f0a2d8cce3808fa0450be2eac33eeadad186"
+    },
+    "runs_logx/14_10M-s42.png": {
+      "bytes": 216072,
+      "sha256": "b18f4052275c0cdd3ff4f5a4452d10dbfb8ca2d7e60445661dbf9477ea5a8062"
+    },
+    "runs_logx/15_10M-s137.png": {
+      "bytes": 214240,
+      "sha256": "d82dca876cc430b683cd998c1d7ef510f4544f5f641dd501c477ca47c4fc8861"
+    },
+    "runs_logx/16_14M-s5.png": {
+      "bytes": 209524,
+      "sha256": "5abae79ea46c3916fa674ae914eebcbc23adfc296eac86609dea5086093a4da9"
+    },
+    "runs_logx/17_14M-s42.png": {
+      "bytes": 208417,
+      "sha256": "3c79e53738497004cd46a29d8a85fac68dd56986be3bdd65bd50002fa9017c9b"
+    },
+    "runs_logx/18_14M-s137.png": {
+      "bytes": 214876,
+      "sha256": "d20478f56aa31b77141ed7a95c1bc9957d1f6fb22fa0c217a06aed75d92bdd62"
+    },
+    "runs_logx/19_23M-s5.png": {
+      "bytes": 197773,
+      "sha256": "f0bc1ed113741543c08b86e9e3f02d6bec65f8d14997c35f4dbb5713e230e493"
+    },
+    "runs_logx/20_23M-s137.png": {
+      "bytes": 217960,
+      "sha256": "9176576c99ac0c20c452b97ba428413e76773501fc812bd0aaf825e1e6e96a55"
+    },
+    "runs_logx/21_46M-s5.png": {
+      "bytes": 220952,
+      "sha256": "be12996e4d7bfe423c569a32983131b25feaace5be7baad65130ac7af848a9f6"
+    },
+    "runs_logx/22_46M-s42.png": {
+      "bytes": 225299,
+      "sha256": "86e96eab8ef806840c7e13c830480250f101884b3776155e1484064e51d1ba10"
+    },
+    "runs_logx/23_46M-s137.png": {
+      "bytes": 218473,
+      "sha256": "c03bd27181ff9dfb3e8690de704c53e8b7485bbfb0ce58682e6396c58be17c08"
+    },
+    "runs_logx/24_78M-s5.png": {
+      "bytes": 241925,
+      "sha256": "a3f7e45a032e61cbbcbf03a4871b60c4e2249268c62ab23f3870116ff2c8efd8"
+    },
+    "runs_logx/25_78M-s42.png": {
+      "bytes": 219180,
+      "sha256": "9bdcee264308a1f910073f6b7ac2069c9f9c0a9f8f2716b7db4d8bfb73862bfa"
+    },
+    "runs_logx/26_78M-s137.png": {
+      "bytes": 223210,
+      "sha256": "90ece800370cb07c87f55c7942ff752fc500ef71e9f5f56b27b9b23374405f85"
+    },
+    "runs_logx/27_120M-s5.png": {
+      "bytes": 218836,
+      "sha256": "4d3369d812f4555f1712878ca0db4666dd077064c86f9094b727b4c6a2d91f64"
+    },
+    "runs_logx/28_120M-s42.png": {
+      "bytes": 220204,
+      "sha256": "db50e8bb16461c61666850ec57e21da30c43bd74b15fae556b1bb6463312c2cf"
+    },
+    "runs_logx/29_120M-s137.png": {
+      "bytes": 222760,
+      "sha256": "fc9fa2fde6cd1c9fb84875b8efd82ac277019b4f43c018ef2e443e45fad855d1"
+    },
+    "runs_logx/30_200M-s5.png": {
+      "bytes": 207968,
+      "sha256": "34ca330d78bd961484eb0d8012e83984780d9fdef0e4d050ed5f92540b77cb0f"
+    },
+    "runs_logx/31_200M-s42.png": {
+      "bytes": 218199,
+      "sha256": "9973e551155df623a5fdf52b638d93441e66e28fae074f0bbda4d58bd3bbfc50"
+    },
+    "runs_logx/32_350M-s5.png": {
+      "bytes": 202596,
+      "sha256": "a8556a4f6b6887cc368f9b14a533561996e2f42877ae24fd37855958d7a65fb6"
+    },
+    "runs_logx/33_350M-s42.png": {
+      "bytes": 211767,
+      "sha256": "100594b1c1936c72df1017c5519d46cba2ed80531d74c22bcb475cf78b219e57"
+    },
+    "training_loss_job_histories_33run_composite_logx.pdf": {
+      "bytes": 247049,
+      "sha256": "5a0b48516deef00175bd5752f1aa24c35461afe5efc4aa8b964b7ee869fdfe6c"
+    },
+    "training_loss_job_histories_33run_composite_logx.png": {
+      "bytes": 2879853,
+      "sha256": "e87ca8e2b48d4444084888e1ff58572ecc60bd2b97966412fe83653b3ccee3e8"
+    },
+    "training_loss_job_histories_33run_composite_logx.svg": {
+      "bytes": 881033,
+      "sha256": "13b81fe176a8541157a67b51a55ac3df77d3a6acd48e2fbf772fa0e877317100"
+    },
+    "training_loss_job_histories_33run_logx_attempts.csv": {
+      "bytes": 9244,
+      "sha256": "534a7cef46b35f8f967da70d1367e4447c368134ccef6715970240534ff08b9b"
+    },
+    "training_loss_job_histories_33run_logx_points.csv": {
+      "bytes": 1208283,
+      "sha256": "ffb48628ab227e89d5ff2161e3ed3262a0df3fc38fe68cab837529a3a4c3a015"
+    },
+    "training_loss_job_histories_33run_logx_segments.csv": {
+      "bytes": 6865,
+      "sha256": "7164f884cdc30c981f90be16c004a040685357437858a35653ad89ca279c58f7"
+    },
+    "training_loss_job_histories_33run_logx_summary.csv": {
+      "bytes": 4493,
+      "sha256": "4fa530a51572cca176a0107e793e87dc42ab0a9ccec5ff92b8c3774804b49cab"
+    }
+  },
+  "audit": {
+    "missing_size_seed_cells": [
+      {
+        "label": "23M",
+        "reason": "incomplete; excluded",
+        "seed": 42
+      },
+      {
+        "label": "200M",
+        "reason": "no completed run",
+        "seed": 137
+      },
+      {
+        "label": "350M",
+        "reason": "no completed run",
+        "seed": 137
+      }
+    ],
+    "n_logical_runs": 33,
+    "n_multi_segment_runs": 20,
+    "n_observed_physical_segments": 54,
+    "n_raw_loss_points": 10403,
+    "n_sizes": 12,
+    "n_target_reaching_runs": 32,
+    "n_unique_observed_jids": 54,
+    "n_zero_data_attempts": 136,
+    "non_target_reaching_runs": [
+      "46M-s5"
+    ]
+  },
+  "created_utc": "2026-07-29T20:06:45.837573+00:00",
+  "figure_title": "33 training-loss job histories: failed to resume segments in the same subplot",
+  "inputs": {
+    "/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/scaling_law_plots/all_loss_curves.v2_clean.csv": {
+      "bytes": 2672384,
+      "sha256": "7bdd1856d872ea9547a77b3cab3fc40f278f49c84fbe36b2359778a957c53541"
+    },
+    "/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/scaling_law_plots/aramis/results/selected_test_endpoint.csv": {
+      "bytes": 4224,
+      "sha256": "fb5eb84dbc3dd2d9a2e7a16e4066f9c677787d87475968cef7a53789016499c2"
+    },
+    "/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/scaling_law_plots/scaling_law_data.csv": {
+      "bytes": 29759,
+      "sha256": "635094e75e5f842f936967c9313a84f7dc0b560f024965fc6b4f1db96b46af7d"
+    }
+  },
+  "protocol": {
+    "cross_job_policy": "no solid cross-job loss line",
+    "excluded_unrelated_long_d_jids": [
+      "j4501060",
+      "j4506444"
+    ],
+    "outcome": "W&B training step_loss",
+    "png_dpi": 300,
+    "raw_points": "all selected loss rows are plotted with low alpha",
+    "resume_connector": "gray or purple dotted provenance handoff",
+    "six_m_policy": {
+      "6M-s137": {
+        "final": "j4509365",
+        "final_seed": 137,
+        "origin_seed": 5,
+        "predecessor": "j4499362",
+        "relay": "j4507453"
+      },
+      "6M-s5": {
+        "final": "j4508786",
+        "final_seed": 5,
+        "origin_seed": 137,
+        "predecessor": "j4499369",
+        "relay": "j4507467"
+      }
+    },
+    "smooth": "rolling median computed separately inside each physical segment",
+    "x_scale": "log",
+    "zero_data_policy": "shown as hollow square in attempt ribbon"
+  }
+}
