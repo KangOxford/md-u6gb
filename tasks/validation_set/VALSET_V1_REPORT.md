@@ -133,18 +133,50 @@ breadcrumb: tasks/validation_set/latest_valset.json
 复现: tasks/validation_set/{build_valset.py, build_valset.sbatch, valset_report_figs.py}
 ```
 
-### 8.1 实体化副本（squashfs shard，2026-07-29 追加）
+### 8.1 实体验证集（独立 squashfs 文件，2026-07-29 追加）
 
-除索引形式外，valset_v1 另外物化为**与月度训练 shard 完全同构**的独立 squashfs 文件：目录布局为 `TICKER/TICKER_<date>_message_val<GLOBALIDX>.npy.zst` 与同名 `_orderbook_` 配对文件（每文件恰存一个 500 行窗口，切片行区间与训练管线逐字节一致），附同格式 in-shard `index.json`。现有 dataloader 把 `DATA_ROOT` 指向其挂载点即可直接使用，唯一差异是评测时传 `--random_offsets_train False`；文件名内嵌 global_idx 可溯源回索引产物。
+**它是什么**：一个单独的 `.squashfs` 文件，把验证集每个样本的原始数据真正装了进去。挂载之后看起来就是一个普通的数据目录，和训练数据的月度包长得一模一样——所以现有的训练、评测代码不用改，把数据路径指过去就能读。
+
+**里面装了什么**（30,720 档）：61,440 个数据文件 + 一份目录清单（`index.json`，格式与训练月度包里的完全相同）+ 一份说明（`VALSET_MATERIALIZE_MANIFEST.json`）。每个样本对应两个文件：一个装它的 500 条逐笔消息，一个装配套的 500 行订单簿快照，按股票分文件夹存放。这些数据是从 26,951 个源文件（ticker-交易日）里按行精确切出来的，切的行区间与训练时读到的一字不差。
+
+**文件名怎么读**：例如 `AAPL/AAPL_2023-05-17_message_val00123456.npy.zst`——AAPL 在 2023 年 5 月 17 日的一个样本；`val` 后面的 8 位数字是它在验证集里的全局编号，凭这个编号可以在来历档案（`provenance_*.npz`）里查到它出自哪个源文件的第几行到第几行。同名把 `message` 换成 `orderbook` 就是它的订单簿文件，读数据的代码就是靠这对名字自动配对的。
+
+**体积**：30,720 档实际只有 **360 MB**（比预估小，因为订单簿相邻行差异极小、压缩率高）。307,200 档预计 ~3.6 GB。
+
+**怎么用**（三步，代码零修改）：
+
+```bash
+mkdir -p /tmp/valset && squashfuse shard_valset_v1_30720.squashfs /tmp/valset
+# 评测命令里：DATA_ROOT=/tmp/valset，并加一个参数 --random_offsets_train False
+# 用完：fusermount -u /tmp/valset
+```
+
+为什么要加那个参数：训练时读数据会在每个文件开头随机丢弃几百条消息（防止模型每轮看到完全相同的切窗位置）；而实体文件里每个文件恰好只有 500 条消息、本身就是样本，开头一条都不能丢，所以要把这个随机丢弃关掉。这是唯一的使用差异。
+
+**关键性质**：
+
+| Property | Value / behaviour |
+|---|---|
+| Self-contained | one file carries all sample data; no dependency on the 48 monthly source shards |
+| Layout-compatible | identical directory/naming/index scheme as training shards; loader needs no code change |
+| Read-only | squashfs is an immutable filesystem; contents cannot be modified after packing |
+| Integrity | SHA-256 of the shard file; per-sample byte-level provenance in `provenance_*.npz` |
+| Deterministic order | loader sorts by ticker → date → id; evaluation order is reproducible |
+| Traceable | global_idx in every filename links back to the index artifacts and manifest |
+| Verified | L1: 2,048 samples byte-compared against source rows; L2: mounted and read by the training dataloader |
+
+**和索引版是什么关系**：同一个验证集的两种形态。索引版只有 43 MB，轻，但用的时候要挂着 48 个月度源数据包；实体版自带数据，拷到哪里都能独立工作，适合发给合作者或归档。两者靠来历档案逐样本对应，打包时做过逐字节比对，内容保证一致。
+
+**当前状态与档位**：
 
 | Tier | File | Size | Status |
 |---|---|---:|---|
-| 30,720 | `squashfs/output/shard_valset_v1_30720.squashfs` | 360 MB | packed; byte-level verification in progress (0 failures so far) |
-| 307,200 | `squashfs/output/shard_valset_v1_307200.squashfs` | ~4 GB (est.) | queued |
-| 3,232,213 (1% N) | on demand | ~40–60 GB (est.) | not built |
-| full pool | on demand | ~70–100 GB (est.) | not built |
+| 30,720 | `squashfs/output/shard_valset_v1_30720.squashfs` | 360 MB | packed; byte-level check running (0 failures so far) |
+| 307,200 | `squashfs/output/shard_valset_v1_307200.squashfs` | ~3.6 GB (est.) | queued |
+| 3,232,213 (1% N) | on demand | ~38 GB (est.) | not built |
+| full pool (5,367,734) | on demand | ~63 GB (est.) | not built |
 
-质检为双层：L1 抽 2,048 个样本，把物化文件内容与源 shard 对应行区间逐字节比对；L2 用训练 dataloader 挂载物化 shard 冒烟（样本数断言 + 读取探针）。通过后连同 `provenance_*.npz`（每样本 ↔ 源文件行区间映射）与 SHA-256 一起落盘。构建脚本：`squashfs/{materialize_valset.py, verify_valset_squashfs.py, run_materialize.sh}`。
+构建与质检脚本：`squashfs/{materialize_valset.py, verify_valset_squashfs.py, run_materialize.sh}`。质检两层：L1 抽 2,048 个样本，把实体文件内容与源数据对应行逐字节比对；L2 用训练同款读数据代码把整个 shard 挂载读一遍（样本总数核对 + 首中尾三点试读）。两层都过了才把文件搬出、登记 SHA-256。
 
 **验证链**（构建时全部通过）：重建 N 与两条独立历史日志锚点吻合（8N `samples_per_node=40,402,673`、O2d 2N `=122,000,461`）→ torch `DistributedSampler` 等价性测试 → 最终 V 逐 seed 逆排列验证（图 3 即其可视化）。
 
