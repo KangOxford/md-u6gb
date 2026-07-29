@@ -23,7 +23,11 @@ ap.add_argument("--n_check", type=int, default=2048)
 A = ap.parse_args()
 
 from lob.lobster_dataloader import LOBSTER_Dataset, _np_load_zst
-prov = np.load(A.provenance)
+# npz 是 zip 容器：必须先整体读入内存并关闭句柄——fork 的 Pool worker 共享
+# 惰性 NpzFile 的文件偏移会并发互踩，zip 成员解压报 zlib.error（实测）。
+_npz = np.load(A.provenance)
+prov = {k: np.asarray(_npz[k]) for k in _npz.files}
+_npz.close()
 g_all = prov["global_idx"]
 rng = np.random.default_rng(20260731)
 pick = np.sort(rng.choice(len(g_all), min(A.n_check, len(g_all)), replace=False))
