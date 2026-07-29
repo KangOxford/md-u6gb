@@ -140,7 +140,7 @@ breadcrumb: tasks/validation_set/latest_valset.json
 
 **它是什么**：一个单独的 `.squashfs` 文件，把验证集每个样本的原始数据真正装了进去。挂载之后看起来就是一个普通的数据目录，和训练数据的月度包长得一模一样——所以现有的训练、评测代码不用改，把数据路径指过去就能读。
 
-**里面装了什么**（30,720 档）：61,440 个数据文件 + 一份目录清单（`index.json`，格式与训练月度包里的完全相同）+ 一份说明（`VALSET_MATERIALIZE_MANIFEST.json`）。每个样本对应两个文件：一个装它的 500 条逐笔消息，一个装配套的 500 行订单簿快照，按股票分文件夹存放。这些数据是从 26,951 个源文件（ticker-交易日）里按行精确切出来的，切的行区间与训练时读到的一字不差。
+**里面装了什么**（30,720 档）：61,440 个数据文件（覆盖 487 只股票；唯低活跃的 Q 在此档无样本） + 一份目录清单（`index.json`，格式与训练月度包里的完全相同）+ 一份说明（`VALSET_MATERIALIZE_MANIFEST.json`）。每个样本对应两个文件：一个装它的 500 条逐笔消息，一个装配套的 500 行订单簿快照，按股票分文件夹存放。这些数据是从 26,951 个源文件（ticker-交易日）里按行精确切出来的，切的行区间与训练时读到的一字不差。
 
 **文件名怎么读**：例如 `AAPL/AAPL_2023-05-17_message_val00123456.npy.zst`——AAPL 在 2023 年 5 月 17 日的一个样本；`val` 后面的 8 位数字是它在验证集里的全局编号，凭这个编号可以在来历档案（`provenance_*.npz`）里查到它出自哪个源文件的第几行到第几行。同名把 `message` 换成 `orderbook` 就是它的订单簿文件，读数据的代码就是靠这对名字自动配对的。
 
@@ -174,7 +174,7 @@ mkdir -p /tmp/valset && squashfuse shard_valset_v1_30720.squashfs /tmp/valset
 
 | Tier | File | Size | Status |
 |---|---|---:|---|
-| 30,720 | `squashfs/output/shard_valset_v1_30720.squashfs` | 360 MB | packed; byte-level check running (0 failures so far) |
+| 30,720 | `squashfs/output/shard_valset_v1_30720.squashfs` | 359 MB | **verified & delivered** (L1: 2,048 samples byte-identical; L2: loader reads all 30,720; sha256 ffcb71d90d96…) |
 | 307,200 | `squashfs/output/shard_valset_v1_307200.squashfs` | ~3.6 GB (est.) | queued |
 | 3,232,213 (1% N) | on demand | ~38 GB (est.) | not built |
 | full pool (5,367,734) | on demand | ~63 GB (est.) | not built |
