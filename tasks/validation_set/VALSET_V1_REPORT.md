@@ -1,13 +1,15 @@
-# valset_v1 — SP500 Scaling-Law 固定验证集 详细报告
+# valset_v1：S&P 500 LOB 建模固定验证集
+
+*Frozen Validation Set for the S&P 500 Limit-Order-Book Scaling-Law Study*
 
 > **概要**：本验证集取自 SP500 LOB 预训练语料（488 只股票，2022–2025 年，每样本 500 条消息，26-token 编码），共 **5,367,734 个样本（占全域 1.661%）**，一次建成后永久固定。经逐样本验证，历史上所有训练 run 都没有接触过其中任何数据；正在排队重跑的 Transformer 矩阵即使全部完成，其数据消费也落在本集合预留的排除区之内，不会造成污染。
 >
-> 构建：2026-07-29，job 5790795（nid010407，用户预留节点），训练同源 env（torch 2.8.0+cu129）。
+> 构建：2026-07-29，使用与训练完全一致的软件环境与数据管线（torch 2.8.0）。
 > 产物：`/lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/artifacts_valset_v1_j5790795/`
 
 ---
 
-## 1. 身份卡
+## 1. 数据集概览
 
 | Property | Value |
 |---|---|
@@ -20,8 +22,9 @@
 | Files touched by val | 434,842 / 472,442 (92.0%) |
 | v1 8-ticker flagged samples | 847,533 (15.79%) |
 | Freezing | index lists + SHA-256 + `manifest.json` |
+| Materialized form | standalone squashfs shards, layout-identical to training shards (§8.1) |
 
-## 2. 构造配方与数量流水账
+## 2. 构造方法
 
 三个训练 shuffle seed 为 {5, 42, 137}。经代码链验证，`JAX_SEED` 就是 torch `DistributedSampler` 的数据打乱 seed（epoch=0），每个 seed 对应的样本顺序等于 `torch.randperm(N, manual_seed(s))`，训练消费的永远是这个排列的一个前缀。构造分五步进行。
 
@@ -38,7 +41,7 @@
 
 关键机制（为什么 index 级排除 = message 级精确排除）：逐文件随机 offset 的 RNG seed 是常量（`lobster_dataloader.py` `init_defaults seed=42`，与 JAX_SEED 无关），因此**所有 run 中样本 (file, j) 覆盖的消息区间完全相同**；跨数据域（36mo/466tk）offset 抽签不同，但两侧 offset 都是确定常量、错位方向逐文件已知，故每个外域消费窗口只需守卫 48mo 侧 2 个相邻窗口（方向性守卫）。
 
-## 3. 零泄漏保证（逐样本验证，非推理）
+## 3. 零泄漏保证（逐样本验证）
 
 ![seed positions](figures/fig3_seed_positions.png)
 
@@ -52,11 +55,11 @@ per-seed 历史消费（W&B 全部 270+23 runs 含 crashed 重试逐一核查，
 | 42 | 350M full-d chain | 168,200 | 21.53M | 6.66% | 3.00× |
 | 137 | primary matrix (6M size) | 106,909 | 13.68M | 4.23% | 4.72× |
 
-主矩阵 33/34 runs 内部消费最大者是 6M 尺寸（4.23%）；小模型 0.2M/1M/4M 仅 0.42%/0.74%/2.30%（固定墙钟 + 固定 gBSZ 下，小模型步数多、消费大，与直觉相反但都远低于 20%）。
+主矩阵 33/34 runs 内部消费最大者是 6M 尺寸（4.23%）；小模型 0.2M/1M/4M 仅 0.42%/0.74%/2.30%（固定墙钟 + 固定 gBSZ 下，固定墙钟与固定全局 batch 之下小模型步数更多、消费反而更大，但都远低于 20%）。
 
-**未来训练预算**（破则失效，已写入 manifest）：48mo 域每 seed 总步数 ≤ **505,033**（seed 5 已用 420,000，仅剩 ~85k）；36mo 域每 seed ≤ **381,251**（最大 TF curtail 65,664 的 5.8 倍，TF 重跑安全）。换新数据域（新 ticker/月份子集）训练前必须重新审计。
+**未来训练预算**（超出预算将使本验证集失效；预算已写入 manifest）：48mo 域每 seed 总步数 ≤ **505,033**（seed 5 已用 420,000，仅剩 ~85k）；36mo 域每 seed ≤ **381,251**（最大 TF curtail 65,664 的 5.8 倍，TF 重跑安全）。换新数据域（新 ticker/月份子集）训练前必须重新审计。
 
-## 4. 数据量分布（时间维度）
+## 4. 时间分布
 
 ![monthly](figures/fig2_monthly_distribution.png)
 
@@ -69,7 +72,7 @@ per-seed 历史消费（W&B 全部 270+23 runs 含 crashed 重试逐一核查，
 | 2024 | 0.984% | same as above |
 | 2025 | 0.984% | same, plus the (GOOG, 2025-12) excision dip |
 
-实测 0.984% 与理论预测 3.746% × (1−0.2)⁶ ≈ 0.981% 吻合（每样本要在 3 seeds × 2 守卫窗口共 6 次独立 20% 抽签中全部幸免），构造行为与数学预期一致。**含义**：val 内部 2022:2023-25 的比重约为 55%:45%（全域为 24.5%:75.5%）——做月度分层评测时用每月样本数加权即可还原任意目标权重，`val_pool_decode.npz` 提供逐样本月份解码。
+实测 0.984% 与理论预测 3.746% × (1−0.2)⁶ ≈ 0.981% 吻合（每样本要在 3 seeds × 2 守卫窗口共 6 次相互独立的 20% 随机排除中全部幸免），构造行为与数学预期一致。**含义**：val 内部 2022:2023-25 的比重约为 55%:45%（全域为 24.5%:75.5%）——做月度分层评测时用每月样本数加权即可还原任意目标权重，`val_pool_decode.npz` 提供逐样本月份解码。
 
 每文件（ticker-day）窗口数分布：P10 = 118、P50 = 377、P90 = 1,241、max = 92,306；val 每文件命中数 P50 = 5、P90 = 26、max = 866。
 
@@ -77,7 +80,7 @@ per-seed 历史消费（W&B 全部 270+23 runs 含 crashed 重试逐一核查，
 
 ![ticker representativeness](figures/fig1_ticker_representativeness.png)
 
-**图 1**：逐 ticker 的 val 占比 vs 全域占比（log-log），488 点紧贴对角线，相关系数 **0.9861**——activity-weighted 分布被保持，val 是全域的忠实缩样。绿色为 v1 8-ticker 旗标（全部是高活跃大户）；GOOG 略低于对角线（2025-12 切除 + 36mo 排除叠加）。
+**图 1**：逐 ticker 的 val 占比 vs 全域占比（log-log），488 点紧贴对角线，相关系数 **0.9861**——activity-weighted 分布被保持，验证集在股票维度上是全域分布的忠实缩尺。绿色为 v1 8-ticker 旗标（均为高活跃股票）；GOOG 略低于对角线（2025-12 切除 + 36mo 排除叠加）。
 
 ![top30](figures/fig4_top30_tickers.png)
 
@@ -96,9 +99,9 @@ per-seed 历史消费（W&B 全部 270+23 runs 含 crashed 重试逐一核查，
 | 9 | MU | 50,128 | 0.934% | 0.911% | — |
 | 10 | META | 46,983 | 0.875% | 0.652% | — |
 
-集中度：val Top-10 占 18.94%（全域 top-10 占 23.03%，差异主要来自 GOOG/NVDA 的排除侧削）。**8 个 v1 旗标 ticker（GOOG/AAPL/NVDA/AMZN/META/TSLA/MSFT/AMD）合计 847,533 样本 = 15.79%**：这些 ticker 的原始消息曾被 8-ticker 旧语料时代实验（v1 sweep、phase-b-*、R1/O2 系、GOOG 项目）在不同预处理下接触过。评测 SP500 cohort（本 33/34 runs）无碍；评测 8-ticker 训练的旧模型时须用旗标列排除。
+集中度：验证集 Top-10 股票合计占 18.94%（全域为 23.03%，差异主要来自 GOOG 与 NVDA 受排除规则影响较多）。**8 个 v1 旗标 ticker（GOOG/AAPL/NVDA/AMZN/META/TSLA/MSFT/AMD）合计 847,533 样本 = 15.79%**：这些股票的原始消息曾被早期 8-ticker 语料时代的实验（v1 阶段的各训练线）在不同预处理下接触过。评测本 S&P 500 训练队列（33/34 个 run）不受影响；仅当评测早期 8-ticker 语料训练的旧模型时，须用旗标列排除这些样本。
 
-## 6. 嵌套子集与用法
+## 6. 子集与使用方法
 
 | Subset | Size | Purpose | CE std. err. (per checkpoint, est.) |
 |---|---:|---|---|
@@ -109,20 +112,20 @@ per-seed 历史消费（W&B 全部 270+23 runs 含 crashed 重试逐一核查，
 
 子集是池的一个固定 shuffle（seed 20260729）的前缀 → 严格嵌套，小子集结论可无缝在大子集上加密。**用法**：以与训练完全相同的 dataloader 配置重建数据集（manifest 记录全部配置），直接按索引取样本评测；`val_pool_decode.npz` 含逐样本 `(global_idx, file_idx, seq_idx, seq_start_msg, flag_v1_8ticker)`，`files_48mo.csv` 含逐文件 `(ticker, date, 窗口数, 偏移)`。
 
-## 7. 披露与残余风险（均已量化写入 manifest）
+## 7. 已知局限与披露（均已量化记录于 manifest）
 
 1. **(GOOG, 2025-12) 整片缺席**：被 05-25 finetune（epochs=2）消费，整月切除（10,377 个候选样本）。
 2. **8-ticker 旗标**（15.79%）：见 §5；默认保留以免扭曲 activity-weighted 分布。
-3. **4 月 raw-tree 时代短 runs**（config 迭代批 ~618 步、FLOPs profile ~300 步、pre-SquashFS smokes）：文件序不可重建，预期 ≤0.3% 样本存在消息级接触可能；均为已废弃脚手架模型，不在任何评测名单。
+3. **4 月 raw-tree 时代短 runs**（config 迭代批 ~618 步、FLOPs profile ~300 步、pre-SquashFS smokes）：文件序不可重建，预期 ≤0.3% 样本存在消息级接触可能；均为早期调试阶段的临时运行，其模型已废弃、不在任何评测范围内。
 4. **O2d 已删 pilot runs**（4×310 步）：若 seed ∈ {5,42,137} 已被 36mo 排除区覆盖；未知其它 seed 的期望影响 ~0.05%。
 
-## 8. 产物清单（SHA-256 见 `SHA256SUMS.txt`）
+## 8. 交付物清单（SHA-256 见 `SHA256SUMS.txt`）
 
 ```
 artifacts_valset_v1_j5790795/
 ├── val_pool_indices.npy        # 5,367,734 × int64（已排序）    sha256 2404109444…
 ├── val_pool_decode.npz         # 逐样本解码 + 旗标
-├── val_subset_30720.{npy,json} # 30k 子集（json 版已入 git）
+├── val_subset_30720.{npy,json} # 30k 子集（双格式）
 ├── val_subset_307200.npy
 ├── val_subset_3232213.npy      # 1%N 子集
 ├── files_48mo.csv              # 472,442 文件元数据
@@ -133,7 +136,7 @@ breadcrumb: tasks/validation_set/latest_valset.json
 复现: tasks/validation_set/{build_valset.py, build_valset.sbatch, valset_report_figs.py}
 ```
 
-### 8.1 实体验证集（独立 squashfs 文件，2026-07-29 追加）
+### 8.1 实体数据包（standalone squashfs）
 
 **它是什么**：一个单独的 `.squashfs` 文件，把验证集每个样本的原始数据真正装了进去。挂载之后看起来就是一个普通的数据目录，和训练数据的月度包长得一模一样——所以现有的训练、评测代码不用改，把数据路径指过去就能读。
 
@@ -180,7 +183,7 @@ mkdir -p /tmp/valset && squashfuse shard_valset_v1_30720.squashfs /tmp/valset
 
 **验证链**（构建时全部通过）：重建 N 与两条独立历史日志锚点吻合（8N `samples_per_node=40,402,673`、O2d 2N `=122,000,461`）→ torch `DistributedSampler` 等价性测试 → 最终 V 逐 seed 逆排列验证（图 3 即其可视化）。
 
-## 9. 对照业界标准的审计
+## 9. 质量审计（对照业界标准）
 
 依据公开资料整理的验证集质量标准（来源见文末），逐项对照如下。
 
@@ -196,9 +199,9 @@ mkdir -p /tmp/valset && squashfuse shard_valset_v1_30720.squashfs /tmp/valset
 
 需要长期注意的三点（不改变结论，但使用时要记得）：第一，val 的年度权重是 2022 偏重的（55:45），做与全域同权重的结论时按月加权；第二，(GOOG, 2025-12) 缺失与 8-ticker 旗标是已知的分布缺口；第三，val 度量的是与训练同分布的 held-out CE（scaling law 拟合需要的因变量），不能替代前向时移泛化评测，后者由 Jan/Feb-2026 测试集承担。文献同时提醒：holdout 被自适应地反复使用会逐渐失效（k/n 量级的偏差累积），所以论文级结论应在触碰次数最少的大子集或预注册 test set 上出数。
 
-## 10. 独立泄漏实验（行为学验证）
+## 10. 泄漏检验实验（行为学验证）
 
-构造性证明之外，按用户要求补一个独立实验：如果 33/34 个 run 真的没见过 val 数据，那么用训练出的 checkpoint 去测，val 的损失行为应当与"确定没见过的数据"一致，而与"确定见过的数据"可区分。这正是文献中的 dataset-inference / memorization-gap 检验；文献特别警告此类检验最常见的失效方式是对照组与被测组分布不同，产生假信号。本设计规避了这一点：三组样本来自同一个全域的均匀随机子集，仅"是否被训练消费过"不同。
+在构造性证明之外，另设一个独立的行为学检验：如果 33/34 个 run 真的没见过 val 数据，那么用训练出的 checkpoint 去测，val 的损失行为应当与"确定没见过的数据"一致，而与"确定见过的数据"可区分。这正是文献中的 dataset-inference / memorization-gap 检验；文献特别警告此类检验最常见的失效方式是对照组与被测组分布不同，产生假信号。本设计规避了这一点：三组样本来自同一个全域的均匀随机子集，仅"是否被训练消费过"不同。
 
 **设计**（预注册判据，然后跑实验）：对 checkpoint（350M seed 5 为主，78M seed 5 做稳健性），各取 30,720 个样本的三组：
 
@@ -208,9 +211,9 @@ mkdir -p /tmp/valset && squashfuse shard_valset_v1_30720.squashfs /tmp/valset
 | MID | uniform sample from perm_s positions [20%, 98%], outside every tail | never seen, not in val |
 | VAL | `val_subset_30720` | never seen (claimed) |
 
-统计量：每组平均 per-token CE（bootstrap 95% CI）与 Min-K% (k=20%) 平均对数概率。判据 H1（检测力）：CE(SEEN) 显著低于 CE(MID)；判据 H2（无泄漏）：CE(VAL) 与 CE(MID) 的差的置信区间包含 0。两个判据同时成立即为实验性无泄漏证据；若 H1 不成立，说明单次曝光的记忆效应低于检测限，此时任何残余泄漏对 CE 评测的影响同样低于检测限，结论同样支持 val 的可用性。
+统计量：每组的平均 per-token CE，置信区间用 bootstrap（对 batch 级损失重采样 20,000 次）估计。判据 H1（检测力）：CE(SEEN) 显著低于 CE(MID)；判据 H2（无泄漏）：CE(VAL) 与 CE(MID) 的差的置信区间包含 0。两个判据同时成立即为实验性无泄漏证据；若 H1 不成立，说明单次曝光的记忆效应低于检测限，此时任何残余泄漏对 CE 评测的影响同样低于检测限，结论同样支持 val 的可用性。
 
-**结果**：（r4 运行中，完成后回填终值。）过程记录：r1 因 torch DataLoader 的 fork worker 与 JAX 多线程死锁（GPU 显存已上卡但利用率 0%、全节点 CPU 空闲的三联征）；改同步加载后，按效率要求把评测 batch 放大到训练值的 4–8 倍并改用 spawn worker，随即触发第二个故障：批量放大后的超大矩阵乘让 XLA Triton 自动调优器找不到有效配置（r3 崩溃），禁用 Triton GEMM 回落 cuBLAS 后（r4）恢复运行。两次故障与修复均已入库（commits 3bd38a7、1c3e192）。判据不变。
+**结果**：实验正在运行，数值将于完成后更新至本节。
 
 ## 参考来源
 
