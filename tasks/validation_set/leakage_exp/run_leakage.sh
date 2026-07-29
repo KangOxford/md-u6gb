@@ -38,7 +38,7 @@ cd "$EXP_DIR"
 # spawn workers 并行解压喂数据；两 checkpoint 共享一次数据集构建。
 python -u "$LEAK_DIR/leakage_test.py" \
     --restore checkpoints/j4499538_5vu8avcx_4499538,checkpoints/j4499580_j8cfcraa_4499580 \
-    --label 78M-s5,350M-s5 --micro_bsz 8,2 --n_data_workers 12 \
+    --label 78M-s5,350M-s5 --micro_bsz 8,2 --n_data_workers 0 \
     --data_root "$DR" --out_json "$LEAK_DIR/results/leak.json"
 echo "[done] both checkpoints"
 echo "LEAKAGE_WRAPPER_OK"
