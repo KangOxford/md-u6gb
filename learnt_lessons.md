@@ -1,5 +1,9 @@
 # Learnt Lessons
 
+## 2026-07-29 Safe symlink creation
+
+- Resolve and inspect both paths before linking; use `ln -s` only when the link name is absent so no existing content is replaced.
+
 ## 2026-07-20 Avoiding Dynamic Slicing in JAX Vectorized Loss Functions
 
 - Avoid using `jnp.vectorize` with scalar dynamic indexing (`logits[label]`) over batch/sequence dimensions. While syntactically concise, XLA lowers dynamic indexing into elementwise `DynamicSlice`/`Gather` nodes, creating trace slowdowns and kernel launch bottlenecks on GPU/TPU v5p.
@@ -469,3 +473,5 @@ L105 UTC 2026-07-29T20:40:00Z: r6-r8 三连 Killed 的真凶定案：同一预�
 L1785350968 UTC 2026-07-29T18:49:28Z: spawn DataLoader worker 会 re-import 主模块并重新执行全部顶层代码（argparse→provenance→jax backend init→dataset 重建→甚至进入 ckpt 循环，且 worker 里再 spawn 12 worker=指数灾难）。任何用 multiprocessing_context='spawn' 的脚本必须把执行流放进 if __name__=='__main__'。leakage_test.py 系列（r3-r6）从未暴露此坑：全部死于更早阶段（autotune/OOM/取消），从未活到首次 loader 迭代——同一隐患仍在其脚本中。valset_ce_eval.py 已重写为函数化+main guard；旧 step 5790795.73 已 scancel。
 L1785351300 UTC 2026-07-29T18:55:00Z: token syntax mask 必须禁止所有结构上非法 special token，不能因某架构历史上“通常不生成 START”就保留 START 概率；full-distribution sampling 会把任何非零概率变成稀有生产事故。sentinel（NA_VAL=-9999）绝不能无校验进入时间算术。inference 完成门不能只数文件/行数，还必须校验时间单调、time_ns 范围、special-token 与 finite 值。scorer 的 nonfinite strict gate 正确暴露上游 contract violation；dropna/clamp 会掩盖而非修复。
 L106 UTC 2026-07-29T21:10:00Z: r6-r9 连环死的最终真凶修正：leakage_test.py 是无 __main__ 保护的平铺脚本，spawn DataLoader worker 按语义重新 import 主模块 → 12 个 worker 各自完整重跑全脚本（重建 323M 数据集 + 各开 JAX GPU 上下文）→ 内存爆炸被内核击杀。铁证指纹：日志中 "[jax] devices: 4" 在 JIT 完成后二次出现（worker 重跑到脚本开头的打印）。农场共存（L105）只是放大器。规则：任何会被 spawn worker 触碰的入口脚本必须有 if __name__ == "__main__" 保护；平铺实验脚本一律禁用 spawn workers（用 num_workers=0 或重构成 main()）。r10 改同步加载。
+L1785353260 UTC 2026-07-29T19:27:40Z: stochastic replay 的“同一个 dataset index”不等于“同一次采样”；必须保留 rank seed、完整 batch width、slot 与此前每次 PRNG split。调试开关若改变 top-n 或输入也不是观察工具：本例 overfit_debug 会改 sample_top_n=1 并喂 real book，故只能新增 host-side token trace。父 allocation RUNNING 也不代表 GPU 可用，物理占用时准确状态必须写 waiting。
+L107 UTC 2026-07-29T21:40:00Z: 泄漏实验 r1-r11 十一版连败系统性复盘（用户点名深刻反思）：四个方法论根因——①违反自己记忆中已有的冒烟铁律（新管线无 --smoke 直接全量，8/11 轮是这一个错的利息）；②执行层自作主张而非抄生产（照抄 eval_test_ce 的部分零故障，自创的 workers/BSZ/聚合全炸）；③诊断先怪环境不疑自己、把"作为修复引入的 spawn"排除出嫌疑清单，[jax] devices 二次打印的铁证在日志里躺四轮（grep 关键词采样代替通读）；④排障期优化对象错置（优化成功吞吐而非失败周期，15min×11 轮纯等待）。已固化为长期记忆 new-pipeline-three-rules。
