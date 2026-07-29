@@ -34,3 +34,13 @@
 - Keep the Q1 checkbox unchecked until the user explicitly confirms understanding.
 - Wait before starting pXiP Q2. The next experiment remains the checkpoint-matched free refit on Jan-2026 test CE, and its absence must not be hidden by the earlier locked-exponent figure or the later different-sweep fit.
 - Make no further `Overleaf_codex` manuscript edits and do not push while this sequential Notion clarification is awaiting user review.
+
+## Result-table plan — 2026-07-29 14:26 UTC
+
+- Completed: locate the exact bracketed table instruction on the supplied Rebuttal page and update that location rather than appending elsewhere.
+- Completed: use `aramis/results/selected_test_endpoint.csv` as the raw 33-row source and `aramis/results/main_fits.csv` plus bootstrap summaries for the compact fit table.
+- Completed: preserve all 33 currently used observations in a 12-size audit table with actual `N`, evaluated `D`, per-seed January-2026 held-out CE, and cross-seed mean/sample SD.
+- Completed: disclose that “terminal” currently means final available evaluated checkpoint and that `46M-s5` is included despite not reaching its target; distinguish 33 manifest-selected rows from 32 strict target-reaching rows.
+- Completed: disclose the actual 2.048-decade parameter span, missing `23M-s42`, nominal `350M` label, excluded finisher, and absence of valid completed Transformer points.
+- Completed: re-fetch the Notion page and verify the original instruction is struck through and the blue callout remains directly below it.
+- No refit, manifest repair, experiment launch, manuscript edit, or Transformer result substitution is authorized by this round. If the user requests a strict terminal estimate, first correct the cohort to 32 rows and regenerate every dependent fit/bootstrap artifact as a separately committed analysis batch.

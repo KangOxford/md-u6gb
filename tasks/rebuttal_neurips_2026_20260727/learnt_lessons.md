@@ -31,3 +31,12 @@
 - Rounded values are unsafe identifiers. Here `0.90` can mean the rounded compute-profile exponent `gamma=0.899729`, the near-mature training-loss exponent `beta=0.9438`, or the later interim long-D exponent `beta=0.9169`; every answer must name the symbol, data, and selection protocol.
 - Fitting a low-dimensional scaling surface to frozen-checkpoint test CE is not training the neural network on the test set. It is still a test-set model-selection step and must be reported separately from an untouched final evaluation.
 - “D-restricted,” “tail-25%,” “loss-cutoff,” and “long-D interim” are distinct estimands. Their numerical proximity or disagreement does not license substituting one for another in a reviewer response.
+
+## Result-table audit lessons — 2026-07-29 14:26 UTC
+
+- A manifest `COMPLETED` or `reached_curtail=1` flag is not sufficient completion evidence. Compare `final_step` with `target_step` and inspect the terminal training log before calling a run complete.
+- “Terminal checkpoint” can silently mean “last available evaluated checkpoint.” This distinction matters when evaluation coverage stops before the intended training budget, as for `46M-s5`.
+- Aggregate means must retain the per-seed raw values and exceptional `D` values. Otherwise the 46M row would hide that one seed was evaluated at 89.806B tokens while the other two were evaluated at 105.514B.
+- Nominal size labels are not parameter counts. Reviewer-facing range claims must use checkpoint-introspected `N`; here the true 2.626M-to-293.283M span is 2.048 decades, not the 3.24 decades implied by plan labels.
+- A current fit can be reproduced faithfully while still carrying a cohort-definition error. Report the existing 33-row result as-is for provenance, then label the strict 32-row refit as a new corrected estimand if it is later requested.
+- Partial Transformer evaluations and throughput profiles are not completed Transformer scaling-law points. Cross-architecture tables should remain empty until matched terminal loss trajectories exist.

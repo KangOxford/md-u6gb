@@ -44,3 +44,13 @@
 - Inserted one blue Codex callout directly below pXiP Q1 via a minimal parent-page update. It distinguishes the literal common-D refit from the tail-25%, near-mature loss-cutoff, long-D interim, compute-profile gamma, and Jan-2026 held-out protocols.
 - Re-fetched the exact anchor and verified one title marker, all four identifying values, the Jan-2026 clarification, and the still-unchecked Q1 checkbox.
 - No `Overleaf_codex` file was changed or pushed. Work is paused before Q2 pending the user’s confirmation that Q1 is understood.
+
+## Current held-out result-table round — 2026-07-29 14:26 UTC
+
+- Fetched the exact Rebuttal page and located `\[把已经跑出来的实验结果 写成一个表格\]` directly below the terminal-checkpoint sentence.
+- Read-only audited the scaling-law, Mamba-3, and Transformer directories. Confirmed the current result source is the 33-row `aramis/results/selected_test_endpoint.csv`; no valid completed Transformer point belongs in this cohort.
+- Aggregated all 33 rows into 12 nominal-size rows while retaining actual `N`, evaluated `D`, per-seed held-out CE, mean, and sample SD.
+- Found and verified the `46M-s5` contradiction: manifest says completed, but checkpoint/log evidence shows 53,970/63,407 and a time-limit interruption. The Notion table explicitly distinguishes 33 currently selected rows from 32 strict target-reaching rows.
+- Updated the target in place. The original bracketed instruction is struck through and a blue callout immediately below contains the raw-result table, fit summary, bootstrap intervals, and provenance/completion caveats.
+- Re-fetched the page after writing and verified the rendered callout contains all 12 sizes, terminal and final-25% fit rows, `46M-s5` warning, actual 2.048-decade range, source hash, and Transformer exclusion.
+- No experiment was launched, no fit was recomputed, no manuscript/source file was edited, and no unrelated working-tree modification was touched.
