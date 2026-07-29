@@ -1,5 +1,9 @@
 # Progress
 
+## 2026-07-29 s5e_lobpipeline symlink
+
+- Target and destination preflight completed; symlink creation and resolution verification are in progress.
+
 ## 2026-07-20 Code analysis and comparison of cross_entropy_loss in LOBS5 vs s5e_mamba3
 
 - Located `cross_entropy_loss` implementation in both `/projects/public/u6gb/FLAIROx/LOBS5/lob/train_helpers.py` (L600) and `/projects/public/u6gb/s5e_mamba3/lob/train_helpers.py` (L733).
@@ -567,3 +571,8 @@ PG1785349000 UTC 2026-07-29T18:16:40Z: 已完成 attached smoke 纠错和正式�
 PG1785349600 UTC 2026-07-29T18:26:40Z: 已创建并 fetch 验证 Notion How-to `How to — 把 LOBBench attach 到正在运行的 SLURM allocation`（3ac12c45…f2da），并在 `sigma0 load checkpoints` 与 `refactoring the code base` 添加入口。页面记录 exact srun/tmux 流、门禁、交接、失败恢复、脚本/commit/产物地图和验收边界。.53 与后起 valset-ce .59 冲突均已精确取消并核验，.47 继续 RUNNING。
 PG1785349656 UTC 2026-07-29T18:27:36Z: gate_and_run_valset.sh 已作为 srun step 挂上 5790795（job-name=valset-ce），等 LOB-Bench farm 释放 GPU1-3 后自动全量评测；脚本断点续跑，被抢占不损失已完成 ckpt。
 PG101 UTC 2026-07-29T20:42:00Z: 泄漏实验改道独立 sbatch j5826356（预留节点 GPU 被合法推理评测占用，遵守 overlap GPU gate 规程）；双监视：sbatch 启动/里程碑 + 农场退场信号。实体验证集两档交付不受影响。
+PG1785351300 UTC 2026-07-29T18:55:00Z: .47 generation 3136/3136 COMPLETED；修复 score launcher env 为 /usr/bin/env 并提交 46db32f，retry .69 完成21/21后由 nonfinite strict gate 正确拒绝正式 summary。完成 score pickle/CSV/source/mask 审计与 CPU START-token 注入反例，定位 -9999ns inference bug；已把终态和 E0-E5 deterministic replay/A-B/validator/full-regression 计划写入并 fetch 验证 Notion How-to 3ac12c45…f2da，同时刷新 topic 与 refactoring 页。
+PG1785351764 UTC 2026-07-29T19:02:44Z: 并行化改造完成并启动：valset_ce_eval.py 改工作队列模式(mkdir 原子锁+params 降序 LPT)+parallel_valset.sh(每 GPU 一个单卡 worker、共享挂载+共享 JAX 编译缓存、per-GPU gate、GPU0 等 LOB-Bench 退出自动纳入、worker 崩溃重试 1 次)。
+PG1785352584 UTC 2026-07-29T19:16:24Z: 4-GPU 工作队列第 3 轮跑通：per-token→per-sample 收集修复后 350M-s5/350M-s42/200M-s5 三卡稳跑（0.15-0.20s/b，350M≈51min/ckpt）。batch0 sanity：350M-s5 loss 0.614 vs Jan macro CE 0.611 同量级 ✓。全队列墙钟预计 ~2h。eval_step 返回 (B,13000) per-token CE，逐样本 loss 全量落盘（macro/micro/按月重加权皆可后处理精确计算）。
+PG1785353260 UTC 2026-07-29T19:27:40Z: 交付 ADHD 逐句说明 docs/runbooks/lobbench_negative_time_root_cause_adhd.md（c782b5b+4960c35）；建独立 diagnostic clone/branch 5b354d0；main 579e5c4 增 E2 attach launcher/analyzer；CPU 核验三 slot RNG keys。启动 node-local tmux sigma0_m3trace_5790795，artifact root=j5705912_step69378_start_trace_j5790795_e2_v1，当前 waiting。Notion How-to 增 E2 状态并 fetch 六项关键字全通过；sigma-0 四记录已提交 1755915。
+PG1785353851 UTC 2026-07-29T19:37:31Z: E2 launch hardening 已提交 0e51cbb/8969a0f/8e1c0aa，CPU import+3/3 RNG 复算通过；四份 sigma-0 记录提交 4a22419。Notion How-to 的 E2 时间刷新至 19:36 UTC，并 fetch 验证 PID 110152、三 hardening commits、no-must-stop review。现状仍 waiting，GPU0≈83.3GiB、GPU1-3≈79.1GiB。

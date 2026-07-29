@@ -1,5 +1,10 @@
 # Plans
 
+## 2026-07-29 s5e_lobpipeline symlink
+
+- Create `/projects/public/u6gb/s5e_lobpipeline` as a symbolic link to `/projects/public/s5e/quant_team/lob_pipeline`, without replacing or deleting existing content.
+- Verify both the stored link target and directory resolution.
+
 ## 2026-07-20 Analysis and comparison of cross_entropy_loss in LOBS5 vs s5e_mamba3
 
 - Search and locate `cross_entropy_loss` definition across `FLAIROx/LOBS5` and `s5e_mamba3`.
@@ -457,3 +462,14 @@ P120 UTC 2026-07-29T15:58:06Z: 用户指示 pilot 模式（"request 多个 nodes
 P121 UTC 2026-07-29T16:49:03Z: 维持 pilot 纪律：不因排队焦虑提前补提剩余 6 pilot（壳机制的真实验证只能来自首个 pilot 起跑；bug 情形下 9 allocation 各浪费一次排队 > 晚几小时入队的损失）。监控事件驱动：首 pilot RUNNING+首实验 tqdm 健康 → 立即错峰补提 8n-B/4n-B/4n-C/2n-B/2n-C/2n-D。
 P122 UTC 2026-07-29T16:54:32Z: 新增巡检项：若未来监控发现 job reason 翻成 AssocGrp*MinutesLimit（项目配额耗尽），立即暂停补提并上报用户（sweep 总预算 536 nhr 可能撞 u6gb 项目 allocation 墙）。其余维持 P121 触发器不变。
 P119 UTC 2026-07-29T17:40:00Z: 用户新需求：valset_v1 物化为独立 squashfs（约束：与 training shard 完全同构，代码零改动可用）。方案：每样本一对 message/orderbook 文件（各 500 行，文件名嵌 global_idx、保留原 date 供范围过滤，stem 配对规则同 _discover_from_index），in-shard index.json 同格式；评测唯一差异 = --random_offsets_train False。体积实测 43B/行（2024-06 shard 110.87GB/25.75 亿行）→ 30720 档 ~1.3GB、307200 档 ~13GB 先行交付；1%N ~140-200GB、全池 ~230-460GB 按需再跑。双层自检：L1 抽 2048 样本逐字节比对原 shard 行区间；L2 训练 dataloader 挂载冒烟（len+probe）。
+P123 UTC 2026-07-29T17:31:23Z: 本轮=find-session-id 轮(用户贴 15:00:15Z Slack 解释轮输出尾部+"找到这个")。计划=先核对四文件本轮落账完整性(P122/F115/L100 均在账),再按 skill 单管道以 Aramis 英文原话为 key 定位会话。
+P1785346820 UTC 2026-07-29T17:40:20Z: attached LOB-Bench 由一次性 gate 推进：仅在 0 compute PID 且四卡显存均低于 1 GiB 连续 3 次后运行 exact-checkpoint smoke，再运行 4-GPU 3136-window generation 和 CPU WS-21。最坏 walltime 安全门为 2026-07-29T18:29:41Z；到点仍忙则无重试记 blocked，绝不自行停止 leakage steps。
+P1785348701 UTC 2026-07-29T18:11:41Z: 新任务=33 个 scaling-law terminal ckpt（12 sizes×seeds, selected_test_endpoint.csv）在 valset_v1 30,720 实体包上算 validation CE，attach 到 5790795/nid010407 只用 GPU1-3（GPU0=sigma-0 LOB-Bench smoke 占 89GB 不碰）。计划：manifest join→eval 脚本（断点续跑）→0p2M-s5 smoke→全量→成果+文档 v1/v2→Notion 回填。
+P123 UTC 2026-07-29T18:15:41Z: 维持 P121/P122 触发器。新增：若未来出现 ≥2N 的兼容 RUNNING allocation 且剩余墙钟 ≥ 某实验预算，按 CLAUDE.md 新规则评估 attach 可行性（物理 GPU 门+零并跑原则）。
+P1785349000 UTC 2026-07-29T18:16:40Z: 保持 tmux session sigma0_lob_resume2_5790795 驱动 .47 generation→CPU WS-21；不把 RUNNING 写成已有结果。终态仅在 generation_complete.json、lobbench_summary.json 和 evaluation_complete.json 齐全，且 feature_count=21、ws21/ks21/l1_21 非空后确认；届时复核 sacct/log/score pickle 并回填同一 Notion 绿色 callout。
+P1785349600 UTC 2026-07-29T18:26:40Z: 继续保护 .47 为 parent allocation 唯一 GPU workload，并在终态把 How-to 的验证快照与 refactoring 状态同步更新。后续实现项：为 attached GPU stages 增加持续 lease/监督，避免 gate 通过后新 overlap step 抢 HBM；formal partial-output 失败前不得声称可原目录 resume，需新 TASK_ROOT 或实现可验证逐-rank续跑。
+P1785350281 UTC 2026-07-29T18:38:01Z: 等待期安排：login 侧 watcher（squeue 每 5min）盯 st-lobgen 结束→唤醒后重挂 gate→全量 33-ckpt eval 自动接续；文档 v1 方法论骨架已写 scratchpad；per-sample ticker 映射已提取并验证（487 块字母序、块内日期序，macro 重建可行）。walltime 账：余 ~16h，eval 需 ~5h，不够则迁移到 chain 后继 5823145 断点续跑。
+P1785351300 UTC 2026-07-29T18:55:00Z: inference 时间根因按 E0-E5 gate 定位：冻结 .69/三反例/commit/seed；CPU 枚举 special mask 并注入 START；按原 rank/batch/slot 与 JAX split 顺序 deterministic replay 104519/186234/222810，记录 token/logit/mask/decoded delta/前后时间；同 RNG 比较 current、block-START、fail-fast、双防御四组；generation_complete 前加入 monotonic/time_ns-range/nonfinite/negative-delta 语义门；先3反例、再128窗口多seed、最后新 TASK_ROOT 完整3136+原 strict scorer。禁止 dropna/clamp/只补3条后冒充冻结协议结果。
+P1785353260 UTC 2026-07-29T19:27:40Z: 维持 E2 supervisor waiting，绝不抢占/取消 .80/.82。GPU gate 通过后自动并行 replay rank0/b91、rank2/b161、rank1/b193；只有三份 CSV 与生产结果 byte-identical，且同一 delta_t_ns 位满足 START=3→mask允许→decode=-9999→时间倒退9999ns，才进入 E3 mask/fail-fast A/B；否则先核 slot RNG key 和重复确定性，不改 scorer。
+P1785353507 UTC 2026-07-29T19:31:47Z: 范围澄清（用户）：33=runs 数；要算的 checkpoints=132（final-25% 窗口，selected_test_last25.csv，每 run 1-10 个中位 3）。132 版才有 run 内 D 变异，是 valset held-out unconstrained fit 中 β 可识别的前提（terminal 33 点 D-N 共线）。manifest_132ckpt.json 已生成（terminal 行沿用旧 label 兼容断点续跑，99 个新增 @step 行），132/132 磁盘验证通过，watcher 将在 33 队列清空后自动接续。总量 5,311M 参数权重，实测吞吐下三卡 ~4.9h，ETA ~00:15Z。
+P1785353851 UTC 2026-07-29T19:37:31Z: E2 保持事件驱动等待，不取消 .80/.82；现有 outer supervisor 在 GPU gate 通过后由 inner shell 重读 0e51cbb/8969a0f/8e1c0aa。只在 e2_result.json 的 all_cases_closed 明确为 true、且三个 byte-identical+START/mask/decode/time checks 全过后进入 E3。
