@@ -55,3 +55,13 @@
 - “Terminal” in the marker legend must mean final available evaluation, with non-target-reaching runs visibly distinguished. Otherwise `46M-s5` looks falsely complete.
 - After uploading Notion media, re-fetch the exact anchor and download the stored files to compare SHA256. A successful upload/append response alone does not prove the displayed image and attachments are intact.
 - The first composite build failed because a multi-index lookup dropped the `seed` field. Keeping index columns with `drop=False` fixed it; the validation gate prevented an incomplete figure from reaching Notion.
+
+## Failed→resume figure lessons — 2026-07-29
+
+- A manifest's nominal `(size, seed)` label is not proof of checkpoint ancestry. Resume metadata can reveal a cross-seed restore even when the final job name and manifest row look consistent.
+- A physical JID is not always a unique training history: one JID can contain multiple W&B run IDs. Select and record the intended W&B history before using JID-level gap fills or drawing a resume connector.
+- “Complete trajectory” must name the observable. Sparse held-out checkpoints cannot reconstruct failure-to-resume optimization history when the predecessor was never evaluated; the complete diagnostic must use training loss and keep the held-out estimand separate.
+- A dotted resume connector is provenance, not an observed loss line. Plot physical segments independently, mark failed endpoints and resume starts, and retain zero-data attempts without inventing values.
+- W&B `finished` does not necessarily mean the intended training target was reached. A gracefully stopped or timeout-interrupted segment can still require a later resume.
+- High-resolution delivery requires both explicit `dpi=300` and post-write pixel/DPI verification. Vector PDF/SVG remains the lossless companion, while Notion's stored PNG should be downloaded and checked rather than trusted from the upload response.
+- Replacing a Notion attachment in place should preserve the previous bytes locally first, then retain the existing block ID and verify the replacement hash. This avoids duplicate media blocks without losing the superseded evidence.

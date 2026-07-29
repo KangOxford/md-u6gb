@@ -71,3 +71,13 @@
 - Inserted one blue Notion callout immediately after the orange 33-run explanation. The composite PNG is the primary artifact; the vector PDF and both CSV audit files are downloadable beside it.
 - Re-fetched the exact anchor and verified one marker, correct placement, all audit text, the rendered image, and three file blocks. Re-downloaded the four Notion media files and matched their SHA256 values to local copies.
 - Plotter commits: `eb42ea5`, `dc77297`, `c3bdea0`; artifact commits: `cad8a33`, `c059ec2`. No experiment, fit, bootstrap, manuscript, or prior result value changed.
+
+## Complete failed→resume training-history round — 2026-07-29
+
+- Audited raw W&B histories, production attempts, checkpoint ancestry, and terminal logs. Confirmed 33 logical runs, 54 observable physical segments, 10,403 raw loss points, 20 multi-segment runs, and 136 zero-data attempts.
+- Corrected the figure-only provenance mapping for the two cross-seed 6M chains, selected the max-step W&B history for the two duplicated JIDs, excluded the unrelated 6M long-D chain, and retained the `46M-s5` timeout plus zero-data resume attempt.
+- Added `plot_33_complete_training_loss_trajectories.py`; also changed the original held-out plotter's PNG default to 300 DPI.
+- Generated and visually inspected the 5,400 × 10,200 composite and the exceptional `6M-s5`, `6M-s137`, and `46M-s5` standalone panels. All 33 standalone PNGs are 1,920 × 1,380 at 300 DPI.
+- Archived the superseded Notion media and manifest before replacement. Replaced the image/PDF/two CSVs in their existing blocks, updated the callout text, and re-fetched the rendered callout.
+- Re-downloaded the new Notion image/PDF/CSVs and matched SHA256 values exactly; the image retained 5,400 × 10,200 pixels and 300-DPI metadata. The callout still has the same 12 child block IDs and no duplicate media.
+- Commits through the verified delivery: `358fddc`, `398161b`, `2c2380a`, `49b325d`, `fbc15d7`, `355ad55`, `fefcb5e`, and `aab4c65`.

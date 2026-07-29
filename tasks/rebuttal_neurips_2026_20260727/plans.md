@@ -58,3 +58,13 @@
 - Completed: validate run/size/checkpoint counts, endpoint equality, target-reaching status, 487-ticker coverage, output count, and all artifact hashes.
 - Completed: upload the composite PNG as the primary Notion figure and add PDF, 33-run summary CSV, and 285-point CSV audit attachments immediately after the existing 33-run explanation.
 - No loss fit, bootstrap, cohort selection, experiment, manuscript source, or prior Notion result value was changed.
+
+## Complete resume-history figure plan — 2026-07-29
+
+- Completed: audit every observable training segment, same-JID W&B duplicate, zero-data attempt, target boundary, and the two cross-seed 6M checkpoint ancestries.
+- Completed: add `--dpi 300` as the default to both the held-out plotter and the new complete training-history plotter.
+- Completed: generate one 5,400 × 10,200 composite, 33 standalone 300-DPI PNGs, vector PDF/SVG, and points/attempts/segments/run-summary audit tables.
+- Completed: replace the existing Notion image, PDF, summary CSV, and points CSV in place without adding duplicate blocks; re-fetch and byte-verify every replacement.
+- Completed: preserve the superseded Notion attachment bytes and a block-level manifest locally before replacement.
+- No experiment, loss fit, bootstrap, endpoint table, manuscript source, or seed-count result was changed.
+- A future repair of `canonical_test.csv`/`rebuttal_analysis.py` should be a separate analysis batch: the current loader groups by manifest `(size, seed)` without validating checkpoint ancestry and should not be described as a complete seed-specific held-out trajectory source until corrected.
