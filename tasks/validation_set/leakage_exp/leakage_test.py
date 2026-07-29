@@ -24,7 +24,7 @@ p.add_argument("--restore", required=True)
 p.add_argument("--label", required=True)
 p.add_argument("--micro_bsz", type=int, default=8)
 p.add_argument("--num_devices", type=int, default=4)
-p.add_argument("--n_data_workers", type=int, default=12)
+p.add_argument("--n_data_workers", type=int, default=0)  # fork workers 与 JAX 多线程死锁（实测），同步加载
 p.add_argument("--data_root", required=True)
 p.add_argument("--out_json", required=True)
 p.add_argument("--restore_step", type=int, default=None)

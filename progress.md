@@ -551,3 +551,4 @@ PG092 UTC 2026-07-29T07:20:00Z: 回答用户 valset 性质问询轮（规模/统
 PG093 UTC 2026-07-29T07:30:00Z: 应"描述一下"输出 valset_v1 中英双语叙述性描述（英文段为 rebuttal 可引用版，遵守无破折号/无列表段落式规则）。
 PG091 UTC 2026-07-29T15:58:06Z: pilot 第一波已提交（错峰 60s）：tf-pilot-8n-A=5825433（8N×22:30，120M:5→120M:42→200M:5）、tf-pilot-4n-A=5825438（4N×17:00，23M×3）、tf-pilot-2n-A=5825442（2N×17:00，6M×3）。新增 scaling_pilot.batch（dry 测试通过：队列解析/形状守卫/未知 label 拒绝）+ train.py 1 行 WANDB_NAME patch。pilot Monitor 已装（实验级进度事件）。0p2M×3 短 job（5824382/85/88）保留在排。
 PG094 UTC 2026-07-29T09:10:00Z: 泄漏实验运行中（log: tasks/validation_set/logs/leakage_srun_j5790795.out，结果将写 leakage_exp/results/*.json）；完成后回填 MD §10。图已定稿英文版；表格全英文化。
+PG095 UTC 2026-07-29T16:52:00Z: 泄漏实验 r2 重启（num_workers=0），log=logs/leakage_srun_j5790795_r2.out；预留 job 5790795 剩 18h。restore 已核实走 param-only TensorStore 直读（step 28,730 完整终点），step=0 显示为 partial_restore 预期副作用。
