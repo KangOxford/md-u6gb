@@ -813,7 +813,7 @@ def make_composite(
         height_ratios=[1.6, 0.12] + [1.0] * 12,
         left=0.065,
         right=0.985,
-        top=0.946,
+        top=0.920,
         bottom=0.035,
         hspace=0.70,
         wspace=0.20,
@@ -995,8 +995,8 @@ def make_composite(
     fig.legend(
         handles=legend,
         loc="upper center",
-        bbox_to_anchor=(0.5, 0.975),
-        ncol=4,
+        bbox_to_anchor=(0.5, 0.956),
+        ncol=7,
         frameon=False,
         fontsize=8,
         handlelength=2.3,
@@ -1005,17 +1005,18 @@ def make_composite(
         "33 training-loss job histories: failed → resume segments in the same subplot",
         fontsize=17,
         fontweight="bold",
-        y=0.993,
+        y=0.994,
     )
     fig.text(
         0.5,
-        0.962,
+        0.974,
         (
             "300-DPI composite • raw W&B step_loss + within-segment rolling median • "
             "54 observed physical segments / 10,403 raw points • "
             "6M cross-seed checkpoint ancestry is explicitly marked"
         ),
         ha="center",
+        va="top",
         fontsize=9.5,
         color="#37474f",
     )
