@@ -85,3 +85,11 @@ F106 UTC 2026-07-27T13:12:03Z: unseen-val 方案代码级验证（回应用户�
 - The final composite is 5,400 × 10,200 pixels at 300 DPI, SHA256 `ac73618dc60d21aab56fee23b803eb217f2b40ffef85af5a78983f712041d2c2`. Each of the 33 standalone PNGs is 1,920 × 1,380 pixels at 300 DPI.
 - Notion callout `3ac12c45-68fd-81af-8da4-dfac41f52592` was updated in place. Its existing image/PDF/CSV block IDs and 12-child structure were preserved; re-downloading all four replacements reproduced the local hashes and the Notion PNG retained 5,400 × 10,200 pixels at 300 DPI.
 - Before replacement, the old held-out PNG/PDF/CSV bytes were archived under `notion_fetches/heldout_loss_before_complete_resume_20260729T1945Z/` with block IDs, sizes, and SHA256 values.
+
+## Log-x supplementary loss figure — 2026-07-29
+
+- The linear-x complete-history figure remains the primary artifact. A separate supplementary rendering uses a logarithmic x-axis for both normalized progress in the overview and training step in every populated size-seed panel.
+- The log-x supplement uses exactly the same 33 logical runs, 54 physical segments, 10,403 raw points, resume connectors, cross-seed corrections, zero-data attempt ribbons, and target markers as the linear-x figure; only the x-axis transform changes.
+- The supplementary composite is 5,400 × 10,200 pixels at 300 DPI, SHA256 `e87ca8e2b48d4444084888e1ff58572ecc60bd2b97966412fe83653b3ccee3e8`. Its vector PDF SHA256 is `5a0b48516deef00175bd5752f1aa24c35461afe5efc4aa8b964b7ee869fdfe6c`.
+- Four blocks were appended to the existing Notion callout: a blue supplement label, a one-paragraph scope note, image block `3ac12c45-68fd-817e-82c5-e340d6b92ada`, and PDF block `3ac12c45-68fd-81c0-8890-e060b3fc8b81`. The prior 12 blocks were preserved, giving 16 children total.
+- Re-downloading the supplementary PNG/PDF from Notion reproduced both local hashes; the stored PNG retained 5,400 × 10,200 pixels and 300-DPI metadata.

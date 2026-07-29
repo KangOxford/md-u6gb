@@ -68,3 +68,10 @@
 - Completed: preserve the superseded Notion attachment bytes and a block-level manifest locally before replacement.
 - No experiment, loss fit, bootstrap, endpoint table, manuscript source, or seed-count result was changed.
 - A future repair of `canonical_test.csv`/`rebuttal_analysis.py` should be a separate analysis batch: the current loader groups by manifest `(size, seed)` without validating checkpoint ancestry and should not be described as a complete seed-specific held-out trajectory source until corrected.
+
+## Log-x supplement plan — 2026-07-29
+
+- Completed: preserve the linear-x main figure and add an explicit `--x-scale {linear,log}` renderer mode with `linear` remaining the default.
+- Completed: generate a separate 300-DPI log-x artifact directory, including 33 standalone plots, composite PNG/PDF/SVG, and unchanged audit tables.
+- Completed: append the log-x PNG and PDF as a supplement in the existing Notion callout rather than replacing or duplicating the primary linear-x media.
+- Completed: re-fetch the callout and byte-verify the new Notion attachments, dimensions, DPI, captions, and final 16-child structure.

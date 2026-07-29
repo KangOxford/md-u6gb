@@ -65,3 +65,10 @@
 - W&B `finished` does not necessarily mean the intended training target was reached. A gracefully stopped or timeout-interrupted segment can still require a later resume.
 - High-resolution delivery requires both explicit `dpi=300` and post-write pixel/DPI verification. Vector PDF/SVG remains the lossless companion, while Notion's stored PNG should be downloaded and checked rather than trusted from the upload response.
 - Replacing a Notion attachment in place should preserve the previous bytes locally first, then retain the existing block ID and verify the replacement hash. This avoids duplicate media blocks without losing the superseded evidence.
+
+## Log-x supplement lessons — 2026-07-29
+
+- A log-scaled training-step axis materially expands the early optimization regime while compressing the late resume boundary. Keeping both linear and log versions avoids forcing one view to serve incompatible inspection goals.
+- Log axes require strictly positive lower limits and should use their native logarithmic tick locator; a linear `MaxNLocator` should only be applied in linear mode.
+- Attempt ribbons drawn in axes coordinates remain evenly readable under either data-axis transform, while loss segments, target lines, and resume markers continue to use the transformed training-step coordinates.
+- A requested alternate rendering should be appended as a clearly labelled supplement when the user asks to keep the original, not silently replace the established primary artifact.

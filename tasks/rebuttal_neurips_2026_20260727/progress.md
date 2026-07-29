@@ -81,3 +81,11 @@
 - Archived the superseded Notion media and manifest before replacement. Replaced the image/PDF/two CSVs in their existing blocks, updated the callout text, and re-fetched the rendered callout.
 - Re-downloaded the new Notion image/PDF/CSVs and matched SHA256 values exactly; the image retained 5,400 × 10,200 pixels and 300-DPI metadata. The callout still has the same 12 child block IDs and no duplicate media.
 - Commits through the verified delivery: `358fddc`, `398161b`, `2c2380a`, `49b325d`, `fbc15d7`, `355ad55`, `fefcb5e`, and `aab4c65`.
+
+## Log-x supplementary round — 2026-07-29
+
+- Added `--x-scale {linear,log}` to the complete-history plotter while retaining linear as the default (`a3769f9`).
+- Generated and committed the independent log-x supplement (`8895a15`): 33 standalone PNGs plus composite PNG/PDF/SVG and audit artifacts.
+- Visually inspected the full composite plus `6M-s5` and `46M-s5`; all provenance, failed/resume, cross-seed, zero-data-attempt, timeout, and target markers remain visible under the log transform.
+- Appended the log-x heading, scope note, PNG, and PDF to the existing Notion callout without changing the linear-x main figure.
+- Re-fetched Notion and re-downloaded both supplemental files. The hashes match local artifacts exactly, the PNG is 5,400 × 10,200 at 300 DPI, and the callout now has 16 children with the original 12 preserved.
