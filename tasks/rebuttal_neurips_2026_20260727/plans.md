@@ -44,3 +44,9 @@
 - Completed: disclose the actual 2.048-decade parameter span, missing `23M-s42`, nominal `350M` label, excluded finisher, and absence of valid completed Transformer points.
 - Completed: re-fetch the Notion page and verify the original instruction is struck through and the blue callout remains directly below it.
 - No refit, manifest repair, experiment launch, manuscript edit, or Transformer result substitution is authorized by this round. If the user requests a strict terminal estimate, first correct the cohort to 32 rows and regenerate every dependent fit/bootstrap artifact as a separately committed analysis batch.
+
+## Seed-ID clarification plan — 2026-07-29
+
+- Completed: verify from the launcher, manifests, result builder, and training code that `5`, `42`, and `137` are actual per-run `jax_seed` values.
+- Completed: rename the ambiguous Notion headers to distinguish the actual seed IDs from the number of seeds/runs, then re-fetch the exact supplied anchor.
+- No experiment result, cohort membership, fit, manuscript source, or run state was changed in this clarification round.

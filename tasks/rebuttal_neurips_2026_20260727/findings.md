@@ -58,3 +58,10 @@ F106 UTC 2026-07-27T13:12:03Z: unseen-val 方案代码级验证（回应用户�
 - `23M-s42` is incomplete and excluded; 23M therefore has only seeds 5 and 137. The two `350M`-label main-sweep runs did reach their prespecified curtail; the separate post-hoc 293M finisher is excluded.
 - Transformer has zero valid completed scaling points in the current availability audit. Timeout-limited first-checkpoint Transformer CSVs are not terminal results and were not added to the table.
 - Notion was updated in place: the original bracketed instruction is preserved with strikethrough, and one blue callout immediately below it contains the 12-size per-seed CE table, two-row fit summary, and the completion/provenance audit. A post-write fetch at 2026-07-29T14:25:44Z verified the marker, all 12 size rows, both fit rows, the 46M warning, 2.048-decade correction, and Transformer exclusion.
+
+## Seed-ID clarification — 2026-07-29
+
+- The table values `5`, `42`, and `137` are the actual `jax_seed` values passed to training runs, not counts. The launcher defines `DEFAULT_SEEDS=(5 42 137)`, submits one job per selected seed, and records that value in the manifest.
+- The result pipeline treats each `(label, seed)` pair as one seed-specific logical run. Therefore `5, 42, 137` means three runs, while `5, 137` or `5, 42` means two runs.
+- In the current training code, `jax_seed` affects both the JAX parameter-initialization random stream and the shuffled training-data order. The production launcher sets dropout to zero, so no dropout-randomness claim is needed.
+- The supplied Notion anchor was updated in place: both result-table headers now say `纳入的实际 seed ID`, the explanatory table says `计划 seed 数量`, and the blue result callout explicitly distinguishes seed values from seed counts. A post-write fetch verified the new wording and confirmed the old `纳入 seeds` header is absent.

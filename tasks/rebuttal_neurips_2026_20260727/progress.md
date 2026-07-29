@@ -54,3 +54,10 @@
 - Updated the target in place. The original bracketed instruction is struck through and a blue callout immediately below contains the raw-result table, fit summary, bootstrap intervals, and provenance/completion caveats.
 - Re-fetched the page after writing and verified the rendered callout contains all 12 sizes, terminal and final-25% fit rows, `46M-s5` warning, actual 2.048-decade range, source hash, and Transformer exclusion.
 - No experiment was launched, no fit was recomputed, no manuscript/source file was edited, and no unrelated working-tree modification was touched.
+
+## Seed-ID clarification round — 2026-07-29
+
+- Re-fetched the exact user-supplied Notion anchor and located the ambiguous `纳入 seeds` headers in both the blue result table and the orange run-count explanation.
+- Verified from the live launcher and training code that `5`, `42`, and `137` are actual `jax_seed` values; each `(size, seed)` is one logical run, and the seed controls parameter initialization plus training-data shuffle order.
+- Applied a minimal in-place Notion update: renamed both headers to `纳入的实际 seed ID`, renamed `计划 seeds` to `计划 seed 数量`, and added a direct definition with a three-ID/three-run example.
+- Re-fetched the anchor after writing. Verification found the new seed-ID wording, the new count header, and no remaining `纳入 seeds` table header. No result value or experiment artifact was changed.

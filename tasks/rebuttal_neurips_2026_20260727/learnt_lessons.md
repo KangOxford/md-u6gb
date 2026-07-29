@@ -40,3 +40,9 @@
 - Nominal size labels are not parameter counts. Reviewer-facing range claims must use checkpoint-introspected `N`; here the true 2.626M-to-293.283M span is 2.048 decades, not the 3.24 decades implied by plan labels.
 - A current fit can be reproduced faithfully while still carrying a cohort-definition error. Report the existing 33-row result as-is for provenance, then label the strict 32-row refit as a new corrected estimand if it is later requested.
 - Partial Transformer evaluations and throughput profiles are not completed Transformer scaling-law points. Cross-architecture tables should remain empty until matched terminal loss trajectories exist.
+
+## Seed-ID clarification lessons — 2026-07-29
+
+- A column containing `5, 42, 137` should be labelled as actual seed IDs/values, not merely `seeds`; its cardinality, not the largest numeric value, gives the number of seed-specific runs.
+- Keep seed identity and seed count in separate columns when both appear in one audit table.
+- Prefer `seed-specific training runs` over `fully independent runs`: the code confirms different initialization and data-shuffle randomness, but that alone does not establish statistical independence.
