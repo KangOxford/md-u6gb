@@ -308,6 +308,7 @@ def make_standalone_plots(
     endpoints: pd.DataFrame,
     colors: dict[str, tuple[float, float, float, float]],
     output_dir: Path,
+    dpi: int,
 ) -> list[Path]:
     run_dir = output_dir / "runs"
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -360,7 +361,7 @@ def make_standalone_plots(
         )
         fig.tight_layout(rect=(0, 0.035, 1, 0.94))
         path = run_dir / f"{index:02d}_{run_id}.png"
-        fig.savefig(path, dpi=180)
+        fig.savefig(path, dpi=dpi)
         plt.close(fig)
         created.append(path)
     return created
@@ -373,6 +374,7 @@ def make_composite(
     output_dir: Path,
     canonical_sha: str,
     endpoint_sha: str,
+    dpi: int,
 ) -> list[Path]:
     endpoint_lookup = endpoints.set_index(["label", "seed"], drop=False)
     fig = plt.figure(figsize=(18, 34))
@@ -578,7 +580,7 @@ def make_composite(
     png_path = stem.with_suffix(".png")
     pdf_path = stem.with_suffix(".pdf")
     svg_path = stem.with_suffix(".svg")
-    fig.savefig(png_path, dpi=190, bbox_inches="tight")
+    fig.savefig(png_path, dpi=dpi, bbox_inches="tight")
     fig.savefig(pdf_path, bbox_inches="tight")
     fig.savefig(svg_path, bbox_inches="tight")
     plt.close(fig)
@@ -604,7 +606,15 @@ def main() -> None:
         / "artifacts"
         / "heldout_loss_trajectories_33run",
     )
+    parser.add_argument(
+        "--dpi",
+        type=int,
+        default=300,
+        help="PNG output resolution (default: 300 DPI)",
+    )
     args = parser.parse_args()
+    if args.dpi <= 0:
+        parser.error("--dpi must be positive")
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     points, endpoints = load_and_validate(args.canonical_test, args.endpoint)
@@ -625,7 +635,9 @@ def main() -> None:
 
     canonical_sha = sha256(args.canonical_test)
     endpoint_sha = sha256(args.endpoint)
-    standalone = make_standalone_plots(points, endpoints, colors, args.output_dir)
+    standalone = make_standalone_plots(
+        points, endpoints, colors, args.output_dir, args.dpi
+    )
     composite = make_composite(
         points,
         endpoints,
@@ -633,6 +645,7 @@ def main() -> None:
         args.output_dir,
         canonical_sha,
         endpoint_sha,
+        args.dpi,
     )
 
     artifact_paths = [points_out, summary_out, *standalone, *composite]
@@ -645,6 +658,7 @@ def main() -> None:
             "x_axis": "cumulative tokens D",
             "cohort": "manifest-selected current 33 logical runs",
             "terminal_marker": "final available held-out evaluation",
+            "png_dpi": args.dpi,
         },
         "audit": {
             "n_sizes": int(points["label"].nunique()),
