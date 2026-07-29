@@ -51,15 +51,12 @@ with Pool(32) as pool:
 assert not bad, f"L1 byte-compare failed on {len(bad)} samples: {bad[:10]}"
 print(f"[L1] PASS: {len(pick)} samples byte-identical", flush=True)
 
-# L2: dataloader 兼容性
-def read_tickers(path):
-    out = []
-    for i, line in enumerate(open(path)):
-        c = line.split(",")[0].strip()
-        if not c: continue
-        if i == 0 and c.lower().startswith("ticker"): continue
-        out.append(c)
-    return out
+# L2: dataloader 兼容性。ticker 列表取 shard 内实际存在者——小档位不必覆盖全部
+# 488 只（如 30,720 档中低活跃 ticker "Q" 无样本，传全量会触发 strict 断言）。
+import json as _json
+shard_tickers = sorted({k.split("/", 1)[0]
+                        for k in _json.load(open(f"{A.mount}/index.json"))["shapes"]})
+print(f"[L2] shard covers {len(shard_tickers)} tickers", flush=True)
 
 from lob.dataloading import create_lobster_prediction_dataset
 ret = create_lobster_prediction_dataset(
@@ -69,7 +66,7 @@ ret = create_lobster_prediction_dataset(
     shuffle_train=True, rand_offset=False, debug_overfit=False,
     val_split=0.0, test_split=0.0, pin_memory=False, prefetch_factor=None,
     persistent_workers=False, test_dir_name=None, use_distributed_sampler=False,
-    process_rank=0, process_count=1, tickers=read_tickers(CONSTITUENTS),
+    process_rank=0, process_count=1, tickers=shard_tickers,
     data_root=A.mount, train_date_range=["2022-01-01", "2025-12-31"],
     test_date_range=None, token_mode="26tok")
 ds = ret[0].dataset_train

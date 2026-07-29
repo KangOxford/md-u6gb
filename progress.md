@@ -556,3 +556,5 @@ PG092 UTC 2026-07-29T16:49:03Z: 会话断线重连（用户 SSH 被远程断开=
 PG096 UTC 2026-07-29T17:05:00Z: 泄漏实验 r3 加速版启动（用户指正后优化）：eval BSZ 放大至训练值 4-8 倍（78M 32/GPU、350M 8/GPU，forward-only 显存余量大）、DataLoader 改 spawn context 12 workers 并行解压（绕开 fork 死锁）、两 checkpoint 共享一次数据集构建、XLA 编译缓存至 TMPDIR。预计总时长从 ~6.5h 压至 ~1.5h（78M ~15min + 350M ~70min + 数据集构建 12min）。log=logs/leakage_srun_j5790795_r3.out。
 PG093 UTC 2026-07-29T16:54:32Z: 用户二次追问 (None) 并给官方文档链接→已用 docs.isambard.ac.uk（job-scheduling+slurm-troubleshooting）+ SchedMD squeue 手册三源交叉作答。6 tf job 无一命中官方"需行动"reason，纯排队确认。监控 bxmvlslc7 继续。
 PG097 UTC 2026-07-29T17:42:00Z: 物化作业已启动（srun --overlap CPU-only，与 r3 GPU 泄漏实验并行于 nid010407）：log=logs/materialize_srun_j5790795.out，产物 → tasks/validation_set/squashfs/output/shard_valset_v1_{30720,307200}.squashfs + provenance + SHA256。r3 处于 dataset 初始化 book 校验静默期（正常）。
+PG098 UTC 2026-07-29T17:31:23Z: 已输出 session ID 表+resume 命令(claude --resume 7426231f-793e-4210-b056-dcb6044b8bca);本轮无实验、无 Notion 写入。
+PG098 UTC 2026-07-29T18:32:00Z: 30720 档 L1 逐字节 2048/2048 全过；L2 断言 bug 修复后经 resume 流程重校验+落盘中；307200 档随后。r5 泄漏实验（BSZ 16/4 + fraction 0.92 + 禁 Triton GEMM）与之并行。MD 已完成对外汇报版润色（36cf048/1840ea5）。
