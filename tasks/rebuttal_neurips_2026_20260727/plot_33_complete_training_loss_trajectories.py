@@ -747,8 +747,9 @@ def make_standalone(
     colors: dict[str, object],
     output_dir: Path,
     dpi: int,
+    x_scale: str,
 ) -> list[Path]:
-    run_dir = output_dir / "runs"
+    run_dir = output_dir / ("runs_logx" if x_scale == "log" else "runs")
     run_dir.mkdir(parents=True, exist_ok=True)
     created: list[Path] = []
     for index, row in enumerate(summary.itertuples(index=False), start=1):
@@ -769,14 +770,25 @@ def make_standalone(
             float(row.target_step) * 1.045,
             float(frame["global_step"].max()) * 1.03,
         )
-        ax.set_xlim(0, x_max)
+        if x_scale == "log":
+            ax.set_xscale("log")
+            ax.set_xlim(
+                max(1.0, float(frame["global_step"].min()) * 0.85),
+                x_max,
+            )
+        else:
+            ax.set_xlim(0, x_max)
         ax.set_ylim(*padded_limits(frame["step_loss"], 0.07))
         ax.grid(True, color="#dfe5e8", linewidth=0.55, alpha=0.8)
-        ax.xaxis.set_major_locator(MaxNLocator(nbins=6))
-        ax.set_xlabel("Training step")
+        if x_scale == "linear":
+            ax.xaxis.set_major_locator(MaxNLocator(nbins=6))
+        ax.set_xlabel(
+            f"Training step{' (log scale)' if x_scale == 'log' else ''}"
+        )
         ax.set_ylabel("W&B step_loss (raw + per-segment rolling median)")
         fig.suptitle(
-            f"{run_id}: complete recoverable job history",
+            f"{run_id}: complete recoverable job history"
+            f"{' (log x)' if x_scale == 'log' else ''}",
             fontsize=13,
             fontweight="bold",
         )
@@ -805,6 +817,7 @@ def make_composite(
     raw_sha: str,
     manifest_sha: str,
     dpi: int,
+    x_scale: str,
 ) -> list[Path]:
     fig = plt.figure(figsize=(18, 34))
     grid = fig.add_gridspec(
@@ -842,14 +855,26 @@ def make_composite(
         linewidth=1.0,
         alpha=0.9,
     )
-    overview.set_xlim(0, 1.045)
+    if x_scale == "log":
+        overview.set_xscale("log")
+        overview.set_xlim(
+            max(1e-4, float(points["progress"].min()) * 0.85),
+            1.045,
+        )
+    else:
+        overview.set_xlim(0, 1.045)
     overview.set_ylim(*padded_limits(points["step_loss"], 0.04))
     overview.xaxis.set_major_formatter(PercentFormatter(xmax=1.0))
-    overview.set_xlabel("Progress toward intended target step")
+    overview.set_xlabel(
+        "Progress toward intended target step"
+        f"{' (log scale)' if x_scale == 'log' else ''}"
+    )
     overview.set_ylabel("W&B step_loss")
     overview.grid(True, color="#dfe5e8", linewidth=0.55, alpha=0.8)
     overview.set_title(
-        "Overview: all 54 physical loss segments (per-segment rolling median; no solid cross-job joins)",
+        "Overview: all 54 physical loss segments "
+        f"({'log-x; ' if x_scale == 'log' else ''}"
+        "per-segment rolling median; no solid cross-job joins)",
         fontsize=10,
         fontweight="bold",
     )
@@ -905,16 +930,22 @@ def make_composite(
                 colors[label],
                 compact=True,
             )
-            ax.set_xlim(
-                0,
-                max(
-                    row_target * 1.045,
-                    float(row_points["global_step"].max()) * 1.025,
-                ),
+            x_max = max(
+                row_target * 1.045,
+                float(row_points["global_step"].max()) * 1.025,
             )
+            if x_scale == "log":
+                ax.set_xscale("log")
+                ax.set_xlim(
+                    max(1.0, float(row_points["global_step"].min()) * 0.85),
+                    x_max,
+                )
+            else:
+                ax.set_xlim(0, x_max)
             ax.set_ylim(*row_y)
             ax.grid(True, color="#e1e6e8", linewidth=0.45, alpha=0.75)
-            ax.xaxis.set_major_locator(MaxNLocator(nbins=4))
+            if x_scale == "linear":
+                ax.xaxis.set_major_locator(MaxNLocator(nbins=4))
             ax.yaxis.set_major_locator(MaxNLocator(nbins=4))
             ax.set_title(
                 f"{run_id}  |  {int(run_summary['n_loss_points']):,} pts",
@@ -927,7 +958,10 @@ def make_composite(
             else:
                 ax.tick_params(labelleft=False)
             if row_index == len(SIZE_ORDER) - 1:
-                ax.set_xlabel("training step", fontsize=7)
+                ax.set_xlabel(
+                    f"training step{' (log)' if x_scale == 'log' else ''}",
+                    fontsize=7,
+                )
             else:
                 ax.tick_params(labelbottom=False)
             ax.tick_params(labelsize=6.2)
@@ -1002,7 +1036,8 @@ def make_composite(
         handlelength=2.3,
     )
     fig.suptitle(
-        "33 training-loss job histories: failed → resume segments in the same subplot",
+        "33 training-loss job histories: failed → resume segments in the same subplot"
+        f"{' — log-x supplement' if x_scale == 'log' else ''}",
         fontsize=17,
         fontweight="bold",
         y=0.994,
@@ -1013,7 +1048,8 @@ def make_composite(
         (
             "300-DPI composite • raw W&B step_loss + within-segment rolling median • "
             "54 observed physical segments / 10,403 raw points • "
-            "6M cross-seed checkpoint ancestry is explicitly marked"
+            "6M cross-seed checkpoint ancestry is explicitly marked • "
+            f"x-axis={x_scale}"
         ),
         ha="center",
         va="top",
@@ -1031,7 +1067,11 @@ def make_composite(
         fontsize=7.2,
         color="#546e7a",
     )
-    stem = output_dir / "training_loss_job_histories_33run_composite"
+    stem = output_dir / (
+        "training_loss_job_histories_33run_composite_logx"
+        if x_scale == "log"
+        else "training_loss_job_histories_33run_composite"
+    )
     png = stem.with_suffix(".png")
     pdf = stem.with_suffix(".pdf")
     svg = stem.with_suffix(".svg")
@@ -1072,6 +1112,12 @@ def main() -> None:
         default=300,
         help="PNG output resolution (default: 300 DPI)",
     )
+    parser.add_argument(
+        "--x-scale",
+        choices=("linear", "log"),
+        default="linear",
+        help="training-step/progress x-axis scale (default: linear)",
+    )
     args = parser.parse_args()
     if args.dpi <= 0:
         parser.error("--dpi must be positive")
@@ -1087,7 +1133,11 @@ def main() -> None:
         )
     }
 
-    stem = "training_loss_job_histories_33run"
+    stem = (
+        "training_loss_job_histories_33run_logx"
+        if args.x_scale == "log"
+        else "training_loss_job_histories_33run"
+    )
     points_path = args.output_dir / f"{stem}_points.csv"
     attempts_path = args.output_dir / f"{stem}_attempts.csv"
     segments_path = args.output_dir / f"{stem}_segments.csv"
@@ -1120,7 +1170,13 @@ def main() -> None:
     manifest_sha = sha256(args.manifest)
     endpoint_sha = sha256(args.endpoint)
     standalone = make_standalone(
-        points, attempts, summary, colors, args.output_dir, args.dpi
+        points,
+        attempts,
+        summary,
+        colors,
+        args.output_dir,
+        args.dpi,
+        args.x_scale,
     )
     composite = make_composite(
         points,
@@ -1131,6 +1187,7 @@ def main() -> None:
         raw_sha,
         manifest_sha,
         args.dpi,
+        args.x_scale,
     )
     artifacts = [
         points_path,
@@ -1154,6 +1211,7 @@ def main() -> None:
             "resume_connector": "gray or purple dotted provenance handoff",
             "zero_data_policy": "shown as hollow square in attempt ribbon",
             "png_dpi": args.dpi,
+            "x_scale": args.x_scale,
             "six_m_policy": CROSS_SEED,
             "excluded_unrelated_long_d_jids": sorted(EXCLUDED_LONG_D_JIDS),
         },
