@@ -375,7 +375,8 @@ def make_composite(
     endpoint_sha: str,
 ) -> list[Path]:
     endpoint_lookup = endpoints.set_index(["label", "seed"], drop=False)
-    fig = plt.figure(figsize=(18, 38))
+    fig = plt.figure(figsize=(18, 34))
+    fig.subplots_adjust(left=0.075, right=0.985, top=0.955, bottom=0.028)
     grid = fig.add_gridspec(
         13,
         3,
