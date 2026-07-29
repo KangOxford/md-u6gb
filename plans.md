@@ -475,7 +475,14 @@ P1785353507 UTC 2026-07-29T19:31:47Z: 范围澄清（用户）：33=runs 数；�
 P1785353851 UTC 2026-07-29T19:37:31Z: E2 保持事件驱动等待，不取消 .80/.82；现有 outer supervisor 在 GPU gate 通过后由 inner shell 重读 0e51cbb/8969a0f/8e1c0aa。只在 e2_result.json 的 all_cases_closed 明确为 true、且三个 byte-identical+START/mask/decode/time checks 全过后进入 E3。
 P1785353993 UTC 2026-07-29T19:39:53Z: E2 继续由后台 supervisor 事件驱动；以 .80 全队列完成作为四卡门禁 ETA 的主变量。21:50-23:30Z 仅为当前吞吐外推，出现新 checkpoint 速度变化、失败或 overlap step 时重新估算，不提前宣称 running。
 P1785354606 UTC 2026-07-29T19:50:06Z: E2 继续 waiting 且不取消 .80/.82；绝对完成 ETA 暂停发布。下一 ETA gate=.82 完成78M三组后进入350M，并至少出现 batch100 的代表性 s/b；此时再与 .80 remaining batch-work 取较晚释放者。
+P1785356813 UTC 2026-07-29T20:26:53Z: 不取消 .82/.87；E2继续物理门禁。待.82进入350M并出现100-batch速度后重估。其释放后E2与.87均会抢门禁；不人为干预，E2 inner race check若失去GPU则安全拒绝而非OOM。
 P124 UTC 2026-07-29T19:46:54Z: 触发器不变（首 pilot RUNNING+健康 → 补提 6 pilot；0p2M 新连起跑即为短 job 通道二次验证）。补提时执行清单新增一条：所有 sbatch/sweep 调用必须"cd 实验目录 && 提交"同调用完成，提交后 sacct WorkDir 抽查。
+P125 UTC 2026-07-29T19:51:08Z: 无新决策，维持 P124 触发器。
+P126 UTC 2026-07-29T19:55:30Z: Notion CN-Rebuttal 深链 block 3c245450 追问：定位 macro-averaged 487 口径出处→核实聚合代码→评判 micro/macro 质疑→回答写回 Notion+划线；建议后续 micro(token 加权)敏感性重拟合（33 终点，分钟级 CPU）。
+P127 UTC 2026-07-29T19:59:30Z: 无新决策；应用户要求提供回答 callout 的 Notion 深链。
 P123 UTC 2026-07-29T20:00:58Z: 用户贴 Response to 8P5h 英文定稿草案+立意注解[他想的做了/超预期/多肯定感谢],要求逐字逐句翻译解释并 update 到 Rebuttal 主页(3aa12c45-68fd-80ab)。方案:核对页面版与所贴文本一致(仅 Thus 后逗号之差)→确认[...]注解不在页面上(无需划线)→建子页面《Response to 8P5h 逐句翻译解释(CN)》全文落 27 句译+解+立意核对+两处口径警示→主页 H1 正下方插红底🤖callout(链接+要点)→grep 验证落点。
+P128 UTC 2026-07-29T20:07:02Z: 无新决策；解释 FIT_PROTOCOL 中 ticker-uniform estimand 双禁令句。
+P129 UTC 2026-07-29T20:09:01Z: 无新决策；澄清「审稿人要求」与「作者自选口径」的边界。
 P130 UTC 2026-07-29T20:18:23Z: 接管中断会话后只读复核主 Notion 页与逐句翻译子页，核对四份根记录，并按 AGENTS.md 将上轮 8P5h 四条记录及本轮复核四条记录分别精确提交；不带入并行会话的工作树改动。
+P1785356580 UTC 2026-07-29T20:23:00Z: bsz 优化落地（46M/23M→8、14M-4M→16，97 行，整除校验过）；重启窗口恰逢 leak r10（有真实进度，57min dataset 构建完成已上 4 卡）抢占——决策共存不杀（§10 数据同链路需要），132 队列 gate 自动等待 r10 退出（~2h），ETA 顺延至 ~05:00Z，walltime 余 14.6h 安全。
 P131 UTC 2026-07-29T20:24:14Z: 用户要求在 proposed rebuttal response 原回答上说明怎样改到“要求全做、超出预期、更多肯定和感谢”，并用蓝色字体。按方括号工作流：fetch 精确页面→原指令删除线→其正下方蓝色 Codex callout→保留 Q1-Q3 数字主体，仅重构开头/标题/cohort/结尾→re-fetch 验证蓝色 spans 与关键英文。

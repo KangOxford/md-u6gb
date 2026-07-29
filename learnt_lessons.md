@@ -478,7 +478,14 @@ L107 UTC 2026-07-29T21:40:00Z: 泄漏实验 r1-r11 十一版连败系统性复�
 L1785353851 UTC 2026-07-29T19:37:31Z: 等待态要同时验证 artifact state 与实际 supervisor PID/cmdline；state 时间戳只代表最后一次迁移。sidecar 验证必须 scope 对齐（全序列对全序列、目标行另断言）；结果文件存在不等于成功，重启必须解析 terminal boolean。纯数组/RNG 的 post-GPU analyzer 应固定 CPU，避免无谓重新占 HBM。
 L1785353993 UTC 2026-07-29T19:39:53Z: 四卡 gate 的 ETA 必须跟随“最后一张所需 GPU”的释放者；单卡作业较早结束不代表 gate 前进。进度条要区分当前 checkpoint 百分比、全 work-queue batch-work 百分比、已落盘结果数，避免把 48.8% 首项误读成全队列完成一半。
 L1785354606 UTC 2026-07-29T19:50:06Z: 多阶段任务在 init 阶段没有总 ETA 信息；.82 的100/960只是78M-mid子阶段10.4%，映射到完整两ckpt三组 workload 是约0.7%。任何进度汇报必须同时给“子阶段分母”和“全任务分母”；发现旧 ETA 建基于缺失分母时应主动撤回。
+L1785356813 UTC 2026-07-29T20:26:53Z: 被取消的并行工作队列只能按durable per-item JSON计完成度；已跑到一半但未落盘的第二波batch不能累计。GPU util瞬时为0也不等于可用：.82仍以同一compute PID在四卡持有83,356/17,672MiB，E2 gate正确保持关闭。
 L102 UTC 2026-07-29T19:46:54Z: sbatch 有三处路径锚定在提交时 cwd（SLURM_SUBMIT_DIR）：#SBATCH --output 相对路径、脚本内 ${SLURM_SUBMIT_DIR}/xxx 引用、WORKDIR 默认值。"bash /abs/path/script.sh" 只保证脚本自身可寻址，不保证这三处正确——从任何目录调用 sweep/batch 前必须 cd 到实验目录。快速验尸法：sacct -X --format=WorkDir 一列即可证伪/证实 cwd 类事故，比翻日志快（本例日志还落在了错误目录，tail 实验目录零发现是第二个陷阱）。exit 指纹：127=command/file not found（元凶节点）、143=SIGTERM（受害节点连坐）。
+L103 UTC 2026-07-29T19:51:08Z: 无新教训（基线轮）。
+L104 UTC 2026-07-29T19:55:30Z: notion MCP update-a-block 两个坑复证：(1) 块内容须作顶层额外属性（callout: {...}）而非包进 type 参数（否则 body.type 校验 400）；(2) PATCH 成功时返回体可能仍显示旧 rich_text 快照，必须 retrieve-a-block 复核而非凭返回体断言失败。
+L105 UTC 2026-07-29T19:59:30Z: 无新教训。
 L101 UTC 2026-07-29T20:00:58Z: 逐句翻译解释类任务的有效交付结构=译文之外每句给三层解:术语定义(LORO/bracketing/macro-average)、数字出处对账(与页面审计表/findings 交叉)、写法意图(为何这么写/防哪类质疑)——纯翻译对已能读英文的用户零增量,价值全在后两层。另:update-page-markdown 对大页面的 update_content 返回体=更新后整页(212KB 落文件),本身即验证材料,无需再拉一次页面;post-page 建空页+replace_content 填内容的两步法比 children 直接传 markdown 稳(children 的 string 项不保证按 markdown 解析)。
+L106 UTC 2026-07-29T20:07:02Z: 无新教训。
+L107 UTC 2026-07-29T20:09:01Z: 表述教训：说「macro 用于回复审稿人」易被读成「审稿人要求 macro」；引用审稿人要求时必须区分 required（审稿人原话）vs chosen（作者实现自由度）。
+L1785356037 UTC 2026-07-29T20:13:57Z: 用户原则（原话）：『回答问题永远排在做事情 做任务前面』。答案必须独立成篇置顶，不与任务动作/状态流混排；被事件流淹没的答案视为未回答，须完整重答。已写入 memory feedback_answer_first_then_autoresume.md。
 L108 UTC 2026-07-29T20:18:23Z: Claude 529 Overloaded 出现在写操作成功之后时，不能凭终端缺少最终答复推断交付失败；应重新 fetch 精确 Notion 主页面与子页，并分别验证标题、链接和关键句。大工作树并行追加时，用索引级精确暂存仅提交本任务四行，避免把无关记录批进同一提交。
 L109 UTC 2026-07-29T20:24:14Z: champion 型 reviewer 回复不应以限制和撤回开场；更有效结构是具体感谢其肯定→逐项说明 requested check 已执行→显式标出 beyond-request 分析→把不利结果表述为 reviewer 帮助论文变得更透明→结尾重申其认可的方法贡献被保留。无法完成 matched comparison 的 Q2 也应写成“完成证据审计并拒绝无效替代”，而非只写“No comparison available”。

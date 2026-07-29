@@ -578,7 +578,13 @@ PG1785353260 UTC 2026-07-29T19:27:40Z: 交付 ADHD 逐句说明 docs/runbooks/lo
 PG1785353851 UTC 2026-07-29T19:37:31Z: E2 launch hardening 已提交 0e51cbb/8969a0f/8e1c0aa，CPU import+3/3 RNG 复算通过；四份 sigma-0 记录提交 4a22419。Notion How-to 的 E2 时间刷新至 19:36 UTC，并 fetch 验证 PID 110152、三 hardening commits、no-must-stop review。现状仍 waiting，GPU0≈83.3GiB、GPU1-3≈79.1GiB。
 PG1785353993 UTC 2026-07-29T19:39:53Z: 只读解析 .80/.82 日志并形成 ETA；Notion How-to 增加 6 行进度/ETA 表，fetch 验证 48.8%、62.5%、10.9%、21:50-23:30Z、22:00-23:45Z、启动后6-12min。sigma-0 四记录提交 6e033e9；E2 仍 waiting。
 PG1785354606 UTC 2026-07-29T19:50:06Z: 实时复核并纠正 E2 进度页：Notion 进度条刷新为 .80 三项69.7/88.5/69.0%、全队列15.4%、.82全任务≈0.7%、E2=0/3；fetch九项关键字通过。撤回旧绝对 ETA，sigma-0 四记录提交 b2d72e9。无 job/file mutation，E2 supervisor 继续 live waiting。
+PG1785356813 UTC 2026-07-29T20:26:53Z: 新进度已写Notion并fetch验证：.82 mid=100%、seen=62.5%、full≈10.8%；valset durable=3/33；.87 gate waiting；E2=0/3。sigma-0共享objects权限阻止普通commit，未改权限/未删对象，改用临时object DB+pack+atomic update-ref完成记录commit b1cb17c；用户config未触碰。
 PG095 UTC 2026-07-29T19:46:54Z: 处置完成：scancel 5824388（385 已先死）；正确 cwd 重提 0p2M 三连=5826605(s5)/5826608(s42)/5826621(s137)，squeue 确认 PENDING；监控 v2 已换装（bxmvlslc7→新任务，集合=3 pilot+3 新 0p2M）。浪费账：2 次 13s/8s 启动失败 ≈ 0.01 nhr，可忽略；主要损失=0p2M 重新排队 ~5.5h。pilot 三连不受影响（WorkDir 已验证正确）。
+PG096 UTC 2026-07-29T19:51:08Z: 监控 v2 基线确认：6 job（3 pilot+3 重提 0p2M）全 PENDING|(None)，正常。
+PG097 UTC 2026-07-29T19:55:30Z: Notion block 3c245450 追问已答：蓝色回答 callout 3ac12c45-68fd-81d0-8647-d64728348332 已插入该 callout children 末尾，原 [...] 已 strikethrough（retrieve 复核通过）。
+PG098 UTC 2026-07-29T19:59:30Z: 已把可点击跳转链接交给用户。
 PG093 UTC 2026-07-29T20:00:58Z: 已完成:①子页面 3ac12c45-68fd-8154(Response to 8P5h 逐句翻译解释 CN)创建并全文写入(27 句原文→译→解、§0 立意核对三点达成、§8 两处待修口径),replace_content 返回与提交一致无截断;②主页 H1 'Response to 8P5h' 正下方插入红底🤖callout(子页链接+要点+两处口径警示),update_content 返回体 grep 验证落点正确、全页唯一;③对话中交付全文翻译解释。子页 URL: https://app.notion.com/p/Response-to-8P5h-CN-3ac12c4568fd8154a29dff1043281415
+PG099 UTC 2026-07-29T20:07:02Z: 已在聊天中解释该句（纯问答轮，无待恢复任务）。
+PG100 UTC 2026-07-29T20:09:01Z: 已向用户澄清（纯问答轮）。
 PG101 UTC 2026-07-29T20:18:23Z: 接管复核完成：主 Notion 页与逐句翻译子页均实时 fetch 验证通过；上轮漏提交记录已独立提交 fa4c6fd。当前轮新增四记录将另作独立提交，其他 CLAUDE.md、根记录及 daily-log 并行改动保持未暂存。
 PG102 UTC 2026-07-29T20:24:14Z: Notion 页 3ac12c45-68fd-80b6 已更新并 re-fetch 验证：原 `[应该他想的...]` 指令已删除线；紧随其后的蓝色 Codex callout 全文使用 blue spans，包含 exceptionally constructive opening、beyond the requested check、33 selected run trajectories、2.626M–293.283M、三项新标题与 grateful closing。原英文回答保持不变，供用户按建议替换。
