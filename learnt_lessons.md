@@ -489,3 +489,5 @@ L107 UTC 2026-07-29T20:09:01Z: 表述教训：说「macro 用于回复审稿人�
 L1785356037 UTC 2026-07-29T20:13:57Z: 用户原则（原话）：『回答问题永远排在做事情 做任务前面』。答案必须独立成篇置顶，不与任务动作/状态流混排；被事件流淹没的答案视为未回答，须完整重答。已写入 memory feedback_answer_first_then_autoresume.md。
 L108 UTC 2026-07-29T20:18:23Z: Claude 529 Overloaded 出现在写操作成功之后时，不能凭终端缺少最终答复推断交付失败；应重新 fetch 精确 Notion 主页面与子页，并分别验证标题、链接和关键句。大工作树并行追加时，用索引级精确暂存仅提交本任务四行，避免把无关记录批进同一提交。
 L109 UTC 2026-07-29T20:24:14Z: champion 型 reviewer 回复不应以限制和撤回开场；更有效结构是具体感谢其肯定→逐项说明 requested check 已执行→显式标出 beyond-request 分析→把不利结果表述为 reviewer 帮助论文变得更透明→结尾重申其认可的方法贡献被保留。无法完成 matched comparison 的 Q2 也应写成“完成证据审计并拒绝无效替代”，而非只写“No comparison available”。
+L108 UTC 2026-07-29T20:29:37Z: (1) 预注册 bounds 的边界撞击本身是证据：micro β 76.6% 撞 0.1 下界=「β 在该口径下未识别/近零」，报告必须带 fraction_at_bound 而非只报 median。(2) s5e miniforge3 对 u6gb 账号 Permission denied，改用 ~kangli.u6gb/miniforge3（PATH 默认 python3 即是）。(3) 变体分析先做逐行复现断言（1e-16）再改单一因素，差异才可归因。
+L108 UTC 2026-07-29T22:45:00Z: 预留 allocation 的正确心智模型：它是用户"多会话共用的即时评测池"而非"空闲资源"——本会话长 GPU 任务放上去必然与其它会话的评测互相击杀（cgroup 共享，后来者/大户胜）。长任务（>30min GPU）一律独立 sbatch；预留节点只放短平快 attached one-shot。另：实验设计冗余的价值实证——78M 死于 VAL 组前，但 MID/SEEN 两组均值已经落在日志里（每组完成即打印 meanCE），中途死亡仍然抢救出核心科学数据。

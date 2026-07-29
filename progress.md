@@ -588,3 +588,6 @@ PG099 UTC 2026-07-29T20:07:02Z: 已在聊天中解释该句（纯问答轮，无
 PG100 UTC 2026-07-29T20:09:01Z: 已向用户澄清（纯问答轮）。
 PG101 UTC 2026-07-29T20:18:23Z: 接管复核完成：主 Notion 页与逐句翻译子页均实时 fetch 验证通过；上轮漏提交记录已独立提交 fa4c6fd。当前轮新增四记录将另作独立提交，其他 CLAUDE.md、根记录及 daily-log 并行改动保持未暂存。
 PG102 UTC 2026-07-29T20:24:14Z: Notion 页 3ac12c45-68fd-80b6 已更新并 re-fetch 验证：原 `[应该他想的...]` 指令已删除线；紧随其后的蓝色 Codex callout 全文使用 blue spans，包含 exceptionally constructive opening、beyond the requested check、33 selected run trajectories、2.626M–293.283M、三项新标题与 grateful closing。原英文回答保持不变，供用户按建议替换。
+PG101 UTC 2026-07-29T20:29:37Z: 两任务完成：(1) micro 重拟合+500 bootstrap 跑完（login node 轻量 CPU，~3min）；(2) subagent aramis rebuttal 流程研究报告写至 tasks/rebuttal_neurips_2026_20260727/aramis_workflow_study.md。
+PG1785357109 UTC 2026-07-29T20:31:49Z: leak r10 已 kill（用户授权+优先级指令）；132 队列 4 gate 将在 ~2min 内全开（4 卡），bsz 三轮优化后 ETA 提前至 ~01:30-02:30Z。
+PG102 UTC 2026-07-29T22:45:00Z: 泄漏实验最终形态：预留节点确认为多会话共用评测节点（本轮击杀者=另一会话的 valset_ce_eval 管线，4×78GB——正主任务已在用冻结 valset 提取 34 ckpt 的 CE），彻底让路转两个独立 sbatch：j5827239(78M, 2.5h wall) + j5827240(350M, 5.5h wall) 并行排队。r11 遗产：MID=0.559874 vs SEEN=0.559668（差 -0.0002 nats，单次曝光记忆低于噪声，H1 不成立方向——预注册规则下同样支持 val 可用性）。
