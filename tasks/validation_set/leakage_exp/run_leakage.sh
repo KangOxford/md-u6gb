@@ -9,6 +9,9 @@ LEAK_DIR=/lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/leakage_exp
 SQUASHFS_DIR=/lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs
 export PYTHONPATH="$EXP_DIR"
 export XLA_PYTHON_CLIENT_MEM_FRACTION=0.85
+# 大 BSZ eval 的 [B*13000, d] GEMM 令 Triton autotuner "No valid config found"（r3 实测）
+# —— 禁 Triton GEMM 回落 cuBLAS，大矩阵乘无压力且省去 autotune。
+export XLA_FLAGS="--xla_gpu_enable_triton_gemm=false ${XLA_FLAGS:-}"
 
 TMP_BASE="${TMPDIR:-/tmp}"
 MOUNT_ROOT="$TMP_BASE/sp500_squashfs_leak_$$"
