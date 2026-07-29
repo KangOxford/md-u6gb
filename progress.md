@@ -591,3 +591,4 @@ PG102 UTC 2026-07-29T20:24:14Z: Notion 页 3ac12c45-68fd-80b6 已更新并 re-fe
 PG101 UTC 2026-07-29T20:29:37Z: 两任务完成：(1) micro 重拟合+500 bootstrap 跑完（login node 轻量 CPU，~3min）；(2) subagent aramis rebuttal 流程研究报告写至 tasks/rebuttal_neurips_2026_20260727/aramis_workflow_study.md。
 PG1785357109 UTC 2026-07-29T20:31:49Z: leak r10 已 kill（用户授权+优先级指令）；132 队列 4 gate 将在 ~2min 内全开（4 卡），bsz 三轮优化后 ETA 提前至 ~01:30-02:30Z。
 PG102 UTC 2026-07-29T22:45:00Z: 泄漏实验最终形态：预留节点确认为多会话共用评测节点（本轮击杀者=另一会话的 valset_ce_eval 管线，4×78GB——正主任务已在用冻结 valset 提取 34 ckpt 的 CE），彻底让路转两个独立 sbatch：j5827239(78M, 2.5h wall) + j5827240(350M, 5.5h wall) 并行排队。r11 遗产：MID=0.559874 vs SEEN=0.559668（差 -0.0002 nats，单次曝光记忆低于噪声，H1 不成立方向——预注册规则下同样支持 val 可用性）。
+PG104 UTC 2026-07-29T20:59:52Z: Notion 第二任务完成并复取验收：12 处句级 track-changes 已就地融入 proposed rebuttal response；已有 Codex 蓝色解释 callout 仍唯一且包含“最终效果”；旧危险表述在 callout 外 unstruck=0，6 个核心新段在 8P5h callout 后均命中 1 次且 blue=1。未新建 callout、评论、附录或页面。
