@@ -166,7 +166,7 @@ def eval_group(state, val_model, jit_eval, name, idx_path):
         its = tuple(jax.make_array_from_process_local_data(sh, t) for t, sh in zip(its, ts_sh))
         loss, acc, _ = jit_eval(inputs, labels, its, state, val_model.apply,
                                 False, '__call_ar__', (onp.array([0])), False)
-        losses.append(float(jax.device_get(loss)))
+        losses.append(float(onp.asarray(jax.device_get(loss)).mean()))
         if bi % 100 == 0:
             print(f"  [{name}] batch {bi}/{len(loader)} loss={losses[-1]:.5f} "
                   f"({(time.time()-t0)/(bi+1):.2f}s/b)", flush=True)
