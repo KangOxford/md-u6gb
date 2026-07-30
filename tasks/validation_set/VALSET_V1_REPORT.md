@@ -8,7 +8,7 @@
 
 valset_v1 是从 S&P 500 限价订单簿预训练语料中一次性建成、此后永久固定的验证集，共 **5,367,734 个样本**（占全域 1.661%，约 26.8 亿条消息、698 亿 token）。它解决一个具体问题：scaling-law 研究里的 33 个训练 run 要在同一把尺子上反复对比，这把尺子必须满足三件事——**训练确实没见过它**、**它和训练数据同分布**、**它永远不变**。
 
-三个核心保证，每一个都有独立证据：第一，**零泄漏**。我们逐一核查了全部训练记录（含中途失败的重试），确认每个 run 只消费了其数据排列的一个前缀、最深至 16.63%，而验证集全部取自 20% 之后的区域，并做了逐样本核验（§4）；一个独立的行为学实验（§10）在此之外再做交叉确认。第二，**同分布**。样本位置由随机排列决定、与内容无关，因此验证集在内容上就是全域的均匀抽样：股票维度与全域的占比相关系数达 0.9861，488 只股票全覆盖（§5）。第三，**永久固定**。索引、SHA-256、完整构造档案一次冻结；未来训练只要不越过预留的排除边界，验证集永远有效（§4）。
+三个核心保证，每一个都有独立证据：第一，**零泄漏**。我们逐一核查了全部训练记录（含中途失败的重试），确认每个 run 只消费了其数据排列的一个前缀、最深至 16.63%，而验证集全部取自 20% 之后的区域，并做了逐样本核验（§4）；独立的行为学实验在 78M 与 350M 两个模型上完成交叉确认——模型对"确定见过"的数据没有任何损失优势，验证集与"确定没见过"的数据在同构成比较下不可区分（§10）。第二，**同分布**。样本位置由随机排列决定、与内容无关，因此验证集在内容上就是全域的均匀抽样：股票维度与全域的占比相关系数达 0.9861，488 只股票全覆盖（§5）。第三，**永久固定**。索引、SHA-256、完整构造档案一次冻结；未来训练只要不越过预留的排除边界，验证集永远有效（§4）。
 
 使用上提供两种形态：**索引清单**（43 MB，配合源数据使用，附三档嵌套子集）和**实体数据包**（独立 squashfs 文件，自带全部样本数据，与训练数据包格式完全一致，现有代码零修改可读，§6）。实体包已交付两档——30,720 样本档（359 MB）与 307,200 样本档（3.51 GB），均通过逐字节质检。
 
@@ -177,7 +177,7 @@ mkdir -p /tmp/valset && squashfuse shard_valset_v1_30720.squashfs /tmp/valset
 | 3 | Size / statistical power | judged by absolute count and metric SE (large-corpus norm 0.1–1%) | 5.37M samples (1.661%); CE SE < 1e-4 nats already at the 30,720 subset | **PASS** |
 | 4 | Frozen & versioned | fixed once, hashed, reproducible | SHA-256 + manifest + deterministic build in the training environment | **PASS** |
 | 5 | Reuse discipline | adaptive reuse wears a holdout out (Dwork et al.); keep an untouched final set | tiered subsets for routine use; pre-registered Feb-2026 test set untouched for final claims | **PASS** (policy) |
-| 6 | Empirical leakage check | back construction proofs with a behavioral test | §10 experiment (seen vs held-out vs val CE) | see §10 |
+| 6 | Empirical leakage check | back construction proofs with a behavioral test | seen/held-out/val CE compared on 78M & 350M: no memorization gap; composition-adjusted VAL−MID CI contains 0 (§10) | **PASS** |
 | 7 | Documentation | datasheet-style provenance, known biases disclosed | manifest + this report + §8 disclosures | **PASS** |
 
 使用时需要长期记住三点。其一，验证集的年度权重偏向 2022（55:45），做与全域同权重的结论时按月加权。其二，(GOOG, 2025-12) 缺失与 8 股票旗标是已知的分布缺口。其三，本验证集度量的是与训练同分布的 held-out 交叉熵——这是 scaling-law 拟合需要的因变量；前向时移的泛化能力由另行预注册的 2026 年测试集负责，两者互补而不可互替。此外，理论文献提醒 holdout 在被自适应地反复使用后会缓慢失效，因此论文级结论应在触碰次数最少的大子集或预注册测试集上出数。
@@ -237,7 +237,28 @@ manifest.json                 # 完整配方、证据链、未来预算、披露
 
 （分层按 batch 内多数年份归类，batch 年份纯度 72–76%。）2022 年的损失比 2024–2025 年高约 0.13 nats，是原始差异的全部来源；同一年份之内两组的差不超过 +0.0066 nats。把验证集各年损失按 MID 组的年份权重重新加权后，构成调整后的 VAL − MID 为 **+0.003551，95% CI [−0.002575, +0.009780]**，置信区间横跨零。结论：在同构成比较下，验证集与"确定没被任何训练见过的数据"在统计上不可区分；原始 +0.045 的差异完全由 2022 年占比这一已记录的构造性质解释（见第 5.1、7 节），与泄漏无关。
 
-**结果（350M，种子 5）**：评测进行中，完成后补充本节并给出两模型联合判定。
+**结果（350M，种子 5；每组 5,120 个 batch，bootstrap 20,000 次重采样）**：
+
+| Metric | Mean CE (nats) | 95% CI |
+|---|---|---|
+| SEEN (seen once in training) | 0.571704 | [0.568466, 0.574844] |
+| MID (never seen, mid-permutation) | 0.573214 | [0.569990, 0.576425] |
+| VAL (validation set) | 0.619364 | [0.616462, 0.622313] |
+| SEEN − MID | −0.001511 | [−0.006019, +0.003007] |
+| VAL − MID | +0.046150 | [+0.041881, +0.050457] |
+
+350M 完整复现了 78M 的模式。H1 同样未检出（−0.0015 nats，置信区间含零且更窄）。VAL − MID 的原始差 +0.0461 与 78M 的 +0.0446 几乎相同，这本身就是构成解释的又一强证据：年份构成是样本组的固有属性，两个模型看到的偏移量自然一致；若差异来自记忆或泄漏，效应量应随模型容量变化。按年份分层（350M batch 更小，年份纯度 91%）：
+
+| Year | CE(MID) | CE(VAL) | VAL − MID |
+|---|---|---|---|
+| 2022 | 0.676993 | 0.680968 | +0.003975 |
+| 2023 | 0.613392 | 0.605371 | −0.008021 |
+| 2024 | 0.496920 | 0.501899 | +0.004978 |
+| 2025 | 0.506774 | 0.509872 | +0.003098 |
+
+逐年差有正有负、量级不超过 0.008 nats，构成调整后的 VAL − MID 为 **+0.001285，95% CI [−0.002490, +0.005097]**，置信区间横跨零。
+
+**联合判定**：两个规模的模型给出一致证据。第一，两个模型都测不出"见过一次"的记忆痕迹（78M：−0.0002 ± 0.007；350M：−0.0015 ± 0.005），说明该训练规程下单次曝光不在损失上留痕，任何残余泄漏的影响低于检测限。第二，验证集与"确定没被训练见过的同分布数据"在构成调整后不可区分（两个模型的调整后置信区间都含零）。第三，验证集偏难的原始差异在两个模型上数值一致、可被构造参数定量预测，属于已记录的年份构成性质而非泄漏。行为学证据与 §4 的构造性证明相互独立、结论一致：验证集干净。
 
 逐 batch 损失与分析脚本随交付物存档（`leakage_exp/results/`、`leakage_exp/analysis/`）。
 
@@ -245,4 +266,4 @@ manifest.json                 # 完整配方、证据链、未来预算、披露
 
 [Unidata: Validation Dataset in ML](https://unidata.pro/blog/validation-dataset-in-ml/) · [IBM: What is Data Leakage in Machine Learning](https://www.ibm.com/think/topics/data-leakage-machine-learning) · [Google Research: The reusable holdout](https://research.google/blog/the-reusable-holdout-preserving-validity-in-adaptive-data-analysis/) · [Dwork et al. 2015, Generalization in Adaptive Data Analysis and Holdout Reuse](https://arxiv.org/pdf/1506.02629) · [mlbenchmarks.org: Test set reuse](https://mlbenchmarks.org/05-test-set-reuse.html) · [The Reliability Gap in Benchmark Auditing (arXiv 2606.03305)](https://arxiv.org/html/2606.03305) · [Gap-K%: Measuring Top-1 Prediction Gap for Detecting Pretraining Data (arXiv 2601.19936)](https://arxiv.org/pdf/2601.19936) · [awesome-data-contamination paper list](https://github.com/lyy1994/awesome-data-contamination)
 
-*报告：2026-07-29。构建于与训练完全一致的软件环境与数据管线（torch 2.8.0）；统计与图表由 `valset_report_figs.py` 生成，图表文字为英文、正文为中文。*
+*报告：2026-07-29；§10 行为学实验结果补入：2026-07-30。构建于与训练完全一致的软件环境与数据管线（torch 2.8.0）；统计与图表由 `valset_report_figs.py` 生成，图表文字为英文、正文为中文。*
