@@ -39,6 +39,7 @@ cd "$EXP_DIR"
 python -u "$LEAK_DIR/leakage_test.py" \
     --restore "${LEAK_RESTORES:-checkpoints/j4499538_5vu8avcx_4499538,checkpoints/j4499580_j8cfcraa_4499580}" \
     --label "${LEAK_LABELS:-78M-s5,350M-s5}" --micro_bsz "${LEAK_BSZS:-8,2}" --n_data_workers 0 \
+    --num_devices "${LEAK_NUM_DEVICES:-4}" \
     --data_root "$DR" --out_json "$LEAK_DIR/results/leak.json"
 echo "[done] both checkpoints"
 echo "LEAKAGE_WRAPPER_OK"
