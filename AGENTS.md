@@ -20,10 +20,6 @@
   block/page ID, attachment source, local path, file type, size, and SHA256.
   Do not treat a Notion page snapshot alone as sufficient evidence that the
   attachment has been preserved locally.
-- For each active task/conversation, maintain four markdown records in the
-  task's working directory: `findings.md`, `plans.md`, `learnt_lessons.md`,
-  and `progress.md`. Update them every conversation round with the current
-  evidence, plan, lessons, and status before moving on to unrelated work.
 </critical-local-rules>
 
 <codex-output-preferences>
