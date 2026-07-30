@@ -591,4 +591,13 @@ PG102 UTC 2026-07-29T20:24:14Z: Notion 页 3ac12c45-68fd-80b6 已更新并 re-fe
 PG101 UTC 2026-07-29T20:29:37Z: 两任务完成：(1) micro 重拟合+500 bootstrap 跑完（login node 轻量 CPU，~3min）；(2) subagent aramis rebuttal 流程研究报告写至 tasks/rebuttal_neurips_2026_20260727/aramis_workflow_study.md。
 PG1785357109 UTC 2026-07-29T20:31:49Z: leak r10 已 kill（用户授权+优先级指令）；132 队列 4 gate 将在 ~2min 内全开（4 卡），bsz 三轮优化后 ETA 提前至 ~01:30-02:30Z。
 PG102 UTC 2026-07-29T22:45:00Z: 泄漏实验最终形态：预留节点确认为多会话共用评测节点（本轮击杀者=另一会话的 valset_ce_eval 管线，4×78GB——正主任务已在用冻结 valset 提取 34 ckpt 的 CE），彻底让路转两个独立 sbatch：j5827239(78M, 2.5h wall) + j5827240(350M, 5.5h wall) 并行排队。r11 遗产：MID=0.559874 vs SEEN=0.559668（差 -0.0002 nats，单次曝光记忆低于噪声，H1 不成立方向——预注册规则下同样支持 val 可用性）。
+PG102 UTC 2026-07-29T20:43:46Z: 披露草稿已写回 Notion（蓝色 callout+蓝字 quote）。
+PG103 UTC 2026-07-29T20:50:30Z: 5 个 update-a-block 并行提交全部成功，返回体确认 strikethrough/blue runs 生效。
 PG104 UTC 2026-07-29T20:59:52Z: Notion 第二任务完成并复取验收：12 处句级 track-changes 已就地融入 proposed rebuttal response；已有 Codex 蓝色解释 callout 仍唯一且包含“最终效果”；旧危险表述在 callout 外 unstruck=0，6 个核心新段在 8P5h callout 后均命中 1 次且 blue=1。未新建 callout、评论、附录或页面。
+PG105 UTC 2026-07-30T11:25:09Z: find-session-id 完成，1 次 grep 管道命中唯一结果，已向用户输出结果表。
+PG1785411096 UTC 2026-07-30T11:31:36Z: 132/132 checkpoint valset CE 评测完成并通过完整性验证（每个 30,720 样本 per-sample loss 落盘，json↔npy 一致 <1e-5；job 5790795 于 10:55Z 用满 walltime COMPLETED，评测在此前完成）。汇总 CSV/md + 三张图已生成，SHA256SUMS 已登记。核心结果：valset micro CE 最低点 120M=0.6014（Jan 表最低点 23M=0.5689，错位）；两表同现大模型回升（D 不足效应）；Δ(val−Jan, macro) 全为正且随 N 单调递减（0p2M +0.055 → 350M +0.005）——同分布 valset 反而比前向 Jan-2026 更难，且差距随模型增大收敛。
+PG1785411459 UTC 2026-07-30T11:37:39Z: self-complete 交付目录建成：/lus/lfs1aip2/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/scaling_law_plots/valset_ce_eval_20260730（379MB，SHA256SUMS_ALL 421 项级）。含 132×28 master 大表、132×2 结果、10 脚本、8 项上游输入快照、valset 数据本体 359MB+构造报告、评测报告 v1/v2、README（阅读入口+三步复现）。外部依赖仅训练代码库与 checkpoint 本体（大表 ckpt_dir 列）。
+PG1785411704 UTC 2026-07-30T11:41:44Z: 任务全链完成：①132/132 valset CE 评测+验证 ②成果保存（288 文件入 git 暂存区+SHA256）③文档 v1 写毕、v2 重写毕（叙事重构去翻译腔，tasks/validation_set/VALSET_CE_EVAL_REPORT.md）④self-complete 交付目录 379MB（scaling_law_plots/valset_ce_eval_20260730/，132×28 大表+全部代码/输入/数据本体/README 三步复现）⑤Notion 回填：主指令下绿色成果 callout+主指令划线+历史遗留 4 处划线（『这是在哪里用到的』发现已划）。git 暂存未 commit（等用户指令）。
+PG1785413012 UTC 2026-07-30T12:03:32Z: A3+A2 拟合闭环(5823145/nid010691 计算节点执行);报告已补『拟合结果』节并同步交付目录;HANDOFF.md 在册。
+PG106 UTC 2026-07-30T13:00:59Z: /find-session-id 完成，1 次 Bash 调用（预算上限 2），输出 resume 命令。
+PG107 UTC 2026-07-30T13:12:11Z: 已成功 attach 5823145 为 step .5，核验 node/env/4 GPU/进程/其余 steps 后正常退出；确认 allocation 健康且四卡空闲。完成旧 E2 终态验尸并把 Notion 页 E2 段更新为 STOPPED、0/3、无结果、旧 state 陈旧，fetch 关键字段验收通过；未重启实验。sigma-0 四记录已独立提交为 a709649，用户的 7 个 modified config 与 4 个 untracked config 均未触碰。
