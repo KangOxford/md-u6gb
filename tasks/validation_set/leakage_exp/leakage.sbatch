@@ -8,4 +8,7 @@
 #SBATCH --output=/lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/logs/leakage_sbatch_%j.out
 # 独立 allocation 跑泄漏实验（预留 job 的 GPU 被 model-zoo 推理评测合法占用，
 # 遵守 CLAUDE.md "Physical GPU gate before overlap"——不与其争抢，排队干净跑）。
+# TMPDIR 防御：绝不继承提交环境的值（那是别的 job 的专属目录，本节点不存在）。
+export TMPDIR="${SLURM_TMPDIR:-/tmp/${USER}_${SLURM_JOB_ID}}"
+mkdir -p "$TMPDIR"
 exec bash /lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/leakage_exp/run_leakage.sh

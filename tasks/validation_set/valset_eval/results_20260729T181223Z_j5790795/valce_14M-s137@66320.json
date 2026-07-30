@@ -1,0 +1,23 @@
+{
+ "label": "14M-s137@66320",
+ "size": "14M",
+ "seed": 137,
+ "jid": "4510296",
+ "ckpt_dir": "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/exp_R1_Mamba3/checkpoints/j4510296_8jz1l24q_4510296",
+ "step": 66320,
+ "num_params": 14445623,
+ "D_tokens": 110356480000,
+ "eval_bsz_per_gpu": 16,
+ "num_devices": 1,
+ "n_samples": 30720,
+ "val_ce_mean": 0.6202462315559387,
+ "val_ce_ci95": [
+  0.6186596751213074,
+  0.6218483448028564
+ ],
+ "val_acc_mean": 0.8771490860376603,
+ "jan2026_ce": 0.5829712001939574,
+ "wall_sec": 585.1,
+ "data": "shard_valset_v1_30720.squashfs",
+ "protocol": "sequential full pass, per-sample CE, drop_last exact"
+}
