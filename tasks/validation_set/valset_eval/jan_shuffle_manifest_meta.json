@@ -1,0 +1,10 @@
+{
+ "seed": 20260131,
+ "n_pool": 7507307,
+ "n_sample": 30720,
+ "source_index": "/lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs/index_2026-01.json",
+ "months": [
+  "2026-01"
+ ],
+ "enumeration": "ticker-alpha -> filename -> window-in-file, floor(rows/500), no offset"
+}
