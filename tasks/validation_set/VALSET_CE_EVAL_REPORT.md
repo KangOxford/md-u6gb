@@ -105,6 +105,19 @@ CI 上端仍触界。第二，**β 移动但两轴 CI 重叠**（last25：1.337 
 切片无法穿过 ≥5 个 size。valset 轴要做 Approach 2 需要补评每 run 的早期 checkpoint（全轨迹），
 这是后续可选扩展。产物：`fits/valset_isoflop_*`。
 
+**Kang-lineage 复核与出图（2026-07-30 追加二）**：同一批数字用 2026-07-27 test-CE audit 的
+legacy VPNLS 管线（`fit_test_ce_kang.py`，无 bounds、checkpoint 等权）重拟合并出全套图：
+termination（33 点）α=1.874 [1.67,2.13] / β=1.811 [1.69,1.92]，last25（132 点）α=1.937
+[1.43,2.20] / β=0.867 [0.54,1.23]，E 均 0.5957。termination 与 aramis 协议互相印证
+（Δ<0.09）；last25 的 β 差（0.867 vs 1.337）暴露 run-权重敏感性，与 Jan 轴
+`TEST_CE_LAST25_AUDIT` 的弱识别结论同构；α 在无 bounds 下亦收敛 1.87–1.94，再证
+α 顶界病理是 Jan 轴特有。compute-optimal 分配 N\*∝C^0.491（termination）/ C^0.309
+（last25），与 Jan 轴 held-out 的 0.294 方向一致（相对 train 面 0.783 反转）。
+compute-optimal 三联图与 Approach 2 IsoFLOP 三联图（dmon-C 窗口切片如实展示、唯一
+bracketed valley 标注、slope 以 surface-implied 呈现）：
+`fits/figures/valset_{chinchilla,isoflop}_{termination,last25}_20260730T131231Z.png`；
+全套数字、公式、协议差异与复现命令：`fits/VALSET_KANG_FIT_20260730.md`。
+
 ## 产物清单与复现
 
 结果目录 `tasks/validation_set/valset_eval/results_20260729T181223Z_j5790795/`（18MB，269 个文件的 SHA256 见目录内 `SHA256SUMS.txt`）：

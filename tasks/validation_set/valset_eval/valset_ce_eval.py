@@ -36,7 +36,13 @@ def parse_cli():
     p.add_argument("--only", default=None, help="逗号分隔 label 白名单（smoke 用）")
     p.add_argument("--provenance",
                    default="/lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/squashfs/output/provenance_valset_v1_30720.npz",
-                   help="用于确定包内实际存在的 ticker 集合（如 30720 档无 Q）")
+                   help="用于确定包内实际存在的 ticker 集合（.npz 取 msg_paths；.npy 视为纯 ticker 数组）")
+    p.add_argument("--sampler_indices", default=None,
+                   help="npy：dataset 全局窗口索引集合（默认 range(n_expect)，即样本即文件的 valset 模式）")
+    p.add_argument("--n_expect", type=int, default=30720,
+                   help="dataset train_size 断言值（valset 包=30720；Jan-2026 全月池=7507307）")
+    p.add_argument("--date_range", default="2022-01-01,2025-12-31",
+                   help="dataset 日期范围（Jan-2026 评测用 2026-01-02,2026-01-31）")
     return p.parse_args()
 
 
@@ -51,12 +57,15 @@ def read_tickers(path):
 
 
 def tickers_in_valset(prov_path, universe):
-    """provenance 源路径形如 .../2022-01/A/A_2022-01-11_...npy → ticker 目录名。
-    dataloader 对缺席 ticker 会 assert（30720 档无 Q），故先取交集。"""
-    prov = onp.load(prov_path)
-    present = {str(pth).rsplit("/", 3)[-2] for pth in prov["msg_paths"]}
+    """确定数据源实际存在的 ticker 集合（dataloader 对缺席 ticker 会 assert）。
+    .npz：valset provenance，取 msg_paths 的目录名；.npy：纯 ticker 数组（Jan pool）。"""
+    if prov_path.endswith(".npz"):
+        prov = onp.load(prov_path)
+        present = {str(pth).rsplit("/", 3)[-2] for pth in prov["msg_paths"]}
+    else:
+        present = set(str(t) for t in onp.load(prov_path))
     kept = [t for t in universe if t in present]
-    print(f"[tickers] {len(kept)}/{len(universe)} present in valset "
+    print(f"[tickers] {len(kept)}/{len(universe)} present in data source "
           f"(absent: {sorted(set(universe) - present)})", flush=True)
     return kept
 
@@ -68,7 +77,7 @@ def build_base_args(cli):
         dir_name="/lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500",
         data_root=cli.data_root,
         tickers=tickers_in_valset(cli.provenance, read_tickers(CONSTITUENTS)),
-        train_date_range=("2022-01-01", "2025-12-31"), test_date_range=None,
+        train_date_range=tuple(cli.date_range.split(",")), test_date_range=None,
         token_mode="26tok", msg_seq_len=500, use_book_data=True, use_simple_book=False,
         book_transform=True, book_depth=500, book_ablation="real",
         masking="none", merging="padded", dataset="lobster-prediction",
@@ -139,17 +148,18 @@ def setup_checkpoint(jax, args, base_args, mesh, restore_path, restore_step, ds_
     return state, val_model, jit_eval
 
 
-def eval_full(jax, cli, mesh, ds_obj, ds_meta, state, val_model, jit_eval, label, eval_bsz):
-    """全量 30,720 样本顺序评测；返回 (per-batch loss, per-batch acc)。"""
+def eval_full(jax, cli, mesh, ds_obj, ds_meta, state, val_model, jit_eval, label, eval_bsz,
+              sampler_ids):
+    """固定样本集合顺序评测（30,720 个）；返回 (per-sample loss, per-sample acc)。"""
     from lob.lobster_dataloader import LOBSTER
     from lob.dataloading import force_cpu
     from lob.sharding_utils import get_data_shardings_for_batch
     from lob.train_helpers import prep_batch
     n_classes, seq_len, book_dim, book_seq_len, train_size = ds_meta
     bsz = eval_bsz * cli.num_devices
-    assert N_EXPECT % bsz == 0, f"bsz {bsz} 不整除 {N_EXPECT}（会丢样本）"
+    assert len(sampler_ids) % bsz == 0, f"bsz {bsz} 不整除 {len(sampler_ids)}（会丢样本）"
     from torch.utils.data import DataLoader as TorchDataLoader
-    kw = dict(batch_size=bsz, sampler=list(range(N_EXPECT)), shuffle=False,
+    kw = dict(batch_size=bsz, sampler=sampler_ids, shuffle=False,
               drop_last=True, collate_fn=LOBSTER._collate_fn, pin_memory=True)
     if cli.n_data_workers > 0:
         kw.update(num_workers=cli.n_data_workers, multiprocessing_context="spawn",
@@ -169,7 +179,7 @@ def eval_full(jax, cli, mesh, ds_obj, ds_meta, state, val_model, jit_eval, label
         loader_it = iter(loader)
     finally:
         os.environ.pop("JAX_PLATFORMS", None)
-    n_batches = N_EXPECT // bsz
+    n_batches = len(sampler_ids) // bsz
     losses, accs = [], []
     t0 = time.time()
     for bi in range(n_batches):
@@ -218,9 +228,16 @@ def main():
         process_rank=0, process_count=1, tickers=base.tickers,
         data_root=base.data_root, train_date_range=list(base.train_date_range),
         test_date_range=None, token_mode="26tok")
-    assert train_size == N_EXPECT, f"train_size={train_size} != {N_EXPECT} (valset 30720 包)"
+    assert train_size == cli.n_expect, \
+        f"train_size={train_size} != n_expect={cli.n_expect}（窗口枚举与清单假设不符）"
     print(f"[dataset] N={train_size:,} seq_len={seq_len} book_dim={book_dim}", flush=True)
     ds_meta = (n_classes, seq_len, book_dim, book_seq_len, train_size)
+    if cli.sampler_indices:
+        sampler_ids = [int(i) for i in onp.load(cli.sampler_indices)]
+        assert max(sampler_ids) < train_size
+        print(f"[sampler] {len(sampler_ids):,} indices from {cli.sampler_indices}", flush=True)
+    else:
+        sampler_ids = list(range(N_EXPECT))
 
     mesh = initialize_mesh(cli.num_devices)
     base_args = dict(base.__dict__)
@@ -264,7 +281,7 @@ def main():
         state, val_model, jit_eval = setup_checkpoint(
             jax, base, base_args, mesh, m["ckpt_dir"], int(m["step"]), ds_meta)
         losses, accs = eval_full(jax, cli, mesh, ds_obj, ds_meta,
-                                 state, val_model, jit_eval, label, eval_bsz)
+                                 state, val_model, jit_eval, label, eval_bsz, sampler_ids)
         mean, lo, hi = boot_mean(losses)
         out = dict(label=label, size=m["size"], seed=m["seed"], jid=m["jid"],
                    ckpt_dir=m["ckpt_dir"], step=int(m["step"]),
@@ -275,7 +292,7 @@ def main():
                    val_acc_mean=float(accs.mean()),
                    jan2026_ce=m["jan2026_ce"],
                    wall_sec=round(time.time() - t0, 1),
-                   data="shard_valset_v1_30720.squashfs",
+                   data=(cli.sampler_indices or "shard_valset_v1_30720.squashfs"),
                    protocol="sequential full pass, per-sample CE, drop_last exact")
         json.dump(out, open(oj, "w"), indent=1)
         onp.save(oj.replace(".json", "_sampleloss.npy"), losses.astype(onp.float32))
