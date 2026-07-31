@@ -10,6 +10,7 @@
 set -uo pipefail
 OUT_DIR="$1"
 MANIFEST="${MANIFEST:?MANIFEST required}"
+TOTAL="${TOTAL:-124}"
 QUANT_ROOT=/lus/lfs1aip2/projects/public/s5e/quant_team/quant
 export PATH="$QUANT_ROOT/miniforge3/bin:$PATH"
 EXP_DIR=$QUANT_ROOT/AlphaTrade/experiments/exp_R1_Mamba3
@@ -40,7 +41,7 @@ worker() {
       # 每 pass 走一遍 manifest（跳过 done/claimed）；最多 4 pass，全 claimed 即秒退。
       # 无锁清理：只做纯增量吞吐，孤儿锁留给原 worker 的 retry 回收。
       for pass in 1 2 3 4; do
-          (( $(done_count) >= 124 )) && { echo "[${HOST} gpu${G}] queue drained"; break; }
+          (( $(done_count) >= TOTAL )) && { echo "[${HOST} gpu${G}] queue drained"; break; }
           CUDA_VISIBLE_DEVICES=$G XLA_PYTHON_CLIENT_MEM_FRACTION=0.80 \
           python -u "$VE_DIR/valset_ce_eval.py" \
               --manifest "$MANIFEST" --data_root "$MOUNT" --out_dir "$OUT_DIR" \
@@ -54,4 +55,4 @@ worker() {
 
 for G in 0 1 2 3; do worker "$G" & done
 wait
-echo "[${HOST}] all 4 workers exited; done=$(done_count)/124"
+echo "[${HOST}] all 4 workers exited; done=$(done_count)/$TOTAL"

@@ -262,6 +262,10 @@ manifest.json                 # 完整配方、证据链、未来预算、披露
 
 逐 batch 损失与分析脚本随交付物存档（`leakage_exp/results/`、`leakage_exp/analysis/`）。
 
+## 11. 首个应用
+
+验证集的第一个用途是重做 scaling-law 的 IsoFLOP 分析。33 条训练链的 256 个 checkpoint 已在本验证集上完成评测，据此得到最优模型规模随算力的标度指数约 0.44（稳健区间 0.40 至 0.47）。分析同时暴露出低算力切片的一个结构性缺口：小模型的早期 checkpoint 在训练时已被轮转删除，导致那些切片只有欠训大模型构成的单侧数据，顶点估计不可靠。完整的方法、逐切片结果与推荐的报告口径见 [`VALSET_ISOFLOP_ANALYSIS.md`](VALSET_ISOFLOP_ANALYSIS.md)。
+
 ## 参考来源
 
 [Unidata: Validation Dataset in ML](https://unidata.pro/blog/validation-dataset-in-ml/) · [IBM: What is Data Leakage in Machine Learning](https://www.ibm.com/think/topics/data-leakage-machine-learning) · [Google Research: The reusable holdout](https://research.google/blog/the-reusable-holdout-preserving-validity-in-adaptive-data-analysis/) · [Dwork et al. 2015, Generalization in Adaptive Data Analysis and Holdout Reuse](https://arxiv.org/pdf/1506.02629) · [mlbenchmarks.org: Test set reuse](https://mlbenchmarks.org/05-test-set-reuse.html) · [The Reliability Gap in Benchmark Auditing (arXiv 2606.03305)](https://arxiv.org/html/2606.03305) · [Gap-K%: Measuring Top-1 Prediction Gap for Detecting Pretraining Data (arXiv 2601.19936)](https://arxiv.org/pdf/2601.19936) · [awesome-data-contamination paper list](https://github.com/lyy1994/awesome-data-contamination)

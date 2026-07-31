@@ -1,0 +1,225 @@
+{
+ "input": "/lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/valset_eval/valset_ce_256_fitready.csv",
+ "delta": 0.15,
+ "tau": 0.1,
+ "n_chains": 33,
+ "slices": [
+  {
+   "C": 3.9299393472768e+17,
+   "n_points": 7,
+   "n_unique_N": 4,
+   "L_min_observed": 0.9132956119186819,
+   "full": null,
+   "window": null,
+   "weight": null
+  },
+  {
+   "C": 9.31449645064645e+17,
+   "n_points": 12,
+   "n_unique_N": 6,
+   "L_min_observed": 0.6789739804309052,
+   "full": {
+    "a": 0.12141463786995757,
+    "N_star": 14719320.107787926,
+    "L_star": 0.6435172662525517,
+    "n_points": 12,
+    "undershoot_nats": 0.0354567141783535,
+    "vertex_undershoot": true,
+    "n_left": 0,
+    "n_right": 12,
+    "curvature_jump": true
+   },
+   "window": null,
+   "weight": {
+    "a": 0.17265402986882164,
+    "N_star": 21580306.680434376,
+    "L_star": 0.6783216259848359,
+    "n_points": 12,
+    "undershoot_nats": 0.0006523544460692587,
+    "vertex_undershoot": false,
+    "n_left": 0,
+    "n_right": 12,
+    "curvature_jump": true
+   }
+  },
+  {
+   "C": 2.2076636930599066e+18,
+   "n_points": 15,
+   "n_unique_N": 7,
+   "L_min_observed": 0.6447532995623986,
+   "full": {
+    "a": 0.09322371373423749,
+    "N_star": 19772658.51697716,
+    "L_star": 0.5383983401326269,
+    "n_points": 15,
+    "undershoot_nats": 0.10635495942977169,
+    "vertex_undershoot": true,
+    "n_left": 3,
+    "n_right": 12,
+    "curvature_jump": true
+   },
+   "window": {
+    "a": 0.017626440992888643,
+    "N_star": 20347150.29965616,
+    "L_star": 0.6409676238369091,
+    "n_points": 8,
+    "undershoot_nats": 0.00378567572548949,
+    "vertex_undershoot": false,
+    "n_left": 3,
+    "n_right": 12,
+    "curvature_jump": false
+   },
+   "weight": {
+    "a": 0.023180855828410757,
+    "N_star": 19168846.170010187,
+    "L_star": 0.6338173942375862,
+    "n_points": 15,
+    "undershoot_nats": 0.010935905324812367,
+    "vertex_undershoot": false,
+    "n_left": 3,
+    "n_right": 12,
+    "curvature_jump": false
+   }
+  },
+  {
+   "C": 5.232466411339513e+18,
+   "n_points": 14,
+   "n_unique_N": 8,
+   "L_min_observed": 0.6267737157582192,
+   "full": {
+    "a": 0.02234819610424938,
+    "N_star": 33068722.30416539,
+    "L_star": 0.6169731375278085,
+    "n_points": 14,
+    "undershoot_nats": 0.009800578230410695,
+    "vertex_undershoot": false,
+    "n_left": 3,
+    "n_right": 11,
+    "curvature_jump": false
+   },
+   "window": {
+    "a": 0.02234819610424938,
+    "N_star": 33068722.30416539,
+    "L_star": 0.6169731375278085,
+    "n_points": 14,
+    "undershoot_nats": 0.009800578230410695,
+    "vertex_undershoot": false,
+    "n_left": 3,
+    "n_right": 11,
+    "curvature_jump": false
+   },
+   "weight": {
+    "a": 0.01928984420940252,
+    "N_star": 32375288.192795493,
+    "L_star": 0.6199038470004581,
+    "n_points": 14,
+    "undershoot_nats": 0.006869868757761077,
+    "vertex_undershoot": false,
+    "n_left": 3,
+    "n_right": 11,
+    "curvature_jump": false
+   }
+  },
+  {
+   "C": 1.2401664633913733e+19,
+   "n_points": 12,
+   "n_unique_N": 6,
+   "L_min_observed": 0.6113101238583224,
+   "full": {
+    "a": 0.00898419192572555,
+    "N_star": 43533215.71047349,
+    "L_star": 0.6113361806421125,
+    "n_points": 12,
+    "undershoot_nats": -2.6056783790084914e-05,
+    "vertex_undershoot": false,
+    "n_left": 1,
+    "n_right": 11,
+    "curvature_jump": false
+   },
+   "window": {
+    "a": 0.00898419192572555,
+    "N_star": 43533215.71047349,
+    "L_star": 0.6113361806421125,
+    "n_points": 12,
+    "undershoot_nats": -2.6056783790084914e-05,
+    "vertex_undershoot": false,
+    "n_left": 1,
+    "n_right": 11,
+    "curvature_jump": false
+   },
+   "weight": {
+    "a": 0.009048151904437477,
+    "N_star": 43725695.97795911,
+    "L_star": 0.611303743178182,
+    "n_points": 12,
+    "undershoot_nats": 6.3806801403609725e-06,
+    "vertex_undershoot": false,
+    "n_left": 1,
+    "n_right": 11,
+    "curvature_jump": false
+   }
+  },
+  {
+   "C": 2.939364987776256e+19,
+   "n_points": 9,
+   "n_unique_N": 4,
+   "L_min_observed": 0.60173,
+   "full": {
+    "a": 0.009106519395461265,
+    "N_star": 66289948.96787468,
+    "L_star": 0.6015710258599967,
+    "n_points": 9,
+    "undershoot_nats": 0.00015897414000332066,
+    "vertex_undershoot": false,
+    "n_left": 2,
+    "n_right": 7,
+    "curvature_jump": false
+   },
+   "window": {
+    "a": 0.009106519395461265,
+    "N_star": 66289948.96787468,
+    "L_star": 0.6015710258599967,
+    "n_points": 9,
+    "undershoot_nats": 0.00015897414000332066,
+    "vertex_undershoot": false,
+    "n_left": 2,
+    "n_right": 7,
+    "curvature_jump": false
+   },
+   "weight": {
+    "a": 0.009278909443570614,
+    "N_star": 66845367.05423714,
+    "L_star": 0.6014926334244479,
+    "n_points": 9,
+    "undershoot_nats": 0.00023736657555206708,
+    "vertex_undershoot": false,
+    "n_left": 2,
+    "n_right": 7,
+    "curvature_jump": false
+   }
+  }
+ ],
+ "slopes": {
+  "full": {
+   "all_valid": 0.4402326746626505,
+   "n_all": 5,
+   "clean_only": 0.4029503717508714,
+   "n_clean": 3,
+   "L_star_monotone": true
+  },
+  "window": {
+   "all_valid": 0.4424633702049002,
+   "n_all": 4,
+   "clean_only": 0.4424633702049002,
+   "n_clean": 4,
+   "L_star_monotone": true
+  },
+  "weight": {
+   "all_valid": 0.35759413035209636,
+   "n_all": 5,
+   "clean_only": 0.46906970471888854,
+   "n_clean": 4,
+   "L_star_monotone": true
+  }
+ }
+}
