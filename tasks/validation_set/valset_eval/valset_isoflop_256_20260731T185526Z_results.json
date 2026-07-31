@@ -1,0 +1,90 @@
+{
+  "method": "within-run log-C interpolation (isoflop_test_ce.py lineage)",
+  "input": "/lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/valset_eval/valset_ce_256_fitready.csv",
+  "n_chains_used": 33,
+  "n_single_point_chains_dropped": 0,
+  "C_targets": [
+    3.9299393472768e+17,
+    9.31449645064645e+17,
+    2.2076636930599066e+18,
+    5.232466411339513e+18,
+    1.2401664633913733e+19,
+    2.939364987776256e+19
+  ],
+  "slices": [
+    {
+      "C": 3.9299393472768e+17,
+      "n_chains": 7,
+      "n_unique_N": 4,
+      "N_star": null,
+      "L_star": null,
+      "para_a": null,
+      "bracketed": false,
+      "n_left": 0,
+      "n_right": 0,
+      "submission_bracketing_rule": false
+    },
+    {
+      "C": 9.31449645064645e+17,
+      "n_chains": 12,
+      "n_unique_N": 6,
+      "N_star": 14719320.107787926,
+      "L_star": 0.6435172662525517,
+      "para_a": 0.12141463786995757,
+      "bracketed": false,
+      "n_left": 0,
+      "n_right": 12,
+      "submission_bracketing_rule": false
+    },
+    {
+      "C": 2.2076636930599066e+18,
+      "n_chains": 15,
+      "n_unique_N": 7,
+      "N_star": 19772658.51697716,
+      "L_star": 0.5383983401326269,
+      "para_a": 0.09322371373423749,
+      "bracketed": true,
+      "n_left": 3,
+      "n_right": 12,
+      "submission_bracketing_rule": true
+    },
+    {
+      "C": 5.232466411339513e+18,
+      "n_chains": 14,
+      "n_unique_N": 8,
+      "N_star": 33068722.30416539,
+      "L_star": 0.6169731375278085,
+      "para_a": 0.02234819610424938,
+      "bracketed": true,
+      "n_left": 3,
+      "n_right": 11,
+      "submission_bracketing_rule": true
+    },
+    {
+      "C": 1.2401664633913733e+19,
+      "n_chains": 12,
+      "n_unique_N": 6,
+      "N_star": 43533215.71047349,
+      "L_star": 0.6113361806421125,
+      "para_a": 0.00898419192572555,
+      "bracketed": true,
+      "n_left": 1,
+      "n_right": 11,
+      "submission_bracketing_rule": false
+    },
+    {
+      "C": 2.939364987776256e+19,
+      "n_chains": 9,
+      "n_unique_N": 4,
+      "N_star": 66289948.96787468,
+      "L_star": 0.6015710258599967,
+      "para_a": 0.009106519395461265,
+      "bracketed": true,
+      "n_left": 2,
+      "n_right": 7,
+      "submission_bracketing_rule": true
+    }
+  ],
+  "slope_logNstar_vs_logC": 0.45242020497338825,
+  "n_valid_slices": 4
+}
