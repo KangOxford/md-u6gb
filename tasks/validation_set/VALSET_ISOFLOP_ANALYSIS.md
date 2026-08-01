@@ -1,6 +1,6 @@
 # 在 valset_v1 上的 IsoFLOP 分析：最优模型规模的算力标度
 
-*基于 432 点全轨迹验证集交叉熵 · 2026-08-01*
+*基于 436 点全轨迹验证集交叉熵 · 2026-08-01*
 
 ---
 
@@ -14,20 +14,20 @@
 
 ## 1. 数据基础
 
-分析建立在 432 个测量点上，每个点是一个训练 checkpoint 在冻结验证集（`valset_v1`，30,720 样本）上的完整交叉熵。这些点来自三批评测：
+分析建立在 436 个测量点上，每个点是一个训练 checkpoint 在冻结验证集（`valset_v1`，30,720 样本）上的完整交叉熵。这些点来自三批评测：
 
 | Source | Points | What it covers |
 |---|---|---|
 | Terminal window (evaluated earlier) | 132 | the last checkpoints of each chain, where models are near-converged |
 | Early backfill (evaluated 2026-07-31) | 124 | early checkpoints, D_tokens down to 2.8e8, where models are still heavily undertrained |
-| Densification (evaluated 2026-08-01) | 176 | every remaining on-disk checkpoint, tightening within-chain sampling |
-| **Total** | **432** | 33 chains, 12 model sizes (2.63M to 293M params) |
+| Densification (evaluated 2026-08-01) | 180 | every remaining on-disk checkpoint, tightening within-chain sampling |
+| **Total** | **436** | 33 chains, 12 model sizes (2.63M to 293M params) |
 
 补评的意义在于把曲线的欠训一侧填了出来。以 78M 为例，此前只有 3 个点、全部集中在训练末段；补评加加密之后有 63 个点，覆盖从 step 170 到收敛的完整轨迹。验证集交叉熵的动态范围也随之扩展到 0.6003 至 2.5119。加密评测把磁盘上所有剩余 checkpoint 都评了，逐尺寸点数如下：
 
 | Size | 0p2M | 1M | 4M | 6M | 10M | 14M | 23M | 46M | 78M | 120M | 200M | 350M |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Points | 11 | 12 | 26 | 49 | 51 | 54 | 42 | 45 | 63 | 45 | 18 | 16 |
+| Points | 11 | 12 | 26 | 49 | 55 | 54 | 42 | 45 | 63 | 45 | 18 | 16 |
 
 每条链内部按 log(算力) 做线性插值，即可读出该链在任意算力处的损失。算力口径为解析式 `C = 6ND`（N 为参数量，D 为已消费 token 数），全表统一，因此切片之间可比。
 
@@ -55,7 +55,7 @@ IsoFLOP 分析的标准做法是：固定一个算力 C，把所有能达到该�
 | window | quadratic fit using only points with L ≤ L_min + 0.15 nats (valley neighbourhood) |
 | weight | quadratic fit on all points, weighted by exp(−(L − L_min)/0.10) |
 
-逐切片结果如下（432 点数据；N\* 单位为百万参数，under 为顶点穿底幅度，单位 nats）：
+逐切片结果如下（436 点数据；N\* 单位为百万参数，under 为顶点穿底幅度，单位 nats）：
 
 | C | L_min obs | full N* / L* / under | window N* / L* / under | weight N* / L* / under |
 |---|---|---|---|---|
@@ -80,9 +80,9 @@ IsoFLOP 分析的标准做法是：固定一个算力 C，把所有能达到该�
 
 ### 3.1 对采样密度的敏感性
 
-把轨迹从 256 点加密到 432 点（即把磁盘上所有剩余 checkpoint 都评出来）后，三种方法的指数一致上移：
+把轨迹从 256 点加密到 436 点（即把磁盘上所有剩余 checkpoint 都评出来）后，三种方法的指数一致上移：
 
-| Mode (acceptance-passing slices) | 256 points | 432 points | Shift |
+| Mode (acceptance-passing slices) | 256 points | 436 points | Shift |
 |---|---|---|---|
 | full | 0.4030 | 0.4342 | +0.031 |
 | window | 0.4425 | 0.4618 | +0.019 |
@@ -90,7 +90,7 @@ IsoFLOP 分析的标准做法是：固定一个算力 C，把所有能达到该�
 
 位移来自链内插值精度的提升：加密前每条链用 7 至 10 个点跨两个数量级算力做 log 线性插值，谷底附近的损失被系统性高估，顶点因而偏左。加密后最高算力切片的 N\* 从 66.3M 移到 70.0M，其余切片基本不动。方法之间的跨度从 0.066 收窄到 0.055。
 
-需要如实指出的是，指数在加密后仍有约 0.02 的移动，说明估计尚未对采样密度收敛。因此报告时应给出区间而非四位小数，并注明该区间不含"继续加密可能带来的进一步位移"这一项。病态切片则完全不受加密影响（全点法穿底仍是 0.1064），再次印证那是结构性的臂不平衡，不是采样问题。
+加密的最后 4 个点（10M 链的中段）对全部结果没有任何影响，三种方法的指数与置信区间逐位相同，说明相对于这批存档，分析已经收敛。但需要如实指出的是，从 256 点到 436 点这一整段加密使指数移动了约 0.02，说明估计对采样密度本身尚未收敛。因此报告时应给出区间而非四位小数，并注明该区间不含"继续加密可能带来的进一步位移"这一项。病态切片则完全不受加密影响（全点法穿底仍是 0.1064），再次印证那是结构性的臂不平衡，不是采样问题。
 
 ### 3.2 抽样不确定度：指数其实没有被定住
 
@@ -162,16 +162,16 @@ IsoFLOP 分析的标准做法是：固定一个算力 C，把所有能达到该�
 
 | Path | Content |
 |---|---|
-| `valset_eval/valset_ce_432_master_table.csv` | **primary** 432-point trajectory table (132 terminal + 124 backfill + 176 densify) |
-| `valset_eval/valset_ce_432_fitready.csv` | fit-ready schema (C = 6ND, loss column carries validation CE) |
+| `valset_eval/valset_ce_436_master_table.csv` | **primary** 436-point trajectory table (132 terminal + 124 backfill + 180 densify) |
+| `valset_eval/valset_ce_436_fitready.csv` | fit-ready schema (C = 6ND, loss column carries validation CE) |
 | `valset_eval/valset_isoflop_432_*_parabolas.png` / `_summary.png` | IsoFLOP parabola panels and valley summary (all-points fit) |
 | `valset_eval/valset_isoflop_robust.py` | three-mode robust vertex estimation with acceptance criteria |
-| `valset_eval/valset_isoflop_robust_432.json` | per-slice results and slopes for all three modes |
+| `valset_eval/valset_isoflop_robust_436.json` | per-slice results and slopes for all three modes |
 | `valset_eval/valset_isoflop_bootstrap.py` | chain-level bootstrap of the scaling exponent |
-| `valset_eval/valset_isoflop_bootstrap_432.json` | bootstrap distribution, sd and 95% CI |
+| `valset_eval/valset_isoflop_bootstrap_436.json` | bootstrap distribution, sd and 95% CI |
 | `valset_eval/valset_ce_256_master_table_20260731T161800Z.csv` | pre-densification snapshot, retained for the 3.1 sensitivity comparison |
 | `valset_eval/valset_isoflop_robust_256.json` | pre-densification robust results |
-| `valset_eval/manifest_densify180.json` | densification manifest; 176 of 180 evaluated, 4 remaining 10M points pending a free node |
+| `valset_eval/manifest_densify180.json` | densification manifest; all 180 evaluated |
 
 ---
 
