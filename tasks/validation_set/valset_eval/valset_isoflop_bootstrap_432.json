@@ -1,0 +1,24 @@
+{
+ "input": "/lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/valset_eval/valset_ce_432_fitready.csv",
+ "method": "window",
+ "delta": 0.15,
+ "n_chains": 33,
+ "n_boot": 2000,
+ "n_boot_usable": 1986,
+ "n_boot_failed": 14,
+ "C_targets": [
+  3.9299393472768e+17,
+  9.31449645064645e+17,
+  2.2076636930599066e+18,
+  5.232466411339513e+18,
+  1.2401664633913733e+19,
+  2.939364987776256e+19
+ ],
+ "slope_point": 0.46175292331088674,
+ "slope_mean": 0.4324779561613922,
+ "slope_sd": 0.13476261978035944,
+ "slope_ci95": [
+  0.12163534080260507,
+  0.5572617873250705
+ ]
+}
