@@ -6,9 +6,9 @@
 
 ## 执行摘要
 
-把 33 条训练链的验证集交叉熵按固定算力切片重新组织，可以直接读出"给定算力预算下最优的模型规模"。核心结论是 **N\* ∝ C^0.44**，即算力每翻十倍，最优参数量增长约 2.8 倍。这个指数与 Chinchilla 的 0.5 同量级但略低，意味着在本任务上，把算力更多地投入数据而非参数，比通用语言建模更划算一些。
+把 33 条训练链的验证集交叉熵按固定算力切片重新组织，可以直接读出"给定算力预算下最优的模型规模"。核心结论是 **N\* ∝ C^0.46**，即算力每翻十倍，最优参数量增长约 2.9 倍。这个指数与 Chinchilla 的 0.5 同量级但略低，意味着在本任务上，把算力更多地投入数据而非参数，比通用语言建模更划算一些。
 
-这个数字必须带着两个条件读。第一，它依赖于用哪种方法从每个算力切片里定位最优点，不同方法给出 0.40 到 0.47 的范围。第二，最低的两个算力切片存在无法修复的数据缺口，任何方法在那里都不可靠。本文把这两点量化清楚，并给出推荐的报告口径。
+这个数字必须带着三个条件读。第一，它依赖于用哪种方法从每个算力切片里定位最优点，不同方法给出 0.43 到 0.49 的范围。第二，最低的两个算力切片存在无法修复的数据缺口，任何方法在那里都不可靠。第三，把轨迹采样从 256 点加密到 432 点后，指数上移了约 0.02，说明估计尚未对采样密度收敛。本文把这三点量化清楚，并给出推荐的报告口径。
 
 ## 1. 数据基础
 
@@ -18,9 +18,14 @@
 |---|---|---|
 | Terminal window (evaluated earlier) | 132 | the last checkpoints of each chain, where models are near-converged |
 | Early backfill (evaluated 2026-07-31) | 124 | early checkpoints, D_tokens down to 2.8e8, where models are still heavily undertrained |
-| **Total** | **256** | 33 chains, 12 model sizes (2.63M to 293M params) |
+| Densification (evaluated 2026-08-01) | 176 | every remaining on-disk checkpoint, tightening within-chain sampling |
+| **Total** | **432** | 33 chains, 12 model sizes (2.63M to 293M params) |
 
-补评的意义在于把曲线的欠训一侧填了出来。以 78M 和 120M 为例，此前各自只有 3 个点，全部集中在训练末段；补评后各有 21 个点，覆盖从 step 170 到收敛的完整轨迹。验证集交叉熵的动态范围也随之从窄区间扩展到 0.6003 至 2.5119。
+补评的意义在于把曲线的欠训一侧填了出来。以 78M 为例，此前只有 3 个点、全部集中在训练末段；补评加加密之后有 63 个点，覆盖从 step 170 到收敛的完整轨迹。验证集交叉熵的动态范围也随之扩展到 0.6003 至 2.5119。加密评测把磁盘上所有剩余 checkpoint 都评了，逐尺寸点数如下：
+
+| Size | 0p2M | 1M | 4M | 6M | 10M | 14M | 23M | 46M | 78M | 120M | 200M | 350M |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Points | 11 | 12 | 26 | 49 | 51 | 54 | 42 | 45 | 63 | 45 | 18 | 16 |
 
 每条链内部按 log(算力) 做线性插值，即可读出该链在任意算力处的损失。算力口径为解析式 `C = 6ND`（N 为参数量，D 为已消费 token 数），全表统一，因此切片之间可比。
 
@@ -48,28 +53,42 @@ IsoFLOP 分析的标准做法是：固定一个算力 C，把所有能达到该�
 | window | quadratic fit using only points with L ≤ L_min + 0.15 nats (valley neighbourhood) |
 | weight | quadratic fit on all points, weighted by exp(−(L − L_min)/0.10) |
 
-逐切片结果如下（N\* 单位为百万参数，under 为顶点穿底幅度，单位 nats）：
+逐切片结果如下（432 点数据；N\* 单位为百万参数，under 为顶点穿底幅度，单位 nats）：
 
 | C | L_min obs | full N* / L* / under | window N* / L* / under | weight N* / L* / under |
 |---|---|---|---|---|
 | 3.93e17 | 0.9133 | no minimum | no minimum | no minimum |
 | 9.31e17 | 0.6790 | 14.7 / 0.6435 / +0.0355 ✗ | insufficient points | 21.6 / 0.6783 / +0.0007 (curvature flag) |
-| 2.21e18 | 0.6448 | 19.8 / 0.5384 / **+0.1064 ✗** | 20.3 / 0.6410 / +0.0038 ✓ | 19.2 / 0.6338 / +0.0109 ✓ |
-| 5.23e18 | 0.6268 | 33.1 / 0.6170 / +0.0098 ✓ | 33.1 / 0.6170 / +0.0098 ✓ | 32.4 / 0.6199 / +0.0069 ✓ |
-| 1.24e19 | 0.6113 | 43.5 / 0.6113 / −0.0000 ✓ | 43.5 / 0.6113 / −0.0000 ✓ | 43.7 / 0.6113 / +0.0000 ✓ |
-| 2.94e19 | 0.6017 | 66.3 / 0.6016 / +0.0002 ✓ | 66.3 / 0.6016 / +0.0002 ✓ | 66.8 / 0.6015 / +0.0002 ✓ |
+| 2.21e18 | 0.6448 | 19.8 / 0.5383 / **+0.1064 ✗** | 20.4 / 0.6409 / +0.0039 ✓ | 19.2 / 0.6337 / +0.0110 ✓ |
+| 5.23e18 | 0.6264 | 33.1 / 0.6168 / +0.0096 ✓ | 33.1 / 0.6168 / +0.0096 ✓ | 32.4 / 0.6198 / +0.0067 ✓ |
+| 1.24e19 | 0.6112 | 43.7 / 0.6113 / −0.0001 ✓ | 43.7 / 0.6113 / −0.0001 ✓ | 43.9 / 0.6113 / −0.0000 ✓ |
+| 2.94e19 | 0.6017 | 70.0 / 0.6009 / +0.0008 ✓ | 70.0 / 0.6009 / +0.0008 ✓ | 70.7 / 0.6008 / +0.0009 ✓ |
 
-窗口法的行为正是稳健方法应有的样子：在数据健康的三个高算力切片上，它给出的 N\* 与全点法**完全相同**（33.1M、43.5M、66.3M，一位小数都不差），因为那里所有点本就落在谷底邻域内；只在唯一病态的切片上起作用，把穿底从 0.1064 压到 0.0038，L\* 从 0.5384 回到 0.6410，单调性随之恢复。
+窗口法的行为正是稳健方法应有的样子：在数据健康的三个高算力切片上，它给出的 N\* 与全点法**完全相同**（33.1M、43.7M、70.0M，一位小数都不差），因为那里所有点本就落在谷底邻域内；只在唯一病态的切片上起作用，把穿底从 0.1064 压到 0.0039，L\* 从 0.5383 回到 0.6409，单调性随之恢复。
 
 由此得到三组标度指数：
 
 | Mode | Slope over all valid slices | Slope over slices passing acceptance | Slices passing |
 |---|---|---|---|
-| full | 0.4402 (n=5) | 0.4030 (n=3) | 3 of 5 |
-| **window** | **0.4425 (n=4)** | **0.4425 (n=4)** | **4 of 4** |
-| weight | 0.3576 (n=5) | 0.4691 (n=4) | 4 of 5 |
+| full | 0.4534 (n=5) | 0.4342 (n=3) | 3 of 5 |
+| **window** | **0.4618 (n=4)** | **0.4618 (n=4)** | **4 of 4** |
+| weight | 0.3710 (n=5) | 0.4887 (n=4) | 4 of 5 |
 
-窗口法是三者中唯一自洽的：它的所有切片都通过验收，因此"全部"与"通过验收"两个口径给出同一个数，不需要事后剔除任何切片。全点法必须剔除两个切片才能自洽，剔除前后相差 0.037（0.4402 对 0.4030）。加权法对被标记切片最敏感，两个口径相差 0.11。
+窗口法是三者中唯一自洽的：它的所有切片都通过验收，因此"全部"与"通过验收"两个口径给出同一个数，不需要事后剔除任何切片。全点法必须剔除两个切片才能自洽，剔除前后相差 0.019。加权法对被标记切片最敏感，两个口径相差 0.12。
+
+### 3.1 对采样密度的敏感性
+
+把轨迹从 256 点加密到 432 点（即把磁盘上所有剩余 checkpoint 都评出来）后，三种方法的指数一致上移：
+
+| Mode (acceptance-passing slices) | 256 points | 432 points | Shift |
+|---|---|---|---|
+| full | 0.4030 | 0.4342 | +0.031 |
+| window | 0.4425 | 0.4618 | +0.019 |
+| weight | 0.4691 | 0.4887 | +0.020 |
+
+位移来自链内插值精度的提升：加密前每条链用 7 至 10 个点跨两个数量级算力做 log 线性插值，谷底附近的损失被系统性高估，顶点因而偏左。加密后最高算力切片的 N\* 从 66.3M 移到 70.0M，其余切片基本不动。方法之间的跨度从 0.066 收窄到 0.055。
+
+需要如实指出的是，指数在加密后仍有约 0.02 的移动，说明估计尚未对采样密度收敛。因此报告时应给出区间而非四位小数，并注明该区间不含"继续加密可能带来的进一步位移"这一项。病态切片则完全不受加密影响（全点法穿底仍是 0.1064），再次印证那是结构性的臂不平衡，不是采样问题。
 
 ## 4. 一个无法修复的数据缺口
 
@@ -86,7 +105,7 @@ IsoFLOP 分析的标准做法是：固定一个算力 C，把所有能达到该�
 
 训练时的 `max_to_keep` 轮转删除了小模型的早期 checkpoint，而大模型的恰好保留了下来。这个不对称正是低算力切片只有右臂的根源：在 C = 2.21e18 处，唯一能提供左臂的小模型压根没有那么早的存档。
 
-磁盘上确实还有 180 个从未评过的 checkpoint，已在评测中，但逐链核对后确认它们**全部落在各链已有算力区间之内或之上**，没有任何一条链的 C_min 会因此下降。它们的价值是把链内采样从 7 至 10 个点加密到 15 至 30 个，从而降低 log(算力) 线性插值的误差，间接提升顶点估计精度，但不改变 bracketing 结构。
+磁盘上确实还有 180 个从未评过的 checkpoint（已评完 176 个，余 4 个 10M 中段点待补），但逐链核对后确认它们**全部落在各链已有算力区间之内或之上**，没有任何一条链的 C_min 会因此下降。它们的价值是把链内采样加密（见 3.1 节的实测效果），降低 log(算力) 线性插值的误差，但不改变 bracketing 结构，因此病态切片的穿底幅度在加密前后一字未变。
 
 因此，最低的两个算力切片（3.93e17 与 9.31e17）应当在报告中明确排除，而不是用任何方法去"抢救"。
 
@@ -94,20 +113,22 @@ IsoFLOP 分析的标准做法是：固定一个算力 C，把所有能达到该�
 
 综合以上，建议按下面的方式报告标度指数，而不是给出单一数字：
 
-主值取窗口法的 **0.44**（四个通过验收的切片，无需事后剔除）。稳健性区间取三种方法在各自自洽口径下的跨度，即 **0.40 至 0.47**。同时说明两点：低于 2e18 的算力切片因小模型早期 checkpoint 缺失而不可靠，已排除；顶点验收采用"穿底不超过 10 倍测量噪声"与"曲率不跳变"两条判据。
+主值取窗口法的 **0.46**（四个通过验收的切片，无需事后剔除）。稳健性区间取三种方法在各自自洽口径下的跨度，即 **0.43 至 0.49**。同时说明三点：低于 2e18 的算力切片因小模型早期 checkpoint 缺失而不可靠，已排除；顶点验收采用"穿底不超过 10 倍测量噪声"与"曲率不跳变"两条判据；指数对轨迹采样密度尚未收敛，加密一倍点数会使其上移约 0.02，故不应给出两位以上有效数字。
 
-这样报告的好处是，读者能看到结论对方法选择的敏感程度，而这个敏感程度本身就是数据覆盖不足的诚实反映。掩盖它而只报一个四位小数的数字，会给出超出数据支撑的精确感。
+这样报告的好处是，读者能看到结论对方法选择和采样密度的敏感程度，而这个敏感程度本身就是数据覆盖不足的诚实反映。掩盖它而只报一个四位小数的数字，会给出超出数据支撑的精确感。
 
 ## 6. 交付物
 
 | Path | Content |
 |---|---|
-| `valset_eval/valset_ce_256_master_table_20260731T161800Z.csv` | 256-point trajectory table (132 terminal + 124 backfill) |
-| `valset_eval/valset_ce_256_fitready.csv` | fit-ready schema (C = 6ND, loss column carries validation CE) |
-| `valset_eval/valset_isoflop_256_*_parabolas.png` / `_summary.png` | IsoFLOP parabola panels and valley summary (all-points fit) |
+| `valset_eval/valset_ce_432_master_table.csv` | **primary** 432-point trajectory table (132 terminal + 124 backfill + 176 densify) |
+| `valset_eval/valset_ce_432_fitready.csv` | fit-ready schema (C = 6ND, loss column carries validation CE) |
+| `valset_eval/valset_isoflop_432_*_parabolas.png` / `_summary.png` | IsoFLOP parabola panels and valley summary (all-points fit) |
 | `valset_eval/valset_isoflop_robust.py` | three-mode robust vertex estimation with acceptance criteria |
-| `valset_eval/valset_isoflop_robust_256.json` | per-slice results and slopes for all three modes |
-| `valset_eval/manifest_densify180.json` | 180 unevaluated on-disk checkpoints (densification, in progress) |
+| `valset_eval/valset_isoflop_robust_432.json` | per-slice results and slopes for all three modes |
+| `valset_eval/valset_ce_256_master_table_20260731T161800Z.csv` | pre-densification snapshot, retained for the 3.1 sensitivity comparison |
+| `valset_eval/valset_isoflop_robust_256.json` | pre-densification robust results |
+| `valset_eval/manifest_densify180.json` | densification manifest; 176 of 180 evaluated, 4 remaining 10M points pending a free node |
 
 ---
 
