@@ -63,14 +63,14 @@ EOF
 
 ## 3. 文档索引
 
-以下文档构成完整的交付，按阅读顺序排列。路径均在 `/lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/` 之下。
+以下文档构成完整的交付，按阅读顺序排列。除本文档位于工作区根目录 `/lus/lfs1aip2/projects/public/u6gb/` 之外，其余路径均在 `/lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/` 之下。
 
 | 文档 | 内容 | 面向的读者 |
 |---|---|---|
 | `VALSET_V1_REPORT.md` | 验证集的构造方法、零泄漏三层证明、统计性质、使用方法、质量审计、行为学泄漏检验结果 | 需要理解这把尺子是否可信的人 |
 | `VALSET_ISOFLOP_ANALYSIS.md` | IsoFLOP 分析正文：方法、逐切片结果、三层敏感性分解、根因、后续方案 | 需要引用标度指数的人 |
 | `hand_off_valset_isoflop_436.md` | IsoFLOP 分析的技术交接：术语定义、复现命令、运维坑、方法教训 | 需要接手继续做分析的人 |
-| `handoff.md` | 本文档：会话溯源与全局索引 | 需要回溯任何决策来龙去脉的人 |
+| `../../handoff.md`（工作区根目录） | 本文档：会话溯源与全局索引 | 需要回溯任何决策来龙去脉的人 |
 
 英文版：`VALSET_V1_REPORT_EN.md` 是验证集报告的完整英文翻译，用于对外分发。
 
