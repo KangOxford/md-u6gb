@@ -347,7 +347,12 @@ def main():
 
     years_f = np.array([d[:4] for d in dom48["dates"].astype(str)])
     months_f = np.array([d[:7] for d in dom48["dates"].astype(str)])
-    seqs_f = np.asarray(dom48["seqs"], dtype=np.int64)
+    # epoch 参照必须扣掉 (GOOG, 2025-12)：该整片按配方被强制切除，v2 在构造上不可能含有它，
+    # 拿含它的 epoch 作分母是苹果对橘子。首轮构建即因此在 GATE2 上失败（实测 0.0580 pp，
+    # 其中 10,377/87,969,827 = 0.0118 pp 的 2025 留存率缺口完全由该切除解释）。
+    # 注意这与「放宽阈值」不同：放宽会掩盖结构，修正参照才让闸门保持精确。
+    seqs_f = np.where(file_goog_dec, 0, np.asarray(dom48["seqs"], dtype=np.int64))
+    seqs_raw = np.asarray(dom48["seqs"], dtype=np.int64)
 
     def _by(keys_f, idx_f):
         ks = sorted(set(keys_f.tolist()))
@@ -372,6 +377,8 @@ def main():
     kish_rel = abs(kish_po - kish_ep) / kish_ep
 
     log("==== v2 acceptance gates ====")
+    log(f"  epoch reference excludes (GOOG, 2025-12): "
+        f"{int(seqs_raw.sum()) - int(seqs_f.sum()):,} windows removed from the denominator")
     log(f"  per-year retention: " + "  ".join(f"{y}={100*ret[y]:.4f}%" for y in yrs))
     log(f"  GATE1 retention max/min = {ratio_y:.4f}  (need < {TOL_YEAR_RETENTION_RATIO})")
     log(f"  GATE2 max |year share - epoch| = {max(dev_pp.values()):.4f} pp "
@@ -402,6 +409,9 @@ def main():
         month_retention_ratio_max_over_min=float(ratio_m),
         ticker_kish_n_eff_pool=kish_po, ticker_kish_n_eff_epoch=kish_ep,
         n_tickers_pool=int((po_t > 0).sum()),
+        epoch_reference="48mo domain MINUS the (GOOG, 2025-12) slice, which the recipe "
+                        "excises and v2 therefore cannot contain",
+        epoch_reference_windows_removed=int(seqs_raw.sum()) - int(seqs_f.sum()),
         note="v1 for comparison: year shares 55.25/13.51/15.10/16.13, retention ratio 3.80, "
              "ticker Kish n_eff 163.19 vs epoch 127.56.",
     )

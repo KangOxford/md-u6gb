@@ -26,10 +26,13 @@ export CUDA_VISIBLE_DEVICES=-1
 export JAX_PLATFORMS=cpu
 export OMP_NUM_THREADS=16
 
+# RUN_ID：sbatch 提交时 = SLURM_JOB_ID；attach 到已有 allocation 时须显式传入，
+# 否则会与宿主 allocation 上的其他 step 争用同一挂载点/产物目录。
+RUN_ID="${VALSET_RUN_ID:-${SLURM_JOB_ID}}"
 TMP_BASE="${TMPDIR:-/tmp}"
-export SQUASHFS_MULTI_MOUNT_ROOT="$TMP_BASE/sp500_squashfs_${SLURM_JOB_ID}_0"
-export ARTIFACTS_DIR="$TMP_BASE/valset_out_${SLURM_JOB_ID}"
-FINAL_DIR="$TASK_DIR/artifacts_valset_v2_uniform_j${SLURM_JOB_ID}"
+export SQUASHFS_MULTI_MOUNT_ROOT="$TMP_BASE/sp500_squashfs_v2u_${RUN_ID}_$$"
+export ARTIFACTS_DIR="$TMP_BASE/valset_v2u_out_${RUN_ID}_$$"
+FINAL_DIR="$TASK_DIR/artifacts_valset_v2_uniform_j${RUN_ID}"
 
 cleanup() {
     if [ -d "$SQUASHFS_MULTI_MOUNT_ROOT" ]; then
@@ -67,7 +70,7 @@ mkdir -p "$FINAL_DIR"
 rsync -a "$ARTIFACTS_DIR/" "$FINAL_DIR/"
 BC_TMP="$TASK_DIR/.latest_valset_v2_uniform.json.tmp"
 cat > "$BC_TMP" <<EOF
-{"version": "valset_v2_uniform_fullpool", "path": "$FINAL_DIR", "job_id": "$SLURM_JOB_ID",
+{"version": "valset_v2_uniform_fullpool", "path": "$FINAL_DIR", "job_id": "$RUN_ID",
  "built_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
  "valid_for": "Mamba-3 48-month cohort only; NOT held-out for the Transformer 36-month domain"}
 EOF
