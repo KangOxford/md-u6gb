@@ -5385,3 +5385,70 @@ Log:   /lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/logs/valset_58244
 Out:   /lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/artifacts_valset_v1_j5824495/
 
 Updated: $(date -u +%Y-%m-%d\ %H:%M:%S) UTC
+| 2026-07-30 14:05 | attach-step sp500q-build (parent 5823145, nid010691) | ✅DONE 19:14Z 构建 SP500 2025-quarter 全新数据集 | /projects/public/u6gb/datasets/sp500_2025_quarter_20260730T140441Z | log: dataset_build/logs/stream_build_attach5823145_20260730T140441Z.log |
+| 2026-07-31T09:37:23Z | attach 5827830 (nid010937) | valset backfill124 |  | driver  |
+
+Job:   5848062 (jance-finish61)
+User:  kangli.u6gb
+Step:  71/132 ckpt  [████████████████░░░░░░░░░░░░░░]  54%
+Model: eval-only — 132-ckpt Jan-shuffle CE, 剩余 61 小档 (10M尾+6M/4M/1M/0p2M)
+Data:  Jan-2026 shuffle 30,720 窗 (seed=20260131, 自然分布), shard_2026-01.squashfs
+Infra: 1N / 4 GPU | eval_bsz=32/gpu
+LR:    n/a (eval)
+Loss:  jan-shuffle CE, 已见段 0.4997-0.5222
+Speed: 小档 ~2-3 min/ckpt/GPU
+Time:  0:00 elapsed  |  ~1h remaining  |  02:30:00 limit
+ETA:   ~1h after start (排队另计)
+W&B:   n/a
+Log:   /lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/logs/jance_finish61_5848062.out
+
+Updated: 2026-07-31 09:51:14 UTC
+
+## 5856631 dfm-smoke-1gpu — DFM 后训练冒烟 (M4)
+- 提交 UTC 2026-08-01T02:09:14Z
+- 配置 /lus/lfs1aip2/projects/public/u6gb/sigma-0/configs/train/dfm_smoke_1gpu.yaml
+- 起点 j5705912_b30675li_5705912@69378，Stage 2A（backbone 冻结，只训零初始化 P）
+- corruption: ICAIF'25 Algorithm 1 原文，beta_max=10 未改
+- 1 node x 1 GPU, 30 min, CURTAIL_EPOCHS=60, PER_GPU_BSZ=4
+- wandb sigma0-dfm @ oxford-lob
+- 日志 /lus/lfs1aip2/projects/public/u6gb/openreview-v2/logs_lobs5/training_5856631_node0.log
+
+## 5856657 dfm-smoke-1gpu — DFM 冒烟重投（5856631 因 gpu-bind 失败）
+- 提交 UTC 2026-08-01T02:42:56Z
+- 修复: (1) 部分节点分配不加 --gpu-bind (2) sigma-0 副本的 node_wrapper 补 DFM 透传
+
+## 5856867 dfm-smoke-1gpu — 第三次重投
+- 提交 UTC 2026-08-01T04:24:58Z
+- 5856631 失败: --gpu-bind=map_gpu:0 与非 NUMA 对齐的 CPU 分配冲突
+- 5856657 失败: 去掉 --gpu-bind 仍失败（task/affinity 由 --gres 派生掩码）
+- 本次修复: 部分节点分配显式 --cpu-bind=none
+
+## 5877859 (attach step .34) m3-35m — SP500 2022-2025 Mamba3 33.6M
+- 起 UTC 2026-08-05T03:22:51Z，附着在 4 节点占位链 5877859 上，未新建排队作业
+- 模型 d_model=640 / n_layers=6 / blocks=20 / d_state=128，实测 33,610,439 参数
+- 配方来源 exp_R1g_mamba3_cuda_ffi/scaling_law_sweep.sh 的 [35m] 档（原为 8 节点，本次 4 节点）
+- global_bsz=64（4 per-GPU × 16 GPU），Muon lr=0.01 + SSM lr=8e-4，wd=0.005
+- 数据 SP500 SquashFS 48 月 2022-01..2025-12，8 tickers × ~997 交易日，26tok
+- COSINE_STEPS=32000 → total_steps=32001，warmup 320 步；不压缩的话 warmup 要 9391 步且全程不退火
+- 速度 ~2.15 it/s，预计 07:40Z 完成
+- W&B https://wandb.ai/oxford-lob/sp500-mamba3-35m/runs/30nkkohd
+- ckpt /lus/lfs1aip2/projects/public/u6gb/sigma-0/checkpoints/j5877859_30nkkohd_5877859
+- 日志 /lus/lfs1aip2/projects/public/u6gb/tasks/sp500_mamba3_35m_20260805T030348Z/logs/
+- 训练后自动接 LOB-Bench：scripts/chain_train_then_bench.sh（监视 step .34 消失 → GPU 闸门 → generation 3136 序列 → score）
+
+## 5924043 u6gb-4-node-chain — 4 节点常驻占位链（断链后重启第 1 跳）
+- 提交 UTC 2026-08-06T03:18:08Z，PENDING，4 节点 / 23:59:00
+- 提交命令 `./record_submission.py -- sbatch four_node_chain.sbatch --chain`（经记账器，submissions.jsonl 有账）
+- 背景：前链在 5862050 → 5877859 处断，因新旧版本脚本调用约定错配（见 F181），5877859 自判 mode=one_shot 静默不续链，08-05T10:33:02 TIMEOUT 后无后继
+- 本次显式带 --chain，阶段 A 的 A0 判断可通过；A1/B1 停止旗标均不存在；提交前 squeue 为空，无重复
+- 验证点：启动后 events.jsonl 的 chain_started 必须是 "mode":"chain"，随后应立刻出 a_submitted 事件
+- 日志 /lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/slurm_logs/u6gb-4-node-chain-5924043.out
+- 事件 /lus/lfs1aip2/projects/public/u6gb/tasks/u6gb_16_nodes_daily_log/events.jsonl
+
+## 5924045 m3-35m-lobbench — LOB-Bench for Mamba3 33.6M @ step 32001
+- 提交 UTC 2026-08-06T03:23:01Z，1 节点 4 GPU，时限 03:00:00
+- ckpt /lus/lfs1aip2/projects/public/u6gb/sigma-0/checkpoints/j5877859_30nkkohd_5877859 @ 32001
+- 评测池 冻结 3136 条 GOOG Jan-2026 索引（与 model_zoo 同池，可比）
+- generation 4 GPU × batch 8，cond=250 gen=250，seed=2026；score 48 workers
+- 独立作业而非 attach：原 allocation 5877859 已 2026-08-05T10:33 TIMEOUT
+- 日志 /lus/lfs1aip2/projects/public/u6gb/tasks/sp500_mamba3_35m_20260805T030348Z/logs/lobbench_5924045.out
