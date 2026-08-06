@@ -46,6 +46,35 @@ while true; do ls; sleep 5; done
 inotifywait <lustre_path>
 ```
 
+### 1.1 `scancel` is FORBIDDEN — no exceptions (2026-08-06)
+
+**Claude must never run `scancel` in any form.** Not on a job, not on a job step,
+not with `-s`, `-f`, `-u`, `--me`, or any other flag. If a job or step needs to be
+stopped, **tell the user and let them do it**.
+
+```bash
+scancel <jobid>              # FORBIDDEN
+scancel <jobid>.<stepid>     # FORBIDDEN — see below, the step form is not safe either
+scancel -s KILL ...          # FORBIDDEN
+scancel -f ...               # FORBIDDEN
+scancel -u <user> / --me     # FORBIDDEN
+```
+
+**Why the step form is also forbidden.** `scancel <job>.<step>` looks scoped to one
+step, but **adding any flag makes Slurm drop the `.<step>` suffix and act on the whole
+job**. On 2026-08-06 a stuck training step was not responding to plain
+`scancel 5924043.27`, so `scancel -s KILL 5924043.27` and `scancel -f 5924043.27` were
+issued. Slurm answered
+`scancel: error: Kill job error on job step id 5924043: No error` — note the missing
+`.27` — and killed the entire 4-node allocation that had 22 hours left on it. It
+survived only because that job happened to carry `Requeue=1`. The two spellings differ
+by one flag and the blast radius differs by an entire allocation, so the whole family
+is off-limits rather than "use it carefully."
+
+**Do this instead**: report the stuck job/step id to the user with what is wrong, and
+wait. A stuck step wastes minutes; a cancelled allocation wastes hours and re-queues
+behind everyone else.
+
 **Trigger Reflex Check**: Whenever I feel like using `find` / recursive `ls` / `du -sh` / `tree` / large directory glob to "understand project structure" or "find files," **STOP**. Use the safe alternatives below, or ask the user directly.
 
 ## 2. Safe Alternatives
@@ -88,6 +117,9 @@ Any batch script or training code must satisfy:
 - Low-risk compute jobs (helpers, plotting, smoke tests) can be submitted automatically based on user preference; large jobs must follow the submission rules in "Safe Operations."
 - Exception: `scaled` experiments explicitly exempted in the existing `CLAUDE.md` follow original rules but do not have a fixed inflight limit.
 - Smoke test → fix → resubmit can be done autonomously, but must still be staggered and monitored for startup load.
+- **Reuse active allocations for evaluation:** Before submitting a new inference, evaluation, or LOB-Bench `sbatch`, inspect the user's RUNNING allocations. When one has compatible hardware and enough remaining walltime, prefer an attached job step such as `srun --jobid=<allocation> --overlap --exact ... --cpu-bind=none`; record the parent allocation, actual step ID, node, and timestamps. Do not create another queued allocation solely for the evaluation when a compatible active allocation is available.
+- **Physical GPU gate before overlap:** Slurm `--overlap` does not make occupied GPU memory safe. Check active steps, compute PIDs, and per-GPU memory first. If the allocation is busy, an attached one-shot may wait for a predeclared zero-PID/near-baseline-memory gate, but it must never kill, retry, or overwrite the existing experiment without explicit authorization.
+- **Queued-chain → attached-allocation handoff:** Hold the queued chain's root while establishing the replacement. Once the attached runner is confirmed live, cancel the entire superseded chain and verify every old job with both `squeue` and `sacct`. Never allow the queued and attached copies of the same experiment to run concurrently.
 
 ### 4.1 SquashFS SP500 Sweep Submission Constraints (2026-05-09)
 
