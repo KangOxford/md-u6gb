@@ -6,9 +6,10 @@
   ks          : 同样先合并 z-score, 再 scipy.stats.ks_2samp().statistic
   l1          : 分箱计数各自归一化成概率后 |p-q|.sum()/2  (= 总变差距离, 上限 1)
 
-覆盖 WS-21 中可从 43 列计算的 11 个 feature。另外 10 个需要 order-id 追踪或
-message type(log_time_to_cancel / limit_*_order_depth / *_cancellation_depth /
-limit_*_order_ticks / *_cancellation_ticks), 43 列表刻意不含这些字段, 故不在范围内。
+覆盖 WS-21 中可从 43 列计算的 12 个 feature(见 COVERED)。另外 9 个(见 NOT_COVERED)
+需要 order-id 追踪或 message type, 43 列宽表刻意不含这些字段, 故不在范围内。
+这个划分不是任意的: 覆盖的全是盘口状态的函数(截面/跨时间统计量), 不覆盖的全需要
+订单身份追踪。
 """
 from __future__ import annotations
 
@@ -30,11 +31,6 @@ NOT_COVERED = ("log_time_to_cancel", "limit_ask_order_depth", "limit_bid_order_d
                "ask_cancellation_depth", "bid_cancellation_depth",
                "limit_ask_order_ticks", "limit_bid_order_ticks",
                "ask_cancellation_ticks", "bid_cancellation_ticks")
-
-
-def destandardize(Z, mu, sd):
-    """(M,T,43) z-score -> 特征空间。"""
-    return Z * sd + mu
 
 
 def features_from_windows(F):

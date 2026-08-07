@@ -1,4 +1,5 @@
-runs/**/*.pt
-runs/**/*.pth
+*.pt
+*.pth
 __pycache__/
 *.pyc
+runs/**/*.log

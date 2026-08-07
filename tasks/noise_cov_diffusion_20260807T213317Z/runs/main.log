@@ -71,3 +71,12 @@
     [hdgn_learned] step  19200 loss 0.8908 l1=0.8139 ws=1.2320 ks=0.6900
     [hdgn_learned] step  30000 loss 1585316233216.0000 l1=0.8158 ws=1.2222 ks=0.6911
     [hdgn_learned] step  43200 loss 3819140.0000 l1=0.8125 ws=1.1983 ks=0.6898
+    [hdgn_learned] step  60000 loss 1321.6874 l1=0.8152 ws=1.1944 ks=0.6930
+    [hdgn_learned] NFE=   5 l1=0.8152 ws=1.1944 ks=0.6930
+    [hdgn_learned] NFE=  10 l1=0.8152 ws=1.1944 ks=0.6930
+    [hdgn_learned] NFE=  20 l1=0.8152 ws=1.1944 ks=0.6930
+    [hdgn_learned] NFE=  50 l1=0.8152 ws=1.1944 ks=0.6930
+    [hdgn_learned] NFE= 100 l1=0.8152 ws=1.1944 ks=0.6930
+    [hdgn_learned] NFE= 200 l1=0.8152 ws=1.1944 ks=0.6930
+[train] arm=hdgn_learned 完成, 用时 477.1s
+[done] -> /projects/public/u6gb/tasks/noise_cov_diffusion_20260807T213317Z/runs/main/results.json

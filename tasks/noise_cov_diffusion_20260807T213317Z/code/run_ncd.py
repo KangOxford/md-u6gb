@@ -41,7 +41,7 @@ class Arm(nn.Module):
     """论文 AdaptiveDDPM 的结构, 把隐层宽度与 L 是否可学参数化出来。"""
 
     def __init__(self, T, D, hidden=256, learn_L=False, L_init=None, emb=32,
-                 trunk="paper", depth=2):
+                 trunk="paper", depth=2, L_bank=None):
         super().__init__()
         self.T, self.D, self.input_dim = T, D, T * D
         self.time_embed = nn.Embedding(1000, emb)
@@ -62,6 +62,10 @@ class Arm(nn.Module):
                 nn.Linear(hidden, hidden)) for _ in range(depth)])
             self.outp = nn.Sequential(nn.LayerNorm(hidden), nn.Linear(hidden, self.input_dim))
         self.learn_L = learn_L
+        # L_bank: (K, D, D) —— 每个市场 regime 一个 Cholesky 因子(dynamic 臂)
+        self.has_bank = L_bank is not None
+        if self.has_bank:
+            self.register_buffer("L_bank", torch.as_tensor(L_bank, dtype=torch.float32))
         self.register_buffer("tril_mask", torch.tril(torch.ones(self.input_dim, self.input_dim)))
         if learn_L:
             self.L_params = nn.Parameter(torch.randn(self.input_dim, self.input_dim) * 0.01)
@@ -80,9 +84,30 @@ class Arm(nn.Module):
         L[idx, idx] = F.softplus(L[idx, idx])
         return L
 
-    def get_noise(self, n, generator=None):
+    def get_noise(self, n, generator=None, regimes=None):
         xi = torch.randn(n, self.input_dim, device=self.tril_mask.device, generator=generator)
-        return xi @ self.get_L().T
+        if not self.has_bank:
+            return xi @ self.get_L().T
+        # 每个样本用它所属 regime 的 L: 按 regime 分组做矩阵乘, K 次而非 n 次
+        out = torch.empty_like(xi)
+        for k in range(self.L_bank.shape[0]):
+            m = regimes == k
+            if m.any():
+                out[m] = xi[m] @ self.L_bank[k].T
+        return out
+
+    def mahalanobis(self, r, regimes=None):
+        """按 regime 分组解三角系统, 返回 ||L^-1 r||^2 / D。"""
+        if not self.has_bank:
+            z = torch.linalg.solve_triangular(self.get_L(), r.T, upper=False).T
+            return (z ** 2).sum(1).mean() / r.shape[1]
+        tot = 0.0
+        for k in range(self.L_bank.shape[0]):
+            m = regimes == k
+            if m.any():
+                z = torch.linalg.solve_triangular(self.L_bank[k], r[m].T, upper=False).T
+                tot = tot + (z ** 2).sum(1).sum()
+        return tot / (r.shape[0] * r.shape[1])
 
     def forward(self, x_flat, t):
         h = torch.cat([x_flat, self.time_embed(t)], 1)
@@ -140,6 +165,8 @@ def main():
     ap.add_argument("--hidden", type=int, default=256)
     ap.add_argument("--trunk", default="paper", choices=["paper","deep"])
     ap.add_argument("--norm", default="quantile", choices=["zscore","quantile"])
+    ap.add_argument("--windows-npy", default=None,
+                    help="直接加载预生成的 (M,T,C) 窗口张量(如 1 分钟数据), 跳过 tick 级构造")
     ap.add_argument("--depth", type=int, default=2)
     ap.add_argument("--batch", type=int, default=256)
     ap.add_argument("--lr", type=float, default=1e-3)
@@ -157,7 +184,14 @@ def main():
     log = lambda *a: print(*a, flush=True)
 
     dev = args.device
-    X = load_dataset(DS, T8, T=args.T, stride=args.T, max_rows_per_ticker=args.rows, seed=args.seed)
+    if args.windows_npy:
+        X = np.load(args.windows_npy).astype(np.float64)
+        rng = np.random.default_rng(args.seed); rng.shuffle(X)
+        args.T = X.shape[1]
+        log(f"[setup] 从 {args.windows_npy} 加载窗口 {X.shape}")
+    else:
+        X = load_dataset(DS, T8, T=args.T, stride=args.T,
+                         max_rows_per_ticker=args.rows, seed=args.seed)
     D = args.T * 43
     ntr_w = int(0.9 * len(X))
     normer = ChannelNormalizer(args.norm).fit(X[:ntr_w])     # 只在训练片上 fit, 防泄漏

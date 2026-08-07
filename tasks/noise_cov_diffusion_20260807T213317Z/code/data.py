@@ -4,7 +4,8 @@
 设计要点
 --------
 原始 43 列量纲差 6 个数量级(价格 ~2.8e6, 量 ~1e2, Δt ~1e4..1e9), 直接做 diffusion
-会被价格列主导。这里做一次**可逆**的特征化再 z-score:
+会被价格列主导。这里只做**可逆的特征化**(归一化在 normalize.py, 与本文件分离,
+因为归一化口径是可切换的实验变量, 而特征化是固定的数据契约):
 
     col 0        log1p(Δt_ns)
     价格 20 列    (p - mid) / tick      -> 相对最优中间价的 tick 偏移
@@ -83,14 +84,6 @@ def load_dataset(ds_dir, tickers, T=16, stride=16, max_rows_per_ticker=200_000, 
     return X
 
 
-def standardize(X):
-    """按 (T,43) 里的 43 个通道做 z-score, 时间轴共享统计量(平稳性假设)。"""
-    mu = X.reshape(-1, X.shape[-1]).mean(0)
-    sd = X.reshape(-1, X.shape[-1]).std(0)
-    sd = np.where(sd < 1e-8, 1.0, sd)
-    return (X - mu) / sd, mu, sd
-
-
 def noise_covariance(Xflat, shrink=1e-3):
     """在展平的 D 维上估计噪声协方差 Σ, 并归一化到 trace(Σ)=D。
 
@@ -104,21 +97,3 @@ def noise_covariance(Xflat, shrink=1e-3):
     return S
 
 
-if __name__ == "__main__":
-    DS = "/lus/lfs1aip2/projects/public/u6gb/datasets/lob_flat43_example_20260807T135612Z"
-    T8 = ["GOOG", "AAPL", "NVDA", "AMZN", "META", "TSLA", "MSFT", "AMD"]
-    T, STRIDE = 16, 16
-    X = load_dataset(DS, T8, T=T, stride=STRIDE, max_rows_per_ticker=200_000)
-    Xz, mu, sd = standardize(X)
-    D = T * 43
-    Xf = Xz.reshape(len(Xz), D)
-    S = noise_covariance(Xf)
-    w = np.linalg.eigvalsh(S)
-    w = np.clip(w, 1e-12, None)[::-1]
-    print(f"窗口张量 {X.shape}  展平维度 D={D}")
-    print(f"协方差 Σ: trace={np.trace(S):.1f} (=D), 条件数={w[0]/w[-1]:.3e}")
-    print(f"特征值 top5 = {np.round(w[:5],2)}   bottom5 = {np.round(w[-5:],6)}")
-    for k in (1, 5, 10, 50, 100):
-        print(f"  前 {k:3d} 个主成分解释方差 {100*w[:k].sum()/w.sum():5.2f}%  ({k}/{D} = {100*k/D:.1f}% 的维度)")
-    # 各向同性基线: iid 噪声的协方差就是 I, 条件数 1
-    print(f"\n对照: iid 噪声 Σ=I, 条件数 1.0, 前 {D//10} 个主成分解释 10.0%")
