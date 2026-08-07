@@ -1,0 +1,4 @@
+runs/**/*.pt
+runs/**/*.pth
+__pycache__/
+*.pyc

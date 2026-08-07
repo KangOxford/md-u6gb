@@ -1,0 +1,435 @@
+{
+  "config": {
+    "T": 8,
+    "rows": 40000,
+    "steps": 300,
+    "hidden": 256,
+    "layers": 2,
+    "batch": 128,
+    "lr": 0.0002,
+    "n_gen": 800,
+    "eval_nfe": 20,
+    "nfe_sweep": "10,20",
+    "eval_at": "100,300",
+    "device": "cpu",
+    "out": "../runs/smoke",
+    "seed": 0
+  },
+  "D": 344,
+  "sigma_cond": 153975.57784762327,
+  "n_train": 36000,
+  "n_test": 4000,
+  "features_covered": [
+    "spread",
+    "orderbook_imbalance",
+    "log_inter_arrival_time",
+    "ask_volume_touch",
+    "bid_volume_touch",
+    "ask_volume",
+    "bid_volume",
+    "vol_per_min",
+    "ofi",
+    "ofi_up",
+    "ofi_stay",
+    "ofi_down"
+  ],
+  "features_not_covered": [
+    "log_time_to_cancel",
+    "limit_ask_order_depth",
+    "limit_bid_order_depth",
+    "ask_cancellation_depth",
+    "bid_cancellation_depth",
+    "limit_ask_order_ticks",
+    "limit_bid_order_ticks",
+    "ask_cancellation_ticks",
+    "bid_cancellation_ticks"
+  ],
+  "arms": {
+    "iid": {
+      "loss_hist": [
+        [
+          100,
+          0.9772525429725647
+        ],
+        [
+          200,
+          0.9105971455574036
+        ],
+        [
+          300,
+          0.8364880681037903
+        ]
+      ],
+      "wall_s": 9.179442882537842,
+      "evals": {
+        "100": {
+          "l1": 0.7995851934523811,
+          "wasserstein": 1.5492788381576437,
+          "ks": 0.6526755952380953,
+          "sample_s": 0.4023430347442627,
+          "_per": {
+            "spread": {
+              "l1": 0.9941875000000001,
+              "wasserstein": 1.9515152827598863,
+              "ks": 0.5159375,
+              "n_gen": 6400
+            },
+            "orderbook_imbalance": {
+              "l1": 0.42400000000000004,
+              "wasserstein": 0.3631005301147149,
+              "ks": 0.19521875000000002,
+              "n_gen": 6400
+            },
+            "log_inter_arrival_time": {
+              "l1": 0.5694375,
+              "wasserstein": 1.0309113569404647,
+              "ks": 0.49234374999999997,
+              "n_gen": 6400
+            },
+            "ask_volume_touch": {
+              "l1": 0.9984999999999999,
+              "wasserstein": 1.7982532655951486,
+              "ks": 0.5053125,
+              "n_gen": 6400
+            },
+            "bid_volume_touch": {
+              "l1": 0.998625,
+              "wasserstein": 1.787084318707232,
+              "ks": 0.510625,
+              "n_gen": 6400
+            },
+            "ask_volume": {
+              "l1": 0.9983125,
+              "wasserstein": 2.5374238547898575,
+              "ks": 0.999375,
+              "n_gen": 6400
+            },
+            "bid_volume": {
+              "l1": 0.99828125,
+              "wasserstein": 2.5379926964330584,
+              "ks": 0.9984375,
+              "n_gen": 6400
+            },
+            "vol_per_min": {
+              "l1": 0.0030000000000000287,
+              "wasserstein": 0.11884098374217633,
+              "ks": 0.307,
+              "n_gen": 800
+            },
+            "ofi": {
+              "l1": 0.6106785714285715,
+              "wasserstein": 1.818387254336254,
+              "ks": 0.3078571428571429,
+              "n_gen": 5600
+            },
+            "ofi_up": {
+              "l1": 1.0,
+              "wasserstein": NaN,
+              "ks": 1.0,
+              "n_gen": 2807
+            },
+            "ofi_stay": {
+              "l1": 1.0,
+              "wasserstein": NaN,
+              "ks": 1.0,
+              "n_gen": 0
+            },
+            "ofi_down": {
+              "l1": 1.0,
+              "wasserstein": NaN,
+              "ks": 1.0,
+              "n_gen": 2793
+            }
+          }
+        },
+        "300": {
+          "l1": 0.8002046130952382,
+          "wasserstein": 1.5543457442833806,
+          "ks": 0.6541395089285714,
+          "sample_s": 0.3611881732940674,
+          "_per": {
+            "spread": {
+              "l1": 0.9942812500000001,
+              "wasserstein": 1.953340393821005,
+              "ks": 0.51875,
+              "n_gen": 6400
+            },
+            "orderbook_imbalance": {
+              "l1": 0.41984374999999996,
+              "wasserstein": 0.3570358776056445,
+              "ks": 0.19584375000000004,
+              "n_gen": 6400
+            },
+            "log_inter_arrival_time": {
+              "l1": 0.56928125,
+              "wasserstein": 1.0473997629657628,
+              "ks": 0.504375,
+              "n_gen": 6400
+            },
+            "ask_volume_touch": {
+              "l1": 0.99834375,
+              "wasserstein": 1.8245911950706837,
+              "ks": 0.5081249999999999,
+              "n_gen": 6400
+            },
+            "bid_volume_touch": {
+              "l1": 0.998625,
+              "wasserstein": 1.8152276786469066,
+              "ks": 0.503125,
+              "n_gen": 6400
+            },
+            "ask_volume": {
+              "l1": 0.9981562500000001,
+              "wasserstein": 2.535649640941993,
+              "ks": 0.99921875,
+              "n_gen": 6400
+            },
+            "bid_volume": {
+              "l1": 0.99828125,
+              "wasserstein": 2.5360831553962084,
+              "ks": 0.99859375,
+              "n_gen": 6400
+            },
+            "vol_per_min": {
+              "l1": 0.004250000000000016,
+              "wasserstein": 0.08661153647780383,
+              "ks": 0.30825,
+              "n_gen": 800
+            },
+            "ofi": {
+              "l1": 0.6213928571428573,
+              "wasserstein": 1.8331724576244177,
+              "ks": 0.31339285714285714,
+              "n_gen": 5600
+            },
+            "ofi_up": {
+              "l1": 1.0,
+              "wasserstein": NaN,
+              "ks": 1.0,
+              "n_gen": 2830
+            },
+            "ofi_stay": {
+              "l1": 1.0,
+              "wasserstein": NaN,
+              "ks": 1.0,
+              "n_gen": 0
+            },
+            "ofi_down": {
+              "l1": 1.0,
+              "wasserstein": NaN,
+              "ks": 1.0,
+              "n_gen": 2770
+            }
+          }
+        }
+      },
+      "nfe_sweep": {
+        "10": {
+          "l1": 0.8001447172619048,
+          "wasserstein": 1.5543539831289612,
+          "ks": 0.6541655505952381,
+          "sample_s": 0.2838857173919678
+        },
+        "20": {
+          "l1": 0.8002046130952382,
+          "wasserstein": 1.5543457442833806,
+          "ks": 0.6541395089285714,
+          "sample_s": 0.38286876678466797
+        }
+      }
+    },
+    "hdgn": {
+      "loss_hist": [
+        [
+          100,
+          0.6275972127914429
+        ],
+        [
+          200,
+          0.6289340257644653
+        ],
+        [
+          300,
+          0.5674909353256226
+        ]
+      ],
+      "wall_s": 5.679990768432617,
+      "evals": {
+        "100": {
+          "l1": 0.8071227678571429,
+          "wasserstein": 1.5835108142576506,
+          "ks": 0.6419765625,
+          "sample_s": 0.3146224021911621,
+          "_per": {
+            "spread": {
+              "l1": 0.9947187500000001,
+              "wasserstein": 1.9210353169697814,
+              "ks": 0.54390625,
+              "n_gen": 6400
+            },
+            "orderbook_imbalance": {
+              "l1": 0.3975,
+              "wasserstein": 0.2848593662508947,
+              "ks": 0.16765625,
+              "n_gen": 6400
+            },
+            "log_inter_arrival_time": {
+              "l1": 0.5694374999999999,
+              "wasserstein": 0.9941135446411951,
+              "ks": 0.46078125000000003,
+              "n_gen": 6400
+            },
+            "ask_volume_touch": {
+              "l1": 0.9984999999999999,
+              "wasserstein": 1.7483680076772738,
+              "ks": 0.5303125,
+              "n_gen": 6400
+            },
+            "bid_volume_touch": {
+              "l1": 0.9986249999999999,
+              "wasserstein": 1.7658579517756197,
+              "ks": 0.52125,
+              "n_gen": 6400
+            },
+            "ask_volume": {
+              "l1": 0.998125,
+              "wasserstein": 2.481360255786961,
+              "ks": 0.9953125,
+              "n_gen": 6400
+            },
+            "bid_volume": {
+              "l1": 0.9982812499999999,
+              "wasserstein": 2.500097638469194,
+              "ks": 0.99625,
+              "n_gen": 6400
+            },
+            "vol_per_min": {
+              "l1": 0.15300000000000002,
+              "wasserstein": 0.7845181514264756,
+              "ks": 0.1895,
+              "n_gen": 800
+            },
+            "ofi": {
+              "l1": 0.5772857142857143,
+              "wasserstein": 1.7713870953214603,
+              "ks": 0.29875,
+              "n_gen": 5600
+            },
+            "ofi_up": {
+              "l1": 1.0,
+              "wasserstein": NaN,
+              "ks": 1.0,
+              "n_gen": 2813
+            },
+            "ofi_stay": {
+              "l1": 1.0,
+              "wasserstein": NaN,
+              "ks": 1.0,
+              "n_gen": 0
+            },
+            "ofi_down": {
+              "l1": 1.0,
+              "wasserstein": NaN,
+              "ks": 1.0,
+              "n_gen": 2787
+            }
+          }
+        },
+        "300": {
+          "l1": 0.8022611607142857,
+          "wasserstein": 1.5922950490882606,
+          "ks": 0.6666090029761905,
+          "sample_s": 0.13442182540893555,
+          "_per": {
+            "spread": {
+              "l1": 0.99465625,
+              "wasserstein": 2.000625820067762,
+              "ks": 0.66484375,
+              "n_gen": 6400
+            },
+            "orderbook_imbalance": {
+              "l1": 0.424,
+              "wasserstein": 0.3882686167847725,
+              "ks": 0.20378124999999997,
+              "n_gen": 6400
+            },
+            "log_inter_arrival_time": {
+              "l1": 0.5691249999999999,
+              "wasserstein": 1.0549394370762541,
+              "ks": 0.5096875000000001,
+              "n_gen": 6400
+            },
+            "ask_volume_touch": {
+              "l1": 0.9983437499999999,
+              "wasserstein": 1.8369859084338118,
+              "ks": 0.51421875,
+              "n_gen": 6400
+            },
+            "bid_volume_touch": {
+              "l1": 0.9987812499999998,
+              "wasserstein": 1.7200042263535327,
+              "ks": 0.54421875,
+              "n_gen": 6400
+            },
+            "ask_volume": {
+              "l1": 0.998125,
+              "wasserstein": 2.533496686394784,
+              "ks": 0.9975,
+              "n_gen": 6400
+            },
+            "bid_volume": {
+              "l1": 0.99828125,
+              "wasserstein": 2.549789497019874,
+              "ks": 0.99859375,
+              "n_gen": 6400
+            },
+            "vol_per_min": {
+              "l1": 0.06925000000000003,
+              "wasserstein": 0.4764708943112896,
+              "ks": 0.26575,
+              "n_gen": 800
+            },
+            "ofi": {
+              "l1": 0.5765714285714286,
+              "wasserstein": 1.7700743553522644,
+              "ks": 0.3007142857142857,
+              "n_gen": 5600
+            },
+            "ofi_up": {
+              "l1": 1.0,
+              "wasserstein": NaN,
+              "ks": 1.0,
+              "n_gen": 2753
+            },
+            "ofi_stay": {
+              "l1": 1.0,
+              "wasserstein": NaN,
+              "ks": 1.0,
+              "n_gen": 0
+            },
+            "ofi_down": {
+              "l1": 1.0,
+              "wasserstein": NaN,
+              "ks": 1.0,
+              "n_gen": 2847
+            }
+          }
+        }
+      },
+      "nfe_sweep": {
+        "10": {
+          "l1": 0.8023262648809523,
+          "wasserstein": 1.5923767407388851,
+          "ks": 0.6666227678571428,
+          "sample_s": 0.20271849632263184
+        },
+        "20": {
+          "l1": 0.8022611607142857,
+          "wasserstein": 1.5922950490882606,
+          "ks": 0.6666090029761905,
+          "sample_s": 0.17424750328063965
+        }
+      }
+    }
+  }
+}

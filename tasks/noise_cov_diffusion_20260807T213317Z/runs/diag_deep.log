@@ -1,0 +1,34 @@
+[setup] dev=cuda 窗口(50000, 16, 43) D=688 train=45000 test=5000 Σcond=3.082e+05
+[base] FLOOR 真实vs真实   l1=0.1880 ws=0.0295 ks=0.1810
+[base] N(0,Σ) 未训练      l1=0.4529 ws=0.2045 ks=0.4205
+[setup] trunk=deep depth=3 hidden=1024; iid_wide 宽度 1072 (目标 8,254,640, 实得 8,453,248)
+[setup] 评估点 [30, 60, 120, 240, 420, 720, 1200, 1920, 3000, 4320, 6000]
+[train] arm=iid 参数=7,781,296
+    [iid] step     30 loss 0.9572 l1=0.9210 ws=1.1225 ks=0.7084
+    [iid] step     60 loss 0.7561 l1=0.9215 ws=1.1271 ks=0.7074
+    [iid] step    120 loss 0.5238 l1=0.9211 ws=1.1223 ks=0.7083
+    [iid] step    240 loss 0.3174 l1=0.9208 ws=1.1292 ks=0.6255
+    [iid] step    420 loss 0.2333 l1=0.9210 ws=1.1337 ks=0.6271
+    [iid] step    720 loss 0.2194 l1=0.9205 ws=1.1328 ks=0.6263
+    [iid] step   1200 loss 0.1631 l1=0.9212 ws=1.1414 ks=0.6276
+    [iid] step   1920 loss 0.1717 l1=0.9201 ws=1.1488 ks=0.6288
+    [iid] step   3000 loss 0.1584 l1=0.9199 ws=1.1629 ks=0.6333
+    [iid] step   4320 loss 0.1529 l1=0.9177 ws=1.1666 ks=0.6322
+    [iid] step   6000 loss 0.1222 l1=0.9182 ws=1.1586 ks=0.6342
+    [iid] NFE=  50 l1=0.9182 ws=1.1586 ks=0.6342
+[train] arm=iid 完成, 用时 128.3s
+[train] arm=hdgn_fixed 参数=7,781,296
+    [hdgn_fixed] step     30 loss 2.3765 l1=0.9130 ws=1.1287 ks=0.6263
+    [hdgn_fixed] step     60 loss 1.3669 l1=0.9120 ws=1.1276 ks=0.6255
+    [hdgn_fixed] step    120 loss 1.1565 l1=0.9116 ws=1.1273 ks=0.6252
+    [hdgn_fixed] step    240 loss 1.0842 l1=0.9109 ws=1.1251 ks=0.6246
+    [hdgn_fixed] step    420 loss 1.0606 l1=0.9107 ws=1.1269 ks=0.6256
+    [hdgn_fixed] step    720 loss 1.0556 l1=0.9106 ws=1.1252 ks=0.6249
+    [hdgn_fixed] step   1200 loss 1.0522 l1=0.9113 ws=1.1261 ks=0.6255
+    [hdgn_fixed] step   1920 loss 1.0517 l1=0.9108 ws=1.1252 ks=0.6250
+    [hdgn_fixed] step   3000 loss 1.0268 l1=0.9099 ws=1.1192 ks=0.6231
+    [hdgn_fixed] step   4320 loss 1.0178 l1=0.9101 ws=1.1197 ks=0.6240
+    [hdgn_fixed] step   6000 loss 1.0227 l1=0.9105 ws=1.1247 ks=0.6252
+    [hdgn_fixed] NFE=  50 l1=0.9105 ws=1.1247 ks=0.6252
+[train] arm=hdgn_fixed 完成, 用时 59.8s
+[done] -> /projects/public/u6gb/tasks/noise_cov_diffusion_20260807T213317Z/runs/diag_deep/results.json
