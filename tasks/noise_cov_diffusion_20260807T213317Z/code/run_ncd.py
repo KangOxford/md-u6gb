@@ -29,7 +29,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from data import load_dataset, standardize, noise_covariance
+from data import load_dataset, noise_covariance
+from normalize import ChannelNormalizer
 from lobbench_eval import score_all, COVERED, NOT_COVERED
 
 DS = "/lus/lfs1aip2/projects/public/u6gb/datasets/lob_flat43_example_20260807T135612Z"
@@ -138,6 +139,7 @@ def main():
     ap.add_argument("--steps", type=int, default=30000)
     ap.add_argument("--hidden", type=int, default=256)
     ap.add_argument("--trunk", default="paper", choices=["paper","deep"])
+    ap.add_argument("--norm", default="quantile", choices=["zscore","quantile"])
     ap.add_argument("--depth", type=int, default=2)
     ap.add_argument("--batch", type=int, default=256)
     ap.add_argument("--lr", type=float, default=1e-3)
@@ -156,16 +158,18 @@ def main():
 
     dev = args.device
     X = load_dataset(DS, T8, T=args.T, stride=args.T, max_rows_per_ticker=args.rows, seed=args.seed)
-    Xz, mu, sd = standardize(X)
     D = args.T * 43
+    ntr_w = int(0.9 * len(X))
+    normer = ChannelNormalizer(args.norm).fit(X[:ntr_w])     # 只在训练片上 fit, 防泄漏
+    Xz = normer.transform(X)
     Xf = Xz.reshape(len(Xz), D).astype(np.float32)
-    ntr = int(0.9 * len(Xf))
+    ntr = ntr_w
     Xtr, Xte = Xf[:ntr], Xf[ntr:]
     Sigma = noise_covariance(Xtr)
     evals_w = np.linalg.eigvalsh(Sigma)[::-1]
     cond = float(evals_w[0] / max(evals_w[-1], 1e-12))
     L_data = np.linalg.cholesky(Sigma).astype(np.float32)
-    real_F = Xte.reshape(-1, args.T, 43) * sd + mu
+    real_F = normer.inverse_transform(Xte.reshape(-1, args.T, 43))
     # x0 clip 阈值: 取训练数据的 99.99% 分位数再留 20% 余量, 保证不裁掉真实数据
     x0_clip = float(np.quantile(np.abs(Xtr), 0.9999) * 1.2)
     log(f"[setup] dev={dev} 窗口{X.shape} D={D} train={len(Xtr)} test={len(Xte)} Σcond={cond:.3e}")
@@ -174,7 +178,7 @@ def main():
     # 基线: FLOOR(真实vs真实) 与 未训练的 N(0,Σ)
     h = len(real_F) // 2
     _, floor = score_all(real_F[:h], real_F[h:])
-    gz = (torch.randn(min(args.n_gen, 4000), D) @ torch.as_tensor(L_data).T).numpy().reshape(-1, args.T, 43) * sd + mu
+    gz = normer.inverse_transform((torch.randn(min(args.n_gen,4000), D) @ torch.as_tensor(L_data).T).numpy().reshape(-1, args.T, 43))
     _, gauss = score_all(real_F, gz)
     log(f"[base] FLOOR 真实vs真实   l1={floor['l1']:.4f} ws={floor['wasserstein']:.4f} ks={floor['ks']:.4f}")
     log(f"[base] N(0,Σ) 未训练      l1={gauss['l1']:.4f} ws={gauss['wasserstein']:.4f} ks={gauss['ks']:.4f}")
@@ -197,7 +201,7 @@ def main():
 
     ab = cosine_alphas(1000, device=dev)
     results = {"config": vars(args), "D": D, "sigma_cond": cond,
-               "n_train": len(Xtr), "n_test": len(Xte), "hidden_wide": Hw, "x0_clip": x0_clip,
+               "n_train": len(Xtr), "n_test": len(Xte), "hidden_wide": Hw, "x0_clip": x0_clip, "norm": args.norm,
                "features_covered": list(COVERED), "features_not_covered": list(NOT_COVERED),
                "baselines": {"floor_real_vs_real": floor, "gaussian_sigma_untrained": gauss},
                "arms": {}}
@@ -238,7 +242,7 @@ def main():
             if step in eval_at:
                 model.eval()
                 g = ddim_sample(model, ab, args.n_gen, args.eval_nfe, dev, seed=1234, x0_clip=x0_clip)
-                gen_F = g.float().cpu().numpy().reshape(-1, args.T, 43) * sd + mu
+                gen_F = normer.inverse_transform(g.float().cpu().numpy().reshape(-1, args.T, 43))
                 per, means = score_all(real_F, gen_F)
                 evs[step] = {**means, "_per": per}
                 model.train()
@@ -250,7 +254,7 @@ def main():
         for nfe in [int(x) for x in args.nfe_sweep.split(",")]:
             ts = time.time()
             g = ddim_sample(model, ab, args.n_gen, nfe, dev, seed=1234, x0_clip=x0_clip)
-            gen_F = g.float().cpu().numpy().reshape(-1, args.T, 43) * sd + mu
+            gen_F = normer.inverse_transform(g.float().cpu().numpy().reshape(-1, args.T, 43))
             _, means = score_all(real_F, gen_F)
             nfe_res[str(nfe)] = {**means, "sample_s": time.time() - ts}
             log(f"    [{arm}] NFE={nfe:4d} l1={means['l1']:.4f} ws={means['wasserstein']:.4f} ks={means['ks']:.4f}")

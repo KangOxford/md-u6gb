@@ -63,3 +63,11 @@
 [train] arm=hdgn_learned 参数=932,528
     [hdgn_learned] step    300 loss 3.0511 l1=0.8165 ws=1.2355 ks=0.6916
     [hdgn_learned] step    600 loss 2.3435 l1=0.8173 ws=1.2366 ks=0.6925
+    [hdgn_learned] step   1200 loss 1.6221 l1=0.8171 ws=1.2347 ks=0.6935
+    [hdgn_learned] step   2400 loss 1.1536 l1=0.8185 ws=1.2431 ks=0.6913
+    [hdgn_learned] step   4200 loss 0.9775 l1=0.8178 ws=1.2428 ks=0.6951
+    [hdgn_learned] step   7200 loss 0.9074 l1=0.8169 ws=1.2403 ks=0.6908
+    [hdgn_learned] step  12000 loss 0.8949 l1=0.8145 ws=1.2378 ks=0.6421
+    [hdgn_learned] step  19200 loss 0.8908 l1=0.8139 ws=1.2320 ks=0.6900
+    [hdgn_learned] step  30000 loss 1585316233216.0000 l1=0.8158 ws=1.2222 ks=0.6911
+    [hdgn_learned] step  43200 loss 3819140.0000 l1=0.8125 ws=1.1983 ks=0.6898
