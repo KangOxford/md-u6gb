@@ -1186,3 +1186,46 @@ generation 只产出 1500/3136 失败，无分数；本次 19.98 s/seq，ETA 4.3
 交付：figures/scorecard_all_axes.png、BPE_PLAN.md（item 9 的计划）、figures/INDEX.md、
 Notion 新页 https://app.notion.com/p/A-2026-08-08-3b612c4568fd81399063f241d07206d9 。
 已停：v5 训练（无法排除的静默污染，见 RESULTS.md §20）。
+
+PG1786171568 UTC 2026-08-08T06:46:08Z: [R14 结算并启动干净训练; 梯度累积基建落地] (1) **R14 出分**: varlen step_28000 全池 WS21 0.1935; 与 R3 联合校正后优势仅 6.4%/0.34σ **不显著**, 已撤回「同算力轴确定胜出」的表述, REVIEWER.md 加 R14 结算段。(2) **发现逐条处置 reviewer 意见的系统性盲区**: 偏袒会累加而处置分开做, 每条单独看都「结论不倒」, 合起来就没了。(3) **实现梯度累积**(src/train.py): global batch 与节点数解耦, K=1 逐字等价; 冒烟 120 步验证 global_bsz 256 与主臂相同、1.22 it/s。(4) **R14 干净训练已启动** r14clean_s30351_064442Z: 2 节点 x 4 GPU x bsz16 x accum2 = global batch 256, v4 词表, total_steps 30351(FLOPs 对齐), 完整 schedule, 预计约 7-9.5 小时。跑完后对 26tok@36000 全池评测, 即得同时校正 FLOPs 与 schedule 完整性的口径, 届时同算力轴只剩 R3 一处未校正(其影响已量化: 剔除后 38.4%)。(5) STATE.md 追加 06:10Z 快照; Notion 新增三页(v5 词表 / R8 / 两个不报错的 bug / v6 判定)。
+
+PG1786179122 UTC 2026-08-08T08:52:02Z: [agentic-MM 本轮] (1) 全程 **attach-only, 零 sbatch**: 所有 CPU 复算作为附着 step 跑在 5944477 上(run_cpu.sh), STT 生成用 attach_only_generate.sh 物理轮询等空卡(截至 08:29Z 仍在等)。(2) 落地 spread_conditional_placement.py 结果并写入 REPORT.md §28。(3) 新建 terminal_inventory.py 做 20 臂分解扫描, 结果写入 §29 —— 推翻自己先前的强平结论。(4) 给 mm_sim_ranged 加逐边 size(向后兼容), regress_sizekeys.py 闸门通过。(5) 新建 reference_policies_size.py(spr/dir 两臂 + 预登记 dir 会失败)与 size_channel.py, 第一轮两臂都「通过」→ **判定为测试坏了而非发现**; 查出 dir 的安慰剂退化(跨窗口绝对价位差把 x 饱和到 ±1, 安慰剂 |inv|=6.94 比对照 5.15 还差)。(6) 新建 reference_policies_size_nomodel.py + size_channel_v2.py: 重锚定安慰剂 + 两个无模型对照 + oracle 天花板 + fills 回归校正, 运行中。
+
+PG-DFM20 UTC 2026-08-08T09:00:00Z: 完成 21-feature panel,5 条臂全部跑完(panel/s2a_{frozen,a2,refresh,cell06}_t080.json + s2a_refresh_t070.json),出图 figs/fig_lvl_slope_feat21_frozen.png 与 figs/fig_curves_feat21_frozen.png,报告 FEATURES_OVER_T.md。改动 dfm_correct_runner.py 两处:npz 现在自带 real_msgs/real_book(真实续段用同一模拟器同一初始状态回放,消除跨管线 id 对齐风险);新增 --build-index 按当前 (n_cond,n_gen) 写日交错索引并在加载模型前退出。全程 attach 到 5944477,本 session 零 sbatch。
+
+PG1786179568 UTC 2026-08-08T08:59:28Z: [v8 首轮白跑, 已修并重跑] task19e 四臂: v7@100 成功(唯一有产物), v8/v8b 训练收敛但被诊断 bug 吃掉, v8@3 仍在跑(会撞同一 bug, 不去干预)。task19f 已在 nid011313 用修好的代码启动四臂 v8/v8b/v8@3/v8b@3, 监控 bk228x9hh **以模型文件落盘为完成判据**(不再看"完成并已回传"那句 —— 它由 shell 打印, 与 python 退出码无关)。目标状态 19/20, (19) 仍未闭合。宿主 5944477 剩约 15h。
+
+PG-DFM21 UTC 2026-08-08T09:05:00Z: goal(21) 两臂改用正确的 stage2a checkpoint 后在 nid011313 GPU0/1 重跑(nid011264 被一个 68GB 的作业占满,只剩 16GB)。goal(22) 提交 j5952782:从 j5705912 step 69378 做 4000 条消息(104k token)的上下文扩展微调,75m preset,PER_GPU_BSZ=1,REMAT=1,1 节点 30 分钟冒烟。提交前做了 dedup 检查(无重复)与节点预算检查(14/20)。
+
+PG-DFM22 UTC 2026-08-08T10:15:00Z: 目标(21) 完成,报告 LONG_ROLL_500x500.md,图 figs/fig_{lvl_slope,curves}_feat21_L500.png,表 figs/table_feat21_L500.md,panel JSON 两份。npz 首次自带真值(real_msgs/real_book,同模拟器同初始状态),回放往返 msgs/book/tokens 全部 1.000000。feature_panel.py 已改为优先使用 npz 内真值,外部真值路径保留给旧文件。目标(22) j5952782 仍在 PENDING(监控脚本自身退出码 1 是循环走完,不是作业失败)。
+
+PG1786204018 UTC 2026-08-08T15:46:58Z: [agentic-MM 结案轮] 新增脚本 terminal_inventory.py / regress_sizekeys.py / size_channel{,_v2,_v3}.py / real_vs_gen_decomp{,2}.py / flow_onesidedness.py / run_cpu{,3}.sh, 新增策略文件 reference_policies_size.py 与 reference_policies_size_nomodel.py, 给 mm_sim_ranged 加逐边 size(闸门通过)。**修掉自己写的一个 bug**: episode_pool_timed.cut_to_duration 的闸门 span<W 按构造永不通过(searchsorted 取窗口内最后一条), 导致 0/128 可用而实际窗口跨 804 秒; 连带作废该文件文档里「只有 66.4% 到 60 秒」的数字。REPORT.md 追加 §28–§33(共 1284 行)。全程 **attach-only 零 sbatch**(附着 5944477); STT 等待器的探测 step 被杀后**未重启**(登录节点常驻轮询禁令), 且其验证目标已被 §28 无需 GPU 地证伪, 该线收掉。
+
+PG1786205005 UTC 2026-08-08T16:03:25Z: [要求 22.1 闭合: 跨 483 支标的] 新增 xsection_gradient.py / xsection_normalised.py / xsection_fig_and_gradient.py, 在 483 支真实标的 18,665 个 60 秒窗口上重测。REPORT.md 追加 §34–§35(1,392 行), 新增 fig12 三面板。**主动撤回 §32–§33 的因果解释**(见 F-记录)。两点梯度检验判为不成立并在脚本内更正了预写的错误判读句。commit 已落。
+
+PG1786206546 UTC 2026-08-08T16:29:06Z: [(20) 第 4/5 次尝试完成] 新增 reference_policies_size.py 的 budget_timed_size_policy 与 band_shape_timed_size_policy(预算约束时机 + 期限结构), 新增脚本 budget_timing.py / band_skill.py / budget_timing_shape.py / budget_beta_scan.py / budget_shape_final.py / make_fig13.py。REPORT.md 追加 §36–§37(1,514 行), 新增 fig13 三面板。GPU 现状 16 张卡全部有 compute PID(18–95GB, sm 92–100%), 按 attach-only **等, 不提交**; 逐步重锚定推理(要求 17/18)仍未做, 但技能测量显示静态形状已含 +0.254, 重锚定的增量未知。commit 已落。
+
+PG1786207495 UTC 2026-08-08T16:44:55Z: [(20) 尝试 6/6b/7 + 定律综合] 新增策略 variance_timed_flatten_policy(含超调上限修正)与 variance_timed_cross_policy, 新增脚本 variance_timed_flatten.py / variance_timed_cross.py / fills_law.py / make_fig14.py。REPORT.md 追加 §38–§39(1,616 行), 新增 **fig14**(244 臂共线 + 参与度定价后的残差)。commit 41fa5f6。Notion 新页已发。**(20) 仍未达成且已给出为何不会有第八个变体的论证**; 使其可达需要改要求 (3)(放开触价以外的挂单)或改 markout 视野, 这是规格决策不是策略搜索。GPU 仍全占, 逐步重锚定推理(要求 17/18)保持等待。
+
+PG-DFM23 UTC 2026-08-08T17:15:00Z: 目标(22) 达成(2000 条上下文,loss 0.5404)。目标(20)(21)(23)(23.1)(24) 均已完成并推 Notion。三条撤回已以加层方式写回 LONG_ROLL_500x500.md 与 PAPER_REVIEW.md 并重推 Notion。遗留:R2 的 edit-rate 匹配对照仍未回答(需在全部 32 batch 上按中位数重做);2000 上下文模型的 compound-error 评测需要 dfm_correct_runner 支持指定 base checkpoint(现在 W.CKPT 写死 500 上下文那个)。
+
+PG-DFM24 UTC 2026-08-08T17:30:00Z: 写 COMPLETION.md,把目标(1)-(24) 每一条钉到磁盘上的具体产物,因为(1)-(19)完成于上下文压缩之前、证据不在当前对话里。盘点:15 个 md(RESULTS.md 2029 行 R1-R33)、43 张图、28 个 eval 模块、245 次提交。同时把三条保留意见(目标 7 口径依赖、R2 混淆未答、2A/2B 无步数匹配)与四条撤回集中列出。
+
+PG1786211986 UTC 2026-08-08T17:59:46Z: [(14) 定案轮] 新增 xsection_lazy_scorer.py(lazy/alwy/imb/thin/join 六臂)与 worker_lazy.py/run_xsection_lazy.sh, 三次全横截面回测(3,769 + 5,644 + 5,644 episodes, 483 支 × 5–6 交易日), 全部 attach 在 5944477 上、零 sbatch。REPORT.md 追加 §41–§48, 新增 fig15。commit 575dfcc→440ee49 共 8 个。**(14)(20) 均未达成并已定案**; 闭合 (14) 需改要求 (3)(返佣/多档/更短视野), 三者都改变问题定义, 未获授权不采用。按要求 (16) 停止搜索循环。
+
+PG-LIT01 UTC 2026-08-08T18:00:00Z: [文献深挖 完成] 25+ 次 WebSearch/WebFetch, 覆盖 VDM/MuLAN/NFDM/NDM/DiffEnc/Blurring/IHD/SPD/GUD/SAGD/Blue-noise/Whitened-Score/EDM/Ting-Chen-2301.10972/Kingma-Gao-2303.00848/Xiao-bilevel-2502.08808/Liu-anisotropic-2602.19512/Xu-DSM-bias-2511.11727/Seitzer-beta-NLL-2203.09168。产出: 候选设计对照表(9 行, 含"缩放 Sigma 目标是否改变"判定)+ 端点项最优解闭式推导 + 关键英文原句 8 条。诚实结论: 文献里没有针对"学满协方差 Sigma"的干净解法。
+
+PG1786213610 UTC 2026-08-08T18:26:50Z: [会话收尾] 新增 fig16(九次尝试全景 + 两道闸门的互补性)、Notion 新页(§48–§54)。REPORT.md 共 54 节。commit 575dfcc→20d8dbd 共 14 个, 全程 attach-only 零 sbatch。**最终**: (6)(13)(19) 达成且此前被我低报; (14)(18)(20) 未达成并定案为「要求(3)的形式化下不存在正收益」, 证据是 19 个机制不同的配置收敛到窄带而非散布。GPU 已空但重锚定推理未执行(现有证据不支持它是成因: 技能随 horizon 上升而非下降), 需要新的自定义上下文推理入口。等用户在三个改(3)的选项或"定稿写论文"之间指定。
+
+PG1786222647 UTC 2026-08-08T20:57:27Z: 变长训练第 4 投成功，在 nid011312+011313（2 节点 8 GPU），
+5.84->6.24 micro it/s，grad_accum 8 -> 约 0.73 优化步/秒。embedding (15847,640)
+确认变长词表进了模型。前三投全部失败于同一根因：这条 allocation 上还跑着我自己
+的 compound-error ce* 链与 crps-return 推理，它们是 step 接 step 的接力链，
+nvidia-smi 瞬时快照对它没有判别力。修法是避开被占节点（新增 ATTACH_NODELIST），
+不杀任何在跑的东西。推理侧完成第一块：/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/varlen-minimal-20260808T172601Z/src/lob/varlen_ref_ring.py。
+
+PG179 UTC 2026-08-08T23:37:40Z: 救回 signal_seed3101/3102（各 .complete），已 os.link 进 merged_n128 成为 gen_id 8/9（768 文件），rollout 数 8→10（实际全窗可读 9）。新脚本 rollout_skill_curve.py 跑完 rc=0，输出 rollout_skill_curve.json + skill_curve.log。生成侧根因定位到节点本地暂存不完整：msg_slice_rows=0 而同一文件头部 msg_total_rows=355886 读得到，四个 rank 全挂、seq_idx 各不同（rank0=8、rank1=62），磁盘充足（238G 空闲 / tmpfs 329G 空闲），故非磁盘满。
+
+PG180 UTC 2026-08-08T23:43:34Z: REPORT.md 追加 §57（2474 行），fig17_rollout_ceiling.png 出图（三面板：学习曲线+外推 / 1-over-k 线性化 / (20) 安慰剂云）。新脚本两个：rollout_skill_curve.py、rollout_forecast_kmax.py（存未平均的 per 矩阵，供任意子集大小复用）。任务 #6 完成：不是靠凑到 20 条，而是靠外推覆盖所有 k。
+
+PG181 UTC 2026-08-08T23:49:05Z: **论文可编译了，三条待查引用全部补齐。** 此前记录说「本节点没有 TeX 引擎」是错的：/projects/public/u6gb/.local/bin/tectonic 存在且可用，main.pdf 编译通过（538 KB，零 error / 零 undefined citation）。新增一节「Ruling out estimation noise, and where the forecast's skill lives」插在 fidelity defect 与 two gates 之间，含 fig17 与 horizon 表；摘要补两句（视野错配 + 集成天花板）。三条 UNVERIFIED 引用按一手记录补全：LOB-Bench = Nagy/Frey/Li/Sarkar/Vyetrenko/Zohren/Calinescu/Foerster, ICML 2025, arXiv:2502.09172；生成器族 = Nagy/Frey/Sapora/Li/Calinescu/Zohren/Foerster, ICAIF 2023, DOI 10.1145/3604237.3626898, arXiv:2309.00638；MCTS-AHD = Zheng/Xie/Wang/Hooi, ICML 2025, arXiv:2501.08603。UNVERIFIED 标记剩 0。样式检查：em-dash 0，itemize/enumerate 0。commit 2e7b566。Notion 新页 https://app.notion.com/p/Kang-line-2026-08-09-the-rollout-ceiling-measuring-the-return-before-paying-the-compute-and-a-se-3b612c4568fd8144813cfed064a704f4
