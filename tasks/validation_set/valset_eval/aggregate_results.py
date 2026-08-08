@@ -3,12 +3,14 @@
 """汇总 valce_*.json + per-sample loss → summary CSV / markdown 表。
 micro = 30,720 样本等权均值（与训练 loss 同口径）；
 macro = 先按 ticker 求均值再对 487 ticker 等权（与 Jan-2026 test CE 同口径）。
-用法: python aggregate_results.py <results_dir>"""
+用法: python aggregate_results.py <results_dir> [ticker_per_sample.npy]
+第二参数省略时用 valset 的 ticker 映射；Jan-shuffle 轴须显式传 jan_ticker_per_sample_30720.npy
+（macro 的分组向量是数据的属性，不是脚本的属性）。"""
 import csv, glob, json, os, sys
 import numpy as np
 
-TICKER_NPY = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                          "ticker_per_sample_30720.npy")
+TICKER_NPY = sys.argv[2] if len(sys.argv) > 2 else os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "ticker_per_sample_30720.npy")
 
 rd = sys.argv[1]
 tickers = np.load(TICKER_NPY)

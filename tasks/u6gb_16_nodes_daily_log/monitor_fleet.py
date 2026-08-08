@@ -15,7 +15,7 @@ from typing import Iterable
 
 TASK_DIR = Path(__file__).resolve().parent
 DEFAULT_EVENTS_PATH = TASK_DIR / "monitor_events.jsonl"
-DEFAULT_NAME_PREFIX = "u6gb-16-nodes-18-jluy-"
+DEFAULT_NAME_PREFIX = "u6gb-4-node-"
 ACTIVE_STATES = {"PENDING", "CONFIGURING", "RUNNING", "COMPLETING", "SUSPENDED"}
 
 

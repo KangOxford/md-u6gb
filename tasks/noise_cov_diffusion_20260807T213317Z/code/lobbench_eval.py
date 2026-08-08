@@ -34,42 +34,31 @@ NOT_COVERED = ("log_time_to_cancel", "limit_ask_order_depth", "limit_bid_order_d
 
 
 def features_from_windows(F):
-    """F: (M,T,43) 特征空间数组 -> dict[feature_name] = 1D 样本数组。
+    """F: (M,T,43) -> dict[feature] = 1D 样本数组（**时间维已摊平**）。
 
-    量用 expm1 反 log1p 回到手数; 价格本来就是相对 BBO 的 tick, 无需绝对 mid。
+    feature 的**定义**全部复用 feature_ts_metrics.feature_series —— 那里返回的是
+    (M,T) 的时间序列。本函数与它的**唯一实质差异就是最后的 .ravel()**，
+    而那一步正是 LOB-Bench 边际指标丢掉时间结构的地方（见 METRICS.md 第 1 节）。
+    把这个差异做成代码里唯一的分叉点，也就杜绝了两处 feature 定义漂移不一致。
+
+    额外加 vol_per_min：它是整窗聚合量（成交量 / 窗口总时长），不是逐时刻序列，
+    故不在 feature_series 里。
     """
-    ask_p, bid_p = F[..., ASK_P], F[..., BID_P]
-    ask_v = np.expm1(np.clip(F[..., ASK_V], 0, 20))
-    bid_v = np.expm1(np.clip(F[..., BID_V], 0, 20))
+    from feature_ts_metrics import feature_series
+    S = feature_series(F)
     dt = np.expm1(np.clip(F[..., C_LOGDT], 0, 25))
     tq = np.expm1(np.clip(F[..., C_TRADE_Q], 0, 20))
-
-    spread = (ask_p[..., 0] - bid_p[..., 0]).ravel()
-    av_t, bv_t = ask_v[..., 0], bid_v[..., 0]
-    av_s, bv_s = ask_v.sum(-1), bid_v.sum(-1)
-    imb = ((bv_s - av_s) / np.maximum(bv_s + av_s, 1e-9)).ravel()
-
-    # OFI: 逐窗口沿时间轴的标准定义
-    dbp = np.diff(bid_p[..., 0], axis=1)
-    dap = np.diff(ask_p[..., 0], axis=1)
-    bv0, av0 = bid_v[..., 0], ask_v[..., 0]
-    dB = np.where(dbp > 0, bv0[:, 1:], np.where(dbp < 0, -bv0[:, :-1], bv0[:, 1:] - bv0[:, :-1]))
-    dA = np.where(dap < 0, av0[:, 1:], np.where(dap > 0, -av0[:, :-1], av0[:, 1:] - av0[:, :-1]))
-    ofi = dB - dA
-    mid = 0.5 * (ask_p[..., 0] + bid_p[..., 0])
-    dmid = np.diff(mid, axis=1)
-
-    total_t = np.maximum(dt.sum(1), 1e-9)                    # 每窗口总时长(ns)
-    vpm = (tq.sum(1) / total_t) * 60e9                       # 每分钟成交量
-
+    vpm = (tq.sum(1) / np.maximum(dt.sum(1), 1e-9)) * 60e9      # 每分钟成交量(整窗)
+    dmid = S["mid_move"]
+    ofi = S["ofi"]
     return {
-        "spread": spread,
-        "orderbook_imbalance": imb,
-        "log_inter_arrival_time": np.log1p(np.maximum(dt, 0)).ravel(),
-        "ask_volume_touch": av_t.ravel(),
-        "bid_volume_touch": bv_t.ravel(),
-        "ask_volume": av_s.ravel(),
-        "bid_volume": bv_s.ravel(),
+        "spread": S["spread"].ravel(),
+        "orderbook_imbalance": S["orderbook_imbalance"].ravel(),
+        "log_inter_arrival_time": S["log_inter_arrival_time"].ravel(),
+        "ask_volume_touch": S["ask_volume_touch"].ravel(),
+        "bid_volume_touch": S["bid_volume_touch"].ravel(),
+        "ask_volume": S["ask_volume"].ravel(),
+        "bid_volume": S["bid_volume"].ravel(),
         "vol_per_min": vpm,
         "ofi": ofi.ravel(),
         "ofi_up": ofi[dmid > 0],

@@ -48,6 +48,9 @@ FEATURE_NAMES = (
 assert len(FEATURE_NAMES) == 43
 
 
+DS = "/lus/lfs1aip2/projects/public/u6gb/datasets/lob_flat43_example_20260807T135612Z"
+T8 = ["GOOG", "AAPL", "NVDA", "AMZN", "META", "TSLA", "MSFT", "AMD"]
+
 def featurize(raw):
     """(N,43) 原始整数 -> (N,43) float 特征。返回 (feat, mid) ; mid 用于反变换。"""
     raw = raw.astype(np.float64)
@@ -95,5 +98,104 @@ def noise_covariance(Xflat, shrink=1e-3):
     S = (1 - shrink) * S + shrink * np.eye(D) * np.trace(S) / D
     S *= D / np.trace(S)
     return S
+
+
+def noise_covariance_toeplitz(S, T, C, blend=1.0, verbose=True):
+    """把 Σ 投影到**块 Toeplitz**(时间平稳)子空间, 再与原 Σ 按 blend 混合。
+
+    动机: Σ 是 (T·C)×(T·C), 要从 9 万个窗口估 T²C²/2 ≈ 23.7 万个自由参数。
+    但如果时间轴平稳, Σ[i,j] 只依赖 i-j, 自由参数降到 T·C² ≈ 2.96 万(8 倍)。
+    沿每条块对角线平均就是到该子空间的正交投影 —— 它**恰好去噪的是滞后结构**,
+    而滞后结构正是 ACF 距离测的东西。这是唯一一个"改进方向"与"评估指标"对齐的候选
+    (见 REPORT 13H.5: 收缩这条路已被留出集似然否掉, 估计精度不是瓶颈)。
+
+    blend<1 时做部分投影, 保留一部分非平稳成分(开盘/收盘效应可能是真的)。
+    结果重新归一化到 trace=D, 与其它臂等噪声能量。
+    """
+    D = T * C
+    assert S.shape == (D, D)
+    B = S.reshape(T, C, T, C)
+    P = np.zeros_like(B)
+    for k in range(-(T - 1), T):
+        idx = [(i, i - k) for i in range(T) if 0 <= i - k < T]
+        m = np.mean([B[i, :, j, :] for i, j in idx], axis=0)
+        for i, j in idx:
+            P[i, :, j, :] = m
+    P = P.reshape(D, D)
+    P = 0.5 * (P + P.T)                       # 数值对称化
+    out = blend * P + (1 - blend) * S
+    # 投影可能把最小特征值压到 0 以下(平均是收缩操作), 抬回正定
+    w = np.linalg.eigvalsh(out)
+    if w.min() <= 1e-8:
+        out = out + (1e-8 - w.min()) * np.eye(D)
+    out *= D / np.trace(out)
+    if verbose:
+        er = lambda M: (lambda v: (v.sum() ** 2) / (v ** 2).sum())(
+            np.clip(np.linalg.eigvalsh(M), 0, None))
+        print(f"[toeplitz] blend={blend} 自由参数 {T*T*C*C//2:,} -> {T*C*C:,} "
+              f"({T*T*C*C//2/(T*C*C):.1f}x), 有效秩 {er(S):.2f} -> {er(out):.2f}, "
+              f"‖ΔΣ‖/‖Σ‖={np.linalg.norm(out-S)/np.linalg.norm(S):.4f}")
+    return out
+
+
+def noise_covariance_tilt(S, gamma, verbose=True):
+    """谱倾斜: Σ(γ) ∝ Q diag(λ^γ) Qᵀ, 归一化到 trace=D。γ=1 即原 Σ。
+
+    γ<1 压平谱(向各向同性), γ>1 磨尖。一个参数的外层搜索族 ——
+    由**生成质量**(外生判据)选 γ, 不由去噪损失选(那个结构上选不出, 见 13H.4c)。
+    """
+    D = S.shape[0]
+    lam, Q = np.linalg.eigh(S)
+    lam = np.clip(lam, 1e-12, None) ** gamma
+    lam = lam * D / lam.sum()
+    out = (Q * lam) @ Q.T
+    if verbose:
+        print(f"[tilt] γ={gamma} 有效秩 {(np.clip(np.linalg.eigvalsh(S),0,None).sum()**2)/(np.clip(np.linalg.eigvalsh(S),0,None)**2).sum():.2f}"
+              f" -> {(lam.sum()**2)/(lam**2).sum():.2f}")
+    return out
+
+
+def noise_covariance_shrunk(Xtr, Xval, grid=None, verbose=True):
+    """用**留出集高斯似然**选收缩强度, 而不是硬编码 shrink=1e-3。
+
+    动机(见 REPORT 13H.4c): 纯去噪损失结构上选不出好的 Σ —— Σ 同时是被学的参数和
+    定义任务的东西, 学习只会把它推向"让任务变简单"。要让"学 Σ"有意义, 信号必须外生。
+    数据本身就是那个外生信号: D=688 维、9 万个训练窗口, **大特征值估得准,
+    小特征值几乎全是采样噪声**(Marchenko-Pastur)。收缩强度该由留出集决定, 不该拍脑袋。
+
+    评分用留出集上的高斯对数似然(常数项省略, 只比较相对大小):
+        ll(a) = -[ log det S(a) + tr(S(a)^-1 C_val) ] / D
+    注意分解只做一次: S(a) = (1-a)S_tr + a*(tr/D)I 在 S_tr 的特征基里是对角的,
+    所以整条 a 网格只需要一次 eigh, 不是每个 a 一次求逆。
+    """
+    D = Xtr.shape[1]
+    S_tr = np.cov(Xtr, rowvar=False)
+    S_tr *= D / np.trace(S_tr)
+    C_val = np.cov(Xval, rowvar=False)
+    C_val *= D / np.trace(C_val)
+    lam, Q = np.linalg.eigh(S_tr)
+    lam = np.clip(lam, 0, None)
+    # C_val 在 S_tr 特征基下的对角元 —— tr(S(a)^-1 C_val) 只需要这些
+    cv = np.einsum("ij,jk,ki->i", Q.T, C_val, Q)
+    if grid is None:
+        grid = np.concatenate([[0.0], np.logspace(-4, 0, 33)])
+    best, best_ll = None, -np.inf
+    for a in grid:
+        d = (1 - a) * lam + a * 1.0          # trace(S_tr)/D = 1, 故各向同性部分就是 1
+        d = d * D / d.sum()
+        if d.min() <= 0:
+            continue
+        ll = -(np.log(d).sum() + (cv / d).sum()) / D
+        if ll > best_ll:
+            best, best_ll = float(a), float(ll)
+    d = (1 - best) * lam + best
+    d = d * D / d.sum()
+    S = (Q * d) @ Q.T
+    if verbose:
+        er0 = (lam.sum() ** 2) / (lam ** 2).sum()
+        er1 = (d.sum() ** 2) / (d ** 2).sum()
+        print(f"[shrink] 留出集选出 a={best:.5g} (对照硬编码 1e-3), "
+              f"留出 loglik={best_ll:.4f}, 有效秩 {er0:.2f} -> {er1:.2f}")
+    return S, best, best_ll
 
 

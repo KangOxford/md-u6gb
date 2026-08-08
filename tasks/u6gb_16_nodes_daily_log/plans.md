@@ -23,3 +23,5 @@
 - 2026-07-25: 深链锚点问答轮:断链取证→按新约束(重叠OK/gap不行)改自续链 one_node_chain.sbatch→提交首棒 5780968→Notion 答复+划线;机制目标从"agent 每轮续链"改为"链自续,agent 只审计"。
 - 2026-07-26 daily log for 2026-07-25: stop after recording the cancelled Notion append and failed local write; do not retry or touch Slurm jobs or experiment files.
 - 2026-07-27 daily log for 2026-07-26: stop after persisting `notion_status=failed`; do not retry Notion or touch Slurm jobs or experiment files.
+- 2026-07-29 daily log for 2026-07-28: stop after recording the cancelled Notion append and socket-blocked failed-status write; do not retry or touch Slurm jobs or experiment files.
+- 2026-07-30: 将自续链脚本统一为 four_node_chain.sbatch 并调整配置/manifest/monitor/submit_self_chain 为 4 节点，保留现存 1 节点排队 Job，提交全新的 4 节点自续链任务。

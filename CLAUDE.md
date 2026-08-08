@@ -437,3 +437,18 @@ done
 ### Lesson (j3492376, 2026-03-30)
 
 Job crashed at 21s (NCCL /dev/shm full on nid011191). Monitor script had `sleep 60` as first checkpoint, but only checked `squeue` and `grep tqdm` on node0. Node0 showed "Shutdown barrier timeout" (symptom), real error was on node4. Monitor ran for 47 minutes without surfacing the crash because it never checked `sacct` exit code or other node logs.
+
+## 运行环境的自我认知 (2026-08-07, 用户明确纠正)
+
+**Claude Code 进程运行在 Isambard 的登录节点上，不是在用户的 Mac 上。** 用户从
+MacBook 通过 SSH 连到服务器，Claude Code 是服务器上的一个程序。
+
+推论（都影响该建议什么）：
+- 服务器**始终有网**。用户 Mac 断网断的是 SSH 连接，不是服务器的出网能力。
+- 因此 `tmux` **确实能**让这个会话在用户断开后存活：`tmux new -s <name>` 里跑
+  `claude --resume <session-id>`，回来 `tmux attach`。不要再说「tmux 也没用因为
+  需要 API 网络」——那是把自己误当成跑在用户笔记本上。
+- 但会话存活 ≠ 工作继续：**没有用户输入时 Claude 不会自己醒来**。所以长时间无人值守
+  的工作必须落到 SLURM 作业里（自带 checkpoint/resume/失败续投），而不是指望会话活着。
+- 登录节点上常驻 agent 仍受 BriCS 2026-05-08 禁令约束。判据是**是否在无人值守下持续
+  发起动作**：脱离后闲置等待输入的会话是良性的，自动轮询/循环提交的不是。

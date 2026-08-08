@@ -1,4 +1,10 @@
-# Handoff：Jan-2026 shuffle 版 132-ckpt CE 评测（中断于 71/132，等 5827830 接力）
+# Handoff：Jan-2026 shuffle 版 132-ckpt CE 评测 ✅ 已全部完成（2026-07-31T12:25Z）
+
+> **本文档已完成使命，保留作执行记录。** 132/132 评测完成（job 5848062，COMPLETED 0:0，1h25m），
+> Approach 3 三轴拟合完成（500 draws 零失败），报告写回、self-complete 子包（285 条 SHA256 自验通过）
+> 与 Notion 回填（页面 `fit scaling law on validation loss`）全部落地。
+> 结论见 `VALSET_CE_EVAL_REPORT.md`「第三把尺子：Jan-2026 shuffle」节与本文件 §10。
+> 以下 §1–§8 为中断当时的续跑说明，已成为历史。
 
 写于 UTC 2026-07-30T22:3xZ。拿到本文档即可无上下文续跑并完成全链条。所有路径均为绝对路径。
 
@@ -107,3 +113,69 @@ Jan-shuffle CE（自然分布、全月随机时点）按 size 段：350M≈0.517
 - **09:37 起该节点 4 GPU 被 backfill124 评测占满**（78.5GB×4，`valset_ce_eval.py --manifest manifest_backfill124.json`，结果目录 `results_backfill124_20260731T093723Z_attach5827830/`，由另一活跃会话驾驶）。backfill124 重档 58 个（350M×10/200M×12/120M×18/78M×18），参照昨天速率估 **8-12h**。
 - **walltime 数学**：5827830 剩 ~15h（09:38 时点）。backfill(~10h) + jan-shuffle(~1h) 串行余量薄；若 backfill 超估，jan-shuffle 将重演 5823145 的 walltime 收割（§7 坑 3 / L1785450367）。备选：5836919（4-node chain，PENDING）起跑后可把 jan-shuffle 挂过去与 backfill 并行。
 - ⚠️ **单 launcher 约束（§7 坑 4 的跨会话版）**：任何会话执行 §2 前，必须先确认 (a) 无其他 jan-shuffle launcher 在任何宿主上运行（查 `logs/jance_parallel_j*.out` mtime、`squeue -j <候选宿主> -s`、OUT_DIR 新锁），(b) 若挂到 5827830 需等 backfill124 完成（GPU gate 在 backfill 的 per-ckpt 进程间隙可能假开，禁止并行挂）。认领后立即在本节追加一行「launcher 已由 <会话/宿主> 于 <UTC> 启动」再开跑。
+- **认领（2026-07-31T09:51:14Z）**：jan-shuffle 收尾改走**独立 job 5848062**（jance-finish61, 1N/2.5h, finish61_jan_shuffle.sbatch, OUT_DIR 复用断点目录）。**5827830 不挂 jan launcher**（本节 (b) 约束遵守）。若 backfill124 完成时 5848062 仍 PENDING，切换宿主前必须先 scancel 5848062（双 launcher 互清活锁，§7 坑 4）。
+
+## 10. 完成记录（2026-07-31）
+
+### 实际执行路径（与 §2 预案的差异）
+
+§2 预案是 attach 到 5827830 续跑。实际未走这条路：5827830 自 09:37 起被另一会话的 **backfill124** 评测占满 4 GPU（8-12h），
+GPU gate 不可能开。改为提交**独立短 job** `finish61_jan_shuffle.sbatch`（1 node / 4 GPU / 2:30），
+即 **job 5848062**（10:44:20Z 起，nid011192），口径仍按 §2：`MODE=jan` + 全量 `manifest_132ckpt.json` + `TOTAL=132`，
+OUT_DIR 复用断点目录靠已有 json 跳过。12:09:33Z 完成，`COMPLETED 0:0`，Elapsed 01:25:20，
+`workers done: 132/132` + `PARALLEL_VALSET_OK` 双信号齐备，零 worker 错误。
+
+### 结果（132/132）
+
+三把尺子的最优规模：valset macro **120M** ｜ Jan-2026 现行 **23M** ｜ Jan-shuffle macro **120M** ｜ micro **120M**。
+
+Approach 3（500 draws，2000 次拟合零失败）：
+
+| 轴 × 协议 | α 点估计 | α boot 中位 [CI95] / 顶界占比 | β [CI95] | E |
+|---|---|---|---|---|
+| Jan-shuffle, last25 | 1.893 内点 | 1.943 [1.828, 2.000] / **35.6%** | 1.405 [1.266, 1.881] | 0.5234 |
+| valset, last25 | 1.922 内点 | 1.936 [1.826, 2.000] / 34.0% | 1.337 [1.197, 2.000] | 0.5957 |
+| Jan-2026 现行, last25 | 2.000 顶界 | — / **100%** | 0.801 [0.527, 1.509] | 0.5552 |
+
+**核心结论**：Jan-shuffle 的顶界占比与 valset 几乎无法区分（35.6% vs 34.0%），而现行口径是 100%。
+因 Jan-shuffle 与现行口径共享同月同批数据、valset 是完全不同数据集，拟合行为上 Jan-shuffle 却站到 valset 一侧，
+说明划分「病理 vs 正常」的是**采样设计**而非数据分布。现行口径的 100% 顶界不能用「Jan-2026 这个月特殊」辩护。
+
+**偏差结构**（这才是最优点左移的原因）：`valset − shuffle` 近乎常数（1M–350M 全落在 +0.0720~+0.0754），
+常数偏移不移动最低点；`Jan现行 − shuffle` 在大模型端从 23M +0.0361 单调爬到 350M +0.0669（近乎翻倍），
+把曲线尾部掰高使最低点左移。整体呈 U 形（谷底 6M +0.0253），小模型端非单调不影响结论。
+
+**micro 不与 macro 同构**（勿套用 valset 节措辞）：Jan-shuffle micro 顶界占比 50.6%/51.4%，比自身 macro 高 15pp，
+valset 只差约 3pp。机制用 Kish 有效样本量量化：valset 487 只折合 164.6 个等效单元（33.8%），Jan-shuffle 仅 74.6（15.3%）。
+
+### 产物落点
+
+| 物 | 路径 |
+|----|------|
+| 报告节 | `/lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/VALSET_CE_EVAL_REPORT.md`「第三把尺子」节 |
+| self-complete 子包 | `/lus/lfs1aip2/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/scaling_law_plots/valset_ce_eval_20260730/jan_shuffle/`（285 条 SHA256 自验通过） |
+| 主表 | 子包 `tables/jan_shuffle_132_table.csv`、`tables/three_ruler_comparison.{csv,md}` |
+| 拟合 | 子包 `fits/`（main_fits / bootstrap_{samples,summary} / three_axis_fit_comparison） |
+| 图 | 子包 `figures/fig_three_rulers.png` |
+| Notion | 页面 `fit scaling law on validation loss`，id `3ad12c45-68fd-80ee-8f6a-e656a3761028`，2026-07-31T12:25Z 追加 7 block |
+| 工作目录 | `/lus/lfs1aip2/projects/public/u6gb/tasks/validation_set/valset_eval/`（原样保留，复制非移动） |
+
+### 新增脚本（均已冒烟验证并入子包 code/）
+
+`build_jan_shuffle_table.py`（三道闸门 + 三尺并表 + macro 重建）、`jan_shuffle_fit_approach3.py`（Approach 3 三轴）、
+`plot_three_rulers.py`（出图）、`run_jan_shuffle_downstream.sh`（下游一条龙）、`finish61_jan_shuffle.sbatch`（评测）。
+
+三道闸门：`n_samples == 30720`；`|mean(npy) − json.val_ce_mean| < 1e-5`；
+ticker↔sample 逐位对齐用单因素 ANOVA 加打乱阴性对照（对齐 F 24.9–31.9，打乱后塌到 0.87–1.12），任一不过即中止。
+
+### 补充教训（§7 坑清单的续）
+
+9. **placeholder chain 节点是多任务共享资源**：§2 写「等 5827830 起跑后 attach」时未料到别的工作线（backfill124）会先占住同一宿主。
+   凡「等 job X 起跑后挂 Y」的计划都必须查**节点物理 GPU 占用**（`nvidia-smi --query-compute-apps`）而非只看 job 状态，
+   且需要跨会话认领机制（本次靠 §9 文档声明行）。
+10. **监控脚本末尾的诊断性 grep 会制造 exit-1 假警报**：本轮 monitor 正常跑到 `132/132 ALL DONE`，
+    末尾 `grep -lE 错误模式` 因无匹配返回 1，整个后台任务被标记 failed。末尾 grep 必须 `|| true`。
+11. **部分数据推出的趋势必须用全量复核**：91/132 时 `Jan−shuffle` 差值看起来全程单调递增，
+    全量后暴露为 U 形（缺的正是 1M/4M 两个小档，属系统性缺失而非随机缺失）。
+12. **不要跨轴照搬前一轴的结论句**：valset 节的「micro 与 macro 同构」在本轴是错的（差 15pp vs 3pp）。
+    结构可复用，结论句必须逐条重验，尤其「X 与 Y 无差异」这类否定式断言。

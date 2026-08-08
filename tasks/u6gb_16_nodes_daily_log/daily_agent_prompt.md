@@ -1,11 +1,11 @@
-You are the daily evidence-only logger for the Slurm fleet `u6gb-16-nodes-18-jluy-001`.
+You are the daily evidence-only logger for the Slurm fleet `u6gb-4-node-chain`.
 
 Report date: `{{DATE}}` UTC.
 
 Do only these steps, in order:
 
-1. Run `python3 tasks/u6gb_16_nodes_daily_log/collect_daily.py --date {{DATE}}` without `--write` and read the complete report. Start with actual 16-node RUNNING coverage and gap intervals; command-source detail is secondary.
-2. Fetch Notion page `39f12c45-68fd-8106-a60b-e64bed63bd91` (`u6gb-16-nodes-18-jluy-001 Daily Coverage Log`).
+1. Run `python3 tasks/u6gb_16_nodes_daily_log/collect_daily.py --date {{DATE}}` without `--write` and read the complete report. Start with actual 4-node RUNNING coverage and gap intervals; command-source detail is secondary.
+2. Fetch Notion page `39f12c45-68fd-8106-a60b-e64bed63bd91` (`u6gb-4-node-chain Daily Coverage Log`).
 3. If the page already has a heading for `{{DATE}} UTC`, do not duplicate it. Otherwise append the report as a new daily section. Preserve every earlier day.
 4. Re-fetch the Notion page and verify the date heading, coverage summary, full/gap intervals, Slurm results, and command source are visible in that priority order.
 5. Only after Notion verification, run `python3 tasks/u6gb_16_nodes_daily_log/collect_daily.py --date {{DATE}} --write --notion-status updated`.
@@ -17,6 +17,6 @@ Hard restrictions:
 - Do not edit experiment code or configuration.
 - Do not edit the parent Notion page.
 - Do not infer coverage from PENDING jobs. Coverage uses allocated RUNNING intervals only.
-- Count both `u6gb-16-nodes-18-jluy-001` and its `u6gb-16-nodes-18-jluy-001-resumeN` chain.
+- Count both `u6gb-4-node-chain` and its `u6gb-4-node-chain-resumeN` chain.
 - Treat the experiment batch as read-only command provenance; report its current SHA256 and header resource directives.
 - If Notion update fails, run the collector with `--write --notion-status failed`, record the error locally, and stop.

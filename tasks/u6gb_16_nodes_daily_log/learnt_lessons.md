@@ -24,3 +24,4 @@
 - 2026-07-25: 续链逻辑必须在 sbatch 载体内部自提(logger 活一周 vs 实验链死三次的唯一差别);用户约束"重叠可接受"反转设计方向,先采约束再定机制;update-a-block PATCH 生效但响应是旧状态,retrieve 复核后再下结论。
 - 2026-07-26 daily log for 2026-07-25: a retargeted manifest plus sandbox-denied Python-child SlurmDBD access prevents the exact collector from persisting the requested historical 16-node report.
 - 2026-07-27 daily log for 2026-07-26: use a runtime-only historical-fleet overlay when the current logger manifest has been retargeted; never reinterpret 1-node RUNNING time as 16-node coverage.
+- 2026-07-29 daily log for 2026-07-28: a direct zero-exit `sacct` query can establish zero 16-node coverage when the retargeted collector cannot open SlurmDBD from its Python child.

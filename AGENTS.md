@@ -25,8 +25,7 @@
 <codex-output-preferences>
 # Codex Output Preferences
 
-- Keep chat responses visually compact. Do not add a full blank line between adjacent short paragraphs when a tighter layout is readable.
-- Approximate the user's preferred "one-third line" paragraph spacing by using short paragraphs, tight bullets, and minimal vertical whitespace. Use full blank lines only when they materially improve scanability for longer or structured answers.
+
 - If a user message contains content inside `[]`, treat that bracketed content as mandatory Notion update instructions:
   - preserve the original bracketed line on Notion and render it with strikethrough (`~~...~~`);
   - insert the assistant's response as a Notion callout block directly below that exact line;
@@ -36,7 +35,7 @@
 - For sections named like `特征数学定义（按当前代码口径）`, render formulas in LaTeX format on Notion (not plain-text pseudo formulas).
 - For experiment feedback, result interpretation, diagnostics, or review replies, update the relevant Notion page by default, not only local markdown.
 - When figures are generated for a result, include the figures in the Notion update as the primary delivery; keep CSV/table values next to them as audit records.
-- If the relevant Notion page is not known, ask for the target page before treating the feedback/reporting task as complete.
+
 </codex-output-preferences>
 
 <environment-paths>
@@ -68,22 +67,3 @@
 - no GPU
 - Login nodes are QoS-limited and must not be used for long-running or intensive workloads.
 </isambard-ai-hardware>
-
-<claude-mem-context>
-# Memory Context
-
-# [u6gb] recent context, 2026-06-18 2:19am UTC
-
-Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
-Format: ID TIME TYPE TITLE
-Fetch details: get_observations([IDs]) | Search: mem-search skill
-
-Stats: 3 obs (723t read) | 3,163t work | 77% savings
-
-### Jun 17, 2026
-9 2:49a 🔵 claude-mem plugin config and script locations confirmed
-11 2:50a 🔵 claude-mem enabled via "claude-mem@thedotmack" key in settings.json
-13 " 🔵 Full enabled plugins list in Claude Code settings.json
-
-Access 3k tokens of past work via get_observations([IDs]) or mem-search skill.
-</claude-mem-context>

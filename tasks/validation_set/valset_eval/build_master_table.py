@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """构建 132 行 master 大表：manifest + 结果 json + per-sample 分位数 + target_step。
-用法: python build_master_table.py <results_dir> <out_prefix>"""
+用法: python build_master_table.py <results_dir> <out_prefix> [ticker_per_sample.npy]
+第三参数省略时用 valset 的 ticker 映射；Jan-shuffle 轴须显式传 jan_ticker_per_sample_30720.npy。"""
 import csv, glob, json, os, sys
 import numpy as np
 
 rd, out_prefix = sys.argv[1], sys.argv[2]
 VE = os.path.dirname(os.path.abspath(__file__))
+TICKER_NPY = sys.argv[3] if len(sys.argv) > 3 else os.path.join(VE, "ticker_per_sample_30720.npy")
 LAST25 = "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/AlphaTrade/experiments/scaling_law_plots/aramis/results/selected_test_last25.csv"
 
 target_step = {}
@@ -44,7 +46,7 @@ for f in sorted(glob.glob(os.path.join(rd, "valce_*.json"))):
         sampleloss_file=os.path.basename(f).replace(".json", "_sampleloss.npy"),
     ))
     # macro
-    tk = np.load(os.path.join(VE, "ticker_per_sample_30720.npy"))
+    tk = np.load(TICKER_NPY)
     order = np.argsort(tk, kind="stable"); st, ss = tk[order], s[order]
     cuts = np.flatnonzero(np.r_[True, st[1:] != st[:-1]])
     per_t = [ss[a:b].mean() for a, b in zip(cuts, np.r_[cuts[1:], len(ss)])]
