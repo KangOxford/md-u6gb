@@ -1176,3 +1176,13 @@ https://app.notion.com/p/26tok-1000-tick-2026-08-08-3b612c4568fd810ea39fc0498da6
 帕累托图 fig8 + Notion 页 3b612c4568fd81648a31da86790880f2。
 在跑：路 A（136.8M @ seq792，16 卡 1.07 it/s，ETA 9.26h）、v5 训练（15600/72000，ETA 7.34h）。
 seq792 33.8M 训练已在 56000/80900 结束，其 task 位已让给路 A。
+
+PG1786167796 UTC 2026-08-08T05:43:16Z: [v6 两个 bug 的完整修复循环 + v4 结论未受影响的确认] (1) **v6 pause 掩码错误**: 对照定根因——同样 6000 步 x batch 64, 臂A(k=0) 产出 250.0/250 满产, 臂B(k=3) 只有 1.8/250、99% 被丢弃。诊断(CPU, 不需撮合引擎)显示 pause 位置全对而剥离后解不开, 生成流一条「消息」拖 45 个 token。根因是**掩码把消息边界信号一起掩掉了**: 消息末尾那个位置的标签正是第一个 pause, 全部不计损失就等于模型从没被监督过消息何时结束。修法: 每组第一个 pause 计损失, 生成端改为「模型采出 pause = 消息结束」并不再 ban 它。(2) **v5 词表 t_sec 上界算错**: 按 value 算得 32 槽够用, 而检查比的是 zigzag 后的 2*value, 实需 46; 后果是**开盘 4.55 小时后的消息全部编码失败, 实测 20.48%**; 而自检因为只取流前 30,000 条一路 PASS。修法: 32→48, 词表仍 15847 ID 不变; 自检改三段采样并加余量闸门(现报「需 46/有 48/余量 1.04x」并对 <1.1x 告警)。连锁: tok/条 5.3845→5.7225, 两臂 seq_len 845→898 / 1316→1369。(3) **确认 v4 词表 t_sec_hi 是 1024 槽、余量 22.3x, 不受影响**——主臂 0.1441 及所有基于它的结论(R3 分解 44.4%、R8 保守区间、R17 撤单 6.63% vs 0.04%)**全部有效**, 只有 v5/v6 实验需重跑。(4) 臂B'(新词表+修正 seq_len) 训练已完成, 编码失败 0 次, loss 2.3081; 臂A' 训练中; 臂B' 评测跑着, 判据是产出率能否从 1.8/250 回到正常。
+
+PG1786169370 UTC 2026-08-08T06:09:30Z: [任务 19 完成并交付] 三批 attach 全部跑完(task19b 四臂 / task19c 三对照臂 / task19d λ 扫描四点), 全部收敛、统一协议。评估落 runs/ts_final_all.json + ts_kl*.json, 图 figs/fig_task19_arms.png 与 fig_task19_lam.png, 胜负项数机械统计落 runs/task19_wins.json。REPORT 2684 行(新增 13H.6/7/8/8b/9/10), 721 个引用数字仅 1 个未核实。README 三条结论扩为四条并写明已知边界。Notion 任务 19 页 3b612c45-68fd-8161-8753-f2a4a856dcd3 重写 179 block 含 2 图回读通过; 主报告页后台同步中。git 71 commits。记忆更新: project_noise_covariance_diffusion_lob 加层推翻"学打不过算", 新建 feedback_regularizer_geometry_over_strength。全程零 sbatch, 全部 attach 到 5944477。
+
+PG1786169768 UTC 2026-08-08T06:16:08Z: 在跑——路 A 5720/36000（2.40 it/s，ETA 3.5h）；26tok@16000 补评（此前那次
+generation 只产出 1500/3136 失败，无分数；本次 19.98 s/seq，ETA 4.35h）。
+交付：figures/scorecard_all_axes.png、BPE_PLAN.md（item 9 的计划）、figures/INDEX.md、
+Notion 新页 https://app.notion.com/p/A-2026-08-08-3b612c4568fd81399063f241d07206d9 。
+已停：v5 训练（无法排除的静默污染，见 RESULTS.md §20）。
