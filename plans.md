@@ -798,3 +798,9 @@ P1786159314 UTC 2026-08-08T03:21:54Z: [新规则: 只 attach 不 sbatch] 用户 
 P1786160006 UTC 2026-08-08T03:33:26Z: [v5 训练重新安家 + 三项 reviewer 欠账] 下一步按优先级: (1) **v5 训练重新 attach**——5944448 已殁, 按 item A11 与「只 attach 不 sbatch」规则, 等 5944477 上 seq792 训练(eta 1.89h)腾出 GPU 后 attach, 不新提交排队作业。v5 需 36000 步 @≈2.2 it/s ≈ 4.5h, 5944477 剩 21h 够。(2) **seq792@36000 评测收尾**并入四路对齐比较(消息量/步数/token 数三者同时对齐), 报告时**必须同时报 6.4% 越界重置率**, 否则分数不干净。(3) **R6**(参数量 33.8M vs 26.8M 偏袒 varlen)、**R8**(n=1 无方差估计)、**R11**(文法约束只给了 varlen, 26tok 应得对等的位置约束)三项 reviewer 欠账未动。(4) **R3 严格版**: ±999 tick 钳位也施加到 varlen。(5) v5 训练完成后进入同算力/同信息量两个口径的评测, 与 v4 的 0.1441 / 0.2432 对照。
 
 P1786160661 UTC 2026-08-08T03:44:21Z: [CRPS 中训练/收益率分布匹配] 用户 /goal 下达 8 项技术目标 + 11 条工作纪律。路径: (1)不重跑生成, 复用 DFM 工作那份 3136 条配对 rollout 作基线; (2)先建严格度量(energy/W1/KS + 按 rollout 的 cluster bootstrap + 真实对半分的地板)再谈改善; (3)**先做机制分解再动手修**——把 P(r) 拆成 P(still)×P(sign)×P(|r|), 结果推翻了「方差太大」的直觉; (4)后训练走 logit-bias 参数化, 因为 softmax 对常数偏移不变, 学到的 b 直接加进 params/decoder/bias 即精确等价, 生成路径零改动且等算力公平性是结构性的; (5)审稿先行, V1(选择性推断)与 V10(归一化漂移)在训练开始前处置。任务目录 tasks/crps_return_alignment_20260808T025024Z, 代码 sigma-0-worktrees/crps-return-alignment-20260808。全程零 sbatch, 只 attach 到 5944477。
+
+P1786162064 UTC 2026-08-08T04:07:44Z: BPE 同信息量差距的收口计划。(1) seq792@36000 全池评测（同消息数+同步数+同上下文，
+对照 26tok@36000=0.2748），因 4 节点 16 task 触发 Error configuring interconnect 改为单节点 4 task 重跑，
+ETA 约 2h。(2) v5 真词表训练已启动（schema 已核对），16GPU×bsz8=global 128，72000 步，
+v5@32000≡v4@16000、v5@72000≡v4@36000。(3) R13 零成本公平性修正脚本 tasks/bpe_varlen_torch_20260806T183132Z/scripts/truncate_time_to_us.py 已就绪，
+待 seq792 打分完成后跑（共用同批 CPU）。(4) 帕累托图与 EQUAL_INFO_GAP.md 已完成并同步 Notion 新页。

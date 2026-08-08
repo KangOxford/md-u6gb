@@ -1156,3 +1156,10 @@ PG1786160006 UTC 2026-08-08T03:33:26Z: [BPE v5 建成通过闸门; 一次 alloca
 PG1786160661 UTC 2026-08-08T03:44:21Z: [CRPS 中训练] 已完成: 度量模块(returns/distance/crps_rl)+20 项单元测试全过; 全量 3136 对基线测量(6 视界, 300 次 cluster bootstrap, 40 次地板重复); 机制分解; 4 组图; 按交易日切 select(10 天 1684 条)/report(10 天 1452 条) 且 real_id 重叠为 0; select 与 report 两个子集的独立基线; CRPS logit-bias 训练器(两个解析梯度均通过中心差分校验, 合成任务上 energy 距离降到 50% 以下); checkpoint 写回工具(dry-run 通过, 显式 SingleDeviceSharding 才能读四卡 mesh 写的 ckpt); REVIEWER.md 十条; Notion 子页已建。**未完成**: GPU 上的实际 rollout 采集与训练——16 张卡全部 sm=100%, 按「只 attach 不 sbatch, 没空卡就等」的规则在等。全程零 sbatch。
 
 PG1786160694 UTC 2026-08-08T03:44:54Z: [task19b 完成并评估, task19c 跑到 2/3] task19b 四臂收敛于 30400/32700/56500/31700, 评估落 runs/ts_task19b.json。评估曾在 nid011240 GPU3 OOM(该卡已用 84.7GB/97.9GB), 改到 nid011313(每卡仅 24.8GB)成功 —— **忙 allocation 内选卡要看实时显存不看节点名**。task19c(iid/hdgn_learned/hdgn_regime)已完成 2 臂, regime 最慢仍在跑。REPORT 新增 13H.6(任务 19 达成)与 13H.7(有效秩不足以刻画 Σ), 698 个引用数字仅 1 个未核实。
+
+PG1786162064 UTC 2026-08-08T04:07:44Z: 本轮完成——v5 真词表训练启动并核对 schema=lossless_lob_vocabulary_v5（前两次实为 v4）；
+帕累托图 fig8 生成；EQUAL_INFO_GAP.md 写成（item 17 的答案）；R14 修复并提交；
+Notion 新页 https://app.notion.com/p/varlen-2026-08-08-3b612c4568fd81648a31da86790880f2。
+在跑：seq792@36000 评测（48/784，ETA ~2h，单节点 4 卡）、v5 训练（5000/72000，eta 8.85h）、
+seq792 训练（checkpoint 已到 44000/80900，stdout 管道断但训练健康）。
+提交：db31dc1 f1e5d67 及本轮三次。损失：allocation 5944448（8 卡）。
