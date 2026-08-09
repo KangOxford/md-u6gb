@@ -1243,3 +1243,7 @@ PG204 UTC 2026-08-09T00:28:00Z: 内核三轮优化（转置+噪声池 / 分块�
 时序重评估 5 格完成。REPORT.md 十九B 节（3742→3867 行）。
 产物：runs/latency_c_v{2,3,4}.json、runs/frontier/、runs/frontier_pareto.png、
 runs/frontier_summary.json。commit 793d019 + e49e604。
+
+PG182 UTC 2026-08-09T00:38:30Z: 实现 clip_quote_prices_open（opt-in，allow_outside_ticks 缺省即逐位委托旧逻辑），gate_open_contract.py 三性质全过（20,000 随机例 0 失配 / 89.3% 真的挂到触价外 / 0 穿越）。make_lazy_policy 加 depth_ticks（默认 0 不改变任何既有臂），XSEC_ARMS=depth|depthsize 选臂集，score_episode_lazy 新增 n_shares。已跑：GS 深度扫描（depth_sweep.py，8 深度 × 3 size）、真实横截面深度冒烟（40 标的 159 episode，34 秒）。size×depth 网格（6×4）在 nid010459 上跑。产出目录 sp500_xsection/episodes_depth_20260809T004600Z 与 episodes_depthsize_20260809T005500Z（均为新目录，不覆盖）。
+
+PG183 UTC 2026-08-09T00:55:23Z: 全量横截面 episodes_depthsize_full_20260809T010500Z 完成（483 标的 / 18,665 episode / 24 格，48 workers 用时约 22 分钟，rc=0）。(20) 深度通道测试 depth_signal_20.json 完成（56 臂 × 128 窗口）。REPORT 追加 §61，并在 §60.4 上加了更正层（原文保留，加「不要引用」的标注）。

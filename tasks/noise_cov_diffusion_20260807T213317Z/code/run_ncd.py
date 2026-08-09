@@ -41,7 +41,7 @@ class Arm(nn.Module):
 
     def __init__(self, T, D, hidden=256, learn_L=False, L_init=None, emb=32,
                  trunk="paper", depth=2, L_bank=None, norm_L=False, anchor=None,
-                 param_mode="chol", logdet=False, eig=None):
+                 param_mode="chol", logdet=False, eig=None, tbins=8, tdep_pow=1.0):
         super().__init__()
         self.T, self.D, self.input_dim = T, D, T * D
         self.time_embed = nn.Embedding(1000, emb)
@@ -100,6 +100,36 @@ class Arm(nn.Module):
             self.dlog = nn.Parameter(torch.log(torch.diagonal(Lm).clamp_min(1e-8)))
             self.register_buffer("L_fixed", torch.empty(0))
             self.register_parameter("L_params", None)
+        elif learn_L and param_mode == "tdep":
+            # v8: **随 t 变形的协方差**。Σ(t) = Σ_data + δ(t)·Δ, δ(t)=ᾱ_t^tdep_pow。
+            #
+            # 为什么这样能同时保住守恒并拿到偏离的收益:
+            #   Cov(x_t) = ᾱ_t Σ_data + (1-ᾱ_t) Σ(t)
+            # 偏离项被 (1-ᾱ_t) 加权, 而 δ(t)=ᾱ_t 在小 t 才大 —— 两者相乘 ᾱ_t(1-ᾱ_t) ≤ 1/4,
+            # 且**两端都趋于零**。大 t(采样开头、跳步最大处)精确等于 Σ_data。
+            # 免费的好处: DDIM 只在起点抽一次噪声, 而 ᾱ_T=2.43e-9 → δ(T)≈0,
+            # 所以**采样先验精确等于 Σ_data**, 与 hdgn_fixed 一致。
+            #
+            # 实现上复用 hdgn_regime 那套 L_bank 分组三角求解, 只是把索引从"市场态"
+            # 换成"t 分箱" —— 不新写一套(任务 9)。
+            Lm = torch.as_tensor(L_init, dtype=torch.float32).clone()
+            self.register_buffer("strict_mask",
+                                 torch.tril(torch.ones(self.input_dim, self.input_dim), -1))
+            self.register_buffer("L_base_off", Lm * self.strict_mask)
+            self.register_buffer("dlog_base", torch.log(torch.diagonal(Lm).clamp_min(1e-8)))
+            self.A = nn.Parameter(torch.zeros(self.input_dim, self.input_dim))
+            self.dlog = nn.Parameter(torch.zeros(self.input_dim))
+            self.n_tbins = int(tbins)
+            self.tdep_pow = float(tdep_pow)
+            # δ_k = 该分箱内 ᾱ_t 的均值的 tdep_pow 次方。用均值而非中点更平滑,
+            # 且 cosine schedule 下 ᾱ 在两端极不均匀(ab[999]=2.43e-9)。
+            _ab = cosine_alphas(1000)
+            _e = torch.linspace(0, 1000, self.n_tbins + 1).long()
+            self.register_buffer("delta_k", torch.stack(
+                [_ab[_e[k]:_e[k + 1]].mean() ** self.tdep_pow for k in range(self.n_tbins)]))
+            self.has_bank = True                       # 走 bank 的分组求解路径
+            self.register_buffer("L_fixed", torch.empty(0))
+            self.register_parameter("L_params", None)
         elif learn_L and param_mode == "spectral":
             # v6: 只学 Sigma_data 特征基里的 D 个特征值, 特征向量冻结。
             # 依据(诊断 13H.1): 自由学习的漂移 99.9% 都在谱上, 旋转只占 0.1%,
@@ -148,6 +178,10 @@ class Arm(nn.Module):
             return self._norm_scale(L)[0]
         if self.param_mode == "spectral":
             return self._norm_scale(self.Q * torch.exp(self.s))[0]
+        if self.param_mode == "tdep":
+            # tdep 没有单一的 L(它随 t 变)。返回偏离最大的那一箱作代表,
+            # 供诊断与"学到的 Σ 有多偏"这类问题使用; 训练/采样一律走 bank()。
+            return self.bank()[int(self.delta_k.argmax())]
         if self.L_anchor.numel() > 0:
             # 锚定模式: L_params 直接作为增量 dL(初始化为 0), 不过 softplus
             L = self.L_anchor + self.L_params * self.tril_mask
@@ -165,16 +199,34 @@ class Arm(nn.Module):
             L = L * torch.sqrt(self.input_dim / ((L ** 2).sum() + 1e-12))
         return L
 
+    def bank(self):
+        """返回 (K, D, D) 的 L 列表。tdep 臂是**可微**的动态 bank, regime 臂是静态 buffer。
+
+        tdep: L_k = tril(L_data,-1) + δ_k·A ⊙ mask  +  diag(exp(dlog_data + δ_k·dlog))
+        δ_k=0 时精确等于 L_data(对角走 exp 保证正定, 无需投影)。
+        """
+        if self.param_mode != "tdep":
+            return self.L_bank
+        d = self.delta_k.view(-1, 1, 1)
+        off = self.L_base_off.unsqueeze(0) + d * (self.A * self.strict_mask).unsqueeze(0)
+        dia = torch.exp(self.dlog_base.unsqueeze(0) + self.delta_k.view(-1, 1) * self.dlog)
+        return off + torch.diag_embed(dia)
+
+    def tbin_of(self, t):
+        """t(0..999) → 分箱索引, 与 delta_k 对齐。"""
+        return (t.long() * self.n_tbins // 1000).clamp(0, self.n_tbins - 1)
+
     def get_noise(self, n, generator=None, regimes=None):
         xi = torch.randn(n, self.input_dim, device=self.tril_mask.device, generator=generator)
         if not self.has_bank:
             return xi @ self.get_L().T
         # 每个样本用它所属 regime 的 L: 按 regime 分组做矩阵乘, K 次而非 n 次
+        Lb = self.bank()
         out = torch.empty_like(xi)
-        for k in range(self.L_bank.shape[0]):
+        for k in range(Lb.shape[0]):
             m = regimes == k
             if m.any():
-                out[m] = xi[m] @ self.L_bank[k].T
+                out[m] = xi[m] @ Lb[k].T
         return out
 
     def logdet_over_D(self):
@@ -212,8 +264,13 @@ class Arm(nn.Module):
             tr(Σ⁻¹Σ_a) = ‖L⁻¹L_a‖²_F
         """
         La = self.L_anchor
-        Z = torch.linalg.solve_triangular(self.get_L(), La, upper=False)
+        Lc = self.bank()[int(self.delta_k.argmax())] if self.param_mode == "tdep" else self.get_L()
+        Z = torch.linalg.solve_triangular(Lc, La, upper=False)
         tr = (Z ** 2).sum()
+        if self.param_mode == "tdep":
+            ld = 2.0 * (self.dlog_base + self.delta_k.max() * self.dlog).sum()
+            return 0.5 * (tr / self.input_dim - 1.0
+                          + (ld - self.logdet_anchor) / self.input_dim)
         return 0.5 * (tr / self.input_dim - 1.0
                       + self.logdet_over_D() - self.logdet_anchor / self.input_dim)
 
@@ -230,11 +287,12 @@ class Arm(nn.Module):
         if not self.has_bank:
             z = self.whiten(r)
             return (z ** 2).sum(1).mean() / r.shape[1]
+        Lb = self.bank()          # tdep 臂是可微的动态 bank, regime 臂是静态 buffer
         tot = 0.0
-        for k in range(self.L_bank.shape[0]):
+        for k in range(Lb.shape[0]):
             m = regimes == k
             if m.any():
-                z = torch.linalg.solve_triangular(self.L_bank[k], r[m].T, upper=False).T
+                z = torch.linalg.solve_triangular(Lb[k], r[m].T, upper=False).T
                 tot = tot + (z ** 2).sum(1).sum()
         return tot / (r.shape[0] * r.shape[1])
 
@@ -286,6 +344,24 @@ def arm_specs(hidden, hidden_wide, L_data, L_bank=None, eig=None,
                                   param_mode="logchol", logdet=False, norm_L=True,
                                   anchor=L_data, **TK),
     }
+    # v8: 随 t 变形的协方差 —— 大 t 精确等于 Σ_data(守恒, 低 NFE 的关键),
+    # 小 t 才偏离(那里 (1-ᾱ_t)→0, 偏离几乎不影响 Cov(x_t))。
+    S["hdgn_learned_v8"] = dict(hidden=hidden, learn_L=True, L_init=L_data,
+                                param_mode="tdep", logdet=False, norm_L=False,
+                                anchor=L_data, tbins=8, tdep_pow=1.0, **TK)
+    # v8b: δ(t)=ᾱ_t² —— 把偏离更集中到小 t, 守恒违反上界从 1/4 降到 4/27
+    S["hdgn_learned_v8b"] = dict(hidden=hidden, learn_L=True, L_init=L_data,
+                                 param_mode="tdep", logdet=False, norm_L=False,
+                                 anchor=L_data, tbins=8, tdep_pow=2.0, **TK)
+    # v8c/v8d: δ(t)=ᾱ_t^3 / ᾱ_t^4。实测 p 的效果**非单调**(p=0 的 v7 是 16/25,
+    # p=1 的 v8 只有 5/30, p=2 的 v8b 是 20/30) —— 因为守恒违反 ∝ ᾱ_t(1-ᾱ_t),
+    # 峰在 ᾱ=0.5 处; p=1 恰好把偏离堆在那个峰上, p 越大越绕开它。
+    S["hdgn_learned_v8c"] = dict(hidden=hidden, learn_L=True, L_init=L_data,
+                                 param_mode="tdep", logdet=False, norm_L=False,
+                                 anchor=L_data, tbins=8, tdep_pow=3.0, **TK)
+    S["hdgn_learned_v8d"] = dict(hidden=hidden, learn_L=True, L_init=L_data,
+                                 param_mode="tdep", logdet=False, norm_L=False,
+                                 anchor=L_data, tbins=8, tdep_pow=4.0, **TK)
     if L_toe is not None:
         # 块 Toeplitz 投影: 强制时间平稳, 自由参数少 8 倍, 去噪的正是滞后结构
         S["hdgn_toeplitz"] = dict(hidden=hidden, learn_L=False, L_init=L_toe, **TK)
@@ -327,7 +403,11 @@ def ddim_sample(model, ab, n, nfe, device, seed=0, Tsteps=1000, x0_clip=None, re
     """
     g = torch.Generator(device=device); g.manual_seed(seed)
     regimes = None
-    if getattr(model, "has_bank", False):
+    if getattr(model, "param_mode", "") == "tdep":
+        # DDIM 只在起点抽一次噪声, 起点是 t=T。ᾱ_T=2.43e-9 → δ(T)≈0,
+        # 所以先验精确等于 N(0,Σ_data) —— 与 hdgn_fixed 的先验完全一致。
+        regimes = torch.full((n,), model.n_tbins - 1, dtype=torch.long, device=device)
+    elif getattr(model, "has_bank", False):
         # 采样时按训练集的 regime 频率抽, 保证生成分布的 regime 组成与真实一致
         pr = torch.as_tensor(reg_prior, dtype=torch.float32, device=device)
         regimes = torch.multinomial(pr, n, replacement=True, generator=g)
@@ -500,6 +580,20 @@ def main():
         npar = sum(p.numel() for p in model.parameters())
         opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
         gen = torch.Generator(device=dev); gen.manual_seed(args.seed + 1)   # 同数据顺序
+        # **约束来源闸门**: 可学的 Σ 必须至少有一个东西拦住 L→∞ 的平凡解。
+        # 没有它, v8 那次的失败方式是: 正则静默不生效 -> 完全无约束 -> trace 涨 180 倍,
+        # 而 loss 反而更好看(0.0378), 全程不报错。改成开跑前大声说出来。
+        _spec = SPEC[arm]
+        _src = ([n for n, on in (("logdet", _spec.get("logdet")),
+                                 ("trace归一化", _spec.get("norm_L")),
+                                 ("KL/Frobenius锚", _spec.get("anchor") is not None),
+                                 ("lam1 正则", args.lam1 > 0)) if on])
+        if _spec.get("learn_L"):
+            if not _src:
+                log(f"[train] !! arm={arm} 的可学 Σ **没有任何约束** —— "
+                    f"这会跌进 L→∞ 的平凡解(见 13H.2/13H.9)。若是故意的演示请忽略。")
+            else:
+                log(f"[train] arm={arm} Σ 约束来源: {', '.join(_src)}")
         log(f"[train] arm={arm} 参数={npar:,}")
         hist, evs = [], {}
         converged_at = None
@@ -508,14 +602,22 @@ def main():
             idx = torch.randint(0, len(Xtr_t), (args.batch,), device=dev, generator=gen)
             x0 = Xtr_t[idx]
             t = torch.randint(0, 1000, (args.batch,), device=dev, generator=gen)
-            reg_b = regimes_t[idx] if model.has_bank else None
+            # tdep 臂的分组索引是 **t 分箱**(每步不同), regime 臂才是市场态(每样本固定)。
+            reg_b = (model.tbin_of(t) if model.param_mode == "tdep"
+                     else (regimes_t[idx] if model.has_bank else None))
             eps = model.get_noise(args.batch, generator=gen, regimes=reg_b)
             a = ab[t][:, None]
             xt = a.sqrt() * x0 + (1 - a).sqrt() * eps
             r = model(xt, t) - eps
             loss = model.mahalanobis(r, reg_b)
-            if model.learn_L and not model.use_logdet and model.L_anchor.numel() > 0 \
-                    and model.param_mode == "logchol" and args.lam_kl > 0:
+            # 白名单必须覆盖**所有**用 KL 锚的参数化。血泪教训(2026-08-08):
+            # 这里原本只写了 "logchol", 新增的 "tdep" 不在名单里 —— 于是 v8/v8b 的
+            # KL 锚**从未被加上**, 而它们同时 logdet=False、norm_L=False,
+            # 结果是完全无约束: 学到的 Σ trace 涨到 123700(180 倍)、有效秩 302,
+            # 直接跌进 13H.2 推导的 L→∞ 平凡解。**不报错, 且 loss 反而更好看**(0.0378)。
+            # 改为按"有锚点就用 KL"判定, 不再枚举 param_mode。
+            if (model.learn_L and not model.use_logdet
+                    and model.L_anchor.numel() > 0 and args.lam_kl > 0):
                 loss = loss + args.lam_kl * model.kl_to_anchor()
             if model.learn_L and model.use_logdet:
                 # 高斯 NLL 的归一化常数。加上它之后不需要 lam1(平凡解自动被堵死),
@@ -556,17 +658,26 @@ def main():
                 log(f"    [{arm}] step {step:6d} loss {loss.item():.4f} "
                     f"l1={means['l1']:.4f} ws={means['wasserstein']:.4f} ks={means['ks']:.4f}")
         wall = time.time() - t0
+        # **先存权重, 再做任何分析。** 血泪教训(2026-08-08): 下面这段诊断在 tdep 臂上
+        # 抛 TypeError, 而它排在 torch.save 之前 —— 一个已经收敛的臂(v8b @ step 51000)
+        # 因此整个丢掉。产物落盘不能依赖任何分析代码的正确性。
+        # 这是"诊断不该有能力杀死训练"那条教训的结构版: 上次只给出错的那一行包了
+        # try/except, 没有改顺序, 于是同一个病换个地方又犯了一次。
+        torch.save(model.state_dict(), os.path.join(args.out, f"model_{arm}.pt"))
         # 学到的 Sigma 塌了没有: 有效秩往 D 跑 = 学成了 iid(13H.1 的判据)。
         # 这是每个可学臂训练后立刻要看的一个数, 比 loss 更能说明它到底学到了什么。
         learned_er = None
         if model.learn_L:
-            with torch.no_grad():
-                Lh = model.get_L().float().cpu().numpy()
-                w = np.clip(np.linalg.eigvalsh(Lh @ Lh.T), 0, None)
-                learned_er = float((w.sum() ** 2) / max((w ** 2).sum(), 1e-30))
-            log(f"    [{arm}] 学到的 Σ 有效秩 {learned_er:.2f} "
-                f"(Σ_data={eff_rank_data:.2f}, 各向同性={D}) "
-                f"trace={float(np.trace(Lh @ Lh.T)):.1f} (Σ_data={D})")
+            try:
+                with torch.no_grad():
+                    Lh = model.get_L().float().cpu().numpy()
+                    w = np.clip(np.linalg.eigvalsh(Lh @ Lh.T), 0, None)
+                    learned_er = float((w.sum() ** 2) / max((w ** 2).sum(), 1e-30))
+                log(f"    [{arm}] 学到的 Σ 有效秩 {learned_er:.2f} "
+                    f"(Σ_data={eff_rank_data:.2f}, 各向同性={D}) "
+                    f"trace={float(np.trace(Lh @ Lh.T)):.1f} (Σ_data={D})")
+            except Exception as e:
+                log(f"    [{arm}] 有效秩诊断失败({e}), 不影响训练产物")
         nfe_res = {}
         model.eval()
         for nfe in [int(x) for x in args.nfe_sweep.split(",")]:
@@ -580,7 +691,6 @@ def main():
                                 "converged_at": converged_at, "stopped_at": step,
                                 "learned_eff_rank": learned_er, "eff_rank_data": eff_rank_data,
                                 "evals": {str(k): v for k, v in evs.items()}, "nfe_sweep": nfe_res}
-        torch.save(model.state_dict(), os.path.join(args.out, f"model_{arm}.pt"))
         with open(os.path.join(args.out, "results.json"), "w") as f:
             json.dump(results, f, indent=2, default=float)
         log(f"[train] arm={arm} 完成, 用时 {wall:.1f}s")

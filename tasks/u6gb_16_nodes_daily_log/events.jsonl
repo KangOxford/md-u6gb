@@ -858,3 +858,8 @@
 {"ts":"2026-08-08T02:55:09Z","event_type":"a_skip_other_link_alive","job_id":"5924043","job_name":"u6gb-4-node-chain","chain_seq":1,"trigger":"exit"}
 {"ts":"2026-08-08T02:55:10Z","event_type":"a_skip_other_link_alive","job_id":"5944477","job_name":"u6gb-4-node-chain","chain_seq":3,"trigger":"poll"}
 {"ts":"2026-08-08T03:00:11Z","event_type":"a_submitted","job_id":"5944477","job_name":"u6gb-4-node-chain","chain_seq":3,"trigger":"poll","successor_job_id":"5951088","via":"record_submission"}
+{"ts":"2026-08-08T22:35:08Z","event_type":"chain_started","job_id":"5950783","job_name":"u6gb-compute-4n","chain_seq":1,"mode":"one_shot","sleep_seconds":43000,"poll_seconds":300,"nodelist":"nid[010474,010483,010489,010494]"}
+{"ts":"2026-08-08T22:35:08Z","event_type":"chain_started","job_id":"5950739","job_name":"u6gb-compute-2n","chain_seq":1,"mode":"one_shot","sleep_seconds":86100,"poll_seconds":300,"nodelist":"nid[010459-010460]"}
+{"ts":"2026-08-09T00:33:31Z","event_type":"chain_finished","job_id":"5944477","job_name":"u6gb-4-node-chain","chain_seq":3}
+{"ts":"2026-08-09T00:53:20Z","event_type":"chain_started","job_id":"5951088","job_name":"u6gb-4-node-chain","chain_seq":4,"mode":"chain","sleep_seconds":86100,"poll_seconds":300,"nodelist":"nid[010640,010643,010648,010655]"}
+{"ts":"2026-08-09T00:53:22Z","event_type":"a_submitted","job_id":"5951088","job_name":"u6gb-4-node-chain","chain_seq":4,"trigger":"start","successor_job_id":"5957521","via":"record_submission"}
