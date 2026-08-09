@@ -1350,3 +1350,9 @@ PG207 UTC 2026-08-09T15:40:11Z: µs 档补训 4 格全部收敛（attach 5957521
 两个 Notion 子页已建（任务 22 清单页、任务 23 主模型页）。
 踩坑：5951088 报 "step creation still disabled (Requested nodes are busy)"，
 已改用 5957521；全程未 scancel。
+
+PG208 UTC 2026-08-09T15:44:31Z: 新增 code/verify_tasks.py（27 条判据的程序化核验）与
+NOTION_TASKS24.md、NOTION_MAINMODEL.md 两个本地镜像。核验 27/27 通过。
+Notion 第三个子页「完成核验」已建：
+https://app.notion.com/p/24-27-27-2026-08-09-3b712c4568fd81b58facc8bc93fcce76
+本轮共建 3 个子页（任务清单 / 主模型 / 核验），另更新延迟页两次。

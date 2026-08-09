@@ -1950,3 +1950,16 @@ F264 UTC 2026-08-09T15:40:11Z: **µs 档三臂对照 —— 任务 19 的胜利�
     对延迟是好事；但说明它是**容量受限的一步生成器**，不在做迭代精修。
 Notion: 任务清单页 3b712c45-68fd-8146-8ef4-cacf519016dd；
         主模型页 3b712c45-68fd-8120-83a3-db04867a4c52
+
+F265 UTC 2026-08-09T15:44:31Z: **24 项任务程序化核验 27/27 通过；核验器抓到一个真实缺口。**
+code/verify_tasks.py 对每项去真实查（文件存在且非空 / REPORT 小节存在 /
+run 目录有 results.json 且指定臂有收敛记录 / 指定指标算得出来），查不到即 FAIL。
+首次运行 25/27，(22)(23) FAIL —— 那两页内容**只上了 Notion，没有本地 md 镜像**，
+而任务 5 要求 everything in a detailed md file。补 NOTION_TASKS24.md（99 行）与
+NOTION_MAINMODEL.md（77 行）后 27/27。
+被质疑的三项经查全部早已完成，只是没在最终输出里露出：
+  (0) REPORT 第一节「任务 0：数据属性分析」1.1-1.5 含图
+  (6) REPORT 第六节「任务 6：下采样到 horizon 频率」+ 8.4b horizon 对照表
+      + runs/converged_horizon（hdgn_fixed conv=23300）
+  (8) REPORT 第九节 + 十三M 节两处，对 ICAIF point (3) 的实证回答
+产物：runs/task_verification.json；Notion 核验页 3b712c45-68fd-81b5-8fac-c8bc93fcce76
