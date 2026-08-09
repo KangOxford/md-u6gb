@@ -1229,3 +1229,9 @@ PG179 UTC 2026-08-08T23:37:40Z: 救回 signal_seed3101/3102（各 .complete）�
 PG180 UTC 2026-08-08T23:43:34Z: REPORT.md 追加 §57（2474 行），fig17_rollout_ceiling.png 出图（三面板：学习曲线+外推 / 1-over-k 线性化 / (20) 安慰剂云）。新脚本两个：rollout_skill_curve.py、rollout_forecast_kmax.py（存未平均的 per 矩阵，供任意子集大小复用）。任务 #6 完成：不是靠凑到 20 条，而是靠外推覆盖所有 k。
 
 PG181 UTC 2026-08-08T23:49:05Z: **论文可编译了，三条待查引用全部补齐。** 此前记录说「本节点没有 TeX 引擎」是错的：/projects/public/u6gb/.local/bin/tectonic 存在且可用，main.pdf 编译通过（538 KB，零 error / 零 undefined citation）。新增一节「Ruling out estimation noise, and where the forecast's skill lives」插在 fidelity defect 与 two gates 之间，含 fig17 与 horizon 表；摘要补两句（视野错配 + 集成天花板）。三条 UNVERIFIED 引用按一手记录补全：LOB-Bench = Nagy/Frey/Li/Sarkar/Vyetrenko/Zohren/Calinescu/Foerster, ICML 2025, arXiv:2502.09172；生成器族 = Nagy/Frey/Sapora/Li/Calinescu/Zohren/Foerster, ICAIF 2023, DOI 10.1145/3604237.3626898, arXiv:2309.00638；MCTS-AHD = Zheng/Xie/Wang/Hooi, ICML 2025, arXiv:2501.08603。UNVERIFIED 标记剩 0。样式检查：em-dash 0，itemize/enumerate 0。commit 2e7b566。Notion 新页 https://app.notion.com/p/Kang-line-2026-08-09-the-rollout-ceiling-measuring-the-return-before-paying-the-compute-and-a-se-3b612c4568fd8144813cfed064a704f4
+
+PG203 UTC 2026-08-09T00:08:53Z: 新增 5 个文件并全部跑出读数（attach 到 5950739，nid010459/010460）：
+code/ncd_kernel.c、code/bench_c.py、code/bench_cudagraph.py（修好捕获期同步的 bug）、
+code/probe_kernel_cost.py、code/latent_oracle.py。
+产物 runs/latency_c.json、latency_c_trained.json、latency_cudagraph.json、latent_oracle.json。
+REPORT.md 增第十九节（3554→3742 行）。numpy→C 同一计算 46.17 µs → 4.33 µs（10.7×）。

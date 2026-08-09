@@ -832,3 +832,10 @@ B 移到 host / C 固定 token 预算）先测 token/消息分布再定。
 P-DFM21 UTC 2026-08-08T23:35:00Z: 用户一句「do you mean P is not necessary?」指出一个我从没跑过的关键对照:**P = 0**。此前所有比较都是 learned-P vs random-P,两者都带非零 residual;random-P 只能证明「随便一个方向不行」,不能证明「需要 residual」。P=0 时 corrector 就是冻结的预训练主干做一次双向重采样,完全无 DFM residual。若 P=0 已能拿到大部分改善,则结论要从「DFM 后训练降低复合误差」降级为「双向重采样降低复合误差」,是完全不同的一篇论文。用 --random-p-scale 0 实现(rp = rp * p_fro * 0 / ||rp|| = 0),两个 horizon 各一臂,挂在 5950739。
 
 P179 UTC 2026-08-08T23:37:40Z: 8→20 rollout 的生成三路全挂（stream A 在 seed3103、5950783 在 seed3105、5950739 两节点 23:03 被杀），只救回 2 个种子。改变计划：不再硬凑 20，改为**先量收益再付成本** —— 用手上的 9-10 条 rollout 测「技能 vs rollout 数」的学习曲线并外推到 k→∞。理由：真正存疑的不是「20 条时技能多少」，而是「集成规模能不能救 (20)」，后者由曲线形状回答，且不花 GPU。脚本 /lus/lfs1aip2/projects/public/u6gb/tasks/agentic_mm_kang_20260807T233500Z/rollout_skill_curve.py。
+
+P238 UTC 2026-08-09T00:08:53Z: 任务 14 延迟目标（<1 µs/样本）—— 两条路线并行证伪。
+GPU 侧用 torch.cuda.CUDAGraph 捕获整条采样链，并单独标定 graph launch 与单 kernel
+设备端派发成本，判断是否存在不可约地板。CPU 侧把整条链写成原生 C（gcc-14 -O3
+-mcpu=native + ctypes），因为 numpy 版 46 µs 的地板经诊断是 Python dispatch 而非硬件。
+若 <1 µs 只有潜空间架构达得到，则先用 PCA 重建做 oracle 上界判断该架构是否可用，
+避免为一个结构已毁的模型报延迟。
