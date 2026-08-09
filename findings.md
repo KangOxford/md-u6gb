@@ -1676,3 +1676,277 @@ F263 UTC 2026-08-09T10:02:20Z: **全模型主表（38 个模型统一重评）�
 (5) 没有任何模型接近噪声底：最好的 ACF1 仍是底的 3.1×，签名 204×，SWD 188×。
 (6) whiten_io=0 与 =1 有系统性偏移（共享臂 hdgn_fixed 上 ACF1 0.0113 vs 0.0682，6×），
     必须分族出表，否则测的是族间差异不是臂间差异。
+
+F264 UTC 2026-08-09T11:35:00Z: 三个实测结论。(1) 最优单标量 c=1.9875 使基线 energy 从 6.839e-2 降到
+1.198e-2（−82.5%），打败本任务 19 条后训练臂中的 17 条；TILT 0.20% 只到 3.817e-2，
+对缩放对照 P(更好)=0.092。(2) 同 checkpoint（ckpt/tilt_p0020）、同 --seed 91000、
+同 192 context，两次采集 0/192 文件相同，首个分歧点在第 26 条消息，energy 3.817e-2
+vs 5.387e-2 相差 41%；机制是 cuBLAS 每次重新 autotune 导致末位舍入不同，被自回归
+categorical 采样放大。(3) R49 报的 qL1 未按各臂自身 sd 标准化，量到的是尺度不是形状；
+除掉尺度后 baseline 0.169 → TILT 0.201（变差），随机方向 s2 为 0.147（比 TILT 好）。
+标准化 qL1 上 19 条臂无一达到 2σ，最好的 P=0.757。产物 compare_energy.json /
+compare_qL1.json 在 /lus/lfs1aip2/projects/public/u6gb/tasks/crps_return_alignment_20260808T025024Z/。
+
+F265 UTC 2026-08-09T12:15:00Z: 根因确认——实验欠功效约一个数量级。真实池独立重抽两份各 192 个收益率
+（2000 次）得零假设：energy median 8.771e-3、p95 2.750e-2、p99 3.990e-2。baseline
+6.839e-2 是 median 的 7.8 倍（超 p99，差距真实），但最优标量 c=1.9875 之后降到
+1.198e-2，仅 1.4 倍 median、落在 p95 以内——统计不可区分。形状指标更极端：baseline
+自身 qL1=0.169，零假设 p95=0.211，即 n=192 下连真实的形状失配都不显著。这一条同时
+解释随机方向追平、对照总能赢、效应量等于复现噪声、19 条臂在 qL1 上无一到 2σ。
+另：三机制不可加，只修零质量 4.612e-2（−33%），只乘标量 1.198e-2（−82.5%），
+两者叠加 1.412e-2（比只乘标量差 17.8%），因为过量零压低 sd 而标量已过补偿。
+注意零假设用 iid 重抽，收益率按交易日聚集（仅 2 天）会使真实零假设更宽，
+故「标量后落在噪声内」是保守方向的偏差。
+
+F266 UTC 2026-08-09T12:45:00Z: 复现底实测（3 点，rep_base/member_0、member_1 与 full_eval_base/member_0，
+后者本身就是同一配置的第三次复现：同 ckpt/step/seed=91000/index sha256 1c4fdf86/n_gen=250）。
+三者逐字不同。CV：energy 15.4%、sd 10.8%、W1 8.7%、qL1（标准化）9.8%，对应 2σ 门槛
+30.8%/21.6%/17.4%/19.6%。据此判定：最优标量 −82.5% 远超门槛；随机方向 −46.5% 越过；
+TILT 0.20% 两次复现 −44.2%/−21.2%，后者在门槛之下；TILT 在 qL1 上恶化 +19.1% 恰压在
+19.6% 门槛上。另：只用前两点时 qL1 的 CV 是 0.8%，加第三点变 9.8%——两点之间的距离
+不是离散度。
+
+F267 UTC 2026-08-09T13:20:00Z: 复现底跑满 5 点后 CV：energy 12.8%、sd 8.8%、W1 8.2%、qL1 15.5%。qL1 是
+最吵的指标不是最稳的（读数走过 2 点 0.8% → 3 点 9.8% → 5 点 15.5%），据此作废
+F266/R50 中「TILT 0.20% 形状恶化 +19.1%」的结论（远在 31% 门槛内）。
+合并两个正交方差源（生成过程 + context 抽样）后：TILT 0.20% vs 标量 z=+1.38、
+clean20 vs 标量 z=−0.34、rnd_s2 vs 标量 z=+0.87、clean14 vs 标量 z=+0.02——
+n=192 下没有任何臂能与「把基线乘一个数」区分开。context 项标准误 2.65e-2 比标量
+自己的均值 1.96e-2 还大。更正：最优标量诚实均值 1.9623e-2 不是 1.198e-2（后者是
+单个复现点上的后见之明值），标量 vs baseline 应为 −73.2% 不是 −82.5%。
+此前全部 z（R49 的 −2.79、R44 的 −3.99、R43 的 −4.32/−4.98）只算了 context 一项方差。
+另：XLA 确定性模式（--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0）
+使生成从 ~30 s/it 变 69.8 s/it，慢约一倍。
+
+F268 UTC 2026-08-09T13:55:00Z: 两个决定性结果。(1) 确定性 XLA（--xla_gpu_deterministic_ops=true
+--xla_gpu_autotune_level=0）使生成 192/192 逐字相同，四个指标 CV 全部 0.0%，代价是
+生成从 ~30 s/it 变 69.8 s/it。确定性路径 energy 6.674e-2 落在默认路径区间
+[6.553e-2, 8.726e-2] 内，无偏倚。但确定性≠更准，只是可重复；正确设计是确定性+多 seed。
+(2) n=2000 真零假设（2000 个互不相同的真实收益率对半劈 1000 vs 1000）：median 1.649e-3、
+p95 5.166e-3、p99 7.479e-3。baseline 8.786e-2 = 53.3× median；标量 c=2.018 之后
+1.283e-2 = 7.8× median 且超 p99——标量之后仍有结构。形状 qL1 baseline 0.1558 vs
+零假设 median 0.0603/p95 0.0960 = 2.6×，第一次可测。结构常数复核：real/gen sd = 1.810
+（n=192 为 1.714/1.712），最优 c=2.018（n=192 为 1.987），P(r=0) 真实 0.0630 vs
+生成 0.1945（超额 3.09 倍，n=192 时为 1.86 倍）。
+
+F-DFM41 UTC 2026-08-09T11:00:00Z: **三个配置在 n=32 粗筛上达到 5/5**(spread/limit_bid_order_ticks/log_depth/bid_volume/ask_volume 全部优于预训练):t0.8/N16(开环)、t0.8/N8/refresh、**t0.85/N8/refresh(最强)**。最强者五项:spread 2.5886->2.0592(-20.4%)、limit_bid_order_ticks 2.1766->0.9356(-57.0%)、log_depth 1.8716->1.6211(-13.4%)、bid_volume 1.3096->1.0927(-16.6%)、ask_volume 1.4404->1.2833(-10.9%)。机理预测被证实:三个 5/5 里两个带 book_refresh(闭环),而闭环正是推断「最可能针对性帮 volume 通道」的那一项——冻结 book 恰好对 corrector 隐藏了它自己编辑造成的簿深变化。且这不是靠调轻校正换来的:t0 从 0.80 抬到 0.85 更轻,但 spread 反而从 -11.8% 改善到 -20.4%,说明闭环是让校正**更准**而非**更少**。n=32 点估计,正在 n=64 复核。
+
+F-DFM42 UTC 2026-08-09T11:35:00Z: **n=64 复核推翻了 n=32 的三个 5/5**。t085N8ref 5/5->4/5(ask_volume -0.157 变 +0.120)、t080N16 5/5->3/5、t080N8ref 5/5->3/5。ask_volume 在 n=64 的三个配置上**全部转差**(+0.1201/+0.1171/+0.0344),而在 n=32 上全部改善——该 feature 的效应在 32 条序列的噪声量级之内。同范数随机对照在 n=64 上是 **0/5**(五项全差,最大 +1.90),所以「learned 方向有效」无疑问,问题只在能否五项同时为负。
+F-DFM43 UTC 2026-08-09T11:35:00Z: **发现结构性权衡:t0 轴上 spread 与 ask_volume 反向**。t0 0.80->0.85 时 spread +0.181->-0.231(改善)而 ask_volume +0.034->+0.120(恶化)。两个 horizon 也恰好互补:250+250 上 ask_volume -0.173 改善但 spread +0.112 变差;500+500 上反过来。所以「五个同时改善」在 t0 这一个轴上**无解**,不是还没找到甜点。正在测 N(步数)与 ||P||(用 step 600 的 r2_cell06,||P||=1.2714 vs 3.5224)两个未测维度。
+
+F-DFM44 UTC 2026-08-09T11:50:00Z: **更正 F-DFM43:五通道之间没有结构性冲突**。用 n=32 的 8 个配置算 ask_volume 与其余四通道的 Delta 相关:spread r=+0.162、limit_bid_order_ticks r=+0.165、log_depth r=-0.089、bid_volume r=+0.101 —— 全部接近 0,且 spread 是弱**正**相关而非我说的反向。我上一条「t0 轴上 spread 与 ask_volume 反向所以无解」是从**两个点**外推的,八配置全局不支持。真正的问题是量级:ask_volume 的平均改善只有 -0.062,比 limit_bid_order_ticks 的 -1.290 小 20 倍、比 spread 的 -0.388 小 6 倍,信号被 n 的噪声淹没(n=32 上 8 个里 3 个五项全负,n=64 上 0 个)。对策改为加大 n 让真实符号显现,已启动 n=128 四臂。
+
+F269 UTC 2026-08-09T15:15:00Z: n=2000 决定性判决。匹配随机对照（3 个方向，逐张量精确匹配 TILT 步范数
+kernel 0.11921/bias 0.00421 相对 0.0020，与训练方向余弦约 0.001）：energy 8.3646e-2
+vs baseline 8.2353e-2，+1.6% z=+0.25——同样大小的随机步无效果。TILT 0.20% 为
+3.3818e-2，vs baseline −58.9% z=−8.31，vs 匹配随机 −59.6% z=−9.32。故梯度学到的是
+方向不是幅度。但形状（qL1 除尺度）：TILT 0.1502 vs baseline 0.1585，−5.3% z=−0.44
+噪声内；匹配随机 +4.7% z=+0.39。TILT 全部效果在尺度（sd 0.5589→0.7926，真实=1.0），
+标量一步到 1.1205，故 TILT vs 标量 +153% z=+4.36（留出集拟合版 +80.8% z=+2.11）仍输。
+未决线索：8% 秩-1 扰动是唯一改善形状的（qL1 −47.5% z=−3.72），但 rnd_s2 是因好看被选中的，
+需未经挑选的一批才能主张。
+
+F270 UTC 2026-08-09T11:58:50Z: main.tex 第 2 条 contribution 同时欠标价与超标价。欠标价：它对应 §5.1（5 个子小节）+ §5.3（2 个子小节）共 5 图 2 表，但只写了一句，漏掉四个独立发现——(a) 表征位于 recurrent state 而非 residual stream（R²≤0.06 vs 0.51-0.59，residual 线性记忆窗仅 2-5 条消息）；(b) state-space duality 逐条消息归因，8 head 中 4 个半衰期 28-66 条、untrained twin 无；(c) 中层塌陷且四种探针（linear/quadratic/RBF/MLP）一致，证明是真缺失非非线性重编码；(d) depth 是唯一 book snapshot 赢的目标（0.62 vs 0.39）。超标价：bullet 写无条件 "generalizes across stocks"，而 §5.3.2 正文是有条件的（OFI 跨股票 R² 差异大，需 winsorize 或 rank 变换才回共同区间）。
+
+
+F271 UTC %Y-%m-%dT%H:%M:%SZ: main.tex 摘要「8.2M-parameter」是净负债：通读七句没有一句的成立依赖参数量，且它把「foundation model 与 8.2M 的尺度张力」这个攻击面搬进了摘要——正文 Intro（main.tex:66）紧跟着有 LOB-Bench 辩护，摘要里没有还手空间。附带发现四处：(a) 「generalizes across metrics beyond limited to」语法坏，应为 beyond order flow imbalance；(b) 摘要 competitive with 强于 Intro（main.tex:70）的 approaches，摘要不得强于正文；(c) 摘要「This representation extends to unseen stocks」无条件，而 §5.3.2 有条件（跨股票 R² 差异大，需 winsorize 或 rank 变换），与上一轮 F270 在 contribution bullet 发现的是同一 overclaim，全文至少复制两处；(d) 摘要完全没写表征位置，而「在 recurrent state 而非 residual stream」（R²≤0.06 vs 0.51-0.59）是全文第一个实质结论，加 from the recurrent state 三词即可带上。另：far above controls and baselines 未锚定，正文有 untrained twin ≈0，写进摘要只多四词却挡住「探针在读平凡信息吗」这一最致命质疑。
+
+F272 UTC 2026-08-09T12:03:19Z: main.tex:77 四处问题。(a) 「shifts predicted order flow as implanted pressure should」把可检验的形状退化成道德判断，而正文 main.tex:70 已写明形状是 linearly and symmetrically in dose——contribution 比正文含糊，是精度倒挂（与 F271 的「摘要不得强于正文」互为对偶）。(b) 「with matched-norm nulls」介词错位，nulls 是对照组不是 steering 的工具，应为 against 或 while...leave it unchanged。(c) 冒号前列两个性质、冒号后并列两个分句，读者需自行配对，且两半是干预实验与读出实验两类不同证据，同一 item 内谁都写不透。(d) 「at a fraction of the inference cost」是无数字比较级，正文有更硬的 without any autoregressive rollout 可换。另：三条 contribution 全无数字，而正文有 R²≈0.38 可上提。
+
+F270 UTC 2026-08-09T16:10:00Z: CE 闸门（任务 6）通过且大幅改善。EVAL_CE=1 走训练前向路径，24 个配对批次，
+同 index/seed/协议：baseline 23.5113±0.2277，TILT 0.20% 22.1856±0.1954，−5.639%，
+0/24 批次变差。关键对照：同范数随机步 mrnd_s11 −0.006%、mrnd_s12 +0.005%（方向相反，
+零附近噪声），即随机动 0.006% 而训练动 5.639%，差约 1000 倍。机制：倾斜目标本身就是
+加权 CE（权重 [0.063,2.516]、ESS 0.595），梯度步自然下降 CE。排除温度效应：步长相对
+||W|| 仅 0.20%，即使完全平行也只等价 0.2% 温度变化，而温度臂 ceG_tau 的 CE 是 18.1
+（差 23%）才是温度效应的量级。
+
+F272 UTC 2026-08-09T00:00:00Z: "J space" 不是本地任何论文的概念，而是 Anthropic 2026-07-06 发布的可解释性工作（论文 "Verbalizable Representations Form a Global Workspace in Language Models"，https://www.anthropic.com/research/global-workspace ；代码 https://github.com/anthropics/jacobian-lens ）。定义链：J-lens 是 lens_ℓ(h) = unembed(J_ℓ h)，其中 J_ℓ = E[∂h_final/∂h_ℓ] 为平均输入-输出 Jacobian（在通用网页文本上估计，论文用 1000 条 ×128 token，~100 prompt 即饱和；估计器为 cotangent 对当前及所有未来 target position 求和、再对 source position 平均）。J-space 则是"对词表每个词 v，最能让模型将来说出 v 的内部方向"所张成的低维子空间。与 logit lens 的唯一形式差别是传输算子：logit lens = unembed(h_ℓ) 即隐含假设 J_ℓ = I；语义差别是相关 vs 因果倾向，时间范围是下一 token vs 所有未来位置。官方给出的经验刻画：同时装几十个概念、占内部总活动 <1/10、读写连接度在部分网络里比普通模式高约 100×（这是称其为 global workspace 的依据，对应 Baars 的全局工作空间理论）、压制 evaluation-awareness 方向后模型开始出现威胁勒索行为。
+
+F273 UTC 2026-08-09T00:00:00Z: 本地证伪结果（先做的一步）：对 /lus/lfs1aip2/projects/public/u6gb/overleaf 下全部 4 个项目（fin-flow-anik-icaif26、How-to-ML-paper、ssm-transformer-aramis-icaif2026、understanding-hidden-states）的 *.tex/*.tikz/*.md/*.txt/*.bib 执行 grep -rniE "j.?space|jacobian"，命中数为 0；main.tex 中字母 J 唯一出现处是股票代码 JPM（/lus/lfs1aip2/projects/public/u6gb/overleaf/understanding-hidden-states/main.tex:167，作为 OOD 测试标的）。
+
+F274 UTC 2026-08-09T00:00:00Z: J-lens 与 understanding-hidden-states 是同位点相反结论，可直接用作论文对照。J-lens 是为 residual stream 设计的工具；该论文的头号发现恰是 SSM 的 residual stream 近乎空（main.tex:212：OFI/traded volume/realized volatility 在残差流 R² ≤ 0.06，对 recurrent state 的 0.51–0.59；残差流线性记忆horizon 仅 ~2–5 条消息）。该对照可补进 Related Work 现有的 SSM 归因段（main.tex:145，ali2024hidden / jafari2024mambalrp / pitorro2025latim），当前该段缺"Transformer 侧残差流方法为何搬不过来"的锚点。另有结构对偶：main.tex:173 的加权和分解是向输入归因，J-lens 是向输出归因，两者拼合即完整 read-write 图，正是 Anthropic 论证 workspace 所用的证据类型。
+
+F271 UTC 2026-08-09T16:40:00Z: LOB-Bench 闸门（任务 7）n=2000、21 特征、修好自指符号链接后：
+baseline WS21 0.273798 / KS21 0.151863 / L1_21 0.251764；TILT 0.20%
+WS21 0.237005（−13.4% 改善）/ KS21 0.161826（+6.6% 退化）/ L1_21 0.249551（−0.9% 改善）。
+三指标方向不一致，与 R58「TILT 改尺度不改形状」同型：WS 对尺度敏感故改善，
+KS 是最大 CDF 偏差对形状敏感故未必受益。LOB-Bench 自身噪声底本任务从未量过，
+正在用 hp_base_s91001/s91002（同 ckpt 另两个生成 seed）与 hp_mrnd_s11（同范数随机步）
+测量；在此之前不判闸门通过或失败。
+
+F273 UTC 2026-08-09T12:11:51Z: 三问的实质答案与一项重大附带发现。(a) exploitable≠decode，但用户的困惑合理：Contribution 3 后半方法上确实是 decode，与 Contribution 2 的差别只在目标的时间方向（已实现量 vs 未来 25 条消息 mid 变动，main.tex:346 已写明 predictive signal）；且 exploitable 承诺了论文没做的交易实验，应改为 predictive, not merely descriptive。(b) steering 是标准词（论文已引 turner2023activation/rimsky2024steering），问题在 dose：main.tex:180 有正式定义但第一次使用在 77 行，定义在使用之后；全文 dose 用于 180/307/331/333 六处，不宜全局换词，应让 77 行自解释。activation patching 不可作替代（语义是替换激活而非加方向向量）。(c) 重大发现：nulls 不是 null-space 而是零假设对照，但更严重的是它盖住了强对照——main.tex:180/311 显示主对照是 30 条 shuffled-label difference-of-means 轴（保留协方差结构与构造方式），不是随机方向；随机方向只排除「推一把就动」，shuffled-label 轴还排除「任何 top-minus-bottom 差值向量都能动」，强度差一个量级，写成 nulls 等于让审稿人按最弱的那种理解。(d) 措辞散布五处：51 exploitable / 70 practically useful+matched null directions / 77 practically exploitable+matched-norm nulls / 180 scrambled-label / 311 shuffled-label；scrambled 与 shuffled 混用需统一。(e) as implanted pressure should 在 77 与 406（结论）各一份，改需成对。
+
+F272 UTC 2026-08-09T17:05:00Z: LOB-Bench 噪声底与闸门判定。baseline 三个生成 seed（91000/91001/91002）：
+WS21 mean 0.268177 CV 1.82%、KS21 mean 0.148998 CV 1.85%、L1_21 mean 0.248649 CV 1.22%，
+对应 2σ 门槛 3.63%/3.71%/2.43%。TILT 0.20%：WS21 −11.62% z=−6.40（真的更好）、
+KS21 +8.61% z=+4.64（真的更差）、L1_21 +0.36% z=+0.30（噪声内）。闸门 (7) 不通过。
+匹配随机步 hp_mrnd_s11（WS 0.263766/KS 0.148504/L1 0.248244）三项全在 baseline 三 seed
+范围内，对照干净。代价形状印证 R58：WS 对尺度敏感故改善，KS 是最大 CDF 偏差对形状敏感，
+拉宽而不修形状必在某处过冲。方法论：同一批生成数据上 LOB-Bench CV 1.8% 而收益率
+energy CV 12.8%，差 7 倍，每个指标的噪声底必须单独量。
+
+F273 UTC 2026-08-09T17:05:00Z: 均匀权重消融（λ=0）第一批结果。倾斜步与均匀步的余弦：kernel 0.9967、
+bias 0.9327——倾斜权重几乎没改变梯度方向。CE：均匀步 −5.660%、倾斜步 −5.639%
+（均匀略好），即 CE 的改善全部来自普通 CE 梯度、与倾斜无关，且 decoder 确实有余量。
+收益率分布的对比在跑（final4）。
+
+F274 UTC 2026-08-09T18:10:00Z: 定论——指数倾斜没有可测的贡献。λ=0 消融（权重全设 1，其余完全相同）：
+步长向量与倾斜步的余弦 kernel 0.9967 / bias 0.9327；收益率 energy 3.5857e-2（−56.5%,
+z=−7.49）对倾斜步 3.3818e-2（−58.9%, z=−8.40），差 6.0% 小于 baseline seed 间 CV 5.8%；
+CE −5.660% 对 −5.639%（均匀略好）；sd 0.7996 对 0.7926（均匀略近真实 1.0）。形状 qL1
+均匀 +3.7% z=+0.27、倾斜 −5.3% z=−0.45，都在噪声内。结论：训练是真的、方向性是真的
+（同范数随机 z=+0.25 无效果），但起作用的是普通极大似然而非分布匹配目标。
+根因：倾斜权重作用在 192 个序列上，梯度在约 24 万个 token 上求和，序列级重加权被
+token 级大数平均稀释；与 R31 的 score function 协方差消失同根。
+真正的可执行发现：sigma-0 的 j5705912 step 69378 最后一层没收敛，一个 decoder-only
+CE 梯度步（0.20% 相对范数）同时使收益率 energy −56.5%、CE −5.66%、LOB-Bench WS21
+−11.6%，但 KS21 +8.6% 退化。
+另：8% 秩-1 扰动（rnd_s2，3 seed）qL1 0.0906、−42.9%、z=−3.26，是全实验唯一改善形状的，
+正在用未经挑选的 rnd_s3 验证是否为该扰动类的性质。
+
+F275 UTC 2026-08-09T18:40:00Z: 最后一个线索死于选择偏差。8% 秩-1 扰动「唯一改善形状」的结论作废：
+被挑出来的 rnd_s2 三个 seed 给 qL1 0.0970/0.0833/0.0914，而同批构造、从未被选中过的
+rnd_s3 两个 seed 给 0.1748/0.1903——比 baseline 的 0.1585 更差。池化 5 次运行
+mean 0.12735、sd 0.05090、vs baseline −19.7%、z=−1.00 噪声内。另：三个匹配随机方向
+在形状上分别 −5.9%/+14.9%/+4.9%，方向间波动 20 个百分点，而 baseline 自身 seed 间
+CV 只有 6.0%——随机方向之间的差异远大于随机与基线之间的差异。最终图景：整个实验里
+没有任何东西改善形状（TILT −5.3% z=−0.44、unifstep +3.7% z=+0.27、匹配随机 +4.7%
+z=+0.39、8% 秩-1 类 −19.7% z=−1.00），所有能动的只有尺度。
+
+F276 UTC 2026-08-09T19:45:00Z: 增量分解与 oracle 上界。整段收益率是逐条增量之和，尺度差距 1.9063 =
+1.5596（逐条边际, 68.9%）× 1.2223（时间依赖, 31.1%）。三个可命名缺陷：动价频率
+真实 4.25% vs 生成 1.53%（36%）、增量峰度 187.9 vs 64.5（2.91×）、依赖放大 1.237 vs
+1.512。S0 copula oracle（秩变换换掉边际、保住模型依赖，n=600，零假设 median 5.495e-3
+p95 1.943e-2）：baseline energy 1.2366e-1（22.5×）qL1 0.2288；标量 c=2.042 给
+2.8326e-2（5.2×）qL1 0.2288 不变；oracle 完美边际给 3.9789e-2（7.2×）qL1 0.1135；
+oracle+残余标量 c=1.497 给 6.9008e-3（1.3×，落进 p95）。结论：标量在 energy 上打败
+完美边际，但两者正交——标量在 qL1 上恒等于 baseline，oracle 边际把 qL1 砍半。
+这是全任务第一次出现形状可修的证据（此前 TILT z=−0.44、普通 CE z=+0.27、匹配随机
+z=+0.39、8% 秩-1 z=−1.00 全动不了）。
+
+F277 UTC 2026-08-09T20:05:00Z: DESIGN_v2 的目标函数里不出现 r。链路是 E_s KL(p*(v|s) || pi_theta(v|s))
+约束 E[phi(Delta)] = mu_real，而 return 只经 r = sum Delta_t 间接相连。和的分布由
+(边际, copula) 共同决定，v2a 只钉边际。算术自洽验证：完美边际下
+sd(r)_gen/sd(r)_real = kappa_gen/kappa_real = 1.2374/1.5125 = 0.818 = 1/1.2223，
+恰是 1.1 节的时间依赖因子；S0 oracle 实测 sd/real 0.7426 与之同量级。故 v2a 的
+数学天花板处 return 尺度仍差 18-26%，qL1 0.1135 仍在零假设 p95 0.0976 带外。
+
+F278 UTC 2026-08-09T20:05:00Z: 三个漏洞。(1) 「1.3x 零假设」那一臂的标量在模型之外：核算 0.5246x2.042
+=1.0712、0.7426x1.497=1.1117，c 是对生成 r 的事后缩放，模型没学到它。(2) v2b 没有
+oracle —— S0 只算了「完美边际 + 模型 copula」，没算「完美边际 + 完美一阶 copula」，
+而后者才是 v2b 的上界；若那 31% 的依赖不是一阶的，phi(Delta_t, R_{t-1}) 也钉不住。
+(3) S4 判据混用样本量：baseline 随 n 从 0.2288(n=600) 掉到 0.1585(n=2000)，oracle
+却两处都写 0.1135，不可能不变，可达窗口必须在 n=2000 重测。(4) 次要：s~data 是
+teacher-forcing 状态，评估在自由 rollout 状态上，exposure bias 是「上界不等于可达」
+的一个具体来源。
+
+F279 UTC 2026-08-09T13:40:00Z: 审计 alexbismuth 的 compounding_error_analysis.py。
+他的核心设计是**对称跨半估计量**: model=½[KL(real_A‖gen_B)+KL(real_B‖gen_A)],
+floor=½[KL(real_A‖real_B)+KL(real_B‖real_A)] —— 两边都是不相交的 X/2 对 X/2,
+KL 的有限样本偏差在 model 和 floor 上构造上相同,相减精确抵消; 且 model 侧两边
+永不共享 context。合成审计(n 每侧固定 128、real 与 gen 同法故真值恒为 0):跨半在
+四档 context 效应下 |excess| ≤ 0.008; 而「floor 用不相交 context、model 用共享
+context」这个形态在 lam=0.75/K=1001 时读到 **−0.285**。注入 drift=0.05 的真实缺陷
+时跨半读 +0.0084(检出),该形态读 −0.0226(报成「低于 floor = 与真实不可区分」)。
+偏差的**水平**成立,**斜率**不成立(lam=0 时也有 ±0.013 且随 lam 无单调趋势)。
+pre-vs-post 对照斜率两估计量差 ≤ 0.008,六单元全部正确判出 post 斜率更小。
+归一化 KL/H(true) 是我 σ 归一化的类别版(他 docstring 明写)。H 插值上限 log(X),
+X=256 时最坏膨胀 1.28×(均匀 1000 支撑),与 t 无关,不制造假 compound error。
+详见 /lus/lfs1aip2/projects/public/u6gb/tasks/dfm_compound_error_20260808T001752Z/
+ALEX_COMPOUND_ERROR.md
+
+F280 UTC 2026-08-09T13:42:00Z: **更正 F279 的合成模型对我自己代码的建模**。合成里
+我把「配对形态」的 floor 建成 context 不相交,但 feature_panel.floor_curve 实际是
+从全部序列×窗口步展平的**合池**里抽两半,两半**共享序列**。我的 floor 也是部分
+配对的,不对称远小于合成预测。实测(dfm_s2a_frozen_t080_L500_2a3500.npz, n=64,
+20 天)偏差是**正的且小**(+0.02~+0.29),不是大负数。合成证明的是「那个形态错」,
+不是「我的代码错」。以实测为准。21 个可算特征里「是否 compound」(斜率>0.05)分类
+**19 个一致**,分歧的 ask_volume(+0.0597 vs +0.0331)与 ask_volume_touch(+0.0144
+vs +0.0586)都紧贴阈值。随机-P 对照在跨半下 **5/5 全差**(配对下 4/5),更严的
+估计量让 learned-vs-random 对照更干净。
+
+F281 UTC 2026-08-09T13:45:00Z: **跨半 floor / 配对 floor 的比值是日间异质性指数**。
+跨半 floor 拿 A 组 32 条对 B 组 32 条,多含序列/日之间的真实异质性; 配对 floor 从
+合池抽两半,只含抽样噪声。实测比值: log_inter_arrival_time 1.12(几乎无日间差异)、
+ask_cancellation_ticks 1.22、ofi 1.38、spread 1.84、limit_bid_order_ticks 1.90、
+delta_mid 2.04(日间差异大于抽样噪声)。两个 floor 不是谁对谁错,是两个不同的零
+假设,各自内部自洽。跨半的代价:n=64 时蒙特卡洛 sd 是配对的 2.5~3.4 倍(spread
+0.1407 vs 0.0416、bid_volume 0.0832 vs 0.0266)。去掉一个偏差换来 2.5~3.4 倍噪声。
+
+F282 UTC 2026-08-09T13:50:00Z: **撤回一个未发布的 5/5**。单种子(seed 0)跨半跑出
+learned-P 五项全负 = 我整晚在找的 5/5(spread −0.6975 / ticks −3.6041 / log_depth
+−0.1359 / bid_volume −0.0850 / **ask_volume −0.0293**)。60 种子重抽后 ask_volume
+跨半均值 **+0.0262(变差)**,只有 **19/60** 个种子为负 —— 那个 −0.0293 是 32%
+概率事件。配对估计量 60 种子里 59 个为正(均值 +0.0525)。**两个估计量同号:
+ask_volume 变差**。这同时回答了整晚的问题:5/5 在这一臂上不可达,ask_volume 是
+稳定变差,不是「量级太小分辨不出」。前四项稳健(60/60、60/60、59/60、55/60)。
+边界:种子重抽只界定估计量的蒙特卡洛不稳定性,不是数据的抽样不确定性(同一批
+64 条序列),后者需日块 bootstrap。
+
+F283 UTC 2026-08-09T13:55:00Z: **在我自己代码里发现一处白丢功率**。
+feature_panel.paired_bootstrap 的日重采样正确配对(rows 两臂共用),但它把**同一个
+rng 对象顺序传给两次 curve() 调用**,rng 已推进,于是第二臂抽到不同的 n_match
+子样本。真值侧是两臂共有的,让它不同等于往对照里注入不抵消的噪声。这不是偏差,
+是功率损失 —— 而当前卡住的正是「margin 小于噪声」。修法是每臂前重置 rng。
+
+F1786286323 UTC 2026-08-09T14:38:43Z: 两条。
+(1) 变长生成骨架闸门通过：随机 logits 下 250/250 条消息全部可被 decode_event
+解开；对照（去掉掩码）60/60 全失败，说明掩码可证伪地在起作用。三轮失败对应
+三个层次的约束：单 token（t_sec.lo 不能当开头）、两 token 联合（(short_hi,digit)
+的值不能落进 head 表）、可推导的 token 级（无合法后继的开头必须剔除，891 行里 6 行为空）。
+(2) 变长 checkpoint 元数据自证通过：token_mode varlen、mamba3 d_model 640
+n_layers 6、词表 15847 与 v5 一致。文件 /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/varlen-minimal-20260808T172601Z/scripts/varlen_generate_smoke.py。
+
+F284 UTC 2026-08-09T14:05:00Z: **给 F283 加一层(不撤销,加限定)**。子采样配对的
+实测收益远小于我写 F283 时的判断: 80 次重复下 sd 只降 3~17%,且 log_depth 反而
+微升(0.94×)。ratio: spread 1.07×、ticks 1.03×、log_depth 0.94×、bid_volume 1.04×、
+ask_volume 1.17×。修法仍正确且免费,但买不到功率。F283 的诊断成立,量级夸大了。
+真正有决定性的是同一次测量给出的**分辨率**(|对照|/蒙特卡洛 sd, n_match=64):
+limit_bid_order_ticks 34.9σ、spread 7.3σ、log_depth 3.6σ、bid_volume 2.1σ、
+**ask_volume 0.99σ 且点估计 +0.0513(错的方向)**。ask_volume 连必要条件都没过 ——
+蒙特卡洛噪声本身就有 1σ,谈不上判符号。这解释了整晚 n=32 五中三、n=64 全灭、
+配置间无结构冲突(r 在 −0.089~+0.165)的全部现象:被测的是噪声。
+
+F285 UTC 2026-08-09T14:35:00Z: **五特征目标的定论(日块 bootstrap, n_boot=200,
+20 交易日, headline 臂)**。「改善」必须区分**水平**和**斜率**,而且两者会反向:
+spread 水平 −0.4147 CI[−1.0480,−0.0409] 排除 0、斜率 CI[−0.7436,−0.2939] 排除 0(双 ✅);
+limit_bid_order_ticks 水平 −3.5200 CI[−4.0123,−2.7983] 排除 0,但斜率 CI[−0.4917,
++0.1145] **不**排除 0; log_depth 水平不排除 0,斜率 CI[−0.3944,−0.0349] 排除 0;
+bid_volume 两者都不排除 0; **ask_volume 水平点估计 +0.0354(变差)且不排除 0,但
+斜率 CI[−0.3245,−0.0077] 排除 0**。按复合误差(斜率)读是 **3/5**(spread、log_depth、
+ask_volume),按水平读是 **2/5**(spread、limit_bid_order_ticks),**没有任何读法给出
+5/5**。我此前把水平和斜率混着说成「改善」是不对的。
+
+F286 UTC 2026-08-09T14:38:00Z: **v2 更温和 residual(‖P‖=1.2714)这条轴否掉**。
+resolution_scan 打 dfm_v2_cell06_{t080,t085}ref_n64: 两臂都只有 2/5 已分辨改善,
+log_depth 被显著推坏 +0.448(5.4σ)/+0.446(6.2σ)、ask_volume +0.539(9.4σ)/+0.361
+(7.0σ)。比 headline 臂差。‖P‖ 轴上「更温和更稳」的假设被证伪。
+
+F287 UTC 2026-08-09T14:40:00Z: **闸门在天数上,不在 n_seq 或超参上**。日块 bootstrap
+CI 的半宽约是蒙特卡洛 sd 的 6 倍(spread: 0.50 vs 0.079)。加大 n_match 只压 MC 噪声,
+压不动数据不确定性。要收窄 CI 需要**更多交易日**(现在 20 天),不是每天更多序列、
+也不是更多 sweep 配置。今晚在 n_seq(32→64→128)和超参(t_start/N/‖P‖)上找了一整晚,
+方向从一开始就错了。
+
+F264 UTC 2026-08-09T15:40:11Z: **µs 档三臂对照 —— 任务 19 的胜利不迁移到小模型（负面结果）。**
+(1) **Σ 的价值在 µs 档完整保留**：hidden=8 下 hdgn_fixed 对 iid，
+    ACF1(ch) 0.0994 vs 0.9469 = **9.52×**；签名(ch) 107.49 vs 1790.64 = **16.66×**；
+    论文 Frob 0.7435 vs 7.2408 = **9.74×**。结构化噪声不是大模型红利。
+(2) **hdgn_learned_v7·kl30 在 µs 档没超过 hdgn_fixed**：
+    h8 Frob 0.82×、h16 0.82×、h32 0.96×、h1024:3 1.07×（NFE=10 时 3.16×）。
+    机制：v7 的 Σ 被 KL 锚在 Σ_data 上 -> **最好情形就是复现 hdgn_fixed**，
+    超越要靠「有用地偏离」，而那需要网络容量协同适应。h8 没有 -> 只剩坏处。
+    **机制在数据里可验证**：v7/fix 随 hidden 单调改善，方向指向全容量的取胜。
+    排除 λ 调参失败：λ_kl=1 的 ACF1 是 0.2152，比 λ=30 的 0.1001 差一倍以上。
+(3) **所有档位都输给零训练 N(0,Σ)**：ACF1 底 0.0277，µs 档 0.0994(差3.6×)、
+    全容量 0.0124(唯一赢的一格)；路径签名零训练 0.7156，µs 107.49、全容量 52.04，
+    都差两个数量级。**不是 µs 档特有的，是整个模型族的问题。**
+(4) **学 Σ 是推理零成本的额外容量**：hidden=8 时 Σ 的 237,016 参数是主干 44,120 的
+    **5.37 倍**，但 ε~N(0,Σ) 与数据无关可离线预生成，运行时只 memcpy(~30 ns)。
+    加宽/加深线性推高延迟，加在 Σ 上不推高 —— 这是任务 3.1 的一个具体答案。
+    但 (2) 说明**免费不等于有用**：hidden≤32 时兑现不出收益。
+(5) µs 档的 DDIM 步数惰性：NFE=1 与 10 几乎逐位相同(ACF1 都 0.0994)。
+    对延迟是好事；但说明它是**容量受限的一步生成器**，不在做迭代精修。
+Notion: 任务清单页 3b712c45-68fd-8146-8ef4-cacf519016dd；
+        主模型页 3b712c45-68fd-8120-83a3-db04867a4c52

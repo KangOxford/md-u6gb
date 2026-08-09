@@ -1260,3 +1260,93 @@ reeval_ts.py 加 --windows-npy/--arms 覆盖并把 eval_cache 写入改为原子
 产物 runs/master/（38 json）、runs/master_table.json、master_table_nfe10.json、
 runs/master_sel.json、MASTER_TABLE.md。
 5951088 上有 8 个计算进程 72-97GB/卡（BPE 优先），全程未碰；5950783 余 43 min 未用。
+
+PG206 UTC 2026-08-09T11:35:00Z: 撤回 R49 的「四项指标同时改善」主张，已写入 RESULTS.md 的 R50（第 50 条）。
+代码提交 ab421fc（compare_arms.py）在分支 feat/crps-return-alignment-20260808。
+本轮零 sbatch，全部为登录节点 CPU 分析。GPU 侧：5950739（2 节点 8 卡）全空闲可用，
+5951088 十六卡满载勿动，5950783 仅剩 35 分钟。blockB 复现此前死于 cuBLAS autotuner，
+需重投到 5950739。
+
+PG207 UTC 2026-08-09T12:15:00Z: R51 写入 RESULTS.md（第 51 条）。提交 063c4d8（measure_replication_floor.sh
++ collect_highpower.sh + collect_rollouts.sh 的 SEED_STRIDE 开关）。两个 job step 并行
+在 5950739：nid010459 跑复现底（rep_base K=4 同 seed + det_base K=2 关 autotune），
+nid010460 跑高功效评估（n=2000，三臂 base/tilt_p0020/rnd_s2，index 文件
+/lus/lfs1aip2/projects/public/u6gb/tasks/crps_return_alignment_20260808T025024Z/data/hp_eval_idx.txt
+含原 192 使旧结果成为子样本）。本轮仍为零 sbatch。
+
+PG208 UTC 2026-08-09T13:55:00Z: RESULTS.md 到 R56（57 条）。rep_base 4/4 + det_base 2/2 完成，hp_base 完成
+（2000 context），hp_tilt_p0020 与 hp_rnd_s2 生成中。全部为 5950739 上的 attach job step，
+本轮零 sbatch。新图 figs/fig6_power.png。代码提交 ab421fc / 063c4d8 / be09479 及 plot_power。
+
+PG209 UTC 2026-08-09T11:58:50Z: 完成 main.tex contribution list 审阅，向用户交付：覆盖率对照表（7 个正文小节 × 是否被 bullet 覆盖）、三处实质问题（欠标价/超标价/"mechanistic" 一词半悬空）、以及拆成 4 条的 LaTeX 改写文本（新增「表征位置+归因机制」条，改写「表征内容+泛化边界」条）。尚未写入 main.tex，等用户确认。
+
+
+PG210 UTC %Y-%m-%dT%H:%M:%SZ: 完成 main.tex 摘要细节审阅，向用户交付：七项细节的保留/删除判定表、8.2M 为净负债的三段论证、三处摘要-正文不一致、以及六处改动的改写摘要（205→198 词，硬信息净增）。未写入 main.tex，等用户确认；其中「transfers to stocks never seen in training」是否需再弱化一档留给用户判断（取决于 §5.3.2 的 winsorize/rank 条件是本质还是技术细节）。本轮零 sbatch。
+
+PG211 UTC 2026-08-09T12:03:19Z: 交付 main.tex:77 的中文直译、六词术语表、四项问题诊断、方案A（保三条修句）与方案B（拆两条，推荐）两版 LaTeX，以及符合禁 enumerate 规则的段落版。全程保留 approaches 未升格为 matches/competitive with，避免重演 F271 记录的摘要强于正文。未写入 main.tex。本轮零 sbatch。
+
+PG209 UTC 2026-08-09T16:10:00Z: RESULTS.md 到 R59+补（62 条）。Notion 阶段15 定稿页已建：
+https://app.notion.com/p/CRPS-15-2026-08-09-3b712c4568fd817892e5d4a6e9f2a6ee
+代码提交 ab421fc/063c4d8/be09479/a427ae5/1f384cb/e30c0b8/0bc1e33/e4aa1a0。
+新图 figs/fig6_power.png、figs/fig7_final.png。LOB-Bench 闸门（任务 7）修好后重投，
+输出落新根 lobbench2/。全程 attach 到 5950739，零 sbatch，未用 scancel。
+
+PG211 UTC 2026-08-09T00:00:00Z: 完成 "J space" 术语澄清。执行链：(1) grep 全 overleaf 4 项目 tex/tikz/md/txt/bib 找 j.?space/jacobian → 0 命中，排除本地来源；(2) 读 /lus/lfs1aip2/projects/public/u6gb/overleaf/understanding-hidden-states/main.tex 全文确认无该概念，J 仅见于 JPM；(3) 用户补充线索 "from anthropic, J lens" 后 WebSearch，再按用户给的官方链接 WebFetch https://www.anthropic.com/research/global-workspace 与 https://github.com/anthropics/jacobian-lens/blob/main/README.md 取权威定义与公式。交付：J-lens 公式 lens_ℓ(h)=unembed(J_ℓ h) 与 J_ℓ=E[∂h_final/∂h_ℓ]、与 logit lens 的对照表（传输算子 I vs J_ℓ、时间范围下一 token vs 所有未来位置、相关 vs 因果倾向）、J-space 经验刻画表、以及与本论文的三点关联（Related Work 锚点、read-write 图对偶、OFI steering 方向是否落在 J-space 的候选实验）。未执行任何计算作业。注：拒绝采用搜索命中的 jspace.com（疑 SEO 站）上无法在官方来源核实的数字，如 "13/180 次出现勒索"。
+
+PG212 UTC 2026-08-09T12:11:51Z: 交付三问逐条解答（含 decode/exploit 的时间方向对照表、dose 定义位置倒挂的诊断、随机方向 vs shuffled-label 轴的强度分级）、全文五处措辞散布表、以及拆两条的最终 LaTeX 与五项改动对照表。已向用户提议连带统一 main.tex:406 的 as implanted pressure should 与 180 行的 scrambled/shuffled。未写入 main.tex，等确认。本轮零 sbatch。
+
+PG210 UTC 2026-08-09T18:40:00Z: RESULTS.md 到 R63（66 条）。SUMMARY.md 已交付。Notion 阶段15 页更新至第 12 节。
+代码提交至 d9db9be（compare_arms/final_verdict/replication_report/make_random_step/
+aggregate_step/collect_highpower*/run_matched_random/run_gates/run_uniform_ablation/
+run_rank1_class/plot_power/plot_final）。全程 attach 到 5950739（剩 9h+），零 sbatch，
+未用 scancel。
+
+PG251 UTC 2026-08-09T20:05:00Z: 本轮为设计审查，无计算。读完 DESIGN_v2.md(330 行)，回答了「是否为 return
+上的真分布匹配」：分布匹配 ✓ / 后训练非 RL ✓ / 匹配对象是 return ✗。产出 F277-F278
+四个漏洞，并把 S0b 插入 S1 之前（P244）。下一步：S0b 与 S1 并行启动，均为 CPU 分钟级。
+
+PG1786286323 UTC 2026-08-09T14:38:43Z: 训练在 5951088 上以 bsz=1/accum=4（全局批 64）从 step 6500 续跑，
+每卡 1 进程 70.7 GB、16 GPU 全用。Notion 已交付三份子页：
+基线 3b712c4568fd81418545d58e2e1f3948、训练数据 3b712c4568fd813fb498d9f6be2c1755、
+bug 复盘 3b712c4568fd81aaa34ee18afca13f7e。
+推理侧 29 个测试全过（环形缓冲 6 + 状态机/掩码 6 + 生成骨架 3 + 编码 12 + e2e 2）。
+
+PG252 UTC 2026-08-09T14:10:00Z: 完成对 alexbismuth compounding_error_analysis.py 的
+分析(P246 四步全做完)。(1) 定义拆解:26-token 相位表 + OTHER 桶、对称跨半估计量、
+KL/H(true) 归一化(他 docstring 明写是我 σ 归一化的类别版)、日聚类**共享抽取矩阵**的
+配对 bootstrap、merge_noop bit-exact canary。(2) 合成审计三个脚本,直接 import 他的
+函数:第一版混淆了配对与样本量已更正,n 对齐后跨半四档全停在 0(|excess|≤0.008),
+被诊断的形态最坏 −0.285。(3) 实测:新写 eval/crosshalf_panel.py,在 headline 臂上
+两估计量并排,21 特征分类 19 一致,随机-P 对照跨半下 5/5 全差。(4) 产出
+ALEX_COMPOUND_ERROR.md(七节含七张表)。副产品两条:floor 比值=日间异质性指数
+(1.12~2.04); 我的 paired_bootstrap 子采样未配对(收益仅 3~17%,见 F284)。
+发现他代码两处问题:n_msgs<bins 静默失效(默认参数不触发,已实测复现全零箱)、
+docstring 承诺的 JS 算了存了但从不输出。日块 bootstrap 已在跑。
+产物路径:
+  /lus/lfs1aip2/projects/public/u6gb/tasks/dfm_compound_error_20260808T001752Z/ALEX_COMPOUND_ERROR.md
+  /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/dfm-post-training-20260801/post_training/dfm/eval/crosshalf_panel.py
+  /lus/lfs1aip2/projects/public/u6gb/tasks/dfm_compound_error_20260808T001752Z/code/{audit_alex_ce,audit_pairing,audit_flatness,seed_stability,subsample_pairing}.py
+  /lus/lfs1aip2/projects/public/u6gb/tasks/dfm_compound_error_20260808T001752Z/panel/crosshalf_L500_{frozen,frozen_all,a2}.json
+
+PG206 UTC 2026-08-09T15:29:34Z: Notion 子页「任务清单交代：24 项各自是怎么完成的」已建
+https://app.notion.com/p/24-2026-08-09-3b712c4568fd81468ef4cacf519016dd
+（24 项逐条 × 做法 × 证据路径；本轮主线三段；三次自我更正的对照表；交付物绝对路径清单）
+新增 micro_arms.sh。
+踩坑记录：`srun ... &` 放在 Bash 工具的后台调用里，外层命令一退出子进程就被杀
+（micro_driver.log 0 字节）。改成让 harness 直接持有 srun（命令里不带 &）后正常。
+
+PG253 UTC 2026-08-09T15:40:00Z: 把 compound error 定义分析发布为 Notion 子页,挂在
+「ssm post training icaif2026」(3b612c45-68fd-8056-b041-eab73497be9b) 下。
+子页 URL: https://app.notion.com/p/Compound-Error-vs-3b712c4568fd819aa728dd10cd2ec343
+(page_id 3b712c45-68fd-819a-a728-dd10cd2ec343)。八节 + 17 张表,两条核心公式用
+Notion math block 渲染。首发后发现两处表格被 `\|`(转义竖线)打断单元格 —— 第 0 节
+第 1 行与第 7 节「已落入平带」行,证据列被吃掉 —— 已用 update_content 三处定点替换
+修复(改写成「绝对值」措辞),同时修掉 Notion 把 compound_error.py 自动链接成
+compound_[error.py](http://error.py) 的问题(加反引号)。
+教训见 L301。
+
+PG207 UTC 2026-08-09T15:40:11Z: µs 档补训 4 格全部收敛（attach 5957521，hidden 8/16/32 × 三臂 + λ 对照），
+时序重评 4 份落盘 runs/micro/*_ts.json。REPORT 新增第二十节（3916→3999 行）。
+两个 Notion 子页已建（任务 22 清单页、任务 23 主模型页）。
+踩坑：5951088 报 "step creation still disabled (Requested nodes are busy)"，
+已改用 5957521；全程未 scancel。

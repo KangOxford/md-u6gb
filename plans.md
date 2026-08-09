@@ -863,3 +863,65 @@ P240 UTC 2026-08-09T10:02:20Z: 用户要「compare all models」的表 + attach 
 每个 (臂,whiten,scheme,λ_kl) 组合取收敛的规范 run，NFE=1 与 10 各出一张。
 BPE 优先：5951088 上有 8 个计算进程占 72-97 GB/卡，不碰；5950783 只剩 43 min，不用；
 全部落在 5950739 两节点。绝不 scancel。
+
+P241 UTC 2026-08-09T11:35:00Z: R49 承诺的三关，第一关（纯缩放对照）执行完毕并推翻 R49。新写
+/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/crps-return-alignment-20260808/run/mid_training/compare_arms.py，
+臂从文件系统枚举而非手写列表，每条臂自动附带最优缩放/仿射对照。计划调整：在效应量
+超过复现噪声（实测 41%）之前，不再新增后训练臂；下一步是压噪声底（同 arm 多次复现
+取平均，或固定 XLA autotune 使采样可复现），否则任何比较都在噪声里。
+
+P242 UTC 2026-08-09T11:58:50Z: 审阅 understanding-hidden-states/main.tex 第 2 条 contribution（"characterize what is represented: flow not snapshot, generalizes across stocks"）。计划：(1) 把该 bullet 对应的正文小节全部列出，量化覆盖率；(2) 检查 over/under-claim 双向错位；(3) 给出拆条改写文本。结论建议：3 条 → 4 条，拆出「表征位置 + 归因机制」为独立一条。
+
+
+P243 UTC %Y-%m-%dT%H:%M:%SZ: 审阅 understanding-hidden-states/main.tex 摘要中的具体细节（模型规模 8.2M、8 只股票、R²=0.59 等）是否必要。判据设定为「该细节是否为某句 claim 的逻辑前提（删了那句话不成立）或可信度锚点（读者不信时它是证据）」，两者皆非即为身份信息。计划：逐条判定 → 单独论证 8.2M → 附带扫摘要与正文的一致性 → 给改写文本。
+
+P244 UTC 2026-08-09T12:03:19Z: 翻译并改写 main.tex:77（Contributions 第三条，causally used and practically exploitable）。计划：逐术语中译并解释 dose-controlled steering / matched-norm nulls / frozen-state linear readout → 对照正文 main.tex:70 找措辞倒挂 → 给保三条（方案A）与拆两条（方案B）两版改写 → 附段落版以符合禁 enumerate 规则。不写入文件，等用户选定。
+
+P244 UTC 2026-08-09T00:00:00Z: 本轮为术语澄清轮（"J space" 是什么 / 与 understanding-hidden-states 论文的关系），无 SLURM 执行计划。派生出一个候选实验，记录待办不立即执行：把 J-lens 的 Jacobian 位点从 Transformer 残差流 ∂h_final/∂h_ℓ 换成 Mamba-3 的 recurrent state ∂(output)/∂h^(ℓ)_t，检验现有 OFI causal-steering 方向（/lus/lfs1aip2/projects/public/u6gb/overleaf/understanding-hidden-states/main.tex:180，高低三分位均值差）是否落在 J-space 内。落在 → OFI 属"可言说"表示；不落在 → 市场整合量在不可言说位点被计算，是比落在更强的结论。前置条件：官方 repo anthropics/jacobian-lens 只支持 HuggingFace decoder transformer，Mamba-3 需自写；但 main.tex:173 已有的"状态=每条消息一次写入的加权和、权重从 gate 恢复"分解让该 Jacobian 部分可解析。
+
+P242 UTC 2026-08-09T16:40:00Z: 剩余两项实验并行中。(1) LOB-Bench 噪声底：hp_base 的另两个 seed +
+匹配随机步，判定 KS +6.6% 是否真退化。(2) 均匀权重消融（λ=0）：把「倾斜带来的」
+与「decoder 本来有余量」分开——若 λ=0 拿到 CE 改善但拿不到收益率改善，则 CE 那部分
+属于 checkpoint、收益率那部分属于倾斜。两者都在 5950739 上 attach。
+
+P245 UTC 2026-08-09T12:11:51Z: 回答用户在 main.tex:77 内嵌的三个 [...] 追问（practically exploitable 是否即 decode / dose-controlled steering 有无更常见说法 / matched-norm nulls 是否 null-space）。计划：先 grep 全文 null|dose|steer|exploit 四词确认实际做法与措辞分布 → 逐题作答并给替代词表 → 输出统一改写。
+
+P243 UTC 2026-08-09T19:45:00Z: 分布匹配后训练设计 v2 定稿于
+/lus/lfs1aip2/projects/public/u6gb/tasks/crps_return_alignment_20260808T025024Z/DESIGN_v2.md。
+核心：把信号从「一条 rollout 一个收益率」（192 自由度）换成「每条消息一个价格增量」
+（约 1.5e5 自由度），用 book 状态把 Δ(v,s) 闭式映回价格 token 的条件分布，
+做逐状态精确归一的倾斜 + 软目标蒸馏（满秩修改，结构上不能退化成 CE）。
+分五步 S0-S4，每步独立否决点。S0 已完成并改写了目标函数。
+
+P244 UTC 2026-08-09T20:05:00Z: 用户追问「这个计划是不是真的在 return 上做分布匹配」。核查 DESIGN_v2.md 后
+判定：是真分布匹配、是离线后训练（非 RL），但匹配对象是逐条增量 Delta 的条件律，
+不是 return 的联合分布。据此在 S1 之前插入 S0b（3 分钟 CPU，与 S1 并行）：
+(a) 补 v2b 的 oracle —— 完美边际 + 完美一阶 copula 的 qL1，目前完全空白；
+(b) 在 n=2000 重测 oracle qL1，修掉 S4 判据混用 n=600/n=2000 的错误。
+S2-S4 的判据线等 S0b 结果再定。
+
+P246 UTC 2026-08-09T13:05:00Z: 目标切换到「分析 alexbismuth 的 compound error 定义」
+(/home/u6gb/alexbismuth.u6gb/AlphaTrade/experiments/Post_Training_WGAN_EGGROLL/eggroll_gan/
+eval/compounding_error_analysis.py)。计划分四步而不是只读代码:(1) 逐条拆解定义(相位表、
+对称跨半估计量、H(true) 归一化、日聚类配对 bootstrap);(2) 用**已知真值的合成数据**审计
+他的估计量,直接 import 他的函数而非复述;(3) 把他的跨半设计套到**我自己的数据**上重测,
+看我发布过的结论哪些幸存;(4) 出对照表 + md。判据:任何「A 比 B 好」的结论都必须在两个
+估计量下同号,否则该结论是估计量的产物不是数据的产物。
+
+P1786286323 UTC 2026-08-09T14:38:43Z: 新目标（BPE ICAIF26）已收到并拆解。已交付 (3) 基线子页、
+(4) 训练数据子页、(A13) bug 复盘子页，三份都在 Notion 主页
+3b512c45-68fd-8026-bc2b-f0102a596f8f 下。
+剩余主线：(1) 训练跑到 32000 步（现 6500）、(2.2) 变长 LOB-Bench 接线。
+(2.2) 的接线面已勘明：26tok 的单 token 步进 apply_model->filter_valid_pred->
+fill_predicted_tok 与我的 logits_fn(hidden,token)->(hidden,logits) 逐位吻合，
+只需把中间的按位置掩码换成前缀驱动的语法掩码；难点是把 token 解回消息
+（price_rel->abs / Clock / ref->order_id），先放 host 侧用已验证的 Python 解码器。
+
+P241 UTC 2026-08-09T15:29:34Z: /goal 增至 24 项，新增 (22) 写一页交代任务怎么完成、(23) 写一页讲最新主模型
+与基线的对比（「µs 级的扩散模型到底还行不行」），两页均作为父页 19d616c8 的子页。
+(23) 暴露一个缺口：µs 档（hidden=8, 961 ns）只训了 hdgn_fixed 与 iid，
+**没有训主表里最优的 hdgn_learned_v7·kl30** —— 不补这一格就答不了「µs 档里学 Σ 还有没有用」，
+而任务 19 正是问这个。
+计划：micro_arms.sh 在 hidden ∈ {8,16,32} 上训 hdgn_learned_v7(λ_kl=30)/hdgn_fixed/iid 三臂
+（外加 h8 的 λ_kl=1 作 λ 对照），一律训到收敛；再做时序重评；然后写两页。
+attach 5951088 的 nid010655（4 卡全空，闸门已查）。
