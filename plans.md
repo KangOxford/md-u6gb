@@ -839,3 +839,11 @@ GPU 侧用 torch.cuda.CUDAGraph 捕获整条采样链，并单独标定 graph la
 -mcpu=native + ctypes），因为 numpy 版 46 µs 的地板经诊断是 Python dispatch 而非硬件。
 若 <1 µs 只有潜空间架构达得到，则先用 PCA 重建做 oracle 上界判断该架构是否可用，
 避免为一个结构已毁的模型报延迟。
+
+P180 UTC 2026-08-09T00:25:23Z: 用户授权修改要求 (3)：允许在触价之外挂单。已实现 clip_quote_prices_open（opt-in，无 allow_outside_ticks 时逐位委托旧函数），回归闸门 gate_open_contract.py 三条性质全过。执行顺序：(a) (14) 深度扫描 d∈{0,1,2,3,5,8}；(b) **oracle 闸门**（用真实移动量按秩分深度，不赢则 (20) 走深度这条路当场判死）；(c) 过了 oracle 才做 (20) 的预测版 + 48 安慰剂 + 分半。六条预登记写在 REPORT §58.3，数据之前。
+
+P239 UTC 2026-08-09T00:28:00Z: F260 达成 961 ns 后，唯一没验证的是 hidden=8 的容量。
+计划：训延迟-质量前沿（frontier.sh，attach 5950739），hidden 8/16/32/64/128/256 at depth1
+加 1024:3 参照，每格 hdgn_fixed 与 iid 两臂，一律训到收敛判据触发（任务 13/16）。
+先做对照：前沿里的 1024:3 必须复现已知的 hdgn_fixed 数字，否则「平坦」测的不是容量。
+边际指标若平坦则换时序指标（本项目已知边际指标对时间结构不敏感）。

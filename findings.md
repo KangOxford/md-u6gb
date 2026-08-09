@@ -1603,3 +1603,24 @@ hidden=4 = 626 ns。** 与潜空间有本质区别：状态全程 D=688，19.5 �
 F259 的另外两条保持有效：GPU 的 1.29 µs graph launch 地板、潜空间 K≤8 的 oracle 否定。
 未验证项：hidden=8 的容量。已启延迟-质量前沿训练 frontier.sh（attach 5950739，
 hidden 8/16/32/64/128/256 at depth1 + 1024:3 参照，hdgn_fixed 与 iid 两臂，训到收敛）。
+
+F-DFM38 UTC 2026-08-09T00:35:00Z: **发现盈亏平衡点**。四只股票 x 两个 horizon = 五点,校正的 Δ(post-draft) 与草稿误差单调线性,r=-0.9508,拟合 Δ=-1.464*draft_ex+0.886,零点 **draft_ex=0.605**。低于该阈值 corrector 净伤害(AEP 0.233->0.953 即 +0.720;GOOG250 0.305->0.617 即 +0.312),高于才有净收益(AMD 0.590->0.530;MSFT 0.680->0.502;GOOG500 0.903->0.570)。learned 与 random 的截距几乎相同(0.886 vs 0.885),差别全在斜率(-1.464 vs -0.490,3 倍),所以 learned 相对 random 的优势 ≈ 0.974*draft_ex;random 自己的盈亏平衡点 1.806 超出实测范围,故全程净伤害。
+F-DFM39 UTC 2026-08-09T00:35:00Z: **更正一次选择性报告**。此前发布的每个聚合数字(-37%、0.903->0.570)都来自 500+500 那一臂;我从没算过 250+250 的聚合,而 GOOG 在 250+250 上是 0.305->0.617(变差一倍)。两组数据一直都在,只报了有利的一半。
+F-DFM40 UTC 2026-08-09T00:35:00Z: **stock/flow 二分跨标的没有整体复现**。四只股票里只有 spread(+0.573/+0.583/+0.572/+0.309)与 limit_bid_order_ticks 在全部四只上 compound。支撑原论断的 log_depth(+0.481)、bid_volume(+0.237)、ask_volume(+0.192)在 MSFT/AMD/AEP 上全部掉到 0.05 以下,而 GOOG 上平的 limit_*_order_depth 在 MSFT/AMD 上却很强(+0.366/+0.571)。能不带 ticker 限定说出口的只有 spread。三只新股票全部 OOD(residual 训在 NVDA;NVDA/AAPL 无 wide-book 数据故无 in-distribution 对照),n=128,skipped=0。
+
+F261 UTC 2026-08-09T00:28:00Z: **hidden=8 的 961 ns 是可兑现的，不是牺牲质量换来的。**
+对照先行：前沿里 h1024_d3 给 NFE=1 l1=0.5560，与已知参照（final_all NFE=10 l1=0.5570、
+bench_merged 0.5430）一致 —— 流水线复现了已知值。
+边际指标（l1/ws/ks）在 hidden 8→1024:3 完全平坦（l1 0.5582→0.5560），176× 参数量
+买不到任何东西 —— 这是指标不敏感的警报，不是模型的性质。换时序指标后前沿才咬住：
+  hidden=8   961 ns(CPU)  f_sig=96.05  acf1=0.0994  tcorr_kl=13.27  xcorr0=4.502
+  hidden=16  1708 ns      f_sig=95.63  acf1=0.0990                  xcorr0=4.517
+  hidden=64  6723 ns      f_sig=95.09  acf1=0.0996                  xcorr0=4.502
+  hidden=256 34.5 µs      f_sig=79.35  acf1=0.0752  tcorr_kl=12.51  xcorr0=4.288
+  hidden=1024:3 68.2 µs(GPU) f_sig=34.66 acf1=0.0124 tcorr_kl=4.99 xcorr0=2.947
+  分半噪声底: f_sig=0.202 acf1=0.0035 tcorr_kl=0.0549 xcorr0=0.971
+三条：(1) hidden 8→64 四个指标全平坦却付 7× 延迟 -> **10 µs 以内 hidden=8 是 Pareto 最优**；
+(2) 容量要到 256 以上才起作用；全容量好 2.7-8.0× 但要 71× 延迟，这是 1 µs 的定价；
+(3) **Σ 的好处在 hidden=8 完整保留**（对 iid：f_sig 4.0×、acf 9.5×）——
+    结构化噪声的优势不是大模型现象，这对论文是独立结论。
+图 runs/frontier_pareto.png；数据 runs/frontier/（7 格 × 2 臂）+ *_ts.json。

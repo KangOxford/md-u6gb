@@ -1235,3 +1235,11 @@ code/ncd_kernel.c、code/bench_c.py、code/bench_cudagraph.py（修好捕获期�
 code/probe_kernel_cost.py、code/latent_oracle.py。
 产物 runs/latency_c.json、latency_c_trained.json、latency_cudagraph.json、latent_oracle.json。
 REPORT.md 增第十九节（3554→3742 行）。numpy→C 同一计算 46.17 µs → 4.33 µs（10.7×）。
+
+PG204 UTC 2026-08-09T00:28:00Z: 内核三轮优化（转置+噪声池 / 分块融合 / dot4）把 MODE_FULL h=8/NFE=1
+从 3915 压到 961 ns，等价性每轮重验（4 种模式组合 <5e-07）。
+新增 frontier.sh、code/plot_frontier.py、code/ncd_kernel.c 的 dot4/out_and_ddim。
+前沿 7 格训练全部收敛（attach 5950739，最快 18 s 最慢 170 s），
+时序重评估 5 格完成。REPORT.md 十九B 节（3742→3867 行）。
+产物：runs/latency_c_v{2,3,4}.json、runs/frontier/、runs/frontier_pareto.png、
+runs/frontier_summary.json。commit 793d019 + e49e604。
