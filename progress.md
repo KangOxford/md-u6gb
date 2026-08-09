@@ -1247,3 +1247,16 @@ runs/frontier_summary.json。commit 793d019 + e49e604。
 PG182 UTC 2026-08-09T00:38:30Z: 实现 clip_quote_prices_open（opt-in，allow_outside_ticks 缺省即逐位委托旧逻辑），gate_open_contract.py 三性质全过（20,000 随机例 0 失配 / 89.3% 真的挂到触价外 / 0 穿越）。make_lazy_policy 加 depth_ticks（默认 0 不改变任何既有臂），XSEC_ARMS=depth|depthsize 选臂集，score_episode_lazy 新增 n_shares。已跑：GS 深度扫描（depth_sweep.py，8 深度 × 3 size）、真实横截面深度冒烟（40 标的 159 episode，34 秒）。size×depth 网格（6×4）在 nid010459 上跑。产出目录 sp500_xsection/episodes_depth_20260809T004600Z 与 episodes_depthsize_20260809T005500Z（均为新目录，不覆盖）。
 
 PG183 UTC 2026-08-09T00:55:23Z: 全量横截面 episodes_depthsize_full_20260809T010500Z 完成（483 标的 / 18,665 episode / 24 格，48 workers 用时约 22 分钟，rc=0）。(20) 深度通道测试 depth_signal_20.json 完成（56 臂 × 128 窗口）。REPORT 追加 §61，并在 §60.4 上加了更正层（原文保留，加「不要引用」的标注）。
+
+PG1786269481 UTC 2026-08-09T09:58:01Z: 推理侧完成 2/3：环形缓冲（6 测试，K=1024 真实丢失 1.7327%）、
+定形状态机+语法掩码（5 测试，与解码器逐位一致，scan 内与 NumPy 逐位一致，
+平均每步允许 2768/15847 token）。共 23 个测试全过。
+训练：5950783 上跑到 step 6000（其间重启 6 次，恢复逻辑在第 5 次起生效），
+已迁到 5951088 续跑。文件：/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/varlen-minimal-20260808T172601Z/src/lob/varlen_ref_ring.py、/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/varlen-minimal-20260808T172601Z/src/lob/varlen_fsm.py。
+
+PG205 UTC 2026-08-09T10:02:20Z: attach 5950739 两节点跑完 38 个模型的统一重评（每格 NFE=1,10）。
+新增 master_eval.sh、fix_missing.sh、code/master_table.py；
+reeval_ts.py 加 --windows-npy/--arms 覆盖并把 eval_cache 写入改为原子（并发共享 run_dir 会撞）。
+产物 runs/master/（38 json）、runs/master_table.json、master_table_nfe10.json、
+runs/master_sel.json、MASTER_TABLE.md。
+5951088 上有 8 个计算进程 72-97GB/卡（BPE 优先），全程未碰；5950783 余 43 min 未用。
