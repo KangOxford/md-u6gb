@@ -3175,3 +3175,22 @@ F306 UTC 2026-08-10T19:04:13Z: on-policy 闭环 v3 (eta_k=0.6/k, 6 轮) 衰减�
 9+ 0.4242->0.2213) 而 1-tick 恶化 (0.2710->0.2953) 且权重翻倍 (n 8537->16003)。
 闭环特有的反馈病理: 更新把盘口做窄 -> 制造更多它最不擅长的状态 -> 池化指标被拖回。
 闭环最好 0.23545 与单步 a025 0.22636 / a035 0.23922 同量级, **没有超过单步**。
+F312 UTC 2026-08-10T19:10:00Z: grok leader 闲置自退获第二次独立确认：PID 81800 启动后未接任何请求，4 分钟后 `grok leader list` 返回 No leader candidates found。与 F310 的 PID 104445（~3 分钟）合并，自退窗口约 3–4 分钟，README/skill 中「闲置数分钟自退、客户端探测降级」的设计断言成立。
+F309 UTC 2026-08-10T19:10:40Z: squeue -w <node> 由 SLURM 服务端展开 nid[a-b,c] 压缩 nodelist 做节点过滤，客户端完全不需要解析区间格式；配 -u $USER -t R 即得"该节点上我的可 attach 作业"。这是 sbash 的全部核心，一条 squeue 就够。
+F310 UTC 2026-08-10T19:10:40Z: 当前权限模式下 /projects/public/u6gb/.claude/（skills 等）对 Claude 只读，mkdir 和 Write 均被拒；tasks/ 与 memory/ 可写。因此 SKILL.md 备在 tasks/sbash_20260810T185613Z/SKILL.md，需用户手动 cp 到 .claude/skills/sbash/ 才能成为 /sbash 斜杠命令；Claude 侧触发已用 memory（feedback_sbash_node_attach_command）兜底。
+
+F309 UTC 2026-08-10T19:10:48Z: **SLURM 嵌套调用时环境变量压过命令行参数。** gtop 从 attach 到 nid010195 的 shell 里跑时报 srun: error: Only allocated 1 nodes asked for 4，根因不是 srun 参数而是继承的 SLURM_NNODES=1（连同 SLURMD_NODENAME/SLURM_STEP_ID/SLURM_STEP_GPUS 一整套）。清掉所有 SLURM 开头的变量后 --nodes=4 立刻正常，4 节点全部回话。注意 SLURMD_NODENAME 是 SLURMD_ 前缀，只匹配 SLURM_ 会漏；SLURM_CONF 要保留否则找不到控制器。
+
+F307 UTC 2026-08-10T19:18:06Z: 【重大】R72 的「逐序列重加权天花板」是 26-token 错位 bug 造出来的, 修正后不存在。
+lad_geometry.py (纯 CPU, 用 h 恢复算精确逐序列 decoder 梯度) 实测 120 序列:
+共享方向占梯度能量 6.8% (R72 撤回前是 66.5%), mean cos(g_i,g_bar)=+0.2658 (撤回前 0.816),
+200 次随机对数正态重加权最好 cos 0.4049 (撤回前称 >=0.986), 极端射线 -0.2243。
+**R72 据此判定 RFT/RAFT/best-of-n/序列级PG/GRPO 全族不可行 —— 该判定作废, 全族重新可用。**
+
+F308 UTC 2026-08-10T19:18:06Z: LAD (arXiv 2602.20132) 在 theta=theta_old 处展开: grad = 0.5*log(2/(1+e^{BA})) * grad log pi,
+即第一步仍是逐序列标量 x grad log pi, 与 GRPO/RFT 同族; 差别在权重形状 (JS 负侧有界于 -0.5log2、正侧线性,
+这就是「不需熵正则也不塌缩」的机制) 与多步 ratio 自校正。
+各散度到普通 MLE 的 cos: TV -0.0163 < HD 0.5023 ~ rKL 0.5131 < JS 0.8208 < RFT 0.9342。
+**与论文「严格散度类 TV/HD/JS 表现更好」吻合: 它们恰是离 MLE 最远的几个。**
+保留: 本次用合成优势 A~N(0,1), 「能转多远」为真但「转过去有没有用」未测;
+需把 R71 的密度比 w=p_real/p_model 当作 e^{A/eta} 接入。
