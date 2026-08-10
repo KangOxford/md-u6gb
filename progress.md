@@ -1356,3 +1356,188 @@ NOTION_TASKS24.md、NOTION_MAINMODEL.md 两个本地镜像。核验 27/27 通过
 Notion 第三个子页「完成核验」已建：
 https://app.notion.com/p/24-27-27-2026-08-09-3b712c4568fd81b58facc8bc93fcce76
 本轮共建 3 个子页（任务清单 / 主模型 / 核验），另更新延迟页两次。
+
+PG254 UTC 2026-08-09T17:08:00Z: action chunking 任务第一轮完成。产物全在
+/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/action-chunking-20260809/docs/action_chunking/:
+  VOCABULARY.md          两套词的定义(是什么/怎么算/单位)+ 三处对不上
+  ACTION_CHUNKING.md     机制、六个解释的判决、可证伪预测、为什么现在不能做实验
+  plot_alex_style.py     按 Alex 配方画我们数据(可复跑)
+  make_figures.py        三张定义图/示意图
+  figs/alex_*.png        五特征复合误差随 t 演化(500 条消息)
+  figs/fig1_compound_error_defined.png / fig2_chunking_bound.png / fig3_four_policy_forms.png
+  figs/slopes.json
+五张 alex_*.png 已发给用户(ask_volume 首次上传网络失败,重试成功)。
+**结论:现在不做 delay/ensemble 实验** —— 五特征里只有三个斜率改善可分辨,日块 CI
+半宽是 MC sd 的 6 倍,新机制的效应大概率落进现有 CI。先把交易日从 20 扩到 60+
+收窄 CI,再上论文的 Row 3/Row 4。
+
+PG255 UTC 2026-08-09T17:48:00Z: 复合误差图现有三套画法,全部可复跑,全在
+/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/action-chunking-20260809/docs/action_chunking/:
+  plot_paper_fig.py   -> figs/fig4_compounding.png   论文 Figure 4 规格(floor-subtracted
+                         KL/H、headline 平均、三臂、增长倍数标在曲线右端)
+  plot_alex_style.py  -> figs/alex_<feature>.png     Alex 分析脚本的画法(逐特征、
+                         细线逐条 rolling、粗线 20 分箱 + CI、floor 作带)
+  make_figures.py     -> figs/fig1..3                定义图/界的对数图/四种策略形态
+已发给用户:五张 alex_*.png + fig4_compounding.png。
+
+PG252 UTC 2026-08-09T20:40:00Z: S0b 完成（约 20 秒 CPU，全部在 login 节点，无 GPU）。
+新增 run/mid_training/v2b_dependence_oracle.py 与 oracle_bound_multiseed.py，修正
+oracle_increment_bound.py 的 partition 性能病。产物 v2b_dependence_oracle.json、
+v2b_dependence_oracle_n2000.json、oracle_bound_n2000_multiseed.json。DESIGN_v2.md
+新增 4.6 节（修正后的上界表 + 新判据）并给 4.5 节加作废标注，7.1 表加入 S0b 行。
+数据定位：判据该用 data/hp_base（两侧各 2000 对，是 n=2000 零假设的来源）；其余
+collection 多为 192 对，且 full_eval_base 与 det_base 共用全部 context、与 eval_base
+完全不重叠。下一步 S1。
+
+PG253 UTC 2026-08-09T21:10:00Z: S1 完成并通过（CPU 秒级，login 节点）。新增
+run/mid_training/increment_map.py，实现 apply_message / delta_grid（对候选价格向量化
+求增量，无采样）。产物 s1_increment_map_gen.json、s1_increment_map_real.json。
+沿途修正 type4 规则、登记真实侧 message/orderbook 不对齐（F284）。
+数据事实：这些 rollout 的订单簿是 LOBSTER 标准 L10（40 列），不是设计 §2.1 写的 500 档；
+但 L10 窗口外不可判定的比例实测为 0，故不构成障碍。下一步 S2（解 lambda），需要先确定
+26tok 编码里价格 token 的词表切片。
+
+PG254 UTC 2026-08-09T21:35:00Z: S2 完成并通过（CPU 10 秒，login 节点）。新增
+run/mid_training/solve_tilt.py，产物 s2_tilt_v2a.json（含 lambda 向量、分箱边界、
+p_real/p_gen）。过程中作废了一次自己造的判决：初版用 --ce-gate 0.01 nats/message 的
+默认值判 OVER BUDGET，但那是我编的数不是实测闸门；从 RESULTS.md 取回实测口径
+（逐 token CE 0.6827、消息级 CE 22.1856、26 tok/msg、闸门 2%、噪声底 0.006%）后
+重判为 PASS，并把这些实测值写进脚本默认值。下一步 S3，需要 GPU/SLURM。
+
+PG212 UTC 2026-08-09T00:00:00Z: 完成 /goal 三项。(1) 代码库定位：/projects/public/u6gb/LOB_Mech_Interp_kang（HOME=/projects/public/u6gb，USER=kangli.u6gb；Alexandre 所说 ~/LOB_Mech_Interp_kang 即此），main 分支 HEAD e3e9cad，结构与关键文件盘点见 F279。(2) 计划已产出：/projects/public/u6gb/LOB_Mech_Interp_kang/docs/plan_global_workspace_20260809.md，含术语定义表、WHERE-vs-HOW 的 ASCII 区分图、GWT 四要素差距表、五个实验 G1-G5（每个给定义/公式/复用代码/新代码/算力/成败判据，含负结果处理）、三级交付方案表、论文文本两处必改、风险表与 CLAUDE.md 红线、依赖图。(3) 判定「文章里似乎已讨论过」为否：区分见 F275。未提交任何 SLURM 作业，未改动论文源文件。
+
+PG213 UTC 2026-08-09T00:00:00Z: 完成 /goal 追加的 (4)(5)。通读 main.tex 全文 415 行（三段：1-119 前言与 OFI 定义、120-279 方法与编码结果、280-415 归因/steering/前瞻/泛化/结论）。(5) 数据资产盘点见 F280、配置差异见 F281，结论：能公平比较且不需重跑提取，产物在 /scratch/u6gb/alexbismuth.u6gb/mech_interp_data（137 条目，可读）。(4) 可做实验，delivery 见 F282。plan 文件已追加 §9 数据资产盘点（含产物位置表、清理风险、写入约定、docs-vs-论文差异表）与 §10 Delivery（最小方案的表骨架 + 正文英文草稿 + Related Work 一句 + 中方案增量 + 明确排除项）。未提交任何 SLURM 作业，未改动论文源文件与 Alexandre 的 scratch。
+
+PG214 UTC 2026-08-09T00:00:00Z: 完成 /goal 追加的 (6)。给出四条论证并全部落到证据：理由一方法论缺口（代码核查见 F283）；理由二论文已攒 workspace 一大半证据但散落四处（六行证据表，前四行是 GWT 三要素已测完，后两行是论文自己写下的未解释现象）；理由三兑现实用卖点且数字已在手（有效维度表见 F284，含论文一处待修正表述）；理由四位点排除≠结构刻画（三种可能对下游应用含义不同）。plan 文件新增 §1.1 承载全部四条论证与两张数据表：/projects/public/u6gb/LOB_Mech_Interp_kang/docs/plan_global_workspace_20260809.md。识别出两处不依赖新实验即可改的论文修正（PCA k 值、participation ratio）。未提交作业，未改论文源文件。
+
+
+PG211 UTC %Y-%m-%dT%H:%M:%SZ: 交付 controls 一词的三读者解读对照表、三个替换候选（附词数）、正文首次出现处用 Hewitt & Liang 2019 锚定含义的建议、以及 steering 句补回 matched-norm null 的 LaTeX 改写。未写入 main.tex，等用户确认是否连同 competitive with 与 8.2M 一起处理。本轮零 sbatch。
+
+PG215 UTC 2026-08-09T19:05:01Z: 通读 main.tex 全文 415 行，完成 contribution 第 3 条逐词对照（8 个术语逐一定位正文出处并判定支撑强度），回答了 tex 内嵌的两条合作者批注（"do you mean decode?" 判定为否，exploitable 在金融语境暗示 PnL 而论文无回测/成本/PnL，建议改 predictively useful；"dose-controlled steering 有无更常见词" 给出四候选对照表，建议 contribution 层用 scaling an activation edit、Method 层用 activation steering / difference-of-means steering vector）。交付两版改写 LaTeX。未修改 main.tex，等待用户确认后再落笔。
+
+
+PG212 UTC %Y-%m-%dT%H:%M:%SZ: 交付三个改写方案的 LaTeX 全文与取舍分析、两个对照的「排除什么/支撑哪个 claim/该放哪句」对照表，推荐方案 B（拆两句）。未写入 main.tex。阻塞项：方案 B 中 stale book 在 OFI 上的 R² 占位待用户提供。本轮零 sbatch。
+
+PG215 UTC 2026-08-09T00:00:00Z: 用户要求「add the details (very compact) to the paper」，我先误解为指上一轮建议里的 PCA 数字修正并已提交推送（94b4cf6）；用户纠正「我让你加 J space 相关的内容」「连 global workspace 都没有提」后，立即改做正确的事：四处紧凑插入 + bib entry，已提交推送（c766b7a）。两次改动都保留，前者本身有效（修正了论文一处不准确表述）。当前论文状态：global workspace 已在 Related Work、residual_vs_state、steering、Conclusion 四处出现，均为定位性表述，未声称任何尚未测量的关于本模型的结果，因此不依赖 G1-G5 任何实验即可成立。
+
+PG211 UTC 2026-08-09T20:30:00Z: RESULTS.md 到 R65（68 条）。DESIGN_v2.md 已随 S0/S1 结果两次更新
+（S0 改写主指标 energy→qL1；S1 加入盘口指示特征）。代码提交 ec10b30（decompose_increments
++ oracle_increment_bound）、76a41e2（price_impact_map）。S0/S1 均为 CPU，未用 GPU。
+下一步 S2 需要模型在价格 token 位置的 logits，须加推理 hook。
+
+PG212 UTC 2026-08-09T21:00:00Z: RESULTS.md 到 R66（69 条）。S0（oracle 上界，改写主指标）、S1（闭式映射
+验证 + 盘口缺陷）、R66（缺陷定位到「改进最优报价」这一 token 事件）全部完成，
+均为 CPU。DESIGN_v2.md 已三次更新。S2 起需 GPU，因全部 allocation 被占而挂起。
+
+PG255 UTC 2026-08-09T20:22:00Z: 在 5964464(4 节点、每卡余 77 GB、剩 10:09)上 attach
+起两条 2026-02 臂,20:17:46Z:
+  feb_frozen_t080_L500_2a3500  nid010480 GPU0  learned-P (Stage 2A, ‖P‖=3.5224)
+  feb_a2_t080_L500_2a3500      nid010482 GPU0  同范数 random-P 对照
+配置: --n-cond 500 --n-gen 500 --n-seq 64 --batch-size 1 --t-start 0.8 --n-steps 8
+--state stage2a/long_NVDA_state.msgpack,无 --book-refresh(与 headline 臂一致)。
+日志 sweep/feb_*.log。已挂 1/5/15/30 分钟四段监控(后台 bakd2ym34)。
+避开 5957521:那是产 j5957521_wh2tzvfs_ checkpoint 的训练作业,每卡只余 25 GB。
+踩到一个坑: srun 里用 `env VAR=... bash ...` 会被 ~/.local/bin/env 劫持(exit 13,
+Permission denied),改成 `bash -c "export ...; exec bash ..."` 即可。
+
+PG256 UTC 2026-08-09T00:00:00Z: 完成 /goal「finish the plan and report back about the global workspace」。执行链：定位 lobs5 解释器被清零（F283）→ 建绕过解释器且不改共享环境 → SMOKE 验证 wiring（isotropic 对照 6.945e-05 对理论 7.512e-05 吻合）→ 全量首跑拿主结果 → 加多档截断与 V 落盘后在 5964464 复跑成功 → 出图 figures/fig_jlens_reachable.png → 结果全部写入 docs/global_workspace_20260809.md（268 行，§4 结果 / §5 交付物含图、表、可粘贴英文正文草稿）。三个结论：输出可达子空间 851968→84 维且架构上界 256 被实测证实（F284）；三条 steering 轴 ρ 低于随机方向 7-40 倍，解释了论文「only partially materialize」（F285）；原假说「ρ 排序解释可控性排序」被否定（F286）。全程 attach 未提交任何 sbatch，只读 Alexandre 的 scratch、产物写自己的 scratch，未改 tex（用户要求改为写 md）。
+
+PG257 UTC 2026-08-09T20:34:50Z: 完成 ins.gitignore 第一步「先构建 memory」。读 Notion 主页 + 5 子页（aug.01_bpe_plan / aug.08_bpe_after_R15 / 训练数据 / 基线选择 / 阶段1 JAX 化 / 训练曲线），落成 5 个 memory 文件 + MEMORY.md 索引到 /projects/public/u6gb/.claude/projects/-lus-...-bpe-kang-icaif2026/memory/：bpe-varlen-project-state、bpe-r5-tokenizer-design、lob-sp500-dataset、bpe-baseline-r1-mamba3、icaif26-paper-constraints。注：MEMORY.md 首次写在 memory 父目录被 don-t-ask 模式拒绝，改写到 memory/ 目录内成功。
+
+PG258 UTC 2026-08-09T20:47:05Z: 完成 ICAIF26 论文的模板迁移与首版正文。main.tex 由 documentclass{article} 32 行骨架改为 acmart sigconf（ACM 支持文件 + 160 条 references.bib 从 understanding-hidden-states 沿用），tectonic 编译通过，6 页含参考文献，8 页上限下余 2 页。正文含 Data / Method（字段布局、四段三路由、三个值变换、词表统计、参数量代价、解码端状态与语法掩码）/ Experimental design（基线 0.20714 + 两个无效比较）；Results 留 KL 占位（训练 ~9k/32k，尚无 LOB-Bench 分）。插入两张现成图 varlen_design_evidence.png 与 varlen_R5_training_curve.png。memory 同步修正 bpe-r5-tokenizer-design 并新增 varlen-r5-worktree-layout。
+
+PG259 UTC 2026-08-09T21:18:53Z: 完成两轮审计与机械性修正。派两个 subagent 对照 /projects/public/u6gb/overleaf/How-to-ML-paper（130 行、70 条规则）审 main.tex，一个逐条合规、一个对抗找违规，二者在 10 个点上独立撞车。已修：symbol->token 全文 97 处；Table 1/3 的 2600->2267 并补一段区分抽取数与窗内数；102 行 5.2x->4.53x；KL/todo 改草稿开关 drafttrue/false 修复匿名性；22% compute->22% steps + 34% FLOPs（按自己立的 C=6NT 规则）；hard maximum->empirical maximum；11 处裸 cite->citet/citep；Transformer 大写；英式拼写统一美式；加 cleveref 与 PassOptionsToPackage backref=page；删未用包 multirow/float 与未用宏 note/colour4。编译通过 6 页，PDF 内 Kang: 计数归零、无断裂引用。
+
+PG260 UTC 2026-08-09T21:32:36Z: 论文新增两个章节。(1) 4.5 Referencing a resting order：把旧方法的失败从「冗余」重写为「三重精确匹配，time 高熵故经常失败」，含三方案对照表（absolute order_id ~17bits/163K、local book index 非平稳 ~11bits/168K、positional ref_n 平稳 4.8bits/~500）、reference 分布（中位 4、P99 582、窗口 50/100/200/500 覆盖 91/96/98/99%、条件后熵降至 0.05 bits、单符号覆盖 96.20%、均值 1.05 符号）、以及 ref 编码行为身份（ref=1 闪单、ref 数百为耐心单，DELETE 偏年轻 EXEC 偏年长）。同步改掉 Introduction 里矛盾的旧表述。(2) 4.7 Is the vocabulary any good：live/dead、Gini/Zipf/集中度曲线、字段效率表、两个验证设计的发现（t_us_lo 纯噪声、typedir 互信息为零）、长度分布窄的建模含义。编译通过，正文 7 页 + 参考文献 1 页 = 8 页，无断裂引用。
+
+PG256 UTC 2026-08-09T22:20:00Z: 出 5 张判决图,全部路径:
+ .../action-chunking-20260809/docs/action_chunking/figs_verdict/
+   figA_slope_survives.png  figB_level_does_not.png  figC_illegal_learned_vs_random.png
+   figD_illegal_rate_is_flat.png  figE_four_layers_verdict.png
+另 12 张 order 层在 figs_orders/,8 张在 figs/,78 张图册在
+ /lus/lfs1aip2/projects/public/u6gb/tasks/compound_error_figure_book_20260809/FIGURE_BOOK.md
+脚本 plot_verdict_figures.py / plot_order_phases.py / plot_headline_paper_style.py /
+plot_alex_style.py / panel_with_other_bucket.py 均可复跑。
+**当前对论文的判断**:按「我们的后训练更好」写不成立。可写的是
+「DFM 后训练在订单簿状态轨迹上压低复合误差斜率 84~89%(罚过非法输出后仍成立),
+代价是 14.7% 非法消息率;学到的残差方向在 event_type 语法上比同范数随机方向差 570 倍」
++ 度量本身 + 盈亏平衡阈值 0.605。下一步建议是**修那 14.7%**(掩码在 token 层,
+非法值是并行重生成整块时跨 token 组合出来的),而不是继续测。
+
+PG255 UTC 2026-08-09T22:35:00Z: S0c 完成（15 秒 CPU）。新增
+run/mid_training/v2b_oracle_bound.py，产物 s0c_v2b_oracle_bound.json。
+这一步不在原计划里，是为回答「能不能发表 / 真的能做到 distribution matching 吗」而补的，
+结果改变了答案：层 3 有了上界且是肯定的（F289），代价是 15 秒。
+同时发现并发：另一会话在同一 worktree 同一分支独立完成了 S1(76a41e2) 与 S2(df47f9b)，
+且正在做 S3（未提交的 build_soft_targets.py / dump_onpolicy_logits.sh /
+tilt_direction_test.py，以及改动的 src/lob/inference_no_errcorr.py）。我的三个 commit
+经核对是干净的，未卷入对方文件。已停止自行实现 S3 以免三度重复。
+
+PG261 UTC 2026-08-09T21:59:38Z: 论文叙事升级为 state-action foundation model 并重排主线。参考 https://kangoxford.github.io/sigma0/ 的开场格式（短句立问题域 + 直接给 what we built）。标题改为 How Should a Foundation Model Represent a Market Action?，副标题 Variable-length lossless action tokenization for limit order books。框架：LOB=state，message=action，撮合引擎=transition function，模型条件于 (state, 历史 action) 预测 next action；state 侧表示天然（数值向量直接进 encoder），action 侧不天然（异构字段+指向历史 action 所造对象的指针），故只改 action 侧、state 编码器不动，这正好对应此前用户强调的实验约束。Abstract 与 Introduction 按 lossless->frequency imbalance->变长按频率 重写，contributions 改为四条并纳入 reference 与词表审计，字段效率表 caption 点明它是设计原理的直接检验。编译通过，正文 7 页 + 参考文献 1 页。
+
+PG257 UTC 2026-08-09T00:00:00Z: 按用户要求重做图并改为以图为主线的单一 md 交付物。产出 6 张独立图（figures/fig1_concept、fig2_bottleneck、fig3_rho_vs_null、fig4_horizon 待数据、fig5_gain、fig6_decode_vs_reach），生成脚本 figures/make_jlens_figures.py，配色 Okabe-Ito 经 dataviz skill 的 validate_palette.js 六项检查全过（最差相邻对 ΔE 11.0 deutan / 25.8 normal）。逐张渲染后目视检查并修了三处布局缺陷：fig1 文字重叠且右框出界（改为三车道布局、说明文字收进框内）、fig5 标题与数值标签重叠且基线注释压在柱子上（去掉无信息量的 y=1 基线、标题加 pad）。报告 docs/GLOBAL_WORKSPACE_REPORT.md 以图为主线重写，每张图同时给相对路径（供渲染）与完整绝对路径（供查找）。
+
+PG262 UTC 2026-08-09T22:14:33Z: 按 How-to-ML-paper 的 Abstract=TL;DR（X-Y-Z-1a）重写摘要，从 285 词细节堆砌收到 225 词，base-1024/length prefix/escape mechanism 等实现细节下沉到 Introduction。新增两段：foundation model 的两句定义（锚定 li2025mars 的 Large Market Model 既有用法，避免自造术语被 challenge），以及 MarS/Nagy 三方定位段（MarS 32 桶不可逆 -> 需 order-batch+ensemble；Nagy 可逆但固定 26 token -> 序列长；本文取二者之长）。Related Work 的 MarS 句补上可核实数字与「为何不作实验臂」的理由，落实指南 line 26 硬要求。同时全文 code->tokenizer 56 处。为控页数合并了 Introduction 中与三方定位重复的两段。提交模式正文 7 页 + 参考文献 1 页。
+
+PG258 UTC 2026-08-09T00:00:00Z: 完成用户要求的「多画图、多做实验、把价值讲清楚」。图从 6 张增至 7 张全部内嵌 docs/GLOBAL_WORKSPACE_REPORT.md（301 行）：fig1 概念、fig2 瓶颈、fig3 三轴对随机基线、fig4 horizon、fig5 增益、fig6 可解码 vs 可达、fig7 per-layer（新，最强价值论据）。新增两个实验：per-layer 分解（F289，纯 CPU，用已落盘 V）与 horizon 扫描（F290，m=1/2/4）。报告开头新增独立章节「这个 section 为什么值得加：四条，每条都有图」——价值一 per-layer 补上论文缺失的另一半（r=-0.16，L7 零信息却占 24% 影响力，L9/L10 两样都没有）、价值二解释论文自己写下的 partially materialize、价值三测的量论文从未测过且决定能否用于干预、价值四架构层面可迁移（state:d_model = 3328:1）。每张图渲染后目视检查并修了 fig4 图例压线与 log 轴次刻度、fig7 无问题。GPU 期间被其他作业占满，全程未提交 sbatch。
+
+PG263 UTC 2026-08-09T22:29:36Z: Inference Efficiency section 已写完并推送到 Overleaf (6056a96)。两张表（Σ 谱对照、C 内核四步优化），两个公式（ε=Bz 低秩采样、CUDA graph 回放下界），跨 p8 末至 p11 初，正文约 1.5 页。零 overfull box、零 undefined reference。四条 memory 写入 overleaf 项目的 memory 目录，写作方案存 INFERENCE_SPEED_SECTION.md，Notion 子页 3b712c45-68fd-816f-b2c3-fb5aafa7c076。
+
+PG264 UTC 2026-08-09T22:45:00Z: 【varlen 训练崩溃循环已定位并修复，等待第 3 次重试验证】
+修改两个文件：
+- src/lob/encoding_varlen_R5.py 新增 `half_tick_cut_R5` 与 `encode_block_guarded_R5`
+  两层护栏：预检在第一条越界消息处**截断窗口**（变长有约 13% 长度余量，
+  截断点靠后时零损失）；兜底把任何编码异常变成 mask 全 False 的窗口（不产生梯度）。
+- src/lob/lobster_dataloader.py 改调 guarded 版本，新增 `_varlen_guard_report`
+  按 1,2,3,4,8,16... 的节奏打印退化，带 PID，既保第一现场可见又不刷屏。
+- tests/unit/test_varlen_guard_R5.py 新增 10 条测试，全绿（1.95 s）。
+重试包装器第 3/8 次于 22:39:39Z 起飞，将自动加载修好的代码。
+
+PG265 UTC 2026-08-09T22:45:00Z: 【varlen 生成 48 路：无输出、无日志、无法定位】
+5964464/5964465 上 GPU 被占（每进程约 73.6 GB），squeue -s 显示 8-9 个 RUNNING 步，
+但 `lfs find` 在整个 worktree 与项目根（限深 2）都找不到 data_gen 或 varlen_gen 目录，
+根目录也没有任何生成日志。而脚本第 98 行就 makedirs。
+本环境 `ps` 被屏蔽（连自己的 shell 都看不到，`ps -u $(whoami)` 返回 0），
+无法从进程侧证实。结论保留为**状态不明**，不编造进度。
+
+PG259 UTC 2026-08-09T00:00:00Z: 回应用户质疑「哪里体现了 global」，新增 globality 实验与 fig8，报告开头新增独立章节「先回答一个该被质疑的问题：这里哪里 global 了」（docs/GLOBAL_WORKSPACE_REPORT.md 现 345 行，8 张图全部内嵌且引用全部有效）。结论改写为明确的负结果：不叫 global workspace，叫 output-reachable subspace，主张是「该 SSM 的循环状态里没有共享工作空间，可达子空间同样低维但被少数通道垄断」，并注明未测的那一半（模块间竞争需双轴 steering 可加性检验）。用户授权抢占 GPU 后，twin 对照（RANDOM_SEED=42）与 horizon m=8/16/32 两个作业已用 --overlap -w 指定空闲节点提交，目前均在等待节点资源（step creation temporarily disabled, Requested nodes are busy），未 scancel 任何作业。
+
+PG266 UTC 2026-08-09T23:20:00Z: 【四个 bug 全部修完，生成冒烟通过并铺开 24 路】
+修复清单（文件:症状:修法）：
+  src/lob/encoding_varlen_R5.py       亚分价打死 16 卡    两层护栏（截断/掩码）  已验证
+  scripts/launch_varlen_train.sh      保存间隔实际 68 min  改 auto（按时间 900 s）下次生效
+  src/lob/train.py:513                resume 少乘 K        × grad_accum_steps     下次生效
+  scripts/run_varlen_with_retry.sh    rc=0 误判成跑完      判据改用 curtail 标记  下次生效
+  scripts/launch_varlen_train.sh      MAX_JOB_HOURS 写死   按 squeue %L 推导      下次生效
+护栏验证：训练跑过旧崩溃点（micro_batch 10,716）5,362 个 micro-batch 仍在跑。
+生成冒烟：nid010093 单序列，250 条消息、0 丢弃、0 不可解码，
+三个产物形状 250×6 / 250×40 / 250×1，与基线逐位一致。
+24 路已投（0-7 在 5964465 的 nid010089+nid010093，8-23 在 5951088），
+输出 /lus/.../varlen-minimal-20260808T172601Z/varlen_gen_20260809T2330Z/，
+每片各自落日志 logs_lobs5/gen_<jobid>_shard<k>.log。
+新增 scripts/launch_varlen_gen_R5.sh：setsid --fork 脱离会话 + 逐片日志 +
+投完核对目录已建（上一次 48 路一个都没起来且零痕迹，就是缺这三条）。
+
+PG264 UTC 2026-08-09T23:28:07Z: 表格整理完成并推送（43f3ff6）。四类修复：去掉两处 resizebox 放大；10 张 caption 全部移到表格上方；comparison-real 从跨栏（填 55%）降为单栏 \small+tabcolsep 3pt（236.8pt，填 98%）；spectrum/kernel 去掉 \small 从 73/86% 舒展到 80/95% 并与正文同字号。浮动参数统一为 table*[t] 与 table[tb]。编译零表格 overfull、零浮动警告、零未定义引用，仍 14 页。剩余：7 张跨栏表使 p7 与 p9 各堆 3 张表，需内容层面合并才能进一步改善。
+
+PG265 UTC 2026-08-09T23:32:06Z: cond_hist 评估进行中。ckpt 已建 (kernel_rel 0.536%, bias 未动, step_norm 0.3195)。
+attach 在 5964465 step .171 上, 已跑 11.5 min; seed 91000 生成 5022/6000 文件 (84%), 91001/91002 待跑。
+按单 seed 约 13.5 min 估算, 三 seed 合计约 40 min。全程零 sbatch。
+
+PG263 UTC 2026-08-09T23:40:28Z: 吸收 artifacts-v2.md 的数据 profiling 进论文。Data 章节新增 profiling 表（六行：性质/实测值/所强制的设计决策），并新增一段明确区分两个时间量的精度标准——action 间隔保留纳秒（模型要预测、模拟器要重放），time-of-day 只到秒（作用是慢变上下文，且亚秒字段实测与噪声不可分）。Reference 章节补入可学性证据（age 自相关为正、DELETE 中位 4 对 EXEC 中位 10）。为控页数做了全局精简：清理 21 处填充词（actually/genuinely/merely/precisely/worth-X），压缩三段最长段落，合并 Introduction 中重复的两组段落（lossless 入场券+三方定位、变长按频率+不是 BPE），Introduction 由 10 段减到 7 段。当前提交模式正文 8 页 + 参考文献 1 页。
+
+PG260 UTC 2026-08-09T00:00:00Z: 用户提供 allocation 实际用途（5964464 DFM 后训练评测每节点只用 GPU0、4/16 卡；5964465 CRPS 推理 1/16 卡）后，把 attach 方式从 --exact --gpus=1 -w 改为仅 --overlap 并在 scripts/jlens_run.sh 内自动挑本节点显存最空的卡（PICK_FREE_GPU），两个作业随即启动：twin 在 nid010092 选 GPU0、horizon2 在 nid010477 正确避开被 DFM 占用 73GB 的 GPU0 而选 GPU1。中途 twin 第一次仍在 boundary 328/512 处 OOM（同卡上他人进程同时增长），把 BATCH 8→4、CHUNK→32 后重投成功。全程未 scancel、未 sbatch。
+
+PG266 UTC 2026-08-09T23:43:45Z: 已修复并提交 5379812; 已在 5964464 (16 GPU 全空闲) 上 attach 重跑修正版 dump (step 5964464.80,
+TAG=_fix, 输出 data/price_logits_fix)。R75 已写入 RESULTS.md。cond_hist 评估继续跑 (seed 91000 完成,
+91001 进行中), 它现在的定位从「分布匹配臂」降为「一个真实但任意的 decoder 扰动对照」。全程零 sbatch。
+
+PG264 UTC 2026-08-09T23:45:48Z: Introduction 首段按用户要求形式化。写出确定性转移 s_{t+1}=f(s_t,a_t)（式 1），指出撮合确定故全部随机性在 action，模型即 p_theta(a_{t+1}|s_{<=t},a_{<=t})；随后写出真实闭环 s_{t+1}=f(s_t, tau^{-1}(y_hat))（式 2），由此得到全文最强的一句：模拟市场的保真度取决于 tau^{-1} 与 tau 的复合在真实 action 上是否为恒等，故 exactness 是结构性要求而非质量目标。这同时补上合规审计 G17 指出的 Problem Setting 形式化缺失。另补 5 处引用（见 F298）。编译通过，无断裂引用，提交模式 9 页（正文 8）。
+
+PG261 UTC 2026-08-09T00:00:00Z: twin 对照完成并据此重写报告的 globality 章节（docs/GLOBAL_WORKSPACE_REPORT.md 现 386 行、9 张图全部内嵌且引用全部有效）。章节结构改为：先给训练模型的集中度数字，再用「但必须加一个对照，否则会得出错的因果」显式更正自己前一版的暗示，然后分三小节给 twin 带来的三个结论（集中度是架构性质、训练搬迁垄断者、训练把特征轴挤出通道）。新增 fig9_twin.png 两面板：(a) per-layer 影响力 twin vs trained，(b) 三条轴 ρ 相对随机基线的符号翻转。horizon2 的 m=8 已出（r99=83、ofi 0.020×），m=16 在跑。
+
+PG267 UTC 2026-08-09T23:50:57Z: 修正链条已全部重跑: dump (5964464.80) -> conditional_tilt_fix -> cond_step_fix -> 评估已启动
+(ARM=cond_fix, 5964464)。R75/R76 已写入 RESULTS.md。commit 5379812 (根因修复) + 后续 (重解)。
+cond_hist (作废臂) 的评估仍在 5964465 上跑完第三个 seed, 保留作为「真实但任意的 decoder 扰动」对照。全程零 sbatch。
+
+PG265 UTC 2026-08-10T00:02:37Z: 建立自动提交推送流程并完成首次推送（commit 4f89fc4，770c6de..4f89fc4）。用户要求今后每做完一件事即自动 commit+push，且外部更新优先、冲突以 Overleaf 端为准，已写入 memory git-auto-commit-push.md。本轮内容改动：Introduction 的 consequences 段拆成两段并压缩。前段论证「建模 next action 即建模整个市场」——f 已知公开且确定，故无他物可估、环境那一半不需要任何训练数据；同一个动作分布无需重训即可服务模拟/预测/agent 训练，这正是 next-action 模型称得上 foundation model 而非又一个预测器的确切含义。后段列出 action 各字段特征及其异质性：type/direction 低基数类别、price 约 1e6 量级且日内漂移跨标的不可比、size 重尾但集中于整手、timestamp 跨十个数量级、order_id 外生且每值仅出现一两次故完全不可学必须重新表达。编译通过，提交模式正文 8 页。

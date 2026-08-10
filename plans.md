@@ -925,3 +925,99 @@ P241 UTC 2026-08-09T15:29:34Z: /goal 增至 24 项，新增 (22) 写一页交代
 计划：micro_arms.sh 在 hidden ∈ {8,16,32} 上训 hdgn_learned_v7(λ_kl=30)/hdgn_fixed/iid 三臂
 （外加 h8 的 λ_kl=1 作 λ 对照），一律训到收敛；再做时序重评；然后写两页。
 attach 5951088 的 nid010655（4 卡全空，闸门已查）。
+
+P247 UTC 2026-08-09T16:55:00Z: 新任务「action chunking 能不能压我们的复合误差」。
+按用户给的顺序执行:(1) 新建 git worktree(不复用旧的);(2) **先**建词表和复合误差的
+记忆;(3) 画定义复合误差的图;(4) **然后**才谈 chunking 管不管用。worktree 已建:
+/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/action-chunking-20260809
+(分支 feat/action-chunking-20260809)。产物落 docs/action_chunking/。
+
+P245 UTC 2026-08-09T20:40:00Z: 判据定稿（取代 P244 的待定项）。主指标 qL1，数据
+data/hp_base，n=2000，多 seed。baseline 0.1558、达标线 qL1 < 0.0973（零假设 p95）、
+v2a 上界 0.0725。v2a 单独跑并单独判决，其上界已足以支撑 S1-S4 的算力，不必等 v2b 的
+上界（v2b 的真上界仍未测，我的合成臂只证机制归因）。S1 起按原计划推进。
+
+P245 UTC 2026-08-09T00:00:00Z: 产出 global workspace 补充实验计划，落地 /projects/public/u6gb/LOB_Mech_Interp_kang/docs/plan_global_workspace_20260809.md。五个实验 G1-G5：G1 SSM 版 J-lens 拟合 J_ℓ=E[∂logits_≥t/∂h^(ℓ)_t]（位点从残差流换到循环状态）；G2 J-space 的 SVD 低维性 + 容量 + 三条监督轴的投影比例 ρ；G3 读写连接度比 RW(u)=write(u)·read(u) 对随机方向的倍数；G4 双轴 steering 的可加性检验（GWT 的有限容量断言）；G5 投影掉 J-space 的消融（对照：同维随机子空间 + 同维 PCA 子空间）。依赖图：G1 是唯一硬前置，G2/G3/G5 依赖 G1，G4 独立可并行。三级交付方案（最小 G1+G2 / 中 +G3 / 完整 G1-G5），建议先做最小方案。算力：G1 单节点单 GPU --time=00:30:00（关键优化见 F276），G2 可在登录节点跑（thin-SVD 于 2112×65536 float32=554MB，符合登录节点小 CPU 实验四条限制）。
+
+
+P244 UTC %Y-%m-%dT%H:%M:%SZ: 回答用户追问「abstract 里 controls 是不是常用词」。判断路径：不按「生词与否」判，按「是否与读者已有词义撞车」判，列出 ICAIF 三类读者背景各自的默认解读；再给「摘要里用具体对照物替代类别名」的改写候选；顺带核对用户新版摘要（已修语法、新增 steering 句）中同源的对照缺失问题。
+
+P246 UTC 2026-08-09T19:05:01Z: 评审 understanding-hidden-states 论文 contribution 第 3 条（/lus/lfs1aip2/projects/public/u6gb/overleaf/understanding-hidden-states/main.tex:77）。产出两版改写方案（A 保守单条 / B 拆两条并把 decodability≠controllability 提为发现），推荐 B。若用户采纳 B，需连改三处：main.tex:77 整条替换；main.tex:361 "matching the directional skill" 改为 approaching 并注明 DeepLOB 是跨市场跨标签参照点非受控对照；补 inference cost 量化（H=50 生成路线 = 50 msg × 26 tok = 1300 步串行 decode，vs 冻结状态一次矩阵向量乘，出处 main.tex:86）。本轮未改动任何论文源文件。
+
+
+P245 UTC %Y-%m-%dT%H:%M:%SZ: 用户追问「controls and baselines 这句具体怎么改」。计划先判断二者是否应当并列（结论：不应当，二者服务不同 claim），再按「每个对照跟随它所支撑的结论」重排，给三个方案（最小改动只留最强对照 / 拆两句把 book 对照升格为内容结论 / neither-nor 自解释结构）并推荐第二个；需向用户索取正文中 OFI 上 stale book 的 R² 数值以填占位。
+
+P246 UTC 2026-08-09T00:00:00Z: 把 global workspace / J-space 紧凑写入论文，不引入任何超出已测数据的关于本模型的新论断。落点四处 + 一条 bib：Related Work 段末（语言模型残差流的低维可达输出工作空间，正是本文发现为空的位点）、§residual_vs_state 段末（若存在此类工作空间则只能在 recurrent state）、steering 可控性段末（特征轴是否落在可达输出子空间是 volume>price>volatility 排序的内部相关量）、Conclusion future work（Jacobian 传输读出与 SAE 并列）。bib entry anthropic2026workspace 用 techreport + 机构作者 + 官方 URL，不编造作者列表与 arXiv 号。
+
+P248 UTC 2026-08-09T20:20:00Z: 用户指示「看哪个 GPU 没用满,没用满的直接放在上面跑」。
+按 ACTION_CHUNKING.md 定的顺序,第一步不是 chunking 实验而是**把尺子做准**:现在日块
+CI 半宽是蒙特卡洛 sd 的 6 倍,五特征里只有三个斜率改善可分辨,新机制的效应会落进
+现有 CI。收窄靠更多**交易日**。查明 headline 臂**没用 wide-book**(sidecar 的
+wide_book keys 为空),所以 2026-02 的 preproc shard 可用(wide-book 只有 2026-01)。
+已建 2026-02 索引:195,020 窗口 / **19 个交易日**,validate-first 40 全部可读、drop 0。
+与 2026-01 的 20 天合并 → **39 天**,CI 应窄 √(39/20)≈1.40×。两条臂已起(learned-P
+与同范数 random-P),配置与 headline 臂逐项对齐以保证可合池。
+
+P249 UTC 2026-08-09T00:00:00Z: J-lens 实验的执行路径与既有代码复用关系（已实施）。新增 src/jlens_fit.py + scripts/jlens_run.sh + figures/make_jlens_figure.py，vendor 与既有 src 一律不改。可微路径完全复用 steer_nexttok.py：boundary() 跑到观测边界（不求导，梯度只流过 tail）、_inject() 把 pert 加到各层 ssm_state、model_unv.apply(...,"__call_rnn__") 出 logits，于是 ∂logits/∂pert 在 pert=0 处即 ∂logits/∂h_state，且与论文 steering 用同一注入点故口径天然一致。估计器照 Anthropic：cotangent 对所有 tail 位置求和、对窗口平均；用 randomized range finder（K=320 随机 cotangent，真实 rank≤256 故 oversampling 64）避免 851968 宽的 SVD，改由 K×K Gram 特征分解回推正交基。后续 G3（读写连接度）/G5（消融）若要做，直接读已落盘的 V 即可，无需再占 GPU。
+
+P250 UTC 2026-08-09T20:34:50Z: 接手 overleaf/bpe-kang-icaif2026（ICAIF26 BPE 论文）。按 ins.gitignore 指令，先建 memory 再做别的事。计划：(a) 整页读取 Notion BPE-ICAIF26 主页（无 #block-id 锚点故走整页扫描模式）及五个关键子页；(b) 落成五个 memory 文件到该工作区 .claude memory 目录；(c) 把 main.tex 从 documentclass{article} 骨架换成 acmart sigconf，ACM 支持文件从姊妹项目 understanding-hidden-states 沿用，正文限 8 页。
+
+P246 UTC 2026-08-09T22:05:00Z: 目标从「跑完 S1-S4」改为「拿到层 3 的证据」（模型自己
+在 energy 与 qL1 上都落进零假设 p95，不挂外部标量）。理由见 F288：v2a 的上界结构上
+到不了层 3。次序：S3 余弦门（几分钟见分晓，>0.99 立即停，省下全部后续算力）->
+S4 v2a 判决（层 2）-> v2b（把 1[Delta_t R_{t-1}>0] 加进 phi，延续率 0.5883 -> 0.6247）。
+v2b 由 P245 的「可选」升为必做。同时把设计与论文的宣称口径改成「逐条增量分布匹配」。
+
+P249 UTC 2026-08-09T22:30:00Z: 目标改为「证明 post-training 在 **action** 上好,可发论文」。
+用户给的三步协议:(1)先看有没有复合误差,没有就不用谈;(2)有的话,要么这几个指标都变好,
+要么其中几个本就没有 CE;(3)再看**均值**有没有 CE。Action = 直接生成的 order 字段
+(type/size/price/time),State = 订单簿(暂不看 21 特征)。用户关键判断:**训练窗口只有
+500 条**(runner 日志 `corrector sequence length 26000 (training used 13000)`,
+13000/26=500),现在测的 500 cond + 500 gen 只是 **2× 训练窗口**,外推太浅;SSM 可外推,
+推得够远必然出现 CE。据此把实验从「在 500 上反复测」改为 **horizon 扫描**。
+已建索引 GOOG_c500_g{1000,1500,3500}.txt(20 天,validate 全通过),已起 6 条 horizon 臂
+(1500/2000/4000 条 = 3x/4x/8x 训练窗口)+ 8 条 n=256 臂(两个月 × learned/random ×
+两个不重叠 offset)。共 14 条在跑。BPE 要卡立刻让。
+
+P250 UTC 2026-08-09T22:29:36Z: ICAIF'26 diffusion 稿新增 Inference Efficiency section。计划分三步：先建 memory 与写作方案 md，再按 understanding-hidden-states-alex-icaif2026 / bpe-kang-icaif2026 的紧凑风格写 LaTeX（目标 1-2 页），最后以 origin/main 为基线提交推送。用户要求本地旧 commit 用 develop 分支留档，正文以远程为准重建。
+
+P251 UTC 2026-08-09T22:45:00Z: 【下一步：先确认训练真正越过 step 9500，再谈生成】
+判据按 L284：不看进度条，看 checkpoint 最大 step。
+1. 22:55 左右查 checkpoints/j5957521_*/ 是否出现 9500 —— 这是护栏生效的唯一硬证据
+   （崩溃点在 9429，出现 9500 即证明已越过那条亚分价消息）。
+2. 同时查 node 日志里的 `[VarlenGuard` 行，确认截断确实发生且截断点靠后（零损失）。
+3. 训练确认稳定后再重投生成，这次必须：out_dir 用绝对路径、stdout 落盘到
+   logs_lobs5/gen_<jobid>_shard<k>.log、启动后 5 分钟内核对目录已建。
+
+P251 UTC 2026-08-09T23:28:07Z: 整理 ICAIF'26 diffusion 稿的全部 10 张表。方法上先客观测量再改：把每个 tabular 连同其 \small/\tabcolsep 抽进一个 sigconf 测量文档，用 \savebox + \the\wd 把自然宽度印到 PDF 上再用 pypdf 读回，对照单栏 241.1pt 与跨栏 506.3pt 判定归属，而不是靠肉眼。
+
+P252 UTC 2026-08-09T23:32:06Z: cond_hist 三个 seed 齐后立即执行: (1) final_verdict.py --metric qL1 (主判据, 标量对照在此数学惰性),
+对照含 baseline / CONTROL_scalar / matched_random 三条 / lambda=0 消融, 双方差合并; (2) run_gates.sh ARM=cond_hist
+跑 CE 与 LOB-Bench 闸门, LOB-Bench 以实测 1.8% CV 为噪声底; (3) 结果一落地即写 R75 (A8)。
+
+P252 UTC 2026-08-10T00:00:00Z: 【10 小时窗口内让 BPE 打赢 26tok 的路线】
+截止 2026-08-10T09:32Z。已知差距（step 9000，同 256 序列清单）：
+    WS-21 varlen 0.26006 vs 26tok 0.21715  = +19.8%（越低越好，varlen 落后）
+两个已知的、都在 varlen 一侧的减分项，且都有解：
+  (a) 训练只到 28%      -> 32,000 步预计 07:30Z 完成（交接看守已挂）
+  (b) 生成喂全零簿       -> 已改真簿（transform_L2_state_gpu，与 26tok 同一函数）
+指标分解显示二者不是同一回事：簿类指标（spread/ofi/volume）varlen 全输，
+而位置类指标（cancellation_depth/ticks、limit_order_depth/ticks）varlen 全赢，
+其中 ask_cancellation_depth 领先 63%。所以 (b) 修好后簿类应大幅回收，
+位置类的优势按机制应当保留。
+时间线：
+    00:0x  真簿冒烟（2 序列）
+    00:2x  step 12000 上跑 256 序列真簿版 -> 量化 (b) 的收益
+    03:12Z 训练触发 5 小时保存，看守接力（新脚本 MAX_JOB_HOURS 自动算）
+    07:30Z 32,000 步达成
+    07:5x  最终 256 序列生成
+    08:2x  最终评分，两臂同清单对照
+
+P253 UTC 2026-08-09T23:43:45Z: 修正后的重做顺序: (1) 看 [PLOG-CHK] 三个数确认 band_mass 接近 1、mean log p(label) 与熵同量级;
+(2) 用 price_logits_fix 重解 conditional_tilt, 重新测 TV_before (预计远小于此前的 0.40-0.47, 因为此前那个数
+是把 size 分布当价格分布renormalise 出来的);(3) 重跑蒸馏与评估; (4) 重跑 CE 闸门, 这次 CE 才是真的 next-token CE;
+(5) 把 R60-R74 中依赖 logits 的结论逐条在 RESULTS.md 原处加撤回层(增加式标记, 不删原文)。
+
+P254 UTC 2026-08-09T23:50:57Z: cond_fix 三 seed 齐后: (1) final_verdict.py --metric qL1 主判据, 对照 baseline/CONTROL_scalar/
+matched_random/lambda=0, 双方差合并; (2) run_gates.sh ARM=cond_fix 跑 CE 与 LOB-Bench (CE 现在才是真的 next-token CE);
+(3) 在 RESULTS.md 的 R60-R74 原处加撤回层(增加式, 不删原文); (4) Notion 建 stage-16 页记录这次根因与修正。

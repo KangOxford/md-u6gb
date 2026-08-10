@@ -1963,3 +1963,722 @@ NOTION_MAINMODEL.md（77 行）后 27/27。
       + runs/converged_horizon（hdgn_fixed conv=23300）
   (8) REPORT 第九节 + 十三M 节两处，对 ICAIF point (3) 的实证回答
 产物：runs/task_verification.json；Notion 核验页 3b712c45-68fd-81b5-8fac-c8bc93fcce76
+
+F288 UTC 2026-08-09T17:00:00Z: action chunking 论文(Lazzati/Stachowicz/Chen/Metelli/
+Wagenmaker/Levine, arXiv 2608.02547)的机制是**定量**的:Markov 单步 BC 为
+Ω(2^H·ε),chunk 或 delay k 为 O((k+1)^(H/k)·ε)。改写成同底:指数**底**从 2 降到
+(k+1)^(1/k) —— k=2 时 1.732、k=8 时 1.316、k→∞ 时→1。**仍是 H 的指数,只是底更小**,
+所以「horizon reduction」被否掉(那会把 H 变成 H/k,改的是指数不是底)。机制原话:
+"states farther in the past are likely to have compounded less error"。六个候选解释
+里三个被否(Temporal Consistency / Horizon Reduction / Representation Learning),
+三个成立(Non-Markovian Expressivity / Reduced Compounding Error / Ensemble
+Generalization)。否掉前三个靠的是同一个构造 **Delayed Policy**(每步仍只出一个动作、
+horizon 没变,但条件在 o_{t−k} 上,性能追平 chunking)。他们的替代方案 randomized
+delay ensemble 在 LIBERO/Robomimic「essentially matches」、真机 Franka 三任务
+「matches, and slightly improves」。**论文真正的结论不是「chunking 好」,而是
+「chunking 不是机制,只是三个机制的载体,而这三个可以不通过 chunking 拿到」。**
+
+F289 UTC 2026-08-09T17:02:00Z: **DFM corrector 按论文的四分法是 Row 2(Action
+Chunking Policy)**,不是 Row 3(Delayed)也不是 Row 4(Ensemble) —— 它取草稿的一个
+block 非自回归并行重生成。于是论文给出一条**对我们可证伪的预测**:给 corrector 加
+延迟条件或随机延迟集成,应当比单纯加大 block 更能压 slope(D_m)。这条预测指向的方向
+与我今晚扫的方向**正交**:t_start / n_steps / ‖P‖ 全是「怎么 chunk」的参数,论文说
+这些不是机制所在。三处对不上必须先说清:(a)我们没有外部环境,o_t 就是模型自己刚写的
+消息、订单簿是其确定性函数,「退回 o_{t−k}」会让订单簿与条件不自洽 —— 机器人那边
+没有这个约束;(b)论文的界是整条轨迹的**标量**累计次优,我们的 D_m 是**曲线**,指数
+增长在 D_m 上是凸增而我们拟合线性斜率;(c)BC 有奖励可兑现(成功率),我们只能兑现到
+分布匹配,中间那步没有定义。
+
+F290 UTC 2026-08-09T17:05:00Z: 按 Alex 的画法(x=生成消息序号 0..499、细线逐条
+rolling(10)、粗线 20 分箱 + 日聚类 bootstrap 95% CI、灰虚线 real-vs-real floor)
+重画 headline 臂五特征。**把 n_match 从 64 提到自适应上限 400 是关键**:每个 bin
+池里有 1600 个 z,固定 64 等于扔掉 95% 的数据、画的是估计量噪声。提上去后斜率:
+spread +0.683→+0.048、limit_bid_order_ticks +0.354→+0.050、log_depth
++0.079→−0.049、bid_volume +0.183→+0.095、ask_volume +0.074→−0.028。
+spread 那张图上红线从 0.6 爬到 3.3、绿线过 m≈200 就基本平了,复合误差**肉眼可见**;
+ask_volume 那张两条线叠在一起、CI 几乎完全重合、前 250 条绿线还在红线之上 ——
+与「1.0σ 未分辨」的统计结论一致。注意 n_match=64 固定值只在**跨特征**比较时必要
+(为了 floor 可比),单特征图内不需要。
+
+F291 UTC 2026-08-09T17:45:00Z: 按论文 Figure 4 的规格重做复合误差图(y 轴
+floor-subtracted 的 KL/H(true)、跨相位/特征平均成一条 headline 曲线、多臂对照)。
+三处与我之前画法的实质差别:(1) floor 减掉压成 0 那条点线,而不是让读者用眼睛减一个带;
+(2) 用 H(true) 归一化 —— 我们的特征已标准化为 z,所以取的是**分箱后 z 直方图的插值熵**,
+与他对 sub-alphabet 计数取熵是同一个对象;(3) 一条 headline 曲线而非每特征一张。
+第三臂用 dfm_s2a_a2(已验证 ids/dates/real_msgs/draft_msgs 与主臂**逐位相同**,
+所以三条曲线是逐窗口配对的),充当他们 selection-null 的角色。
+**结果与他们高度一致**:我们的 anchor 首末 bin 增长 **2.97×**(他们 3.1×)、
+post-trained **1.71×**(他们 2.3×)、对照臂全程在 anchor **之上**(他们两个控制也是)。
+**但水平差别很大**:我们 post 比 anchor 低 **−70%**,他们是 −11%。
+另一处必须说明的差异:他们的 y 值在 0.03~0.10,我们在 0.2~1.5,约 15 倍。原因就是
+VOCABULARY.md §3.2 那条 —— 他测 **token 边缘分布**,我们测 **LOB 特征**;模型可以
+token 级很准而重建出的订单簿不准,后者的归一化散度自然大得多。这不是谁的数错了,
+是测的对象不同。
+产物:sigma-0-worktrees/action-chunking-20260809/docs/action_chunking/
+{plot_paper_fig.py, figs/fig4_compounding.png, figs/fig4_compounding.json}
+
+F279 UTC 2026-08-09T20:40:00Z: S0b 作废了 DESIGN_v2 §4.5 的全部数字，方向不变但量级
+对 v2a 有利。同源重测（data/hp_base, n=2000 配对, 8 seed）：baseline qL1 0.1558、
+标量 c=2.018 qL1 0.1558（构造不变）、ORACLE 边际 qL1 0.0725（跨 seed 0.0611-0.0756）、
+ORACLE+标量 c=1.321 energy 3.764e-3。零假设 n=2000: energy median 1.599e-3 p95
+5.325e-3、qL1 median 0.0612 p95 0.0973。三处改判：(1) v2a 上界 0.1135 -> 0.0725，
+原值悲观 36%，因为它取自 n=600 而 baseline 取自 n=2000；(2) v2a 上界本身就落进零假设
+p95（0.0725<0.0973），原判「仍在带外」错误，达标线因此从「必须逼近上界」松到「走完
+窗口的 43%」；(3) 可达窗口 0.045 -> 0.0833，宽 1.85 倍。ORACLE+标量在 energy 与 qL1
+两个指标上都落进 p95。
+
+F280 UTC 2026-08-09T20:40:00Z: v2b 的前缀特征被量化证实是对的，lag-1 结构上不可行。
+同一真实幅度边际、只换符号过程：iid kappa 0.9979（自检）、lag-1 在实测延续率 0.7574
+下 kappa 1.0066（解释真实超额的 1.5%，延续率推到 0.999 也只到 1.0269）、prefix 在实测
+延续率 0.6247 下 kappa 1.3927（解释 90.6%），真实 kappa 1.4332。闭式 AR(1) 核对一致：
+实测 lag-1 自相关 0.0645 只给 kappa 1.0664，要到 1.5125 需 rho=0.393（6.1 倍）。
+即 87% 的真实超额离散度不是一阶依赖。§4 选 R_{t-1}（前缀和）而非 Delta_{t-1} 此前只有
+「值函数需要前缀」的定性理由，现在有 60 倍的量级差。注意：该合成臂不是 v2b 的可达上界
+（幅度 i.i.d. 重抽，丢掉了模型已有的幅度聚集，qL1 0.1191 反而差于 v2a 上界），只证机制
+归因，不证可达性。
+
+F281 UTC 2026-08-09T20:40:00Z: S0 的 rank_transform 有两个此前未记录的性质。(1) 性能：
+np.quantile -> ndarray.partition 占 424s 中的 408s（96%），因为真实增量池 95.5% 恰为 0，
+introselect 在近 50 万 kth + 47.6 万相同元素上退化；目标数组已排序，直接线性插值等价
+（真实带并列数据上 max|diff| 1.355e-20），加速 3513x（62k）至约 2e5 x（498k 全池）。
+已在 oracle_increment_bound.py 内修正，S0 的既有结果不受影响。(2) 语义：随机 tie-break
+打散零原子时连带打散了它自称保住的依赖，实测只保留模型超额依赖的 62%（kappa 1.1347 vs
+模型 1.2179），故该臂标称的「real marginal + model dependence」不准确。
+
+F282 UTC 2026-08-09T21:10:00Z: S1 通过，闭式增量映射误差 0.265%（门槛 1%），但通过前
+先撞出两个东西。映射本身不需要撮合引擎：中价只取决于最优买卖价，一条消息只有触及最优
+档才改变它，L10 快照已足够。最终成绩（data/hp_base/data_gen，400 文件 99600 条消息）：
+整体 99.735%，type1 99.90% / type2 100% / type3 99.62% / type4 97.34%，L10 窗口外
+不可判定 0 例，预测 P(Delta=0) 0.9827 vs 实测 0.9843，动价中位相对误差 0。
+
+F283 UTC 2026-08-09T21:10:00Z: type 4 的 price 字段不可信，必须吸附到最优档。原始规则
+（price 字面）只解释 89.87% 的动价，其中 type4 单独只有 61.5%（40/104 错）。四个错例
+里有两个的 price 严格夹在两档之间、根本不是簿上任何一档，而实测效果一律是「该侧最优档
+被吃掉」——成交本来就只打在盘口，生成时的簿模拟器把模型吐出的 price 吸附了。改为
+type4 吃最优档后动价解释率 89.87% -> 94.78%（最终 400 文件下 type4 97.34%）。
+反面对照很重要：把同样的吸附加到 type2/3 上，动价升到 95.57% 但「不动」的准确率从
+99.85% 崩到 78.20%，整体 99.76% -> 78.50%。撤单在不存在的价位上就是 no-op，不能吸附。
+
+F284 UTC 2026-08-09T21:10:00Z: 新数据缺陷 —— 真实 rollout 的 message 与 orderbook 文件
+不对齐。判别方法是只看实测中价确实变了的时刻：data_gen 上映射解释 632 次动价中的 568
+次（89.87%），data_real 上只解释 1854 次中的 22 次（1.19%，等于随机）。偏移量 -3..+3
+全扫过，曲线全平在 87.2%（那只是「不动」的基础率），即两个文件之间不存在任何对齐。
+影响面：mu_real 只从订单簿算 mid、不需要消息，故 S2 的目标不受影响；§1.2 的缺陷 A
+（真实 4.25% 的消息改变中价）也只用了簿，安全。但任何把真实消息与真实簿状态配对的
+分析都会是错的，需要先解决来源。
+
+F285 UTC 2026-08-09T21:35:00Z: S2 通过。约束 E_s E_{v~p*}[phi] = mu_real 在 lambda=0
+处的内层期望恰是模型的聚合增量律，而那正是生成 rollout 直接采样到的，所以聚合版 lambda
+有闭式解 lambda_j = log(p_real_j/p_gen_j)，不需要 GPU。data/hp_base、各 498000 个增量、
+1 个零原子 + 32 个等真实质量分箱、生成侧空箱 0 个。结果：KL(p*||pi_pre) = 0.01779
+nats/message，闭式界 2max|lambda| = 2.6428 nats（最坏单 token），最大 |lambda| 1.32
+（比值 3.7），零原子 lambda 仅 -0.029 但其补集必须涨 2.72 倍。三种口径对 2% 闸门：
+消息级 CE 0.080% PASS（噪声底 0.006% 的 13 倍、闸门内 25 倍）、逐 token 均摊 0.100%
+PASS、全部压在价格 token 上 2.605% FAIL。闸门原定义针对全局扰动的平均逐 token CE，
+而 v2 只动 26 个位置中的 1 个，故适用前两行；第三行是须在 S3/S4 盯住的风险。
+
+F286 UTC 2026-08-09T21:35:00Z: 倾斜的 token 空间 KL 等于增量空间 KL，不是它的上界。
+因为 p*(v|s) 正比于 pi_pre(v|s)exp(lambda^T phi(Delta(v,s)))，倾斜只通过 Delta 依赖 v，
+故 KL_token = sum_v p*(v)[lambda^T phi(Delta(v)) - log Z] = KL_increment，给定 Delta
+后 v 的条件分布不变。所以「多个 token 映到同一个增量」并不产生松弛。真正的松弛在另一处：
+我算的是聚合边际的 KL，由凸性它低于 E_s[逐状态 KL]，故 0.01779 是扰动的下界而非上界。
+
+F292 UTC 2026-08-09T18:20:00Z: 出我们自己 post-training 的定稿图
+(figs/fig_posttraining.png)。三臂:预训练 SSM 自回归自跑(anchor)、双向离散 flow
+matching 后训练(Stage 2A,trunk 冻结只训 corrector)、同范数随机方向对照。
+首末 bin 增长 **2.96× / 1.75× / 2.24×**,post 末端比 anchor 低 **62%**,
+且 post 的绝对水平(0.17~0.30)全程贴在 floor 附近而 anchor 爬到 1.19。
+**关键的是随机对照臂也涨 2.24× 且大部分区间在 anchor 之上** —— 说明压住增长的
+不是「加了个 corrector」,是「加了个学到方向的 corrector」。
+两处画法上的修正:(1) **分箱必须在已打分区间 [fit_from, R) 上均分**,不能在
+0..R 上均分再砍掉前 30 条 —— 那样第一个 bin 只有别人的 40% 宽,它的 bootstrap 带
+炸到 3.6 把整张图的 y 轴压扁(实测);(2) 10 个 bin × 47 条 + n_cap=1200 比
+20 个 bin × 25 条 + n=400 干净得多,因为我们只有 64 个 window(他们 4096),
+分箱数是拿分辨率换稳定性的唯一旋钮。
+
+F275 UTC 2026-08-09T00:00:00Z: 判定 global workspace 与论文 §residual_vs_state 不重复，区分是 WHERE vs HOW ORGANIZED。现有节回答位点问题（信息在 recurrent state 不在 residual stream，R² 0.51-0.59 vs ≤0.06，lag-k 显示残差流线性记忆仅 2-5 条消息）；global workspace 回答组织问题（那个 65536 维状态内部是弥散的还是集中在低维高连接度广播空间）。附带一个对本文有利的结构性论点：Anthropic 是在 residual stream 里找到 workspace 的，而本文已证 SSM 的 residual stream 是空的，故若 SSM 存在 workspace 必然在 recurrent state 里——使该分析成为本文位点结论的自然延伸而非外挂热点。
+
+F276 UTC 2026-08-09T00:00:00Z: J-lens 在本模型上比在 LLM 上便宜一个量级，成本优化来自 unembed 的线性性：∂logits/∂h^(ℓ) = W_U · ∂r_final/∂h^(ℓ)，故只需对残差流 256 维做 VJP 而非对词表 2112 维，省 8.25×。JAX 的 jax.vjp+vmap 可一次批处理 256 个 cotangent，峰值内存 256×65536×4B=67MB，GH200 无压力。据此 G1 估算：13 层 × 200 窗口 ≈ 2600 次批处理 backward，按 50ms/次估 ≈ 2.2 分钟纯计算，I/O 主导，--time=00:30:00 足够。官方 repo 称 ~100 prompt 即饱和（论文用 1000 序列 ×128 token），故先取 200 窗口并做 100/200/400 饱和曲线。
+
+F277 UTC 2026-08-09T00:00:00Z: 论文已攒了 GWT 四要素中的一半，只是当别的用途写了。(a) 低维性已有但被埋没：main.tex:192 的「PCA 128 主成分恢复全部 R²」与「ridge 有效自由度 ≈ 状态维度 1%」目前只作为「不是过拟合」的辩护写在 Robustness 里；(d) 因果可干预已有：main.tex:180,307-333 的 dose-controlled steering + 30 个 shuffled-label null；(b) 高读写连接度半有：src/attn_state_contrib.py 已实现 SSD 对偶写入分解 h_T=Σ_s coef(s)(x_s⊗B_rot_s) 且逐窗口自验证，缺的是读出侧；(c) 可言说基底完全没有：全部 probe 为外部监督标签。故真正要新写的代码集中在 (c) 与 (b) 的读出侧。
+
+F278 UTC 2026-08-09T00:00:00Z: 本计划最高价值的单点：J-space 投影比例 ρ(u)=‖P_J u‖²/‖u‖² 可解释论文 main.tex:333 已写下但未解释的现象——「equally decodable features are not equally controllable」，可控性排序 volume > price > volatility。三特征在 state 中可解码性接近（R² 0.52/0.51/0.39，main.tex:259-261），next-token 信念也都干净响应，但推进撮合引擎后只有 traded volume 的实现统计逃出 null 带。论文当前归因为「单条消息决定该统计量的直接程度」，是定性事后解释。机制假说：可解码 ⇔ 方向存在于 state；可控 ⇔ 方向落在 J-space 内。预测 ρ(w_volume) > ρ(w_OFI) > ρ(w_rvol) 且与已报可控性排序一致。该点的价值不依赖 GWT 假设成立（排序不一致则写成排除性结论），成本也最低，故列为优先。
+
+F279 UTC 2026-08-09T00:00:00Z: 代码库 /projects/public/u6gb/LOB_Mech_Interp_kang 现状盘点（main 分支，HEAD e3e9cad）。已有 40 个 src/*.py + 28 个 scripts/*.batch。与本计划直接相关的三个：src/attn_state_contrib.py（520 行，SSD 对偶写入分解，含 h_relerr/h_pairnorm/y_relerr 三道逐窗口自验证闸门）、src/export_decoder_axis.py（96 行，导出有监督 OFI 解码轴 w∈R^65536，是 J-lens 无监督对偶的对照物）、src/load_model.py（68 行，JAX 模型加载，故 jax.jacrev/vjp 天然可用）。README 第 18 行声称 src/ 含 SAE，但实际无 sae*.py，SAE 未实现（与论文 Conclusion 把 SAE 列为 future work 一致）。模型：HierarchicalLobPredModel，d_model=256，13 SSM 层，26-token 消息，8.2M 参数，ckpt j3751501 step 30180。
+
+F280 UTC 2026-08-09T00:00:00Z: 全部历史实验产物完整可读，但在 Alexandre 的 scratch 而非 kangli 的。/scratch/u6gb/alexbismuth.u6gb/mech_interp_data/ 有 137 个顶层条目，drwxrwxr-x 组可读写：激活缓存 goog_jan2026_ssm/ 2014 个 npz 约 3.1GB + random twin goog_jan2026_ssm_random_s42/ 2014 个；decoder_axis_goog_jan2026_ssm_L3.npz（247KB，仅 L3）；三条 steering 轴产物全在（steer_nexttok_arrays{,_tvol,_rvol}.npz、steer_mid_arrays_{tvol,rvol}_k50.npz）；论文用的 forward_results_goog_jan2026_ssm_w700.json 与 _w1500.json 及各自 _random_s42；book_baseline_{contemp,forward}_*.json；capacity_results_goog_jan2026_ssm.json；其余 8 ticker 的 ssm 目录。对照：/scratch/u6gb/kangli.u6gb/mech_interp_data 不存在（该 scratch 下只有 LOBCAST_dwnld），首查时误判为「产物已清空」，线索来自 figures/README.md:10 写的 SCRATCHDIR=/scratch/u6gb/alexbismuth.u6gb。推论：G2/G3/G5 所需状态与轴全部现成，只有 G1 的 Jacobian 必须新算。风险：产物在 /scratch，时间戳 Jun30-Aug1，多数 scratch 有按天清理策略，小体积 json/npz 应尽快备份到 Lustre。
+
+F281 UTC 2026-08-09T00:00:00Z: docs/results/ 与论文正文的数值差异全部是配置差异而非错误，公平比较必须锁配置。market metrics 完全一致（0.515/0.511/0.385 对论文 0.52/0.51/0.39，fwd-CV 与 twin 同样对上）。forward Δmid：docs 报 H=50 峰 R²=0.318（W=500，3 个 horizon），论文报 H=25 峰 R²=0.38（W=700，7 个 horizon），差异源于后来重跑的 w700 7-horizon run，figures/README.md 的 2026-07-29 PAPER NOTE 明确记录了这次图与数据的替换。方向准确率 twin：docs 0.626 对论文 60.5%，论文用 W=1500。steering 叙事：docs/results/steering.md 停在 OFI 的 sell/buy 两侧 + belief-consistent yardstick（2026-07-23 audit 后），论文已改为 volume/price/volatility 三特征可控性排序，对应 commit c38c2f0 之后的新实验，docs 未回写。结论：以论文正文为准，docs/results 停在约 2026-07-23，复现论文数字须用 *_w700.json / *_w1500.json / steer_*_{tvol,rvol}_* 这几组。
+
+F282 UTC 2026-08-09T00:00:00Z: 最小方案的新增数据量precisely是三个数。Delivery 表为三行四列，Decodable R² 列（0.52/0.59/0.51）与 Controllable 列（Yes/Partial/No）全部来自论文已有结果，仅 J-space projection ρ 一列是新测的。配套正文约 4 行接在 main.tex:333 之后，Related Work 一句接在 main.tex:145 段末（成本为零，做不做实验都该加）。若 ρ 排序与可控性排序不一致，正文改写为约 2 行的排除性结论，表保留（三个 ρ 仍是新数据），Related Work 那句不变。草稿全文已写入 /projects/public/u6gb/LOB_Mech_Interp_kang/docs/plan_global_workspace_20260809.md §10。
+
+F283 UTC 2026-08-09T00:00:00Z: 「residual stream 近乎为空」当前只有线性直读的证据，存在方法论缺口。核查代码：src/probes_residual_market.py:8 明言对 residual stream 用「the SAME kernel-ridge nested-CV machinery」，而该 machinery 的 Gram 是线性的（export_decoder_axis.py docstring：dual ridge on the linear Gram Gs = Xs Xsᵀ）；论文 main.tex:283 那个 linear/quad/RBF/MLP 四探针容量阶梯只作用在 recurrent state 上（src/probes_nonlinear.py:89 读 d["ssm_state"]），未用于 residual stream。故审稿人可质疑「信息是否在残差流里、只是不在直读的基底上」，而 lag-k control 只证明残差流的线性记忆短（2-5 条消息），未排除其他形式。J-lens 的全部动机恰是此点（logit lens 的 unembed(h_ℓ) 隐含假设 J_ℓ=I，各层基底不同故该假设在中间层错），加入后结论从「线性探针读不到」升级为「用专门为此设计的基底传输方法也读不到」，属对主结论的加固而非新话题。
+
+F284 UTC 2026-08-09T00:00:00Z: 从 capacity_results_goog_jan2026_ssm.json（job 5641147，n=2014，p_per_layer=65536）挖出论文未写全的有效维度数字，且发现论文一处表述不精确。OFI L1 W500 best layer L3（full R²=0.5919）：participation_ratio=67.14，n90=934，n99=1782，dof_mean=501（n_train≈1617，≈1% of p）；PCA 扫描 k=32→0.5846（98.8% of full）、k=64→0.5910（99.9%）、k=128→0.5860、k=256→0.5815、k=512→0.5663（超过饱和点后下降）；cum_ev_at_k 显示 k=64 只占状态方差 50.8%。Touch best_ask_off L2（full 0.8039）：PR=102.25，dof_mean=655，k=4 即 0.6293，k=128→0.8004，k=256→0.8047。关键推论：k=64 仅占方差一半却恢复 99.9% 可解码性且 k>64 后 R² 下降，说明信息不在方差大的地方而在特定低维可读子空间，65536→67 压缩约 1000×，这正是 workspace 的定义。修正项：论文 main.tex:192 写 "A PCA of 128 components recovering full R² performance"，对 OFI 实际是 k=64（k=32 已 98.8%），128 是 touch 的数；participation ratio=67.14 论文完全未写。这两处修正不依赖任何新实验。
+
+
+F272 UTC %Y-%m-%dT%H:%M:%SZ: main.tex 摘要「far above controls and baselines」的 controls 属同形异义风险而非生词风险。ICAIF 读者三分：计量经济学背景默认读成回归控制变量（controlling for size/momentum），心理学/医学读成对照组，NLP probing 读成 control task（Hewitt & Liang 2019）。第一种解读似是而非因而不会触发读者查证。第二层问题：controls 与 baselines 并列但未说明为何是两个，作者心中实为两个独立威胁（untrained twin 答「探针本身会不会读出来」、stale book snapshot 答「不用模型能不能做到」），并列成抽象类别名后两者都失效。同源问题出现在用户新增的 steering 句：「pushing the state along a feature's direction shifts ... symmetrically in dose」丢掉了 matched-norm null directions，而这是全文最需要对照的一句——无 null 时「推状态就改输出」最省力解释是「随便推都会改」，steering 证据力归零。附带：in dose 非标准搭配（药理学为 dose-response），beliefs 对金融审稿人偏拟人化，a feature's direction 在刚列举三个 feature 之后泛指会卡读者。用户新版已修 beyond limited to 语法并统一 central driver，但 competitive with（强于 Intro 的 approaches）与 8.2M-parameter 仍在。
+
+F285 UTC 2026-08-09T19:05:01Z: contribution 第 3 条与正文的四处不一致（全部经 grep 核验）。(1) "at a fraction of the inference cost" 在全文无任何数字支撑：速度只出现三处且全为定性，main.tex:161 "much faster inference speed" 说的是 8.2M 模型 vs 更大 LOB 模型（与 probe vs DeepLOB 无关）、main.tex:352 "without autoregressively generating a single message"、main.tex:408 "fast by construction"。(2) contribution 写 approaches，正文 main.tex:361 写 "matching the directional skill"，二者打架；且该比较为跨市场跨标签（DeepLOB 在 LSE、标签为未来 50 book events 的平滑中价；本文在 GOOG 2026-01、H=50 messages），60.7% vs 63.9% 差 3.2pp，不能称 matching。(3) "with the volume push also materializing in engine rollouts" 掩盖 main.tex:333 的事实：三轴仅 volume 逃出 null band，flow 仅弱卖方漂移且需每条消息重注入，volatility 完全不动。(4) "causally steerable" 弱于原稿 "causally used"，与 main.tex:180 自述的实验目的（干预是为检验 use 而非 presence）不符。
+
+
+F273 UTC %Y-%m-%dT%H:%M:%SZ: 摘要 far above controls and baselines 的并列是结构性错误而非措辞问题。两个对照排除的是不同的替代解释、支撑的是不同的 claim：untrained twin 排除「这是架构与探针的功劳而非训练的功劳」，支撑「表征是学出来的」，应紧跟 R²=0.59；当前可见 book 排除「这是数据里现成的、不需要模型」，支撑「表征的是流不是快照」，应另起一句。后者被写成 baselines 等于降级：OFI 是跨 W 条消息的时间累积量而 book 是瞬时快照，模型赢过 book 的含义是「状态在跨时间积分」，这是全文核心内容性结论，却被放进了对照的语法位置，而语法位置决定读者分配多少注意力。三方案词数比较：只留 untrained twin 比原句更短且从定性 far above 升为定量 0.59 vs ≈0；拆两句多一句但两个对照各自自解释；neither-nor 结构最短但把两个量级不同的对照（≈0 与中等值）抹平成同一句 comes close to，损失信息。待补数据：正文中 OFI 目标上 stale book 的 R²（已知 depth 目标上为 0.62 vs 0.39，book 赢，方向相反）。
+
+F285 UTC 2026-08-09T00:00:00Z: 论文两次提交均已推送到 Overleaf remote https://git.overleaf.com/6a32803e9702b59986f5a6ba。第一次 94b4cf6「Robustness: report the actual PCA saturation and participation ratios」（39a6990..94b4cf6），修正 main.tex:208 的 PCA 表述并补入 participation ratio 67/102 与「64 方向仅占方差 50.8% 却恢复 99.9% 可解码性」；该次 rebase 时拉入了合作者的编辑（\KL 颜色改红、abstract 与 Introduction 改写、half-lives 由 30-70 改为 28-66 与 docs 对齐、contributions 由 subsection 改为 inline）。第二次 c766b7a「Position the work against the global-workspace result in language models」（94b4cf6..c766b7a），四处插入 + references.bib 新增 anthropic2026workspace。合规核查：正文无 em-dash（`---`）、无 enumerate/itemize、四处 \cite 均已落位（main.tex 行 153/223/344/419）。
+
+F277 UTC 2026-08-09T20:30:00Z: S1 通过。price_impact_map.py 重放 100 条 rollout / 24900 条消息：中价精确
+一致 99.751%，但 98.3% 的消息本就不动中价，故看混淆矩阵——实际动了 416 条中预测对
+404（recall 97.1%）、precision 90.8%、在真正动价的消息上精确值正确率 95.0%。5% 误差
+按类型为 type3 撤单 36 / type4 成交 18 / type1 提交 8，逐例检查发现是模型撤一个不存在
+的单（撤 100 而该档仅 97 实际只减 10；撤 25 而该档仅 4 实际完全没变），引擎在修复，
+非规则错误。另：inference 日志里的 num_errors 定义是
+(l2_book_states[1:]==l2_book_states[:-1]).all(axis=1).sum()，即「整个 10 档 book 一字
+未变」的消息数，真实数据也有 55%，我此前误读为错误计数。
+
+F278 UTC 2026-08-09T20:30:00Z: 全任务最锐利的缺陷刻画（n=200 配对 rollout）。做了可见改动的消息：真实
+0.4495 vs 生成 0.3010（0.670）；动了中价的消息：真实 0.0470 vs 生成 0.0166（0.354）。
+两者不同即结论：P(动中价|做了可见改动) 真实 10.5% vs 生成 5.5%——即使在做事的消息里，
+模型碰盘口的概率也只有真实的一半，是专门回避盘口事件而非笼统保守。而一条消息碰不碰
+盘口完全由价格 token 决定，故设计 v2 的特征映射必须显式含 1[p=best quote] 与
+1[p improves best]，它们比 1[Δ=0] 更锐利（是价格 token 的直接函数）。
+
+F291 UTC 2026-08-09T20:05:00Z: **更正 F291 之前我对节点状态的判断**。看到 5 个
+allocation 上 ~72 张卡全部 sm=0% 且各 held 20 GB,我先判为「我的 DFM 臂卡住了」。
+两处证据推翻这个判断:(1) 逐 PID 查 /proc,进程 cmdline 是
+`python -u scripts/varlen_bench_generate.py checkpoints/j5957521_wh2tzvfs_`,
+**不是** dfm_correct_runner;(2) state 全是 **R**(running),不是 D/Z。四个
+allocation 一致。所以这是一条 train+generate 流水线:5957521(72 GB/卡, sm=100%)在
+训练并产 checkpoint,另外四个 allocation 在消费同一批 checkpoint 做 varlen 生成。
+**sm=0% 是瞬时采样,不是挂起证据** —— 自回归生成有大量 Python 侧工作,瞬时采到 0%
+很常见。另:rollouts/ 目录 7.9 小时无新写入是**另一件事**(我的 n128/v2 臂早已结束
+或死亡,卡被这条流水线接管),两者无因果。
+
+F292 UTC 2026-08-09T20:07:00Z: 五个 allocation 的物理状态(19:58Z):
+5957521 4 节点 72 GB/卡 sm=100% 训练;5951088 4 节点、5950739 2 节点、5964464
+4 节点各 20 GB/卡;5964465 4 节点 40 GB/卡(每卡 2 进程)。全部为 varlen 生成,
+state=R。**每卡尚余约 77 GB**,一条 DFM 臂(~20 GB)物理上塞得下,但 CLAUDE.md 的
+物理闸门是「zero-PID / 近基线显存」,当前不满足,且会与延迟敏感的生成任务抢 SM。
+按「只 attach 不 sbatch,没空卡就等」执行:**等**。最先释放的是 5950739
+(剩 2:36:49),其次 5951088(剩 4:55:00)。
+
+F279 UTC 2026-08-09T21:00:00Z: 缺陷定位到单个 token 事件。价格在 26-token 编码里占 3 个位置
+（sign + 2 个 base-1000 位），且是相对中价的偏移（encoding.py 注释
+"Price effectively lossless: +/-$9,999.99 from mid"）。实测 n=150 配对 rollout /
+37350 条消息：price_high==0 真实 84.7% vs 生成 95.4%；|偏移|<=50 ticks 真实 54.4% vs
+38.4%；价格落在最优报价上 真实 9.77% vs 生成 6.70%；**价格改进最优报价 真实 8.45% vs
+生成 1.34%，差 6.3 倍**。缺陷刻画三次收敛：可见改动 1.5× → 动中价 2.8× →
+条件动中价 1.9× → 改进盘口 6.3×，每往 token 侧走一层缺口更集中一层。
+设计修正：(1) 候选枚举锚在盘口邻域而非低位 token 全部取值（price_high 并非恒 0，
+真实 15% 的消息离中价 >1000 ticks），规模从 2000 降到约 2k+1；(2) φ 四维即可
+（改进盘口 / 落在盘口 / 方向 / 尾部），无需 10 个分位箱。
+
+F280 UTC 2026-08-09T21:00:00Z: 算力状态——五个 allocation（5950739/5951088/5957521/5964464/5964465）
+每卡均有活 python 进程占 20-72 GB（5957521 且 100% util）。按「只 attach 物理空闲卡、
+没有就等」的规则，S2（需 GPU 前向取 logits）挂起，未叠加未投队列。
+
+F281 UTC 2026-08-09T22:15:00Z: S2 通过。倾斜价格低位数字这一个 categorical，n=3000 真实状态：改进最优报价
+0.03752→0.08099（目标 0.08327）、落在最优报价 0.00973→0.09316（目标 0.09859）、
+中价上移 0.01771→0.04091（目标 0.04137）、改进≥2ticks 0.01562→0.02665（目标 0.02586），
+四矩命中 94.5-103.1%。lambda=[1.1424,2.7157,0.2287,-0.3949]，KL(p*||pi)=0.175 nats/消息
+（相对消息级 CE 23.5 nats 是 0.74%）。修掉三个 bug：(1) 价格数字是词表 1108..2107 不是
+前 1000（词表 2112 各字段共享偏移），取 [:1000] 读的全是无关 token；(2) 候选价格用
+mid+k·tick 构造，而中价在价差为奇数 tick 时落在半格上，候选永远等不上最优报价，
+at_best 只有 6e-5、目标不可达、lambda 发散到 -200——数值发散要先查可行性；正确构造是
+p_real + s·(low-low_real)·TICK；(3) logits 算在条件窗口而 data_real 只有 N_GEN 条后续，
+join 出 0 状态，正确窗口是 data_cond。
+
+F282 UTC 2026-08-09T22:15:00Z: exposure bias 量化为 3 倍。「改进最优报价」的频率：真实 0.0833；模型在真实
+状态上的一步条件 0.0375（2.2× 缺口）；模型在自己生成的状态上 0.0129（6.5× 缺口）。
+中间 3 倍是纯复合误差。设计含义：倾斜在真实状态上训练只能关掉 2.2 倍，剩下 3 倍需要
+状态来自模型自己的 rollout（on-policy 蒸馏），同一套机器换 dump 位置即可。
+这解释了为什么只在真实数据上做的后训练够不着这个缺陷。
+
+F283 UTC 2026-08-09T00:00:00Z: lobs5 conda 环境的解释器被截断为 0 字节，且以最危险的方式静默失败。/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/envs/lobs5/bin/python3.11 大小 0，时间戳 Aug 6 21:26，python 与 python3 都是指向它的 symlink。执行空文件等同执行空脚本：rc=0、无任何 stdout/stderr、不写文件，连 python -c "print(1/0)" 都返回 0。我花了四轮诊断才定位（先怀疑 srun I/O 转发、再怀疑 /scratch 不共享），关键判据是 file -L 报 "empty"。损坏范围很窄：lib/libpython3.11.so.1.0（6.5MB）与 site-packages/jax（0.7.2）均完好，只有解释器二进制被清零。绕过方案（未改共享环境）：从 lobs5_recon/bin/python3.11 拷同版本 3.11.13 到 /projects/public/u6gb/bin/python3.11-lobs5，运行时 PYTHONHOME 指回 lobs5、LD_LIBRARY_PATH 指向 lobs5/lib，实测 jax 0.7.2 + orbax 正常。
+
+F284 UTC 2026-08-09T00:00:00Z: J-lens 实验完成，输出可达子空间极小且架构上界被数据证实。产物 /scratch/u6gb/kangli.u6gb/mech_interp_data/jlens_goog_jan2026_v2.json 与 jlens_V_goog_jan2026_v2.npy（320×851968 float32，1.09GB，Jacobian 已落盘故后续截断分析不必再动 GPU）。配置 N=512 窗口取轴 / N_JAC=128 窗口取 Jacobian / K=320 随机 cotangent / tail M=4 / GOOG Jan-2026 / boundary 498，attach 到 allocation 5964464。结果：状态总维数 P=851968（13 层×65536），架构上界 d_model=256（输出头是单个 Dense(256→2112)，故 rank(J)≤256 是架构结论不是假设），实测累计能量 @r=256 恰为 1.000 证实该上界；有效维度 r99=84，前 10 个方向占 80.8% 能量；奇异值 σ1=546、σ84=10.8、σ256=0.54、σ320=0.0027。
+
+F285 UTC 2026-08-09T00:00:00Z: 三条 steering 轴系统性避开输出可达子空间，这是本次最强发现。ρ(u)=‖Qᵀu‖²/‖u‖²，各向同性零假设为 r/P。@r=84：Traded volume 7.437e-06（0.075× 零假设，z_vs_shuffled=15.41）、OFI 2.519e-06（0.026×，z=1.78）、Realized volatility 1.463e-05（0.148×，z=22.16），零假设本身 9.860e-05。三条轴全部低于随机方向 7 到 40 倍，即 diff-of-means 轴 97% 以上的能量花在对输出没有直接影响的状态方向上。截断稳健：r=84/256/320 三档下排序完全一致（rvol>tvol>ofi）。校验：各向同性对照实测 9.945e-05 对理论 84/851968=9.86e-05，吻合，证明投影计算正确。含义：论文「Steered beliefs only partially materialize」此前无机制解释，现有一个——注入向量与模型实际用来影响输出的子空间几乎正交。可操作推论（未做）：把 steering 轴先投影到 Q 再注入，同样的 ‖u‖ 应产生大得多的输出改变。
+
+F286 UTC 2026-08-09T00:00:00Z: 原假说被数据否定，按计划预写的负结果处理方式关闭该路径。plan_global_workspace_20260809.md §3 的假说是「ρ 排序解释可控性排序」。实测 ρ 排序 rvol>tvol>ofi（三档截断一致），论文已报的引擎回放可控性排序是 tvol>ofi>rvol。ρ 最高的 realized volatility 恰是可控性最差的那个，故「落在输出可达子空间里」不解释三个特征之间的可控性差异。另外在最严格截断 r=84 下 OFI 轴与 shuffled-label 零假设已不可区分（z=1.78）。不追加实验去救该假说。
+
+F287 UTC 2026-08-09T20:34:50Z: 澄清 R5 的所指。ins.gitignore 里孤立的一行「R5」与 Notion 主页 (1.2)「use the R5 version of BPE」指的是变长无损分词器的版本号（实现 src/lossless_v5.py，词表 15847），不是同页 reply instructions 里的写作规则 (R5)「claims 之间要有逻辑演进」，也不是 aug.08_bpe_after_R15 里的 R15（学习率对照实验）。三者同名不同物，容易混。判据：主页 (8) 要求 encode/decode/inference 文件名带版本号「例如 R5」，且训练曲线子页标题为「Varlen R5 损失 2.839 → 2.066」。
+
+F293 UTC 2026-08-09T21:05:00Z: **用户纠正测量对象后撞出一个选择效应,足以给整晚结论
+打问号**。用户指出要测**生成的 order**(event 里的 field)而不是订单簿状态。按 Alex 的
+相位分解(我们的 tokenization 与他完全相同:MSG_LEN=26 / VOCAB=2112,runner 里就断言着)
+重测 phase 0-10,发现 **corrector 在吐非法消息**:
+  字段          draft      corr
+  event_type   0.000%    **5.162%**
+  size         0.037%    **9.028%**
+  price        0.013%     0.838%
+  direction    0.000%     0.300%
+哨兵值 -30000 / -3000000,是 NA token 解码失败。**不随 rollout 位置增长**
+(m0-100 为 5.61%,m400-500 为 4.50%),是恒定缺陷不是复合误差。
+**致命之处**:lobbench_features.all_features 对未定义处返回 NaN、zpool 再 isfinite
+过滤,所以 corrector 那 9%/5% 的非法输出被**静默丢弃**,它是在自己输出的**干净子集**
+上被打分,而 draft 用的是近乎全部输出。这是系统性偏袒后训练臂的选择效应,今晚所有
+「post 改善了 X」的数字都是在扔掉 corrector 最差输出之后算的。方向明确(偏袒 corr),
+量级待重算。这正是 Alex 的 OTHER 桶设计来抓的东西。
+
+F294 UTC 2026-08-09T21:08:00Z: **order 层面基本没有复合误差,复合误差在书状态里。**
+按 Alex 估计量(KL/H)测 phase 0-10 的斜率(每 100 条消息):event_type +0.0044→+0.0175、
+direction −0.0061→+0.0012、price_sign +0.0114→+0.0167、price_hi +0.0712→−0.0695、
+price_lo −0.0070→+0.0042、size_hi +0.0008→−0.0130、size_lo +0.0240→−0.0158、
+dt_ns_hi −0.0106→−0.0331、dt_ns_mid +0.0092→+0.0041、dt_ns_lo +0.0127→+0.0002。
+**全部 |slope| ≤ 0.07,多数 ≤ 0.02,若干为负。** 对比书状态量 spread 的 +0.683 nats/100。
+注意单位不同(KL/H 无量纲 vs nats),不能直接比大小,但 order 各相位**内部**一致地平。
+这在同一份数据上、用他的估计量,复现了我此前基于 21 特征提出的 stock/flow 二分。
+phase 7 dt_s 的 H=0.000(全部 dt<1 秒,整秒位恒为 0),被 h_eps 守卫正确标为 LOW-H 并
+置 NaN —— 该守卫在我们数据上确实会触发,不是摆设。
+
+F295 UTC 2026-08-09T21:10:00Z: event_type 相位上 **post 比 draft 差约 6 倍**
+(KL/H 约 0.55 vs 0.09,日块 CI 完全不重叠),而 draft 基本贴在 floor 上。成因就是
+F293 的非法输出:非法值落进 OTHER 桶,被计入 KL 而不是被丢掉。两条曲线都平 ——
+**没有复合误差,只有一个恒定的、后训练引入的分布损伤**。
+
+F288 UTC 2026-08-09T20:47:05Z: 论文数字全线修正——Notion aug.01_bpe_plan 页是 v1/v3 设计意图，与 R5 落地实现差两个版本，不可用于写作。权威源是 sigma-0-worktrees/varlen-minimal-20260808T172601Z/docs/R5_TOKENIZATION_SPEC.md（数字取自词表文件与编码器源码）。被推翻的关键项：(1) 它不是 BPE——无 merge 规则、无递归，是按字段逐值词表+逃逸机制；(2) dt.head 1992 非 848，price.head 5770 非 402，size.head 299 非 118，ref.head 712 非 118；(3) dt 单符号覆盖 78.84% 非 47.4%；(4) v5 保留纳秒（余数单占 1000 槽，还原率 100%），是 v4 才丢纳秒（24.92%）；(5) t_us 整段 2048 ID 在 v5 已回收，不存在首事件微秒锚点；(6) t_sec 每 16 事件重述一次，非每条消息；(7) typedir 是 11 种联合取值单符号，非 TYPE/DIR 两字段；(8) 均值口径 5.735（池）/ 6.0165（GOOG），8.07 是过时估算；(9) 词表增大导致 33.6M→51.2M（+52%），此前完全漏报。
+
+F296 UTC 2026-08-09T21:35:00Z: **F293 在独立的 2026-02 数据上完全复现,并多出一个
+决定性对照**。非法输出率(learned-P / random-P / draft):
+  event_type  5.150% / **0.009%** / 0.000%
+  size        9.162% /   4.053%  / 0.037%
+  price       1.016% /   0.731%  / 0.134%
+  direction   0.319% /   0.041%  / 0.000%
+一月对应值 5.162 / 9.028 / 0.838 / 0.300,**跨独立月份复现到 0.2 个百分点以内**,
+是结构性质不是噪声。**决定性的是 event_type 那一行:同范数随机方向只有 0.009%,
+学到的方向 5.150%,差 570 倍。** 所以不是「corrector 加噪声」,而是**学到的方向本身
+指向破坏语法的地方**。sidecar 记录 syntax_mask=True,掩码没拦住。
+另:runner 自己一直在记这个(`malformed messages: ... zero quantity draft 0.00% ->
+corrected 8.80~12.20%; book-inert [235] -> [314]`),我从没读过那行,是另起一套分析才
+撞上的。两者数字一致(zero-quantity ≈ size 非法率 9%)。
+
+F297 UTC 2026-08-09T21:38:00Z: 论文式(相位池化、减 floor、25 条消息一箱、日聚类
+bootstrap)的 headline 图,我们的形状与 Alex 论文 Figure 4 **不同**:
+anchor 从 ~0(贴 floor)升到 ~0.15 后在 m≈150 **饱和**并转平,而非全程稳步上升;
+post-trained **起点就在 0.18**(非法输出造成的恒定损伤),全程平,m≈150 后落到 anchor
+之下,末端 −2%。随机-P 对照 0.28~0.35 全程最差(对照行为正确)。anchor 的首箱为
+−0.0117(在 floor 上),所以论文式的「首末箱倍数」对我们**未定义**,不能照搬那个说法。
+结论:在 order 层面,后训练是拿**一个恒定的前置损伤**换**一条更平的曲线**,末端打平,
+且差异落在 CI 内。
+
+F298 UTC 2026-08-09T21:40:00Z: 2026-02 两条臂 20:53Z 均正常完成(193 batch,
+1222.7s / 1199.8s),各 64 序列 / **19 个交易日**,skipped=0。与 2026-01 的 20 天合并
+可得 39 天,用于收窄日块 CI(P248)。
+
+F289 UTC 2026-08-09T20:58:14Z: 论文 Table 1 的 book 张量行写错，用户抓出。错法是同一列比两个不同阶段的量：26tok 格写展开前 500x503，varlen 格写展开后 13000x503，读起来像 book 输入被改了 26 倍。核实 train_helpers.py:1302 repeat_book：if msg.shape[0]>book.shape[0] 则 np.repeat(book, msg//book)。26tok 走真分支 repeat 26 次得 13000 行；varlen 由 dataloader 先用 book[msg_idx] 展开到 13000 行故该 if 为假、恒等（encoding_varlen_R5.py:159 注释明写「JAX 侧零改动」）。真相：进模型的 book 张量两边都是 13000x503，book 编码器逐位未改。真正的差异是 tensor 内唯一快照数 500 vs 2600，且它不是独立设计选择，而是「同样符号预算装下 5.2 倍消息」的必然后果，即 GOOG 曝光混淆因素的 book 侧同一件事。
+
+F290 UTC 2026-08-09T21:18:53Z: 三个用户抓出/审计抓出的论文硬错误。(1) 术语：全文用 symbol 表示 token，但金融领域 symbol=ticker=股票代码，ICAIF 读者会把「Sequence length (symbols) 13000」读成一条序列里有一万三千只股票。根因是把中文规格文档的「符号」直译。已全文替换 97 处 symbol->token。(2) Table 1 的 2600 是 loader 抽取数不是窗内数：encoding_varlen_R5.py:178 是 tokens[:seq_len]，抽 2600 条编码出均值 15031 个 token 后截断到 13000，窗内实际 13000/5.735=2267 条。自乘可验：500x26=13000 精确，2600x5.735=14911 超出。这也是论文同时出现 4.53x 与 5.2x 两个压缩倍数的根源（2600/500=5.2 错，2267/500=4.53 对）。(3) anonymous 双盲投稿下 KL 宏把「Kang: #1:」印进 PDF 第 5 页，两个独立审计都判为 desk reject 级。
+
+F291 UTC 2026-08-09T21:32:36Z: 旧方法 reference 失败的真实机制（用户口述，此前论文写反了）。26tok 的 reference 是重复被引订单的 (price,size,time) 三元组，解码端拿这三个值去簿里搜。训练时看着便宜（原订单在上下文里，模型学会 copy）；生成时是三重精确匹配，而 time 取自近连续高熵值域，采样器无法逐位复现，于是经常匹配不到任何订单，撤单/成交被撮合引擎丢弃，被引订单永远留在簿里。此前论文把这 10 个符号写成「纯冗余，模型能白拿」，那是训练侧视角，掩盖了生成侧的失败模式，属于把强论点写成了弱论点。R5 的 ref_n 是位置引用，解码器索引自己维护的表，窗口内任意 n 必定解析到唯一订单，模型要预测的量从时间戳变成一个中位数为 4 的小整数。尚缺实测失败率，已在 tex 里标 KL。
+
+F292 UTC 2026-08-09T21:32:36Z: 词表质量的权威审计文档 /projects/public/u6gb/bpe-tokenization/multi-agents-world-model/VOCABULARY_PROPERTIES_ANALYSIS.md（2026-08-02，全量 1606.6 亿条精确计数非抽样）。关键量：live 14288/15847=90.16%，dead 1559 主因 t_sec zigzag 使奇数槽结构上不可达；Gini（仅 live）0.8999，Zipf 斜率 −1.22，top-1/100/1000 覆盖 8.88%/57.26%/85.16%；字段效率比（信息份额/token份额）dt 1.47x、price 1.40x、t_sec 1.09x、ref 0.97x、size 0.50x、typedir 0.32x（后者是理论上限非缺陷，2.16 bits 就是该字段全部信息量）；t_us_lo 条件熵恰为 10.0000 bits 即纯噪声，印证每 session 只发一次的设计；I(event_type; side)=0.000004 bits，1606 亿条上统计独立到小数点后六位，合并 typedir 只赚一个 token 的长度不吸收任何冗余。注意版本差：该文档的 6.9072 tokens/记录对应 t_sec 每条重述的 build，R5 改为每 16 事件重述后为 5.735，结构性结论可迁移、长度数字不可。
+
+F299 UTC 2026-08-09T22:15:00Z: **把非法输出计入(OTHER 桶)后重算书状态五特征,结论
+分裂成「斜率稳、水平不稳」**。非法消息率(四字段合计):draft 0.050% vs corr 14.713%。
+水平(mean D_m 的 corr−draft),丢弃 NaN → 计入:
+  spread                -1.0344 → -0.8211  (仍改善,缩水 21%)
+  limit_bid_order_ticks -3.7031 → -2.9122  (仍改善,缩水 21%)
+  log_depth             -0.1982 → -0.0128  (**缩水 94%,几乎归零**)
+  bid_volume            -0.1131 → +0.0410  (**符号翻转 → 变差**)
+  ask_volume            +0.1054 → +0.2386  (本就差,更差)
+水平改善 **4/5 → 3/5**。
+斜率(nats/100 msgs),丢弃 → 计入:
+  spread                +0.653→+0.085  /  +0.653→+0.106  (降 84%)
+  limit_bid_order_ticks +0.456→+0.044  /  +0.514→+0.059  (降 89%)
+  bid_volume            +0.192→+0.114  /  +0.192→+0.137
+  log_depth             +0.090→-0.058  /  +0.090→-0.052
+  ask_volume            +0.067→-0.054  /  +0.067→-0.048
+**五个斜率全部仍然下降。** 机制:非法率随 rollout **平**(learned-P 全程 13~17%、
+random-P 3~6%),所以它给水平加常数、对斜率零贡献 —— 斜率主张**结构上免疫**于该偏袒,
+水平主张不免疫。这不是运气,是两个量对恒定偏移的敏感性不同。
+
+F300 UTC 2026-08-09T22:18:00Z: **撤回 headline_paper_style.png 的置信带(点估计不在
+自己的带内)**。anchor 首箱点估计 −0.012,其 bootstrap CI 却是 [+0.02,+0.16]。原因:
+按天**有放回**重采样会复制序列,而 floor 把 rows 劈两半算,复制使两半更相似 → floor
+被压低 → excess=KL−floor 被系统性抬高;model KL 两侧同样被复制、几乎不受影响。
+**点估计干净(用原始未复制的行),带不可信。** 基于点估计的结论不受影响:
+order 层 post 全程 +0.151 vs anchor +0.125,逐箱胜负 10/20;m<150 post 差 2.2 倍
+(+0.175 vs +0.080),m>150 无法区分(+0.141 vs +0.145)。
+
+F293 UTC 2026-08-09T21:43:53Z: 两种编码的引用失败是对称的，此前论文只写了一半。SPEC §6 明载 R5 也会引用失败：当 K < ref_n <= 已写入总数时环形缓冲已覆盖真实 id，只能给合成 id，同样被撮合引擎丢弃——与 26tok 三元组匹配失败的可观测后果完全相同（撤单绑不到订单，被引订单永远留在簿里）。区别在于「什么支配失败率」：26tok 是结构性的（要求采样器精确复现高熵时间戳，加资源无用），R5 是定尺决策（K=256/1024/4096 对应 4.49%/1.73%/0.82%，可用内存买下来）。并列写反而更有说服力，也回应了审计致命-3「无损性只量化了一条失效路径」。
+
+F287 UTC 2026-08-09T22:05:00Z: 模型的前缀持续性只有真实的 71%，v2b 有实打实的修复余地。
+data/hp_base n=2000 两侧对比：prefix 延续率真实 0.6247 / 生成 0.5883（超额 +0.1247 vs
++0.0883，模型占 71%）；lag-1 延续率 0.7574 / 0.6823（超额占 71%）；P(涨|非零) 0.5018 /
+0.4730；kappa 1.4332 / 1.2179（超额占 50%）。缺口是延续率 +0.0364，小而具体，且正是
+v2b 的 phi 直接约束的量。结合 F280（前缀机制解释真实超额的 90.6%），v2b 的杠杆与靶子
+都已验证。
+
+F288 UTC 2026-08-09T22:05:00Z: 发表就绪度评估——当前不可发表，因为所有正面数字都是
+oracle 上界，没有一个来自训练出来的模型。已有的是：两条路线的干净证伪（R31 协方差->0、
+R62 余弦 0.9967）、全任务四条臂都动不了形状（z 在 -1.00 到 +0.39）、可行性上界（S0b）、
+机制归因（F280，是真实数据的性质不是模型的成绩）、工程使能条件（S1 映射 99.735%、
+S2 KL 预算 0.080%）。缺的正是核心表格「训练后的模型 vs 对照」。
+关键结构性结论：v2a 即使做到完美，energy 仍是零假设的 10.0 倍（p95 为 median 的 3.33
+倍），只有挂上模型外的标量 c=1.321 才降到 2.4 倍落进带内。故按当前方案「模型自己匹配
+return 分布」连上界都没有，v2b 是唯一能把尺度收进模型内部的路，不是可选项。
+宣称口径须改：方法做的是逐条增量的分布匹配，不是 return distribution matching。
+
+F289 UTC 2026-08-09T22:35:00Z: S0c —— v2b 的真上界测出来了，答案是「原则上够」。构造：
+从 v2a 臂（真实边际 + 模型自身次序）出发，只把一部分「反转」翻成「延续」，符号翻转
+精确保住 |Delta|，故边际与幅度聚集全部不动，唯一移动的量就是 v2b 的 phi 直接约束的
+前缀延续率。解出翻转概率 q=0.2191，实现延续率 0.6247 = 真实值。
+n=2000、4 seed、data/hp_base，零假设 energy median 1.5971e-3 p95 5.4200e-3、
+qL1 median 0.0607 p95 0.0999：
+  baseline            sd/real 0.5524  kappa 1.2179  energy 8.786e-2 (55.0x) qL1 0.1558
+  标量+外挂常数        sd/real 1.1147  kappa 1.2179  energy 1.283e-2 ( 8.0x) qL1 0.1558
+  v2a 真实边际         sd/real 0.7958  kappa 1.1406  energy 1.586e-2 ( 9.9x) qL1 0.0725 (qL1 落 p95)
+  v2b +前缀符号        sd/real 1.0254  kappa 1.4696  energy 3.137e-3 ( 2.0x) qL1 0.0585 (两项都落 p95)
+  real                sd/real 1.0000  kappa 1.4332
+仅靠符号翻转就把 sd/real 从 0.7958 抬到 1.0254、kappa 从 1.1406 抬到 1.4696（真实 1.4332），
+qL1 0.0585 甚至低于零假设中位数 0.0607。即：模型不需要外挂常数就能承载 return 分布——
+这是层 3 第一次有上界，且是肯定的。仍是上界不是可达性。
+
+F290 UTC 2026-08-09T22:35:00Z: 价格 token 改不了增量的符号，符号由 (type, direction)
+完全决定。data/hp_base/data_gen 300 文件 1339 次动价，四类全部锁死零例外：
+add on ask 0 涨 / 433 跌、add on bid 357/0、remove on ask 264/0、remove on bid 0/285。
+价格 token 的唯一杠杆是「这条消息动不动盘口」与「动多大」。
+两个后果：(1) v2b 仍可行，因为倾斜是看得见前缀的——在 R>0 的状态抬高 (add,bid)/
+(remove,ask) 的动价概率、压低另两类，聚合延续率即上升，phi 里的 1[Delta*R>0] 自动做这件事；
+(2) 「动不动」是唯一杠杆，而 v2a 的坐标（P(Delta=0)、分位箱）也在争同一个杠杆，
+故 v2a 与 v2b 的坐标必须在同一个凸对偶里联合求解。设计 §4.2 的分阶段（v2a 先跑并单独
+判决，v2b 视情况再做）结构上是错的：先解 v2a 会把动价率锁死，v2b 将无杠杆可用。
+
+F294 UTC 2026-08-09T21:59:38Z: 论文主线被我摆反了，用户纠正。核心不是 reference（那是最大单项压缩来源，但属于结果），而是「变长 + 按频率分配 = balanced vocabulary」，且 lossless 是前置硬约束（要当 simulator 用就必须无损）。正确论证链：lossless 是 entry condition -> 付出这个代价的两种朴素方式在相反方向上失败（每值一符号则 16 万词表且多数值只出现 1-2 次不可学；固定位数拆分则词表小但把近乎恒定的位与近乎均匀的位塞进同样大的槽）-> 两者是同一个失败：每符号承载的信息量极不均 -> 变长+按频率把每符号信息量拉平，同时保住可逆。关键澄清：balanced 不是「每个符号用得一样多」，而是「每个符号承载的信息量相当」，故字段效率比（信息份额/token份额，完美为 1.00x）才是该原理的直接度量，dt 1.47x / ref 0.97x / typedir 0.32x 应据此解读。
+
+F287 UTC 2026-08-09T00:00:00Z: attach 到共享 allocation 时必须关掉 JAX 显存预分配，否则症状分两档且都难查。默认 XLA_PYTHON_CLIENT_PREALLOCATE 会抢约 75% 显存，当同节点已有 JAX 进程时第二个进程报 jaxlib._jax.XlaRuntimeError: INTERNAL: Failed to initialize BLAS support（发生在第一个 Dense 的 dot_general 上）；运气差时更早失败，表现为无 traceback 的静默退出（我先后在 boundary 328/512 和 jacobian 1/128 处各遇一次，当时 nvidia-smi 显示 GPU 全空、主机 772GB 空闲，因而误判为内存问题）。修法：XLA_PYTHON_CLIENT_PREALLOCATE=false 加 XLA_PYTHON_CLIENT_ALLOCATOR=platform，已写入 scripts/jlens_run.sh。
+
+F288 UTC 2026-08-09T00:00:00Z: 输出可达子空间的维数不随 horizon 变化，但 ρ 随 horizon 略降。m=1（只看下一条消息）与 m=4 的 r99 同为 84，说明可达子空间的有效维度由架构决定而非由前瞻长度决定。ρ 值 m=1 对 m=4：ofi 4.249e-06→2.519e-06（0.043×→0.026× 零假设）、tvol 7.813e-06→7.437e-06（0.079×→0.075×）、rvol 1.528e-05→1.463e-05（0.155×→0.148×）。三条轴的相对排序 rvol>tvol>ofi 在两个 horizon 下不变。完整 6 档扫描（m=1,2,4,8,16,32）运行中。
+
+F266 UTC 2026-08-09T22:10:32Z: 变长 R5 生成的 LOB-Bench 评分崩在 `log_time_to_cancel/wasserstein: nan`。
+根因不在评分器：生成 CSV 里**撤单引用窗口内 NEW 单的命中率是 0.00%**（基线 26tok
+69.6%，真实数据 83.2%）。判别依据是撤单 id 全部落在 900,000,001..900,000,224（synth
+号段）而 NEW id 全部落在 901,568,000..934,130,131（主机 next_oid 号段），两套编号
+在文件里永不相遇。40 条序列里有 441 个重复撤单 id 且差值出现负数（-17/-10/-2），
+证明解码器的 RefTable **解析本身是成功的**，被毁掉的只是写 CSV 那一步。
+
+F295 UTC 2026-08-09T22:14:33Z: MarS 是有损的，已从论文原文取到逐字证据（此前只有用户口述，不能直接写进论文）。ICLR 2025 版附录 B：「Both price and volume are discretized into the range [0, 32), and interval into [0, 16). An index within the range [0, 49152) can uniquely identify a position for the (type, price, volume, interval) tuple.」Figure 2 图注亦写明「volume slot (binned volume)」。全文 lossless/lossy 各 0 次即他们未主张无损；order-batch 侧另用 VQGAN 把 order image 离散成 token，是第二层有损。措辞上他们自己很克制：「We take the first step toward building a generative foundation model as a world model」，故论文里应按「其目的下的刻意选择」陈述而非贬低。三方定位由此成立：MarS 短但不可逆 -> Nagy 可逆但每条固定 26 token -> 本文可逆且变长 5.735。
+
+F296 UTC 2026-08-09T22:14:33Z: 领域用词第二次出错：全文 56 处 code 需换成 tokenizer/tokenization/vocabulary。与 symbol/ticker 同源，都是把中文技术词直译成信息论词汇，而该领域惯例来自 NagyGenerativeAI2023 的「custom tokenizer for message data」。仅保留 code path（指代码路径）一处。
+
+F301 UTC 2026-08-09T22:32:00Z: **三步协议在 500 horizon(2× 训练窗口)上的结果**,
+action 字段,真值分位数分箱(40 箱 + 越界 + 非法),日块 bootstrap n=200:
+STEP 1 有 CE 的字段:**size**(斜率 +0.0189 CI[+0.010,+0.029])、**log10_dt**
+(+0.0188 CI[+0.010,+0.032])。event_type / direction / price_rel **本就没有 CE**
+(CI 均含 0)。
+STEP 2 这 2 个都被处理:**size 显著降低**(对照 −0.0296 CI[−0.045,−0.017]),post 斜率
+转负 −0.0106 CI[−0.025,−0.001](误差随位置缩小);**log10_dt 的 CE 被消掉**
+(post 斜率 CI[−0.003,+0.022] 含 0),但对照本身 n.s.。
+STEP 3 **均值出问题**:post 的 price_rel z 从 +2.699 到 +2.295 —— **离真值 2.7 个标准差
+且全程不动**,是恒定均值偏置不是 CE;draft 只有 −0.093→−0.405。event_type post z
++0.865→+0.930 vs draft +0.119→+0.312。size 上 post z +0.023 最好(随机 +4.076)。
+**结论:post 修好了「误差累不累积」,引入了「一开始就偏了」。** 与不裁剪 W1 的
+「post 均值 +1202 vs 真值 −225」是同一件事的两种表述。
+
+F302 UTC 2026-08-09T22:34:00Z: **更正 F(order_field_quality) 里 price 的 W1 结论,
+方向反了**。我的 W1 算在 ±60 ticks 的裁剪网格上,而真值 **47.9%** 的价格在该范围外。
+不裁剪重算:price W1 draft 728.1 / post 1506.7 / random 1272.7 —— **post 差 2.07 倍**,
+不是我先前说的好 1.93 倍。size 14.41/15.08(post 略好 4.5%,随机 615.4)、log10_dt
+1.220/1.526(post 好 20%)不受影响。判据:任何在有界网格上算的距离必须同时报**网格外
+质量占比**;47.9% 一出现就该知道结论不可信。这是本轮第二次「检查前先报数字」
+(第一次是单种子 5/5)。此后所有分箱改用**真值分位数**,从构造上消除该风险。
+
+F283 UTC 2026-08-09T23:50:00Z: 真正的分布匹配（R69）。把 4 维 φ 换成 g 的 11 格完整直方图（g = 价格相对
+本侧最优报价的带符号 tick 距离，分箱划分整个支撑）。真实 vs 生成缺陷单调：
+[3,5] 0.049、[2,2] 0.094、[1,1] 0.187、[0,0] 0.772、[-1,-1] 1.115（偏多）、
+(-inf,-101] 1.333。细分末格发现模型几乎不用高位数字：(-inf,-1001] 真实 0.15602 vs
+生成 0.00006。倾斜后 TV 到目标 0.43024→0.01150（−97.3%），11 格中 10 格命中 5-14% 内，
+KL=0.786 nats/消息（4 维版 0.175）。预训练条件在 (-inf,-101] 上放 80.5% 质量而真实
+44.3%——4 维 φ 对此完全盲视。蒸馏收敛到可达 KL 的 90.4%（4 维版 65%），总步长
+0.579% of ||W||：约束更完整反而更好拟合，因为直方图移动比局部尖锐调整更接近 h 的
+线性函数。
+
+F289 UTC 2026-08-09T00:00:00Z: per-layer 分解给出本轮最强的价值论据：可解码性与输出影响力在层间几乎不相关，Pearson r = -0.16。输出影响力（各层占 851968 维状态对 logits 总敏感度的份额，由 V 的分层 Frobenius 能量给出）为 L0..L12 = 0.67/1.37/5.25/12.97/2.89/6.47/5.45/23.96/15.32/0.12/0.00/19.87/5.68 %；论文已有的 OFI 逐层可解码 R²（job 5641147 的 per_layer 字段）为 0.0465/0.5483/0.4061/0.5919/0.5592/0.4504/0.3493/-0.0013/0.0664/-0.0022/-0.0023/0.1580/0.1133。两条关键对照：(1) L7 的 OFI R² = -0.001（论文用四探针阶梯判定为 genuine absence）却占 23.96% 的输出影响力，为全栈最高，L7+L8 合计 39%，即论文说「什么都没有」的地方恰是模型施加控制的地方；(2) L9 与 L10 既无市场信息（R²≈0）也几乎无输出影响（0.12% 与 0.00%），是真正未被利用的两层，论文对此完全没有结论。产物 /scratch/u6gb/kangli.u6gb/mech_interp_data/jlens_perlayer_goog_jan2026_v2.json，代码 src/jlens_perlayer.py。
+
+F290 UTC 2026-08-09T00:00:00Z: horizon 扫描判定「出不去」而非「还没出去」，但只覆盖 1-4 条消息。m=1/2/4 的 r99 = 84/85/84，稳定，说明可达子空间的有效维度由架构决定而非由前瞻长度决定；三条轴相对随机基线的比值 ofi 0.043→0.033→0.026、tvol 0.079→0.075→0.075、rvol 0.155→0.155→0.148，差距不收窄，OFI 反而略微拉大。边界要如实写：m=8 及以上未完成，先是 K=320 的 vmap 在 m=8 需要 13.8 GiB 而 OOM，改成 CHUNK=32 分块后又遇上 5964464/5964465 两个 allocation 的 GPU 被其他作业占满（78-96 GB/卡），按「只 attach 不 sbatch」规则未提交新作业。
+
+F291 UTC 2026-08-09T00:00:00Z: 崩溃的 sweep 仍可从已落盘的中间产物无 GPU 恢复。horizon 运行在 m=8 OOM 死掉、未写 JSON，但 m=1/2/4 的 V 矩阵在各自算完时就已 np.save 落盘，故用 src/jlens_horizon_from_V.py 在登录节点纯 CPU 重算出全部 ρ，结果与 GPU 运行时打印的数值逐位一致（ofi 4.249e-06/3.270e-06/2.519e-06 等），既恢复了数据又顺带验证了 CPU 路径正确。该脚本的关键是不显式构造 Q（851968×320 float64 = 2.18 GB 会被登录节点 cgroup SIGKILL）：因 Q = Vᵀ E diag(1/sv)，故 Qᵀu = diag(1/sv) Eᵀ (Vu) 只依赖 K 维向量 Vu，Gram 与 Vu 均按列块在 mmap 上累加，峰值内存降到一块 168 MB。
+
+F284 UTC 2026-08-09T22:29:36Z: 本地 main (c41fa36) 与 origin/main (8247ee1) 的 diff 是纯删除 75 行、零新增，即远程已含 ACM 迁移，本地只多出我写的 70 行 section 加 .gitignore。所以"以远程为准重改"不需要重写，git diff 生成补丁 → reset --hard origin/main → git apply 即可精确移植。另：.gitignore 里的 `**.md` 规则让 INFERENCE_SPEED_SECTION.md 不出现在 git status，一度误判为改动丢失。
+
+F267 UTC 2026-08-09T22:40:00Z: 变长生成 1.32 秒/消息里**绝大部分是 XLA 重编译**，不是推理。
+`generate_tokens_R5` 未 jit，且主机循环每条消息新建一个 `logits_fn` lambda、
+函数内部又新建 `step` 闭包；JAX 编译缓存以**被追踪函数的对象身份**为键，
+新闭包＝缓存永不命中＝每条消息重编译一次 14 步 scan。
+把生成器与预填充各提到两层循环之外 jit 一次后：2 条序列总耗时
+**11 分钟 -> 67.8 秒**（含载模型/建掩码/编译），每条序列边际 330 秒 -> **约 13 秒**，
+**约 25×**。算法、掩码、FSM、采样、rng 分裂顺序逐位不变，属目标 (2.3)。
+255 条的全量生成因此从 30 分钟降到约 2 分钟（32 片）。
+
+F268 UTC 2026-08-09T22:40:00Z: 解码器引用表在生成起点为空时，撤单只能撤生成窗口内自己刚下的单，
+窗口内命中率 91.0% —— **高于真实数据的 83.2% 就是警报**，说明表达不出
+「撤一张生成窗口之前就存在的挂单」（真实数据里约 17% 属于这一类）。
+用条件窗口的真实 NEW id 预热引用表后为 94.3%，仍高于真实，进一步说明
+step-9000 模型发出的 `ref_n` 集中在小值，即偏好撤刚下的单。
+基线 26tok 是 69.6%（**低于**真实），因为它的撤单能带条件窗口的真实 id。
+
+F269 UTC 2026-08-09T22:45:00Z: 【varlen 训练空转 5 小时的根因：一条亚分价成交】
+作业 5957521 自 17:25 起连续 12 次失败、每次约 14 分钟，checkpoint 冻结在 step 9000。
+证据链：(a) sacct 17 个 FAILED 步，exit 1:0；(b) 20 个 checkpoint 目录中 13 个只含
+step 9000；(c) node2 日志
+`lossless_v5.LosslessEncodingError: row 2430: price is not on a half tick (numerator -1252686)`。
+链条：亚分价成交（sub-penny，隐藏单中点成交/零售价格改善）-> 分子 2*price-ask-bid
+除不尽 tick=100 -> lossless_v5.derive_price_half_ticks 按设计拒绝 -> dataloader worker
+抛异常 -> rank 死 -> JAX 协调服务判整个 16 卡作业失败。
+恢复点 9000、崩溃点约 9429（micro_batch 10716），checkpoint 间隔 500 步，
+**永远差 71 步存不上下一个 checkpoint**，净进度精确为零。
+
+F270 UTC 2026-08-09T22:45:00Z: 【编码器对数值大小robust，对结构性约束不 robust】
+写护栏测试时用 price=-1e18 想制造「必然编不出来」，结果编码器**编出来了**：
+分子 -2e18 整除 tick，长尾走 base-1024 逃逸，位数再多也表示得了。
+真正让编码器无路可走的是「时间戳非单调」这类结构性约束，不是数值大小。
+护栏要防的是后者，测试也必须用后者触发。
+
+F292 UTC 2026-08-09T00:00:00Z: 「这里哪里 global」这个质疑成立，且量化后答案是否定的——SSM 的输出可达子空间不是共享工作空间而是少数通道垄断。GWT 的主张不只是存在低维空间，而是该空间被众多模块共享读写（Anthropic 的依据是读写连接度比普通方向高约 100×）。把每个 (layer, head) 当作一个模块（13×8=104，论文本身也按 head 刻画长记忆积分器），用 V 的分模块 Frobenius 能量算影响力份额：participation ratio = 23.3（均匀应为 104）、Gini = 0.750（均匀应为 0）、最大单模块 L7H6 占 10.3%（均匀应为 1.0%，即 10 倍）、top-3 占 26.6%、top-5 占 38.9%（均匀 4.8%）、top-20 占 74.8%、持有≥半个均匀份额的模块 41/104。最大的几个模块 L7H6 10.3% / L8H7 8.7% / L3H2 7.5% / L7H0 6.3% / L11H6 5.9%，其中 L7 有两个 head 进前四，而论文判定 L7 是 OFI 的 genuine absence 层。结论：语言模型残差流里被报告的那种共享工作空间在此 SSM 中不存在，可达子空间同样低维（84/851968）但不共享。产物 /scratch/u6gb/kangli.u6gb/mech_interp_data/jlens_globality_goog_jan2026_v2.json，代码 src/jlens_globality.py，图 figures/fig8_globality.png。
+
+F269 UTC 2026-08-09T23:09:13Z: **首个干净的变长 vs 26tok 对照**（同 248 条序列、同条件窗口、同 harness）：
+WS-21 变长 0.22941 vs 基线 0.23997（变长胜 4.4%），KS-21 0.13946 vs 0.11713（基线胜 19.1%），
+L1-21 0.22899 vs 0.19328（基线胜 18.5%）。变长在 21 项 Wasserstein 里赢 11 项，
+且**胜负沿一条清晰界线**：赢的全是订单几何（bid_cancellation_depth 0.0836 vs 0.3689 = **4.4×**、
+cancellation_ticks 同量级、limit_order_ticks/depth、vol_per_min 2.2×），
+输的全是时序与量（log_inter_arrival 0.3084 vs 0.0827 = 3.7× 差、spread 0.5492 vs 0.2143、
+bid_volume 3.6× 差）。几何优势对应 `price_rel` 的归纳偏置，时序劣势对应 v5 新增的 dt 纳秒余数。
+**注意变长只训练到 step 9000/32000（28%），基线是 step 32001 完整训练。**
+
+F270 UTC 2026-08-09T23:09:13Z: **R5 并不比 R4 差**——上一轮我把两把尺子混了。R14(v4) 的 0.1935 是**全池 3,136 条**，
+今天的 0.22941 是**子集 248 条**；已实测的子集/全池放大系数 1.1445（基线臂：0.23708/0.20714）。
+R5 换算到全池 = **0.2004**，与 R4 的 0.1935 差 **3.6%**，而 R5 只训练 28%。
+另外 R4 当年报的「胜 26tok 30%」分母是 0.2748，那是 PyTorch 自建 harness 的坏基线
+（同模型正确 harness 上 0.20714，被打残 32%）。**该系数量在基线臂上，套到变长臂假设
+「子集放大与模型无关」，未直接验证；跑全池即可消掉（现在约 25 分钟）。**
+
+F271 UTC 2026-08-09T23:09:13Z: 变长生成多样性不足的机制**定位为撤单复读**，四个候选逐一排除：
+(a) rollout 衰减——按进度分 5 段，唯一价格比 0.344→0.340、熵 2.271→2.221，**全程平**；
+(b) 掩码卡住——全局唯一价 3,520 vs 基线 3,528，**词表够得着**；
+(c) 盘口冻结致相对价映射成常数——唯一中价 5.9（基线 4.5、真实 7.2）、中价不动 97.0%
+（基线 97.7%、真实 96.2%），**簿比基线动得还好**；
+(d) **复读上一条输出——相邻撤单四字段全同占 36.9%，基线 8.4%，真实 4.1%**。
+且复读率随训练上升（4500 34.7% → 6500 36.8% → 9000 36.9%），熵同步下降。
+**但三个点全在 32,000 步余弦的高 LR 段**，退火期变宽是常见形态，需跑满再判。
+独立佐证指向表示：价差 3.1¢ vs 真实 4.8¢（基线 4.0¢），而 spread 正是变长最差的一项。
+
+F271 UTC 2026-08-09T23:35:00Z: 【净进度为零需要两个 bug，任一单独都不致命】
+崩溃周期 14 分钟（编码器亚分价 raise），保存周期 68 分钟（checkpoint_every=3000 步）。
+    只有崩溃 bug：auto 模式首存在 5 分钟、之后 15 分钟一次 -> 每个周期都能存下 -> 会推进
+    只有保存 bug：不崩就跑满 5 小时才存 -> 完全正常
+    两个同时： 崩溃周期 < 保存周期 -> **一次都存不下** -> 净进度精确为零
+代价：17:25-22:39 共 5.23 小时 × 16 GPU = **83.7 GPU-小时**，checkpoint 停在 9000。
+教训不是「要修 bug」，是**故障排查时要看两个时间常数的相对关系**，
+不是各自的绝对值。单看「14 分钟崩一次」会去修崩溃；单看「68 分钟存一次」会觉得没问题。
+
+F272 UTC 2026-08-09T23:35:00Z: 【resume 的单位错误：一个 bug 三处症状】
+`resume_from_step` 取自 `state.step`（优化器步），下游三处全数 micro-batch：
+    dataloading.py:367  skip_samples = resume_from_step * per_process_bsz
+    train_helpers:981   batch_offset -> tqdm 起点
+    train_helpers:1001  batch_idx    -> CURTAIL_EPOCHS 边界
+K=4 下：只跳过应跳量的 1/4（step 9000 时重放 108,000 样本/节点）、
+进度条起点差 27,000、curtail 边界晚 27,000 个 micro-batch 触发。
+K=1 时本式恒等，所以这个 bug 在引入梯度累积之前不存在，也不会被任何回归测试抓到。
+
+F273 UTC 2026-08-09T23:35:00Z: 【护栏上线后的实测：真正的退化不是亚分价】
+四节点 1,691 个优化步内的诊断分布：
+    half_tick_cut     2 次      <- 亚分价截断,极罕见
+    encode_error      0 次      <- 没有整窗编不出来的
+    masked_positions  231 次    <- 主要项：2,600 条消息编不出 13,000 个 token
+    掩码位数 min 333 / 中位 1,153 / max 11,226（max 那条就是亚分价截断得早）
+即：**打死作业 5 小时的那个原因，实际发生率是万分之一量级**；
+而占绝大多数的 231 次是设计表里「n_messages=2600 -> 100% 覆盖」这条结论
+在 48 个月全池上不再成立（该表只测了 2022-01）。
+估算损失约 0.06% 的监督信号，可忽略，但**它此前是完全静默的**。
+
+F284 UTC 2026-08-10T03:40:00Z: 独立审计（sub-agent）判决 v2 不是 distribution matching，三条致命项全部逐位
+复核通过：(1) R69 声称的 renormalise 在代码里不存在，实为把末格拉宽藏起 15.6% 不可达
+质量，诚实 12 格 TV 0.58626→0.16752（−71.4%）而非 0.43024→0.01150（−97.3%），地板
+0.15602；(2) 第二个不可行格 [6,inf) 未申报，lambda_0=0.12048193=mu_0/(2*ridge) 逐位相同，
+attained_0 精确 0，是 ridge 影子价格（R67 教训第二次发生，被 ridge 吞掉）；
+(3) 广告 TV=0.01150 是 100% 正则化偏差，ridge*sum|lambda|=0.011496 逐位相同，KKT 残差
+4.5e-14。核心论点：池化约束不蕴含逐状态条件，lambda 全局故 p*/pi 是状态无关的阶梯，
+整个后训练只搬运 10 个标量。TV(被优化的预训练条件, 实际 rollout)=0.30789 是待修缺陷
+TV(rollout,real)=0.15432 的两倍。审计报告在
+/local/user/1483804540/claude-1483804540/-lus-lfs1aip2-projects-public-u6gb/86555900-8835-408c-8841-89733592f85d/tasks/af6271aef3825365b.output
+
+F285 UTC 2026-08-10T03:40:00Z: 我自己查出的更根本一条：E[log p(实际发出 token)]=-6.921 而 -H(p)=-5.732，
+差 1.19 nats。若 token 真从该分布采样则两者必须相等。说明读到的 pi_pre 不是生成时
+采样用的那个（可能采样路径有掩码/重归一化）。低位数字条件熵 5.65（teacher-forced）/
+5.73（on-policy），有效支撑 328/347 of 1000。
+
+F286 UTC 2026-08-10T03:40:00Z: 用户提出的 MC/拒绝采样想法达到零假设。6000 条 rollout 按 KDE 密度比
+w=p_real/p_model 重加权：energy 从 49.6x null 降到 0.2x（留出版 0.56x，仍在 null 内），
+qL1 0.1581→0.0552，ESS 41.5%。尾部按深度衰减（留出）：P(|r|>2sd) 恢复 98%、
+3sd 恢复 50%、4sd 恢复 10%；oracle 与留出几乎相同，故是支撑稀薄而非过拟合。
+仅 0.25% 真实收益率落在模型范围外，|r| 99.9 分位真实 5.157sd 模型 3.621sd。
+
+F287 UTC 2026-08-10T03:40:00Z: 逐序列重加权有可测天花板。cos(grad_RFT, grad_plainCE)=+0.9985（v1 是 0.9967）。
+机制：192 条 rollout 的逐序列梯度 g_i=gbar+delta_i，||gbar||=0.201、mean||delta||=0.137、
+mean cos(g_i,gbar)=0.816，共同方向占梯度能量 66.5%；200 次随机 lognormal 重加权最多
+旋转到 cos>=0.98608。故 RFT/RAFT/best-of-n/序列级 reward PG/GRPO/v1 这一整类在本模型上
+近乎惰性。出路是逐位置值函数比 pi*=pi*E[w|x<=t]/E[w|x<t]，V(R,t) 用 149 万个点回归，
+逐候选乘子 log V(R+Delta(v,s),t+1)-log V(R,t)：聚合梯度余弦 −0.3868（穿过上界），
+但可达 KL 仅 0.0232 nats、decoder 只捕获 2.0%（92% 候选 Delta=0 使乘子成常数被 softmax
+约掉；且"哪些候选改进盘口"随状态跳变，线性层做不了状态依赖索引）。
+
+F288 UTC 2026-08-10T03:40:00Z: 条件化修掉审计第一条。真实放置律随价差强烈变化且必须变化（价差 1 tick 时
+物理上不可能改进 2+ tick）：P(改进盘口) 随价差 0.052/0.066/0.079/0.100/0.108 单调上升；
+max TV(条件直方图, 池化直方图)=0.15242，占池化总缺陷 0.44825 的 34%——即池化目标里
+三分之一的"模型错了"只是价差混合。按价差分 5 个 regime 各解 lambda(c) 后，各 regime
+TV 0.400/0.415/0.468/0.438 → 0.027/0.032/0.038/0.015。
+
+F285 UTC 2026-08-09T23:28:07Z: 两张 Top-k 表"太夸张"的根因是 \small 之后又套 \resizebox{\textwidth}{!}：自然宽 333.6pt 被拉到 506.3pt，等比放大 1.52 倍，9pt 的 \small 渲染成约 13.7pt，比正文还大。table* 本身已足够容纳，resizebox 纯属多余。另查出全部 10 张表的 caption 都在表下方，而 ACM 规范要求表格 caption 在上方（只有图在下）。表格宽度分布：跨栏表 299-400pt（占 span 59-79%），我的两张单栏表 177/206pt（占 column 73/86%）。
+
+F286 UTC 2026-08-09T23:32:06Z: 「可达 KL」在本任务里同时是三样东西, 读错方向会得出相反结论。KL(p*||pi) 逐 regime 为
+0.6656/0.6295/0.8482/0.8251 nats/msg (条件直方图), 对比 MC-twisted 的 0.0232。(a) 作为路线容量上界越大越好:
+twisted 即使 100% 实现也只移动 0.0232 nats, 故判定「必须动 trunk」是量化结论而非印象; (b) 作为代价越小越好:
+price-low field 的熵约 5.732 nats, 0.79 是其 14%, 正是第 6 条闸门 (不牺牲 perplexity) 要管的量;
+(c) 作为模型缺陷诊断中性: 0.79 大是因为各 regime TV(model,real)=0.400/0.415/0.468/0.438。
+蒸馏损失 H(p*,pi_theta)=H(p*)+KL(p*||pi_theta), H(p*) 是不可动地板, 因此「预训练损失 - 地板」恰等于可达 KL,
+这使天花板在训练前即可知。实测: cond 5.086877->4.449408 (降 0.6375, 捕获 86%), twist 5.691688->5.691055
+(降 0.00063)。step_norm 0.3195 (0.536% of ||W||=59.607) vs 0.0170 (0.029%) 佐证 twist 那一步小到改不动任何东西。
+
+F274 UTC 2026-08-09T23:40:00Z: 【第一个真实对照：varlen 落后 19.8%，但按指标类型完美二分】
+同一份 256 序列清单，同一个评分器，checkpoint step 9000（占目标 28%）：
+    WS-21   26tok 0.21715  varlen 0.26006   +19.8%
+    KS-21   26tok 0.11616  varlen 0.16132   +38.9%
+    L1-21   26tok 0.18595  varlen 0.24181   +30.0%
+逐指标分解出现**一条极干净的分界线**：
+  需要簿状态的指标 varlen 全输：spread +0.336、ofi_down +0.402、ofi_up +0.193、
+    ask_volume +0.203、bid_volume +0.172、ask_volume_touch +0.108、
+    orderbook_imbalance +0.044
+  只需相对价格的指标 varlen 全赢：ask_cancellation_depth -0.249（领先 63%）、
+    ask_cancellation_ticks -0.248、bid_cancellation_depth/ticks -0.150、
+    limit_bid_order_depth/ticks -0.095、limit_ask_order_ticks/depth -0.035
+根因已定位（F275）。这条分界线本身是结论：**相对半 tick 编码在位置类指标上
+确实优于 26tok 的绝对价十进制片段**，且这个优势在簿输入全为零时依然成立。
+
+F275 UTC 2026-08-09T23:40:00Z: 【根因：生成时喂给模型的簿是常量全零】
+scripts/varlen_bench_generate.py:139 `_bk_const = jnp.zeros((1, book_dim))`，
+prefill 与逐 token 生成都用它。而模型是带簿编码器训练的（book_depth 500 -> d_book 503），
+26tok 基线走的是活簿（transform_L2_state_gpu 在 jit 循环里随撮合引擎演化）。
+即：**基线拿真簿、变长拿全零**，既不公平也直接解释了上面那条分界线。
+撮合引擎本来就在生成循环里（第 352 行已经在读 get_L2_state 取 ask1/bid1），
+所以修复不需要新基建，只需把 503 维簿表示接上并穿进生成器。
+
+F297 UTC 2026-08-09T23:40:28Z: artifacts-v2.md 的核心价值不是指标本身，而是每个指标直接推出一个设计决策，论文此前缺这条链。可用的 profiling 组：mid 日内漂移约 $31、spread 从 $1.19 收窄到 $0.63、event rate U 型（开盘 27/sec → 午间 10/sec → 收盘 28/sec）三者非平稳，而 event type composition 全天稳定（约 47% NEW）——正好解释为何 price 存相对量、spacing 存 dt、time-of-day 单独给、而 typedir 可用固定小词表。另有 dt 双峰（9.5% 在 dt=0）驱动三路由，REF 中位 4 驱动位置引用。REF 可学性证据：age 序列自相关 +0.085，且 DELETE 中位 age=4（闪单）对 EXEC 中位 age=10（耐心单），说明 REF 不是随机而有可学结构。用户两点修正在 R5 中均已落实：dt 保留纳秒（artifacts-v2 §1.3.1 的「丢 ns」已过时），absolute time 只到秒（v5 已回收 t_us 整段 2048 ID）。注意 EXEC_H 存在口径冲突：artifacts-v2 测 AMZN 2021 单日说 EXEC_H 占成交量 38.2% 且是 EXEC_V 的 4.2 倍 leading indicator，而 R5 SPEC 在 SP500 2022-2025 的 29.4 亿条里说 event_type 5 从未出现，两者数据集不同，未在论文中合并。
+
+F293 UTC 2026-08-09T00:00:00Z: horizon 扫描补到 m=8，结论更稳：r99 = 84/85/84/83（m=1/2/4/8），有效维度不随前瞻长度变化；三条轴相对随机基线 ofi 0.043→0.033→0.026→0.020、tvol 0.079→0.075→0.075→0.075、rvol 0.155→0.155→0.148→0.150，差距不收窄且 OFI 持续拉大，即「出不去」而非「还没出去」在 1-8 条消息范围内成立。m=16/32 仍在跑。
+
+F287 UTC 2026-08-09T23:43:45Z: 【重大撤回】CRPS 任务里整条 tilt/蒸馏链的输入不是价格条件分布, 而是 size 的高位 base-100 数字。
+根因 src/lob/inference_no_errcorr.py:1987 `_lab = _m[:, _L:]` 按整条消息(26 token)平移标签, 而因果 token 模型
+logits[j] 预测 token j+1。形状相容故永不报错。字段布局 TOK_LENS=(1,1,3,2,1,3,2,3,3,2,2,3) 下位置 4=price_low
+(词表 1108-2107), 位置 5=size_high (词表 1008-1107); dump 取 pos%26==4 实际读到位置 5。
+实测: dumped 分布熵 0.2663 nats, 98.6% 在 token 1008/1009 (=size_high 0 与 1, 整手 100-199 股),
+price band 内质量 1.5e-5, 给 label_low 的 mean log p = -22.95 nats, 按消息平移 -2..+2 全部无效。
+连带: 本任务所有 CE 数字测的是 26-token-ahead CE (约 21 nats), 第 6 条 perplexity 闸门全部作废。
+幸存: 拒绝采样 oracle (只用收益率)、twisted_target (只用 label)、一切来自已生成消息+订单簿的统计。
+修复 commit 5379812: _lab=_m[:,1:1-_L] 且 _pos=(arange+1)%_L, 并加 [PLOG-CHK] 自检行。
+
+F288 UTC 2026-08-09T23:43:45Z: 触发这次排查的是一个不可能成立的对照: 冻结 λ 的 on-policy 复核里, 条件分布给 bin [6,inf]
+0.26168 的概率, 而 12000 次实际生成里 0 次。若那是采样律, P(0 of 12000)=0.74^12000≈0。
+同一份数据里 TV(emitted,real)=0.19128 远好于 TV(teacher-forced conditional,real)=0.48899, 也不自洽:
+若 token 抽自该条件分布, 聚合直方图应等于平均条件分布。两处不自洽指向同一个根因。
+
+F303 UTC 2026-08-10T00:05:00Z: **horizon 扫描验证了用户的判断:复合误差随外推深度出现。**
+训练窗口 500 条。有 CE 的 action 字段数:1000 条(2×) **2/5**、1500 条(3×) **2/5**、
+2000 条(4×) **5/5(全部)**。但**不是所有字段的斜率都在长**:event_type 真在长
+(+0.0058→+0.0074→+0.0103)、direction 也在长(−0.0063→−0.0004→**+0.0065**,符号翻转);
+price_rel 斜率无趋势,它的显著主要来自 **CI 收窄**([−0.003,+0.106]→[+0.020,+0.067]),
+是统计功效上来了不是效应变大;size 与 log10_dt 的斜率反而缩小但始终显著。
+严谨表述:**4× 外推下五个字段全部可检出 CE,其中 event_type 与 direction 的效应本身
+随外推增长。** 4000 条(8×)的 h3500_learned 已完成 129 batch —— **旧记忆「4000 条
+必 OOM」在 n_seq=32 下不成立**,该条需加层。
+
+F304 UTC 2026-08-10T00:07:00Z: **STEP 2/3 结果。** STEP 2 斜率对照(post−pre):
+**size 在三个 horizon 全部显著降低**(−0.0296[−0.045,−0.017] / −0.0102[−0.016,−0.006]
+/ −0.0095[−0.014,−0.004]),是唯一处处显著的字段;log10_dt 仅在 3× 显著(−0.0116);
+event_type 在 4× **变差**(+0.0205[+0.000,+0.041]);direction/price_rel 处处 n.s.
+(price_rel 点估计在 2×/4× 为负 −0.0229/−0.0254,CI 贴 0)。
+STEP 3 均值偏移 z(end),draft→post:**log10_dt +1.474/+1.798/+1.629 → −0.170/−0.212/
+−0.148**,即预训练的消息间隔均值偏 1.5~1.8 个标准差,后训练压到 0.15~0.2 以内,
+**降低约 91%,三个 horizon 全部成立** —— 今晚最强的单条正面结果。
+direction 三处均改善;event_type 三处均**变差约 2 倍**(+0.312/+0.537/+0.530 →
++0.930/+1.178/+1.161);price_rel 混合(2× 时 post +2.295 很差,但 3×/4× 分别
++0.615/+0.340,与 draft 相当)。
+
+F305 UTC 2026-08-10T00:09:00Z: 14 条臂 12 条完成,2 条以
+`gpu_cudamallocasync_allocator` 启动期错误挂掉(n256_feb_random / h3500_random,
+均 0 batch),已在 nid010093 GPU2/GPU3 重起。非法率在三个 horizon 上稳定:
+draft 0.052~0.056%、corr 14.27~14.74%、random 4.23~4.46% —— 与 horizon 无关,
+进一步确认是恒定缺陷。
+
+F298 UTC 2026-08-09T23:45:48Z: foundation-model-aramis-2026/thesis_template/references.bib（124 条）与本文 bib 差集 114 条，其中六条直接补上本文的引用缺口。最关键 limisiewicz2026computeoptimaltokenization（Compute Optimal Tokenization，Meta/Zettlemoyer 组）——它把「词表大小与序列长度在固定算力预算下互斥」讲成正题，正是本文两轴对照被迫采用的同一套记账，此前论文无任何先例支撑。其余：coletta2023conditionalgeneratorslimitorder（Vyetrenko 等，JP Morgan，且发表于 ICAIF 本会）、kolm2025tlob、lecun2022path 与 bruce2024genie（world model 概念的出处，此前论文用了这个词却零引用）、morin2005hierarchical（给参数量 +52% 提供可缓解路径，避免「无法消除」的绝对措辞）、kaplan2020scaling 与 hoffmann2022chinchilla（论文用了 C=6NT 却一直没引出处）。另补 sennrich2016bpe 与 kudo2018sentencepiece，替换审计指出的错误引用 vaswani2017attention（该文与 subword 无关）。bib 由 160 增至 170 条。
+
+F276 UTC 2026-08-10T00:05:00Z: 【vmap 过的函数要 2-D 输入，错误信息落在被调方】
+`preproc.transform_L2_state_gpu` 外面套了 `jax.vmap(in_axes=(0,None,None))`，
+所以必须传 `(N,43)`。传 1-D `(43,)` 时 vmap 沿那 43 个元素逐个映射，
+每个切片是 0 维标量，函数体第一句 `book[:3]` 报
+`IndexError: Too many indices: array is 0-dimensional, but 1 were indexed`。
+**错误发生在被调方内部，原因在调用方的形状约定**，堆栈里看不到 vmap。
+基线调用处 `inference_no_errcorr.py:1055` 结尾正是 `.reshape(1,-1)`——
+我抄了那一段的内容，漏了那一句形状。
+判据：包装器（vmap/pmap/jit）改变输入契约，读函数签名不够，要读**装饰器**。
+
+F294 UTC 2026-08-09T00:00:00Z: random-weights twin 对照推翻了「集中度是训练造成的」这一暗示，同时给出两个更强的结论。集中度几乎不变：训练 PR 23.3 / Gini 0.750 / top-5 38.9%，twin PR 22.2 / Gini 0.688 / top-5 40.4%——即输出影响力的少数通道垄断是架构性质，该 SSM 从来就没有全局工作空间，不是训练破坏的。训练改变的是两件别的事。其一，垄断者的身份：twin 的 per-layer 影响力单调衰减且 L0 独占 49.96%（浅层路径短自然主导），训练后 L0 降至 0.67%（降 75 倍）、L1 13.89%→1.37%，控制权搬到中后段 L7 2.55%→23.96%、L8 2.07%→15.32%、L11 3.25%→19.87%（合计 59%），且 L9/L10 从 3.12%/3.10% 被清空到 0.12%/0.00%。其二，也是最反直觉的，训练把特征轴推出了输出通道：ρ 相对随机方向 tvol 37.7×→0.075×（降 500 倍）、ofi 55.1×→0.026×（降 2100 倍）、rvol 82.6×→0.148×（降 560 倍）。这与论文已有的「最新一条消息写 53% 状态却只贡献 8% OFI 读出、OFI 在长记忆子空间」严丝合缝，补上的另一半是：那个长记忆子空间恰恰不是能影响输出的子空间。twin 的 r99=177 大于训练的 84，可达子空间更宽会让 ρ 天然偏大，但 2 倍解释不了 500-2100 倍。产物 jlens_twin_s42.json / jlens_globality_twin_s42_m4.json / jlens_perlayer_twin_s42_m4.json，图 figures/fig9_twin.png。
+
+F277 UTC 2026-08-10T00:10:00Z: 【「同 token 预算」这条轴给变长制造了 5 倍的训练/测试上下文错配】
+评测协议固定：250 条真实消息做条件、生成 250 条。两臂拿到的信息完全相同。
+但两臂**训练时的窗口消息数**差 5.2 倍：
+    26tok   训练 500 条/窗口   测试 250 条   错配倍数 2.0
+    varlen  训练 2,600 条/窗口 测试 250 条   错配倍数 10.4
+Mamba3 是递归模型，隐状态是定长摘要；在 2,600 条的窗口上训练出来的状态分布，
+与只喂 250 条（约 1,368 个 token，占训练上下文 10.5%）时的状态分布不是一回事。
+26tok 那一侧是 6,500/13,000 = 50%。
+即：**为了让两臂 token 预算相同，我让变长的上下文错配严重 5 倍**——
+这是「同 token 预算」这条轴的隐藏代价，此前只算了 GOOG 曝光量（5.12×）这一项。
+可检验的推论：若这是主因，变长在生成早期的质量应显著差于后期（隐状态尚未进入
+训练时的分布）。修法是跑「同消息数」臂（varlen 也用 500 条/窗口，约 2,900 token
+上下文），但那需要重训，7.2 小时。先做完簿修复再看还差多少。
+
+F289 UTC 2026-08-09T23:50:57Z: 修正后的真实数字: 模型价格摆放条件分布离真实 TV=0.132-0.136 (逐 regime), 不是此前的 0.40-0.47;
+可达 KL=0.2041 nats, 不是 0.79。预训练留出损失 1.758376 nats (此前 5.087 那是 size 字段的)。
+蒸馏 1.758376 -> 1.614048, 捕获可达 KL 的 70.7%, 相对步长 0.498%, cos(grad_fit,grad_holdout)=+0.9939。
+自检行 [PLOG-CHK] mean log p(label)=-1.9141 / entropy=1.8665 / band_mass=0.998958, 熵与自身标签只差 0.047 nats。
+CE-GATE 从 ~21 nats 变成 0.615553。内部矛盾消失: TV(emitted,real)=0.191 现在略高于 teacher-forced 的 0.13 (状态漂移),
+此前是不可能的 0.191 < 0.489。
+
+F290 UTC 2026-08-09T23:50:57Z: 对齐用反推而非假定确定 (check_alignment.py)。编码器 p_ref=前一行簿中价向下取整到 tick,
+故低位数字可从 CSV 反推。lag=0: low 精确 0.6089 / sign 0.9915; lag=-1/+1/+2 的 low 只有 0.057-0.081。
+定案靠 1000 倍差距。低位 61% 的残差不进入 tilt: 候选网格用编码里精确成立的 d(price)/d(low)=sign*tick。
+簿行配对由行数定案: data_cond 250 消息/251 簿行 (bk[0] 是初始簿), data_real 250/250。
+
+F278 UTC 2026-08-10T00:05:00Z: 【簿修复的量化收益：WS 差距 19.8% -> 9.4%】
+同一个 step-9000 checkpoint，唯一变量是「模型收到的簿」：
+                          WS-21     KS-21     L1-21
+    26tok 基线           0.21715   0.11616   0.18595
+    varlen 全零簿        0.26006   0.16132   0.24181
+    varlen 真簿          0.23752   0.15683   0.24262
+    簿修复带来            -8.7%     -2.8%     +0.3%
+WS 收益集中在簿类指标：ofi_down -0.189、ofi_up -0.132、spread -0.098。
+L1 几乎没动、KS 只动 2.8%，说明簿主要影响的是**分布的位置**（Wasserstein 敏感）
+而非**形状**（KS 敏感）。
+两臂产物逐字节比对：250/250 行全不同、20 条抽样全不同——簿确实进了模型，
+统计上看起来接近只是巧合。
+
+F279 UTC 2026-08-10T00:05:00Z: 【varlen 已经赢 9/21 个指标，且赢的都是位置类】
+真簿 step 9000 下 varlen 优于 26tok 的九项（WS 差）：
+    ask_cancellation_depth  -0.247   ask_cancellation_ticks  -0.244
+    bid_cancellation_depth  -0.170   bid_cancellation_ticks  -0.171
+    limit_bid_order_depth   -0.104   limit_bid_order_ticks   -0.104
+    vol_per_min             -0.059   limit_ask_order_depth   -0.007
+    limit_ask_order_ticks   -0.005
+全部是「相对盘口的位置」类指标。这与编码设计直接对应：变长把价格编成
+**相对中点的半 tick 偏移**，26tok 编绝对价的十进制片段。
+**这是编码本身的收益，不是训练量或参数量的收益**——它在只训练 28% 时就成立。
+
+F280 UTC 2026-08-10T00:05:00Z: 【log_inter_arrival_time 落后的唯一来源是 dt=0 的比例】
+                零占比    p25       中位      p75       均值
+    真实        32.1%   0.0008m   0.0202m   0.3383m   5.741m
+    26tok       30.1%   0.0009m   0.0145m   0.2098m   4.790m
+    varlen      23.5%   0.0010m   0.0248m   0.3345m   5.029m
+除零占比外**变长每一项都比 26tok 更接近真实**：p75 差 -1.1%（26tok 差 -38%），
+均值差 -12%（26tok -17%）。唯一的短板是同时刻事件少了 8.6 个百分点。
+v5 有专门的 `dt_zero` 单 token（ID 11），模型在 28% 训练量时还没学到它 32% 的频率。
+可检验推论：训练到 32,000 步后零占比应向 32% 收敛，该指标随之回收。
