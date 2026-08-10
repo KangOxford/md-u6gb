@@ -1610,3 +1610,9 @@ LOB-Bench KS-21 -13.0% 改善, CE 仅 +0.035%。全部闸门通过且三条是�
 边界: 单股 GOOG 单时段 2026-01; 结构性下界 0.156 仍在 (当前 0.226, 可达缺口关掉 55%);
 高位 tilt (commit eddaadc) 是拿掉剩余部分的路, 尚未评估; on-policy 闭环 v3 在跑, 非本结论依赖项。
 全程零 sbatch。
+
+PG270 UTC 2026-08-10T04:23:34Z: 【任务完成】最终工作点 alpha=0.35。九项设定全部满足: 分布匹配 (非矩匹配)、复现集单独 2.60sigma、
+perplexity +0.084%、LOB-Bench 改善而非未恶化、独立评审已推翻并修正过一次根因 bug、目标为自设计的
+逐价差 regime 指数倾斜 + 离线蒸馏。产物: RESULTS.md R1-R89、fig8_frontier.png、
+final_qL1_*.json 五份、onpolicy_hist.json、high_digit_tilt.json。全程零 sbatch。
+边界: 单股 GOOG 单时段; 结构性下界 0.156 需两位置联合蒸馏; on-policy 闭环 v3 在跑但非依赖项。
