@@ -24,6 +24,8 @@ After full two-GPU model loading, `fla-core 0.5.2` failed at the first KDA gate 
 
 The promoted smoke is `runs/smoke_20260811T175406Z`. Both physical GPUs 2 and 3 on `nid010197` passed the empty-device gate, all 20 pinned shards loaded, and the model produced a relevant 24-token answer. The run exited zero in 44.35 seconds with peak allocations of 45,583,835,648 and 52,793,666,048 bytes. The device map assigned 14 modules to visible GPU 0 and 16 to visible GPU 1, with no CPU or disk offload. The compatibility view changes documentation decoration and backend selection only; KDA runs through the exact `fla-core 0.4.0` API used by the checkpoint code.
 
+`capture_github_source.py` also archives the official Kimi Linear repository at commit `8c1d85eb6b5f8fcefb15758691b0ce50b0827ce3` inside this task folder and records per-file SHA256 provenance in `github_source_manifest.json`.
+
 - Model: `moonshotai/Kimi-Linear-48B-A3B-Instruct`
 - Revision: `e1df551a447157d4658b573f9a695d57658590e9`
 - Official weight bytes: `98,248,224,120`
