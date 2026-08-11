@@ -1,0 +1,1 @@
+A hybrid SSM-attention language model benefits from both layer types by combining the contextual strength of SSM with the efficiency of attention, enabling better performance and scalability

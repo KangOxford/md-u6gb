@@ -1,0 +1,26 @@
+{
+  "completed_utc": "2026-08-11T17:20:52.926600+00:00",
+  "model_id": "ai21labs/AI21-Jamba2-3B",
+  "revision": "525c6c8e1d9f5bddedfbdc1dbb0ade2df84230c9",
+  "model_type": "jamba",
+  "use_mamba_kernels": false,
+  "generated_text": "A hybrid SSM-attention language model benefits from both layer types by combining the contextual strength of SSM with the efficiency of attention, enabling better performance and scalability",
+  "input_tokens": 40,
+  "generated_tokens": 32,
+  "elapsed_seconds": 15.309878614993067,
+  "peak_gpu_memory_bytes": 6396346368,
+  "gpu": {
+    "name": "NVIDIA GH200 120GB",
+    "total_memory_bytes": 102005473280,
+    "visible_device_count": 1,
+    "cuda_visible_devices": "3"
+  },
+  "runtime": {
+    "hostname": "nid010197",
+    "python": "3.13.12",
+    "torch": "2.9.1+cu126",
+    "torch_cuda": "12.6",
+    "transformers": "4.57.1",
+    "accelerate": "1.11.0"
+  }
+}
