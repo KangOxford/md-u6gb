@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/01_jamba2_3b_inference/smoke.py", line 117, in <module>
+    main()
+    ~~~~^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/01_jamba2_3b_inference/smoke.py", line 43, in main
+    torch.cuda.reset_peak_memory_stats(0)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/01_jamba2_3b_inference/.venv/lib/python3.13/site-packages/torch/cuda/memory.py", line 376, in reset_peak_memory_stats
+    return torch._C._cuda_resetPeakMemoryStats(device)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+RuntimeError: Invalid device argument 
+[W811 17:18:15.754568713 AllocatorConfig.cpp:28] Warning: PYTORCH_CUDA_ALLOC_CONF is deprecated, use PYTORCH_ALLOC_CONF instead (function operator())
+srun: error: nid010197: task 0: Exited with exit code 1
+srun: Terminating StepId=5975573.864

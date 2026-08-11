@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T17:16:22Z",
+  "updated_utc": "2026-08-11T17:18:27Z",
   "state": "running",
   "active_target": "01_jamba2_3b_inference",
   "completed_targets": [],
-  "alert": null,
-  "next_action": "Refresh process-level GPU occupancy in allocation 5980502 and retry the guarded Jamba2 generation on a device empty at launch time."
+  "alert": "Compute CUDA initialization now succeeds, but the smoke resets allocator statistics before creating its first CUDA tensor and Torch 2.9 rejects that call.",
+  "next_action": "Initialize the CUDA allocator before resetting peak stats, update the allocator environment variable name, commit the fix, and retry within the remaining 5975573 window."
 }

@@ -37,3 +37,5 @@ The cuSPARSELt audit found that NVIDIA's installed wheel declares the legacy `ma
 The full runtime preparation now exits zero and imports Torch `2.9.1+cu126` on the login node. This proves package/link integrity, not GPU access; the next gate is `torch.cuda.is_available()` plus an allocation-restricted tensor operation on a revalidated compute GPU.
 
 At `2026-08-11T17:16:13Z`, a launch aimed at `nid010053` GPU 0 found PID `164189` and exited with the safety code `70` before creating a CUDA context. This confirms the point-in-time `gtop` snapshot is not used as a lock; the compute-side guard is authoritative.
+
+The next attempt (`runs/smoke_20260811T171746Z`) used an actually empty device in `5975573`: `nid010197` GPU 2 had 21 MiB used and no compute PID. CUDA initialization passed, then Torch `2.9.1` raised `Invalid device argument` when peak-memory statistics were reset before the allocator had been initialized. No weights were loaded. The fix is to create a minimal CUDA tensor first and use the current `PYTORCH_ALLOC_CONF` name.

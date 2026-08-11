@@ -23,4 +23,6 @@ The remaining package warning is now narrowly audited: NVIDIA's legacy `manylinu
 
 The first post-snapshot launch correctly aborted before CUDA/model work because `nid010053` GPU 0 had acquired PID `164189`. The point-in-time snapshot was not treated as a reservation; the next attempt will use a fresh process-level probe.
 
+A guarded attempt on `5975573` then proved the CUDA 12.6 runtime can initialize on a GH200. It stopped before weight load because peak-memory statistics were reset before allocator initialization. The required code change is narrow: create the first CUDA tensor before the reset and use the renamed allocator configuration variable.
+
 Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the currently empty device pool. No result has yet been promoted to `completed`.
