@@ -15,4 +15,6 @@ The retry succeeded on `nid011179`: 13 files at the pinned revision were downloa
 
 The first guarded GPU smoke selected an actually empty GH200 (3 MiB used and no compute PID) but stopped before model load because Torch `2.13.0+cu130` is newer than the node's driver compatibility level `12070`. Raw evidence is preserved in `01_jamba2_3b_inference/runs/smoke_20260811T165758Z/`. The next action is a driver-compatible ARM Torch pin, not a model-code change.
 
+Torch has now been repinned locally to the official AArch64 `2.9.1+cu126` wheel and the CUDA 13 packages were removed. The login node does not expose the CUDA 12 shared libraries that this wheel dynamically links, so the next authoritative check is inside the compute allocation. The runtime remains unpromoted.
+
 Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the currently empty device pool. No result has yet been promoted to `completed`.

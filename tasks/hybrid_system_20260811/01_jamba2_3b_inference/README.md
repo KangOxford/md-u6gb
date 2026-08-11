@@ -27,3 +27,5 @@ The pinned model snapshot completed at `2026-08-11T16:57:14Z`. All 13 files were
 The first GPU smoke (`runs/smoke_20260811T165758Z`) passed the empty-device gate on `nid011179` GPU 1 (3 MiB used, no compute PID), then failed before model load. Torch `2.13.0+cu130` rejected the node's driver compatibility level `12070`. This run is evidence of an environment ABI mismatch only; it is not evidence against Jamba2 inference. The environment must be repinned to a CUDA 12.7-compatible ARM build before retry.
 
 The corrective runtime pin is official PyTorch `2.9.1+cu126` from `https://download.pytorch.org/whl/cu126`. That index publishes a CPython 3.13 AArch64 wheel and CUDA 12.6 is within the node driver's reported compatibility. `prepare_runtime.sh` now resolves this exact build before any retry.
+
+The repin installed successfully and reduced the task-local environment from 4.6 GB to 863 MB, but its login-node import check cannot find dynamically linked CUDA 12 libraries (`libcudart.so.12` and `libcublas.so`). The next check is the authoritative compute-node library surface; this is not yet a usable runtime claim.

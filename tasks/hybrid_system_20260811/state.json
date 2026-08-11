@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T17:00:05Z",
+  "updated_utc": "2026-08-11T17:02:37Z",
   "state": "running",
   "active_target": "01_jamba2_3b_inference",
   "completed_targets": [],
-  "alert": "The first GPU smoke passed the empty-device gate but Torch 2.13.0+cu130 could not initialize against driver compatibility 12070; no model weights were loaded.",
-  "next_action": "Install the committed Torch 2.9.1+cu126 AArch64 pin, verify torch.cuda on the compute node, then rerun the guarded Jamba2 generation."
+  "alert": "Torch 2.9.1+cu126 is installed locally, but the login-node library path lacks its dynamic CUDA 12 dependencies; compute-node availability is not yet checked.",
+  "next_action": "Inspect CUDA 12 library locations and import Torch inside allocation 5980502, then encode the verified library path in the launcher before generation."
 }
