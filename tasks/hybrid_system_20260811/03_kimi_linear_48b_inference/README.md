@@ -18,6 +18,8 @@ The independent runtime completed at `2026-08-11T17:41:29Z`: 45 pinned packages,
 
 The first guarded launch passed both GPU gates and then stopped before tokenizer/model load because the remote tokenizer code imports an undeclared `tiktoken` dependency. The runtime now pins the current CPython 3.13 AArch64 wheel, `tiktoken==0.13.0`, before retrying.
 
+The next import exposed a documentation-only compatibility defect: Transformers `auto_docstring` assumes annotations have `__name__`, while the pinned remote code uses Python 3.13 `types.UnionType`. `prepare_compatibility_model.py` preserves the full original snapshot and creates a symlink view whose only code change is removing the two runtime documentation decorators; both source hashes are recorded.
+
 - Model: `moonshotai/Kimi-Linear-48B-A3B-Instruct`
 - Revision: `e1df551a447157d4658b573f9a695d57658590e9`
 - Official weight bytes: `98,248,224,120`

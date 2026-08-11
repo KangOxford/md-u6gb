@@ -1,4 +1,5 @@
 .venv/
 hf_home/
 model/
+compatibility_model/
 runs/

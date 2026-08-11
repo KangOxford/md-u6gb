@@ -10,7 +10,7 @@ if [[ "$owner" != "$current_user" || "$state" != "RUNNING" ]]; then echo "Job ga
 if ! scontrol show hostnames "$nodelist" | rg -F -x -q "$node"; then echo "Node gate failed" >&2; exit 3; fi
 job_detail="$(scontrol show job "$job_id" -o)"; end_time="${job_detail#* EndTime=}"; end_time="${end_time%% *}"
 remaining="$(( $(date -d "$end_time" +%s) - $(date +%s) ))"; (( remaining >= 600 )) || { echo "Less than 10 minutes remain" >&2; exit 3; }
-if [[ ! -x "$task_dir/.venv/bin/python" || ! -f "$task_dir/model/download_manifest.json" ]]; then echo "Prepare runtime/model" >&2; exit 4; fi
+if [[ ! -x "$task_dir/.venv/bin/python" || ! -f "$task_dir/compatibility_model/compatibility_manifest.json" ]]; then echo "Prepare runtime/model/compatibility view" >&2; exit 4; fi
 mkdir -p "$task_dir/runs"; stamp="$(date -u +%Y%m%dT%H%M%SZ)"; output="$task_dir/runs/smoke_${stamp}"; mkdir -p "$output"
 srun --jobid="$job_id" --overlap --exact --nodes=1 --nodelist="$node" --ntasks=1 --cpus-per-task=32 --mem=180G \
-  bash "$task_dir/gpu_guard_and_smoke.sh" "$gpu_a" "$gpu_b" "$task_dir/model" "$output" 2>&1 | tee "$output/launch.log"
+  bash "$task_dir/gpu_guard_and_smoke.sh" "$gpu_a" "$gpu_b" "$task_dir/compatibility_model" "$output" 2>&1 | tee "$output/launch.log"
