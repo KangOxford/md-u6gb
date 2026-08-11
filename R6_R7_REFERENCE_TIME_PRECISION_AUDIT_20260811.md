@@ -30,6 +30,21 @@ remaining `ref_size` 在毫秒口径为 94.4079%，只比 original size 高 0.04
 
 这些数字是数据侧 oracle 唯一识别率，不是模型生成后的 reference 成功率。选定 E-ms 或 E-us 后，真实 L2 增量仍须通过小规模训练和 paired-255 重放测量。
 
+## 用现有 `dt_ns` 构造 `ref_age` 的 resolver 重放
+
+进一步按实际候选设计计算 `ref_age_ns = current_touch_time_ns - referenced_new_time_ns`，并且只在 `(side, price, original_ref_size, ref_age_bucket)` 唯一时接受：
+
+| `ref_age` 精度 | 可见目标成功率 | 全部 touch 成功率 | 误选 |
+|---|---:|---:|---:|
+| 秒 | 87.4807% | 76.8574% | 0 |
+| 毫秒 | 94.1776% | 82.7411% | 0 |
+| 微秒 | 98.0388% | 86.1334% | 0 |
+| 纳秒 | 100.0000% | 87.8565% | 0 |
+
+纳秒分项的全部事件成功率：partial CANCEL 64/76 = 84.2105%，DELETE 27,205/30,849 = 88.1876%，EXECUTION 520/705 = 73.7589%。所有可见目标均 100% 正确；剩余 3,841 个失败全部因为目标订单早于 condition，当前可见历史没有它的逐单创建时间。要把数据侧总体上限从 87.8565% 提到 100%，初始化必须补齐这些旧订单的逐单 ID/price/size/time 元数据，或用另一条对 pre-condition 订单有效的保证。
+
+这仍是 oracle resolver 测试。当前 R6 checkpoint 没有生成 `original_ref_size/ref_age_ns`，因此不能从现有产物宣称训练后的两级成功率。
+
 ## 可复现产物
 
 - 脚本：`tasks/varlen_bench_subset_20260809/resolver_design_supervision/r6p1_twolevel_options_20260811T185757Z/audit_time_precision.py`
