@@ -22,7 +22,7 @@ if [[ ! -x "$task_dir/.venv/bin/python" ]]; then
     "$task_dir/.venv"
 fi
 
-"$uv_bin" pip install \
+"$uv_bin" pip sync \
   --python "$task_dir/.venv/bin/python" \
   --index "$torch_index" \
   --index-strategy unsafe-best-match \
