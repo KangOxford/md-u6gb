@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T17:19:00Z",
+  "updated_utc": "2026-08-11T17:20:53Z",
   "state": "running",
-  "active_target": "01_jamba2_3b_inference",
-  "completed_targets": [],
+  "active_target": "02_nemotron_nano_9b_v2_inference",
+  "completed_targets": ["01_jamba2_3b_inference"],
   "alert": null,
-  "next_action": "Retry the guarded Jamba2 generation within the remaining 5975573 window on a freshly empty device."
+  "next_action": "Prepare and run the isolated Nemotron Nano 9B v2 deployment on a freshly revalidated empty device."
 }

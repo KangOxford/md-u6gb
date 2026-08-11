@@ -1,7 +1,7 @@
 # Hybrid inference supervisor summary
 
 State: **running**  
-Updated: `2026-08-11T16:55:37Z`
+Updated: `2026-08-11T17:20:53Z`
 
 The exact Notion target has been fetched and converted into four isolated model tasks. Current primary-source revisions and checkpoint byte sizes are pinned. A live read-only probe found eight empty GPUs inside allocation `5980502`, alongside unrelated GPU-resident processes that must remain untouched.
 
@@ -25,4 +25,6 @@ The first post-snapshot launch correctly aborted before CUDA/model work because 
 
 A guarded attempt on `5975573` then proved the CUDA 12.6 runtime can initialize on a GH200. It stopped before weight load because peak-memory statistics were reset before allocator initialization. The required code change is narrow: create the first CUDA tensor before the reset and use the renamed allocator configuration variable.
 
-Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the currently empty device pool. No result has yet been promoted to `completed`.
+Jamba2-3B is now functionally deployed. The corrected guarded run on `nid010197` physical GPU 3 loaded the pinned 6.39 GB checkpoint and produced 32 new tokens in 15.31 seconds with 6.40 GB peak GPU memory. Raw preflight, log, output, and structured provenance are committed under `01_jamba2_3b_inference/runs/smoke_20260811T172020Z/`.
+
+Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the currently empty device pool. Jamba2 is the first promoted result; Nemotron Nano 9B v2 is next.

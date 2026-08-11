@@ -16,6 +16,6 @@ Model weights, virtual environments, cloned upstream repositories, and generated
 
 ## Current status
 
-As of the user-supplied `gtop` sample at `2026-08-11T17:14:29Z`, all 16 GPUs in allocation `5980502` were physically idle with about 18h49m remaining. Allocation `5980745` remained fully active and is excluded; `5975573` was nearly expired and is also excluded. No process has been stopped, moved, or overwritten. Every deployment still repeats an inside-allocation GPU process/memory gate at launch time.
+The user-supplied `gtop` sample at `2026-08-11T17:14:29Z` showed all 16 GPUs in allocation `5980502` physically idle, but a launch-time probe less than two minutes later found that training processes had returned to all four nodes. The guard aborted before CUDA initialization. Allocation `5980745` remains fully active and excluded. A separate launch on an actually empty GPU in the nearly expired allocation `5975573` completed the Jamba2-3B smoke without stopping, moving, or overwriting any process. Every deployment repeats the same inside-allocation GPU process/memory gate at launch time.
 
 The task-wide state machine is recorded in `manifest.json`, `events.jsonl`, `state.json`, and `summary.md`.

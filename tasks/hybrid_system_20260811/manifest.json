@@ -4,7 +4,7 @@
   "created_utc": "2026-08-11T16:41:37Z",
   "source_notion_url": "https://app.notion.com/p/3b912c4568fd806b9200ecead77d7bf8",
   "evidence_question": "Can each selected open hybrid architecture be reproduced as local GPU inference on Isambard-AI without disturbing existing processes?",
-  "state": "planned",
+  "state": "running",
   "candidate_parent_allocation": {
     "job_id": "5980502",
     "owner": "kangli.u6gb",
@@ -25,7 +25,8 @@
       "revision": "525c6c8e1d9f5bddedfbdc1dbb0ade2df84230c9",
       "weight_bytes": 6394271296,
       "planned_gpus": 1,
-      "status": "downloaded_and_hashed"
+      "status": "inference_success",
+      "result_path": "01_jamba2_3b_inference/runs/smoke_20260811T172020Z/result.json"
     },
     {
       "task": "02_nemotron_nano_9b_v2_inference",
