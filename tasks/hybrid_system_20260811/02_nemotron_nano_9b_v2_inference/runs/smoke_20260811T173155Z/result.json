@@ -1,0 +1,28 @@
+{
+  "completed_utc": "2026-08-11T17:32:23.035953+00:00",
+  "model_id": "nvidia/NVIDIA-Nemotron-Nano-9B-v2",
+  "revision": "6533e8de2c68e4536bf7c411d7a3ce5734111476",
+  "model_type": "nemotron_h",
+  "use_mamba_kernels": false,
+  "use_cache": false,
+  "compatibility_modeling_sha256": "91155415bb4a3cbf7dd9eaf19583604a47671d6cbfaaed6ee934a08208d853e4",
+  "generated_text": "-1-1-1-1-1-1-1-1-1-1-1",
+  "input_tokens": 31,
+  "generated_tokens": 24,
+  "elapsed_seconds": 13.749160772989853,
+  "peak_gpu_memory_bytes": 19746058752,
+  "gpu": {
+    "name": "NVIDIA GH200 120GB",
+    "total_memory_bytes": 102005473280,
+    "visible_device_count": 1,
+    "cuda_visible_devices": "2"
+  },
+  "runtime": {
+    "hostname": "nid010197",
+    "python": "3.13.12",
+    "torch": "2.9.1+cu126",
+    "torch_cuda": "12.6",
+    "transformers": "4.57.1",
+    "accelerate": "1.11.0"
+  }
+}
