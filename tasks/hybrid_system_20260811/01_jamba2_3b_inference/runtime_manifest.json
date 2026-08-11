@@ -1,5 +1,5 @@
 {
-  "created_utc": "2026-08-11T17:13:24Z",
+  "created_utc": "2026-08-11T17:15:34Z",
   "path": "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/01_jamba2_3b_inference/.venv",
   "committed": false,
   "commit_reason": "A 4.8 GB generated virtual environment is not appropriate for Git; exact locally installed packages are committed in requirements.lock.",
@@ -10,6 +10,7 @@
   "accelerate": "1.11.0",
   "size_human": "4.8G",
   "shared_miniforge_modified": false,
-  "status": "cuda12_dependencies_installed_one_platform_gate_remaining",
-  "last_error": "uv pip check reports nvidia-cusparselt-cu12 0.7.1 was built for a different platform"
+  "status": "login_import_verified_compute_cuda_pending",
+  "last_error": null,
+  "audited_exception": "nvidia-cusparselt-cu12 0.7.1 uses legacy manylinux2014_sbsa tag but ships an independently verified AArch64 ELF library"
 }

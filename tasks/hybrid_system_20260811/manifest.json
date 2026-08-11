@@ -9,12 +9,13 @@
     "job_id": "5980502",
     "owner": "kangli.u6gb",
     "observed_state": "RUNNING",
-    "observation_utc": "2026-08-11T16:39:00Z",
+    "observation_utc": "2026-08-11T17:14:29Z",
+    "observation_source": "user-supplied gtop snapshot",
     "point_in_time_empty_devices": {
-      "nid010053": [3],
-      "nid010371": [0, 1],
-      "nid010473": [0, 2],
-      "nid011179": [1, 2, 3]
+      "nid010053": [0, 1, 2, 3],
+      "nid010371": [0, 1, 2, 3],
+      "nid010473": [0, 1, 2, 3],
+      "nid011179": [0, 1, 2, 3]
     }
   },
   "targets": [

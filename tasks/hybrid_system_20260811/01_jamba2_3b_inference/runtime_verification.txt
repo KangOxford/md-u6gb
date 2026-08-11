@@ -1,0 +1,19 @@
+Verified UTC: 2026-08-11T17:15:34Z
+Python: 3.13.12
+Torch: 2.9.1+cu126
+Torch CUDA build: 12.6
+Transformers: 4.57.1
+Accelerate: 1.11.0
+Hugging Face Hub: 0.36.0
+Safetensors: 0.6.2
+Tokenizers: 0.22.1
+CUDA built: true
+
+uv pip check result:
+Found 1 incompatibility
+The package `nvidia-cusparselt-cu12` was built for a different platform
+
+Audited exception accepted:
+NVIDIA's AArch64 cuSPARSELt wheel records the legacy manylinux2014_sbsa tag,
+while libcusparseLt.so.0 is independently verified as ELF machine AArch64
+(e_machine=183). No other package-check exception is accepted.

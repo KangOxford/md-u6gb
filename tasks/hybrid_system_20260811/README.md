@@ -16,6 +16,6 @@ Model weights, virtual environments, cloned upstream repositories, and generated
 
 ## Current status
 
-As of `2026-08-11T16:41:37Z`, research selection and live-allocation preflight are complete. Eight GPUs in allocation `5980502` were physically empty at the probe instant, but other GPUs on the same nodes hold unrelated Python processes. No process has been stopped, moved, or overwritten. Deployment code and GPU smoke runs are the next gates.
+As of the user-supplied `gtop` sample at `2026-08-11T17:14:29Z`, all 16 GPUs in allocation `5980502` were physically idle with about 18h49m remaining. Allocation `5980745` remained fully active and is excluded; `5975573` was nearly expired and is also excluded. No process has been stopped, moved, or overwritten. Every deployment still repeats an inside-allocation GPU process/memory gate at launch time.
 
 The task-wide state machine is recorded in `manifest.json`, `events.jsonl`, `state.json`, and `summary.md`.

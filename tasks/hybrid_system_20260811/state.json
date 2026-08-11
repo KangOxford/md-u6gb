@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T17:14:37Z",
+  "updated_utc": "2026-08-11T17:15:34Z",
   "state": "running",
   "active_target": "01_jamba2_3b_inference",
   "completed_targets": [],
   "alert": null,
-  "next_action": "Run the exact runtime verifier and import check, then verify torch.cuda inside allocation 5980502 before retrying generation."
+  "next_action": "Verify Torch CUDA and a tensor operation on one guarded GPU in allocation 5980502, then rerun the Jamba2 generation smoke."
 }

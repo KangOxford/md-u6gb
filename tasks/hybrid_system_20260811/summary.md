@@ -19,4 +19,6 @@ Torch has now been repinned locally to the official AArch64 `2.9.1+cu126` wheel 
 
 The dependency-resolving retry installed all CUDA 12.6 packages. The audit is down to one failure: `nvidia-cusparselt-cu12==0.7.1` carries an incompatible platform tag. This must be resolved before the compute import and model generation are retried.
 
+The remaining package warning is now narrowly audited: NVIDIA's legacy `manylinux2014_sbsa` tag is inconsistent with UV's accepted tags, but the shipped shared object is an AArch64 ELF. The exact exception verifier and login-node Torch import both pass. A user-supplied `gtop` sample at `17:14:29Z` shows all 16 GPUs in allocation `5980502` idle; the next gate is compute-side CUDA initialization and generation on one revalidated device.
+
 Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the currently empty device pool. No result has yet been promoted to `completed`.
