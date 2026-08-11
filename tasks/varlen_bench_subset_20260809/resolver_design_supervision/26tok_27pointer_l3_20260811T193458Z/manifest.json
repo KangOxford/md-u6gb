@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "study": "26tok_cancel_failure_and_27th_pointer_design",
+  "created_utc": "2026-08-11T19:34:58Z",
+  "mode": "read_only_design_audit",
+  "implementation_authorized": false,
+  "training_authorized": false,
+  "job_mutation_authorized": false,
+  "sources": {
+    "generated": "/lus/lfs1aip2/projects/public/u6gb/tasks/varlen_bench_subset_20260809/baseline255/data_gen",
+    "condition": "/lus/lfs1aip2/projects/public/u6gb/tasks/varlen_bench_subset_20260809/varlen_eval255/data_cond",
+    "real": "/lus/lfs1aip2/projects/public/u6gb/tasks/varlen_bench_subset_20260809/varlen_eval255/data_real"
+  },
+  "sample": {
+    "sequences": 255,
+    "generated_cancel_delete_events": 31142,
+    "generated_unresolved_events": 1201,
+    "real_cancel_delete_events": 30925,
+    "real_execution_events": 705
+  },
+  "candidate": {
+    "name": "ref_new_rank",
+    "definition": "reverse rank among historical NEW messages",
+    "observed_cancel_delete_range": [1, 241],
+    "token_range_reusable": [0, 999],
+    "vocabulary_resize_required": false,
+    "recommended_resolution_order": [
+      "pointer_exact_live_id",
+      "exact_timestamp",
+      "same_price_closest_millisecond"
+    ]
+  }
+}

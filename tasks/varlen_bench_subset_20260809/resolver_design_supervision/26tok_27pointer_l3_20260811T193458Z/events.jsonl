@@ -1,0 +1,5 @@
+{"ts":"2026-08-11T19:34:58Z","event":"audit_started","detail":"Read-only replay; no code, training, or Slurm mutation authorized."}
+{"ts":"2026-08-11T19:34:58Z","event":"generated_failures_profiled","detail":{"events":1201,"delete":1180,"partial_cancel":21,"declared_side_l10_nonempty":1201,"same_price_live_order":0}}
+{"ts":"2026-08-11T19:34:58Z","event":"visibility_oracle_measured","detail":{"real_cancel_delete_total":30925,"visible_target_new":27269,"visible_percent":88.177849636,"real_execution_total":705,"visible_execution_target":520,"visible_execution_percent":73.758865248}}
+{"ts":"2026-08-11T19:34:58Z","event":"pointer_candidates_compared","detail":{"absolute_index_entropy_bits":8.5421,"message_distance_entropy_bits":6.9938,"reverse_new_rank_entropy_bits":6.0525,"reverse_new_rank_range":[1,241]}}
+{"ts":"2026-08-11T19:34:58Z","event":"design_completed","detail":{"recommended":"pointer first, timestamp exact second, same-price millisecond fallback","oracle_combined_success_percent":99.5441,"warning":"oracle is not trained-model accuracy"}}
