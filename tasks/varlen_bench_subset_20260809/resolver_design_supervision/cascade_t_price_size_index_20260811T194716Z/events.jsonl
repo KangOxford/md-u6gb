@@ -1,0 +1,6 @@
+{"ts":"2026-08-11T19:47:16Z","event":"oracle_time_uniqueness","detail":{"touches":31630,"visible_targets":27789,"exact_ns_time_unique_visible":27789,"visible_rate_percent":100.0,"all_rate_percent":87.85646538096744}}
+{"ts":"2026-08-11T19:47:16Z","event":"oracle_price_size_uniqueness","detail":{"unique_visible":23982,"visible_rate_percent":86.30033466479543,"all_rate_percent":75.82042364843502}}
+{"ts":"2026-08-11T19:47:16Z","event":"cancel_delete_split","detail":{"total":30925,"visible":27269,"visible_percent":88.177849636,"price_size_unique":23521,"price_size_unique_visible_percent":86.25545491217133,"price_size_unique_all_percent":76.05820533548909}}
+{"ts":"2026-08-11T19:47:16Z","event":"baseline_residual_pointer_candidates","detail":{"residual_misses":1201,"with_visible_live_same_side_new":1201,"minimum_candidates":5,"median_candidates":21,"p90_candidates":42,"maximum_candidates":294}}
+{"ts":"2026-08-11T19:47:16Z","event":"baseline_ref_price_diagnostic","detail":{"residual_misses":1201,"reference_price_disagrees_with_event_price":986,"percent":82.09825145711907,"note":"Raw reference size values were not persisted, so frozen-output price-plus-size recovery cannot be measured."}}
+{"ts":"2026-08-11T19:47:16Z","event":"notion_verified","detail":{"page_id":"3b812c45-68fd-8145-a418-c3dc0a0f42d6","markers_verified":true}}

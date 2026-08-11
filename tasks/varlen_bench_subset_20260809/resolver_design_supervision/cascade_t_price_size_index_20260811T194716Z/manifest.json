@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "study": "reference_cascade_t_ns_price_size_data_index",
+  "created_utc": "2026-08-11T19:47:16Z",
+  "mode": "read_only_oracle_and_frozen_output_replay",
+  "implementation_authorized": false,
+  "training_authorized": false,
+  "job_mutation_authorized": false,
+  "evidence_question": "Can exact reference time, price plus original size, and a final data-index pointer make BPE and 26-token cancellation reference resolution nearly perfect?",
+  "sources": {
+    "condition": "/lus/lfs1aip2/projects/public/u6gb/tasks/varlen_bench_subset_20260809/varlen_eval255/data_cond",
+    "real": "/lus/lfs1aip2/projects/public/u6gb/tasks/varlen_bench_subset_20260809/varlen_eval255/data_real",
+    "baseline_generated": "/lus/lfs1aip2/projects/public/u6gb/tasks/varlen_bench_subset_20260809/baseline255/data_gen",
+    "prior_bpe_audit": "/lus/lfs1aip2/projects/public/u6gb/tasks/varlen_bench_subset_20260809/resolver_design_supervision/r6p1_twolevel_options_20260811T185757Z"
+  },
+  "cascade": [
+    "unique exact reference time at nanosecond precision, validated by side price and original reference size",
+    "unique side plus reference price plus original reference size",
+    "historical data index constrained to a NEW on the declared side that is still live"
+  ],
+  "stop_policy": "No implementation or training before user selects the design."
+}

@@ -1,0 +1,54 @@
+{
+  "real_paired_255": {
+    "all_touches": 31630,
+    "visible_targets": 27789,
+    "visible_percent": 87.85646538096744,
+    "exact_reference_time_ns": {
+      "unique_visible": 27789,
+      "visible_percent": 100.0,
+      "all_percent": 87.85646538096744
+    },
+    "side_reference_price_original_reference_size": {
+      "unique_visible": 23982,
+      "visible_percent": 86.30033466479543,
+      "all_percent": 75.82042364843502
+    },
+    "cancel_delete": {
+      "total": 30925,
+      "visible": 27269,
+      "visible_percent": 88.177849636,
+      "price_size_unique": 23521,
+      "price_size_unique_visible_percent": 86.25545491217133,
+      "price_size_unique_all_percent": 76.05820533548909
+    },
+    "outside_visible_history": 3841,
+    "outside_visible_history_percent": 12.14353461903256
+  },
+  "frozen_26_token_generated": {
+    "cancel_delete": 31142,
+    "exact_ns_l1": 23466,
+    "exact_ns_l1_percent": 75.35161518206922,
+    "same_price_millisecond_l2": 6475,
+    "same_price_millisecond_l2_increment_pp": 20.791856656605226,
+    "combined_live_id": 29941,
+    "combined_live_id_percent": 96.14347183867446,
+    "residual_miss": 1201,
+    "residual_miss_percent": 3.856528161325541,
+    "residual_with_visible_live_same_side_new": 1201,
+    "residual_pointer_candidate_count": {
+      "minimum": 5,
+      "median": 21,
+      "p90": 42,
+      "maximum": 294
+    },
+    "residual_reference_price_disagreement": {
+      "count": 986,
+      "percent": 82.09825145711907
+    }
+  },
+  "interpretation": {
+    "valid_live_id_with_masked_index_oracle": "Can be made 100% on the 1201 frozen residual misses because every miss has a live same-side historical NEW candidate.",
+    "exact_target_id": "Not established by that result. A 500-message history pointer cannot identify targets before the visible condition window.",
+    "model_rate": "Unknown until reference fields are persisted and a selected representation is trained."
+  }
+}

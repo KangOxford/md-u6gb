@@ -1,0 +1,10 @@
+{
+  "status": "diagnostics_done",
+  "last_updated_utc": "2026-08-11T19:47:16Z",
+  "code_changes": 0,
+  "training_submissions": 0,
+  "slurm_job_mutations": 0,
+  "notion_update_verified": true,
+  "decision_required": true,
+  "recommendation": "Use the three-level cascade, but report exact-target and any-live-ID separately; pilot-train before claiming model success."
+}
