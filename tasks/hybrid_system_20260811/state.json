@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T17:02:37Z",
+  "updated_utc": "2026-08-11T17:04:24Z",
   "state": "running",
   "active_target": "01_jamba2_3b_inference",
   "completed_targets": [],
-  "alert": "Torch 2.9.1+cu126 is installed locally, but the login-node library path lacks its dynamic CUDA 12 dependencies; compute-node availability is not yet checked.",
-  "next_action": "Inspect CUDA 12 library locations and import Torch inside allocation 5980502, then encode the verified library path in the launcher before generation."
+  "alert": "Torch 2.9.1+cu126 is installed, but uv sync omitted its transitive CUDA and Python dependencies; the runtime installer is corrected and must complete a clean dependency check.",
+  "next_action": "Run the corrected dependency-resolving installation, require uv pip check to pass, then verify torch.cuda inside allocation 5980502."
 }

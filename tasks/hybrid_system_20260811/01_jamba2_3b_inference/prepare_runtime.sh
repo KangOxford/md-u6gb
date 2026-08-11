@@ -22,11 +22,13 @@ if [[ ! -x "$task_dir/.venv/bin/python" ]]; then
     "$task_dir/.venv"
 fi
 
-"$uv_bin" pip sync \
+"$uv_bin" pip install \
   --python "$task_dir/.venv/bin/python" \
   --index "$torch_index" \
   --index-strategy unsafe-best-match \
-  "$task_dir/requirements.txt"
+  --requirement "$task_dir/requirements.txt"
+
+"$uv_bin" pip check --python "$task_dir/.venv/bin/python"
 
 "$task_dir/.venv/bin/python" - <<'PY'
 import importlib.metadata as metadata
