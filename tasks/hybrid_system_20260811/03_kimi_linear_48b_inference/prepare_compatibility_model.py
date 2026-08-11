@@ -33,6 +33,21 @@ def main() -> None:
     if upstream.count(marker) != 2:
         raise RuntimeError("Expected exactly two auto_docstring decorators")
     derived = upstream.replace(marker, "")
+    forced_flash = '''        if getattr(config, "_attn_implementation", None) is not None:
+            if config._attn_implementation != "flash_attention_2":
+                logger.warning_once(
+                    f"Ignoring the provided attention implementation {config._attn_implementation}")
+                logger.warning_once("Using flash_attention_2 backend instead.")
+                config._attn_implementation = "flash_attention_2"
+        else:
+            config._attn_implementation = "flash_attention_2"
+'''
+    preserve_backend = '''        if getattr(config, "_attn_implementation", None) is None:
+            config._attn_implementation = "eager"
+'''
+    if derived.count(forced_flash) != 1:
+        raise RuntimeError("Expected exactly one forced FlashAttention backend block")
+    derived = derived.replace(forced_flash, preserve_backend)
     linked = []
     for path in sorted(source.rglob("*")):
         if not path.is_file() or ".cache" in path.parts or path.name == name:
@@ -50,7 +65,7 @@ def main() -> None:
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "source": str(source),
         "destination": str(destination),
-        "patch": "remove two runtime-only auto_docstring decorators incompatible with Python 3.13 UnionType",
+        "patch": "remove two runtime-only auto_docstring decorators and preserve the available eager MLA backend instead of forcing absent FlashAttention",
         "upstream_modeling_sha256": sha256(upstream.encode()),
         "derived_modeling_sha256": sha256(derived.encode()),
         "linked_files": linked,
