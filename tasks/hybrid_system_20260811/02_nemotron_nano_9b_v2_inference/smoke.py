@@ -23,6 +23,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--max-new-tokens", type=int, default=24)
+    parser.add_argument("--fast-kernels", action="store_true")
     return parser.parse_args()
 
 
@@ -34,7 +35,8 @@ def main() -> None:
     source_manifest = json.loads((args.model_dir / "download_manifest.json").read_text(encoding="utf-8"))
     if source_manifest.get("resolved_revision") != MODEL_REVISION:
         raise RuntimeError("The linked source snapshot is not the pinned revision")
-    compatibility_manifest = json.loads((args.model_dir / "compatibility_manifest.json").read_text(encoding="utf-8"))
+    compatibility_path = args.model_dir / "compatibility_manifest.json"
+    compatibility_manifest = json.loads(compatibility_path.read_text(encoding="utf-8")) if compatibility_path.exists() else None
 
     started = time.perf_counter()
     torch.cuda.set_device(0)
@@ -44,7 +46,7 @@ def main() -> None:
     torch.cuda.reset_peak_memory_stats(0)
     tokenizer = AutoTokenizer.from_pretrained(args.model_dir, local_files_only=True, trust_remote_code=True)
     config = AutoConfig.from_pretrained(args.model_dir, local_files_only=True, trust_remote_code=True)
-    config.use_mamba_kernels = False
+    config.use_mamba_kernels = args.fast_kernels
     config.use_cache = False
     model = AutoModelForCausalLM.from_pretrained(
         args.model_dir,
@@ -84,7 +86,10 @@ def main() -> None:
         "model_type": config.model_type,
         "use_mamba_kernels": config.use_mamba_kernels,
         "use_cache": config.use_cache,
-        "compatibility_modeling_sha256": compatibility_manifest["derived_modeling_sha256"],
+        "implementation": "derived_pure_torch" if compatibility_manifest else "pinned_upstream",
+        "compatibility_modeling_sha256": (
+            compatibility_manifest["derived_modeling_sha256"] if compatibility_manifest else None
+        ),
         "generated_text": generated_text,
         "input_tokens": int(inputs["input_ids"].shape[-1]),
         "generated_tokens": int(generated_ids.shape[-1]),

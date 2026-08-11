@@ -32,8 +32,8 @@ if (( remaining_seconds < 600 )); then
   echo "Refusing a smoke run with less than 10 minutes remaining ($remaining_seconds seconds)" >&2
   exit 3
 fi
-if [[ ! -x "$task_dir/.venv/bin/python" || ! -f "$task_dir/compatibility_model/compatibility_manifest.json" ]]; then
-  echo "Prepare the runtime, source snapshot, and compatibility model first" >&2
+if [[ ! -x "$task_dir/.venv/bin/python" || ! -f "$task_dir/model/download_manifest.json" ]]; then
+  echo "Prepare the runtime and source snapshot first" >&2
   exit 4
 fi
 mkdir -p "$task_dir/runs"
@@ -49,5 +49,5 @@ srun \
   --ntasks=1 \
   --cpus-per-task=24 \
   --mem=120G \
-  bash "$task_dir/gpu_guard_and_smoke.sh" "$physical_gpu" "$task_dir/compatibility_model" "$output_dir" \
+  bash "$task_dir/gpu_guard_and_smoke.sh" "$physical_gpu" "$task_dir/model" "$output_dir" 1 \
   2>&1 | tee "$output_dir/launch.log"
