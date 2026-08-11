@@ -16,6 +16,8 @@ The runtime pins the official `fla-core==0.5.2` KDA implementation. The two-GPU 
 
 The independent runtime completed at `2026-08-11T17:41:29Z`: 45 pinned packages, Torch `2.9.1+cu126`, Transformers `4.57.1`, and `fla-core 0.5.2`, occupying 5,307,878,989 bytes. Torch and FLA imports pass; the only package-check exception is the already audited NVIDIA SBSA/AArch64 wheel tag.
 
+The first guarded launch passed both GPU gates and then stopped before tokenizer/model load because the remote tokenizer code imports an undeclared `tiktoken` dependency. The runtime now pins the current CPython 3.13 AArch64 wheel, `tiktoken==0.13.0`, before retrying.
+
 - Model: `moonshotai/Kimi-Linear-48B-A3B-Instruct`
 - Revision: `e1df551a447157d4658b573f9a695d57658590e9`
 - Official weight bytes: `98,248,224,120`
