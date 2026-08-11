@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "experiment_name": "hybrid-inference-system-20260811",
+  "created_utc": "2026-08-11T16:41:37Z",
+  "source_notion_url": "https://app.notion.com/p/3b912c4568fd806b9200ecead77d7bf8",
+  "evidence_question": "Can each selected open hybrid architecture be reproduced as local GPU inference on Isambard-AI without disturbing existing processes?",
+  "state": "planned",
+  "candidate_parent_allocation": {
+    "job_id": "5980502",
+    "owner": "kangli.u6gb",
+    "observed_state": "RUNNING",
+    "observation_utc": "2026-08-11T16:39:00Z",
+    "point_in_time_empty_devices": {
+      "nid010053": [3],
+      "nid010371": [0, 1],
+      "nid010473": [0, 2],
+      "nid011179": [1, 2, 3]
+    }
+  },
+  "targets": [
+    {
+      "task": "01_jamba2_3b_inference",
+      "model_id": "ai21labs/AI21-Jamba2-3B",
+      "revision": "525c6c8e1d9f5bddedfbdc1dbb0ade2df84230c9",
+      "weight_bytes": 6394271296,
+      "planned_gpus": 1,
+      "status": "planned"
+    },
+    {
+      "task": "02_nemotron_nano_9b_v2_inference",
+      "model_id": "nvidia/NVIDIA-Nemotron-Nano-9B-v2",
+      "revision": "6533e8de2c68e4536bf7c411d7a3ce5734111476",
+      "weight_bytes": 17776492512,
+      "planned_gpus": 1,
+      "status": "planned"
+    },
+    {
+      "task": "03_kimi_linear_48b_inference",
+      "model_id": "moonshotai/Kimi-Linear-48B-A3B-Instruct",
+      "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+      "weight_bytes": 98248224120,
+      "planned_gpus": 2,
+      "status": "planned"
+    },
+    {
+      "task": "04_kimi_k3_feasibility",
+      "model_id": "moonshotai/Kimi-K3",
+      "revision": "9f62e4e9fffbd0a83ddd60e1c209d828994b3569",
+      "weight_bytes": 1560936091448,
+      "planned_gpus": null,
+      "status": "capacity_gate_failed"
+    }
+  ],
+  "launch_gates": [
+    "parent allocation is still owned by kangli.u6gb and RUNNING",
+    "selected node belongs to that allocation and has enough remaining wall time",
+    "every selected physical GPU has no compute process and at most 64 MiB used immediately before launch",
+    "CUDA_VISIBLE_DEVICES contains only the revalidated physical GPU indices",
+    "task-local paths are used for model snapshots, environments, logs, and outputs"
+  ],
+  "success_gate": "Pinned local weights load on GPU, generation exits zero, output is non-empty, and provenance plus GPU evidence are preserved.",
+  "stop_policy": {
+    "cancel_existing_jobs": false,
+    "kill_existing_processes": false,
+    "automatic_stop": false
+  }
+}
