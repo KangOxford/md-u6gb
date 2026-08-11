@@ -26,7 +26,7 @@ fi
   --python "$task_dir/.venv/bin/python" \
   --index "$torch_index" \
   --index-strategy unsafe-best-match \
-  --requirement "$task_dir/requirements.txt"
+  "$task_dir/requirements.txt"
 
 "$task_dir/.venv/bin/python" - <<'PY'
 import importlib.metadata as metadata
