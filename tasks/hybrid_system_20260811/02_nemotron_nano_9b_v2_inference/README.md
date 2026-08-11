@@ -18,3 +18,5 @@ Success requires a task-local checkpoint snapshot, a pinned environment, exit co
 ```
 
 The pinned upstream snapshot remains byte-for-byte unchanged and includes NVIDIA's configuration, implementation, tokenizer, model card, safety/privacy/explainability documents, and four checkpoint shards. Its remote implementation contains a complete pure-PyTorch Mamba-2 fallback but unconditionally imports the gated RMSNorm function from `mamba-ssm`. Because the site's AArch64/Python 3.13 runtime does not provide that CUDA extension, `prepare_compatibility_model.py` creates a non-overwriting symlink view and replaces only that import with the algebraically equivalent upstream reference formula. Both implementation hashes are recorded. This is a functional compatibility deployment, not an optimized throughput claim.
+
+Runtime preparation completed at `2026-08-11T17:27:40Z`. The independent 5,299,391,581-byte environment contains 43 pinned packages, imports Torch `2.9.1+cu126`, and passes the same narrowly scoped NVIDIA SBSA/AArch64 library audit as the Jamba deployment. See `requirements.lock` and `runtime_manifest.json`.
