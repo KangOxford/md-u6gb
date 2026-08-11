@@ -1,0 +1,31 @@
+Loading checkpoint shards:   0%|          | 0/20 [00:00<?, ?it/s]Loading checkpoint shards:   5%|▌         | 1/20 [00:01<00:24,  1.29s/it]Loading checkpoint shards:  10%|█         | 2/20 [00:02<00:24,  1.34s/it]Loading checkpoint shards:  15%|█▌        | 3/20 [00:04<00:23,  1.37s/it]Loading checkpoint shards:  20%|██        | 4/20 [00:05<00:21,  1.37s/it]Loading checkpoint shards:  25%|██▌       | 5/20 [00:06<00:20,  1.38s/it]Loading checkpoint shards:  30%|███       | 6/20 [00:08<00:20,  1.48s/it]Loading checkpoint shards:  35%|███▌      | 7/20 [00:09<00:19,  1.47s/it]Loading checkpoint shards:  40%|████      | 8/20 [00:11<00:17,  1.45s/it]Loading checkpoint shards:  45%|████▌     | 9/20 [00:12<00:16,  1.46s/it]Loading checkpoint shards:  50%|█████     | 10/20 [00:14<00:14,  1.48s/it]Loading checkpoint shards:  55%|█████▌    | 11/20 [00:15<00:13,  1.49s/it]Loading checkpoint shards:  60%|██████    | 12/20 [00:17<00:12,  1.53s/it]Loading checkpoint shards:  65%|██████▌   | 13/20 [00:19<00:10,  1.56s/it]Loading checkpoint shards:  70%|███████   | 14/20 [00:20<00:09,  1.59s/it]Loading checkpoint shards:  75%|███████▌  | 15/20 [00:22<00:08,  1.61s/it]Loading checkpoint shards:  80%|████████  | 16/20 [00:24<00:06,  1.63s/it]Loading checkpoint shards:  85%|████████▌ | 17/20 [00:25<00:04,  1.62s/it]Loading checkpoint shards:  90%|█████████ | 18/20 [00:27<00:03,  1.63s/it]Loading checkpoint shards:  95%|█████████▌| 19/20 [00:29<00:01,  1.64s/it]Loading checkpoint shards: 100%|██████████| 20/20 [00:29<00:00,  1.43s/it]Loading checkpoint shards: 100%|██████████| 20/20 [00:29<00:00,  1.50s/it]
+{
+  "completed_utc": "2026-08-11T17:55:03.298736+00:00",
+  "model_id": "moonshotai/Kimi-Linear-48B-A3B-Instruct",
+  "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+  "generated_text": "Hybrid linear and full attention combines the efficiency of linear attention with the modeling power of full attention, enabling scalable processing of long",
+  "input_tokens": 22,
+  "generated_tokens": 24,
+  "elapsed_seconds": 44.34685029699176,
+  "peak_gpu_memory_bytes": [
+    45583835648,
+    52793666048
+  ],
+  "gpu_names": [
+    "NVIDIA GH200 120GB",
+    "NVIDIA GH200 120GB"
+  ],
+  "cuda_visible_devices": "2,3",
+  "device_map_counts": {
+    "0": 14,
+    "1": 16
+  },
+  "runtime": {
+    "hostname": "nid010197",
+    "python": "3.13.12",
+    "torch": "2.9.1+cu126",
+    "torch_cuda": "12.6",
+    "transformers": "4.57.1",
+    "fla_core": "0.4.0"
+  }
+}

@@ -1,0 +1,1 @@
+Hybrid linear and full attention combines the efficiency of linear attention with the modeling power of full attention, enabling scalable processing of long
