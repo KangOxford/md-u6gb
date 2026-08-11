@@ -1,0 +1,173 @@
+{
+  "created_utc": "2026-08-11T17:56:58.207508+00:00",
+  "github": {
+    "url": "https://github.com/MoonshotAI/Kimi-K3",
+    "revision": "3cb39dfd32e51c3328e2e4b4af21341247d06c43",
+    "archive_url": "https://github.com/MoonshotAI/Kimi-K3/archive/3cb39dfd32e51c3328e2e4b4af21341247d06c43.tar.gz",
+    "files": [
+      {
+        "path": "LICENSE",
+        "size_bytes": 3065,
+        "sha256": "f45c677fa7f42405512b67f9b18b4ccd6927c6787492867763d80368631b7c54"
+      },
+      {
+        "path": "README.md",
+        "size_bytes": 45004,
+        "sha256": "849a303d849486aac61d1f0c253e3a1148ca59e801be807151c2dc3cce57ccb2"
+      },
+      {
+        "path": "assets/kimi-logo.png",
+        "size_bytes": 87988,
+        "sha256": "4a80f64242bf907940765adc7bcf340c28dd83334b07c5503792a26495d1933b"
+      },
+      {
+        "path": "k3_tech_report.pdf",
+        "size_bytes": 1795670,
+        "sha256": "86fb82a63ced501f0c3f4f404c0c6fa88a7a6cfac17aae81fd1a8f455998067c"
+      }
+    ]
+  },
+  "model": {
+    "id": "moonshotai/Kimi-K3",
+    "revision": "9f62e4e9fffbd0a83ddd60e1c209d828994b3569",
+    "metadata_files_downloaded": [
+      ".eval_results/apex-agents.yaml",
+      ".eval_results/deep-swe.yaml",
+      ".eval_results/gpqa.yaml",
+      ".eval_results/hle.yaml",
+      ".gitattributes",
+      "LICENSE",
+      "README.md",
+      "assets/kimi-logo.png",
+      "config.json",
+      "configuration_kimi_k3.py",
+      "encoding_k3.py",
+      "generation_config.json",
+      "kimi_k3_processor.py",
+      "kimi_k3_vision_processing.py",
+      "media_utils.py",
+      "model.safetensors.index.json",
+      "modeling_kimi_k3.py",
+      "modeling_kimi_linear.py",
+      "preprocessor_config.json",
+      "tiktoken.model",
+      "tokenization_kimi.py",
+      "tokenizer_config.json"
+    ],
+    "files": [
+      {
+        "path": ".eval_results/apex-agents.yaml",
+        "size_bytes": 157,
+        "sha256": "576ccc93fc22aeffcf0bb7346a864b931d75894f0897119ce1d66de671021072"
+      },
+      {
+        "path": ".eval_results/deep-swe.yaml",
+        "size_bytes": 156,
+        "sha256": "59728f597c5bc12bf87513b905508bcd0ddc5689d819972007610f43bfc533b3"
+      },
+      {
+        "path": ".eval_results/gpqa.yaml",
+        "size_bytes": 152,
+        "sha256": "65870556e2ef9004d72a966cfba1ca9639b99f1825d9812060a13d3809dbfe6e"
+      },
+      {
+        "path": ".eval_results/hle.yaml",
+        "size_bytes": 139,
+        "sha256": "2b6c92d5f91476d1ebcbebd7f7e77a1ce042e5d77a544ccab1cc42dec149e703"
+      },
+      {
+        "path": ".gitattributes",
+        "size_bytes": 1639,
+        "sha256": "a2279e56e2c16d0648ab43dc60517acfaf219c682c58d21eebfe180df99d4e6f"
+      },
+      {
+        "path": "LICENSE",
+        "size_bytes": 3065,
+        "sha256": "20c797ce19af0c17de52c6afb144644768a591c521655f5ebf5712c9850f2887"
+      },
+      {
+        "path": "README.md",
+        "size_bytes": 45261,
+        "sha256": "57de265b5842dfa465c6e73b368b0e15a89b8793b5450528dad577da202cc6fe"
+      },
+      {
+        "path": "assets/kimi-logo.png",
+        "size_bytes": 87988,
+        "sha256": "4a80f64242bf907940765adc7bcf340c28dd83334b07c5503792a26495d1933b"
+      },
+      {
+        "path": "config.json",
+        "size_bytes": 7006,
+        "sha256": "9710e121a58d03ac92c8d6da287a19541994319afbbe6d6202af001ffd379213"
+      },
+      {
+        "path": "configuration_kimi_k3.py",
+        "size_bytes": 11343,
+        "sha256": "735eb9ebe593e17d231e08e1df7f7be9b5ee0e079f511aa201f9572077b416ae"
+      },
+      {
+        "path": "encoding_k3.py",
+        "size_bytes": 22827,
+        "sha256": "b9cb7ae100fed34b9337f80dacee5abbf7e261fe9b74bc0e76366701d46f5333"
+      },
+      {
+        "path": "generation_config.json",
+        "size_bytes": 53,
+        "sha256": "c6648c25e9705af7fba8847e243840d21b5cc63ddeb6297f750a7ddbb6a02836"
+      },
+      {
+        "path": "kimi_k3_processor.py",
+        "size_bytes": 7660,
+        "sha256": "ec9f7e86d2ab0eee07a8e7e7c037046e77ac3c25a710ad1298ec13be3b585b54"
+      },
+      {
+        "path": "kimi_k3_vision_processing.py",
+        "size_bytes": 6686,
+        "sha256": "d122b30bfd3a51a6f05d4bfcfda1e657827322b1353f7caefeebc2835d7736b5"
+      },
+      {
+        "path": "media_utils.py",
+        "size_bytes": 13844,
+        "sha256": "78403540328f9847d6b7ebc5c44eb2e6a752863de0afb7d0710728bb161dc60d"
+      },
+      {
+        "path": "model.safetensors.index.json",
+        "size_bytes": 59764096,
+        "sha256": "a1c5210650ce71d2d3ae9ec5a101ac4afd3cf4b10091be589853437eb967febd"
+      },
+      {
+        "path": "modeling_kimi_k3.py",
+        "size_bytes": 53444,
+        "sha256": "b9171c96726eda55234c92ac8dfae7e24c512fda68968ae8f2c3782b42665ea2"
+      },
+      {
+        "path": "modeling_kimi_linear.py",
+        "size_bytes": 51506,
+        "sha256": "9e3564c70ac21854ce5a090cc946c5dc76b70d1050ef50840449181a20fff44a"
+      },
+      {
+        "path": "preprocessor_config.json",
+        "size_bytes": 1011,
+        "sha256": "4be333605990c53a816e586dee9d5dd545afb7a59947c17f8f7ef26b4782668e"
+      },
+      {
+        "path": "tiktoken.model",
+        "size_bytes": 2795286,
+        "sha256": "b6c497a7469b33ced9c38afb1ad6e47f03f5e5dc05f15930799210ec050c5103"
+      },
+      {
+        "path": "tokenization_kimi.py",
+        "size_bytes": 16145,
+        "sha256": "f28ea66e2d862a2a5814970b2ce40c2f7d8296ff09aed90a7e7def689b906944"
+      },
+      {
+        "path": "tokenizer_config.json",
+        "size_bytes": 3478,
+        "sha256": "5d0803c94db9cd78763499e0956c95fd5a225c14a727e5a6cf5db3f96f010a6e"
+      }
+    ],
+    "weight_download": "skipped_by_capacity_gate",
+    "weight_shards": 96,
+    "weight_bytes": 1560936091448
+  }
+}
