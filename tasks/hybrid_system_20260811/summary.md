@@ -21,4 +21,6 @@ The dependency-resolving retry installed all CUDA 12.6 packages. The audit is do
 
 The remaining package warning is now narrowly audited: NVIDIA's legacy `manylinux2014_sbsa` tag is inconsistent with UV's accepted tags, but the shipped shared object is an AArch64 ELF. The exact exception verifier and login-node Torch import both pass. A user-supplied `gtop` sample at `17:14:29Z` shows all 16 GPUs in allocation `5980502` idle; the next gate is compute-side CUDA initialization and generation on one revalidated device.
 
+The first post-snapshot launch correctly aborted before CUDA/model work because `nid010053` GPU 0 had acquired PID `164189`. The point-in-time snapshot was not treated as a reservation; the next attempt will use a fresh process-level probe.
+
 Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the currently empty device pool. No result has yet been promoted to `completed`.

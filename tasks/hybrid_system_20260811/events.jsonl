@@ -14,3 +14,4 @@
 {"time_utc":"2026-08-11T17:14:37Z","event":"cusparselt_platform_audit","target":"01_jamba2_3b_inference","result":"known_tag_exception_verified","details":"wheel_tag_manylinux2014_sbsa; libcusparseLt.so.0_ELF_machine_AArch64_183; exact_exception_verifier_added"}
 {"time_utc":"2026-08-11T17:14:29Z","event":"gpu_capacity_snapshot","job_id":"5980502","source":"user_gtop","result":"16_of_16_gpus_idle","remaining":"18h49m","action":"select_5980502_exclude_active_5980745_and_expiring_5975573"}
 {"time_utc":"2026-08-11T17:15:34Z","event":"runtime_verification","target":"01_jamba2_3b_inference","result":"login_import_success","details":"torch2.9.1_cu126_cuda_built_true_exact_sbsa_exception_only; compute_cuda_pending"}
+{"time_utc":"2026-08-11T17:16:13Z","event":"gpu_smoke_attempt","target":"01_jamba2_3b_inference","job_id":"5980502","step_id":"5980502.51","node":"nid010053","physical_gpu":0,"result":"guard_abort_before_cuda","details":"compute_pid_164189_detected_exit_70"}

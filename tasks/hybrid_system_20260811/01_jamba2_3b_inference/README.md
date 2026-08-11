@@ -35,3 +35,5 @@ The dependency-resolving retry installed the complete CUDA 12.6 wheel set and ex
 The cuSPARSELt audit found that NVIDIA's installed wheel declares the legacy `manylinux2014_sbsa` tag, which UV does not recognize as AArch64, while the shipped `libcusparseLt.so.0` is independently verified as ELF64 machine `AArch64` (`e_machine=183`). `verify_runtime.py` accepts only this exact one-package/tag/binary combination; all other `uv pip check` failures remain fatal.
 
 The full runtime preparation now exits zero and imports Torch `2.9.1+cu126` on the login node. This proves package/link integrity, not GPU access; the next gate is `torch.cuda.is_available()` plus an allocation-restricted tensor operation on a revalidated compute GPU.
+
+At `2026-08-11T17:16:13Z`, a launch aimed at `nid010053` GPU 0 found PID `164189` and exited with the safety code `70` before creating a CUDA context. This confirms the point-in-time `gtop` snapshot is not used as a lock; the compute-side guard is authoritative.

@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T17:15:34Z",
+  "updated_utc": "2026-08-11T17:16:22Z",
   "state": "running",
   "active_target": "01_jamba2_3b_inference",
   "completed_targets": [],
   "alert": null,
-  "next_action": "Verify Torch CUDA and a tensor operation on one guarded GPU in allocation 5980502, then rerun the Jamba2 generation smoke."
+  "next_action": "Refresh process-level GPU occupancy in allocation 5980502 and retry the guarded Jamba2 generation on a device empty at launch time."
 }
