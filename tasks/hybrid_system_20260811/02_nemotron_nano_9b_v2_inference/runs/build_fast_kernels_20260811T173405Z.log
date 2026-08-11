@@ -1,0 +1,68 @@
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2024 NVIDIA Corporation
+Built on Thu_Sep_12_02:27:38_PDT_2024
+Cuda compilation tools, release 12.6, V12.6.77
+Build cuda_12.6.r12.6/compiler.34841621_0
+Using Python 3.13.12 environment at: /projects/public/u6gb/tasks/hybrid_system_20260811/02_nemotron_nano_9b_v2_inference/.venv
+Resolved 4 packages in 191ms
+Prepared 2 packages in 63ms
+Installed 3 packages in 30ms
+ + einops==0.8.1
+ + ninja==1.13.0
+ + wheel==0.46.1
+warning: `wheel==0.46.1` is yanked (reason: "Causes CI failures where setuptools is pinned to an old version")
+Using Python 3.13.12 environment at: /projects/public/u6gb/tasks/hybrid_system_20260811/02_nemotron_nano_9b_v2_inference/.venv
+Resolved 29 packages in 236ms
+   Building causal-conv1d==1.6.2.post1
+Downloading nvidia-cusparselt-cu12 (270.7MiB)
+ Downloaded nvidia-cusparselt-cu12
+      Built causal-conv1d==1.6.2.post1
+Prepared 2 packages in 13.83s
+Uninstalled 1 package in 11ms
+Installed 2 packages in 16ms
+ + causal-conv1d==1.6.2.post1
+ ~ nvidia-cusparselt-cu12==0.7.1
+Using Python 3.13.12 environment at: /projects/public/u6gb/tasks/hybrid_system_20260811/02_nemotron_nano_9b_v2_inference/.venv
+Resolved 62 packages in 513ms
+Uninstalled 1 package in 8ms
+Installed 4 packages in 55ms
+   Building mamba-ssm==2.3.2.post1
+Downloading ml-dtypes (4.8MiB)
+Downloading tilelang (38.5MiB)
+Downloading cuda-core (4.5MiB)
+Downloading nvidia-cuda-nvdisasm (4.5MiB)
+Downloading z3-solver (26.0MiB)
+Downloading apache-tvm-ffi (2.0MiB)
+Downloading nvidia-cutlass-dsl-libs-cu12 (83.0MiB)
+Downloading nvidia-cutlass-dsl-libs-base (3.2MiB)
+ Downloaded apache-tvm-ffi
+ Downloaded nvidia-cuda-nvdisasm
+ Downloaded ml-dtypes
+ Downloaded nvidia-cutlass-dsl-libs-base
+ Downloaded cuda-core
+ Downloaded z3-solver
+ Downloaded tilelang
+ Downloaded nvidia-cutlass-dsl-libs-cu12
+      Built mamba-ssm==2.3.2.post1
+Prepared 15 packages without build isolation in 19.91s
+Installed 15 packages in 2.83s
+ + apache-tvm-ffi==0.1.9
+ + cloudpickle==3.1.2
+ + cuda-bindings==13.3.1
+ + cuda-core==1.0.1
+ + cuda-pathfinder==1.6.0
+ + cuda-python==13.3.1
+ + mamba-ssm==2.3.2.post1
+ + ml-dtypes==0.5.4
+ + nvidia-cuda-nvdisasm==13.3.73
+ ~ nvidia-cusparselt-cu12==0.7.1
+ + nvidia-cutlass-dsl==4.6.2
+ + nvidia-cutlass-dsl-libs-base==4.6.2
+ + nvidia-cutlass-dsl-libs-core==4.6.2
+ + nvidia-cutlass-dsl-libs-cu12==4.6.2
+ + protobuf==6.33.6
+ + quack-kernels==0.6.4
+ + tilelang==0.1.8
+ + torch-c-dlpack-ext==0.1.5
+ + z3-solver==4.15.4.0
+{'causal_conv1d': '1.6.2.post1', 'mamba_ssm': '2.3.2.post1'}
