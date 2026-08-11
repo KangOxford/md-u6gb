@@ -45,6 +45,7 @@ def main() -> None:
     tokenizer = AutoTokenizer.from_pretrained(args.model_dir, local_files_only=True, trust_remote_code=True)
     config = AutoConfig.from_pretrained(args.model_dir, local_files_only=True, trust_remote_code=True)
     config.use_mamba_kernels = False
+    config.use_cache = False
     model = AutoModelForCausalLM.from_pretrained(
         args.model_dir,
         config=config,
@@ -66,6 +67,7 @@ def main() -> None:
             **inputs,
             max_new_tokens=args.max_new_tokens,
             do_sample=False,
+            use_cache=False,
             pad_token_id=tokenizer.eos_token_id,
         )
     torch.cuda.synchronize()
@@ -81,6 +83,7 @@ def main() -> None:
         "revision": MODEL_REVISION,
         "model_type": config.model_type,
         "use_mamba_kernels": config.use_mamba_kernels,
+        "use_cache": config.use_cache,
         "compatibility_modeling_sha256": compatibility_manifest["derived_modeling_sha256"],
         "generated_text": generated_text,
         "input_tokens": int(inputs["input_ids"].shape[-1]),
