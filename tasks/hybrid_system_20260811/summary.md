@@ -11,4 +11,6 @@ Recommended next action: download and hash the pinned Jamba2 snapshot on a compu
 
 The first compute-side download command exited before network or model work because Slurm resolved bare `env` to a non-executable user-local file. The committed launcher now invokes `/usr/bin/env` explicitly; this was a wrapper-path failure, not a model or GPU failure.
 
+The retry succeeded on `nid011179`: 13 files at the pinned revision were downloaded and locally SHA256-hashed, with exactly 6,394,271,296 safetensor bytes. The next gate is a real one-GPU generation after immediate device revalidation.
+
 Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the currently empty device pool. No result has yet been promoted to `completed`.

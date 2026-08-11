@@ -1,0 +1,3 @@
+slurmstepd: error: execve(): /projects/public/u6gb/.local/bin/env: Permission denied
+srun: error: nid011179: task 0: Exited with exit code 13
+srun: Terminating StepId=5980502.25

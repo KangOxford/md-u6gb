@@ -24,7 +24,7 @@
       "revision": "525c6c8e1d9f5bddedfbdc1dbb0ade2df84230c9",
       "weight_bytes": 6394271296,
       "planned_gpus": 1,
-      "status": "planned"
+      "status": "downloaded_and_hashed"
     },
     {
       "task": "02_nemotron_nano_9b_v2_inference",

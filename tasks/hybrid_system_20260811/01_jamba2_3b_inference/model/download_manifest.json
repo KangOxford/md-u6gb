@@ -1,0 +1,75 @@
+{
+  "created_utc": "2026-08-11T16:57:14.530632+00:00",
+  "model_id": "ai21labs/AI21-Jamba2-3B",
+  "requested_revision": "525c6c8e1d9f5bddedfbdc1dbb0ade2df84230c9",
+  "resolved_revision": "525c6c8e1d9f5bddedfbdc1dbb0ade2df84230c9",
+  "model_dir": "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/01_jamba2_3b_inference/model",
+  "safetensor_bytes": 6394271296,
+  "files": [
+    {
+      "path": ".gitattributes",
+      "size_bytes": 1519,
+      "sha256": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361"
+    },
+    {
+      "path": "LICENSE.txt",
+      "size_bytes": 11342,
+      "sha256": "9e268e3c9b70a4e979d6072c04ba439debd8f30a255322c520bebcebf4278f67"
+    },
+    {
+      "path": "README.md",
+      "size_bytes": 4392,
+      "sha256": "9ec1da74b97a4f1f3d5187187889c79b86a609526415bd1128b86bbeb312ba13"
+    },
+    {
+      "path": "assets/Enterprise Reliability Benchmarks for Tiny Models.png",
+      "size_bytes": 74531,
+      "sha256": "14ea66c20abadef0d8cec5e87541abb4bee036bea41abf8a4523b661aa525b0c"
+    },
+    {
+      "path": "chat_template.jinja",
+      "size_bytes": 3147,
+      "sha256": "d027ed3478d927b912afb0984fd3e9671c6e8d2af49de78800ea6a46c530c6cf"
+    },
+    {
+      "path": "config.json",
+      "size_bytes": 1004,
+      "sha256": "40ac492a8a89e9010340ef417e7a91b3a8a9bcd4b19df84d49262eaa0304e31f"
+    },
+    {
+      "path": "generation_config.json",
+      "size_bytes": 132,
+      "sha256": "108ed425bbd78893bb03e3d9aa4ad23fab091aa0e3e3040c29de256e3302a35e"
+    },
+    {
+      "path": "model-00001-of-00002.safetensors",
+      "size_bytes": 4973441016,
+      "sha256": "78da3eac60acafbc0e6d40b2004e46d087f5a7e9cd4a559f7c6dd0408e961f52"
+    },
+    {
+      "path": "model-00002-of-00002.safetensors",
+      "size_bytes": 1420830280,
+      "sha256": "920e3735fc9c349d7df8c5bf6e59b44d2b113eea5e49036b285ea43022a83b85"
+    },
+    {
+      "path": "model.safetensors.index.json",
+      "size_bytes": 37422,
+      "sha256": "7d8a544c4a9fc1545ff34b6f9dbced838d3dcf0d5774a33c3648e07d50c72419"
+    },
+    {
+      "path": "special_tokens_map.json",
+      "size_bytes": 895,
+      "sha256": "90a1f613c89566d8c7f53043a7092321d376498ac541aae1914ef1328e895be7"
+    },
+    {
+      "path": "tokenizer.json",
+      "size_bytes": 8285713,
+      "sha256": "e7a4e48ea138a47ad25233b59d59babae314ee104ba9557644f28f5f2e49f900"
+    },
+    {
+      "path": "tokenizer_config.json",
+      "size_bytes": 5771,
+      "sha256": "a05e17f6c5eff04d8d86c3bc2cd90c4613fbee2fb474de21cc3814a47f54ffad"
+    }
+  ]
+}

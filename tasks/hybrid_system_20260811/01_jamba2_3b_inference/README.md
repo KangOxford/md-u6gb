@@ -21,3 +21,5 @@ All commands are non-destructive and refuse to use a GPU with a compute process 
 The runtime deliberately sets `use_mamba_kernels=False` for the first compatibility smoke. This exercises the actual Jamba model and generation path through Transformers' reference implementation without requiring an unverified CUDA extension build against the site's Python 3.13 / Torch 2.11 / CUDA 13 stack. Kernel-optimized serving is a separate performance gate after functional inference succeeds.
 
 Runtime preparation completed at `2026-08-11T16:55:37Z`. The isolated environment resolved Torch `2.13.0+cu130`, Transformers `4.57.1`, and Accelerate `1.11.0`; see `requirements.lock` and `runtime_manifest.json`. The generated 4.6 GB `.venv` is task-local and intentionally not committed.
+
+The pinned model snapshot completed at `2026-08-11T16:57:14Z`. All 13 files were hashed locally, both safetensor shards total exactly `6,394,271,296` bytes, and the resolved revision equals the requested revision. The committed audit record is `model/download_manifest.json`; the 6.0 GiB snapshot itself remains task-local.

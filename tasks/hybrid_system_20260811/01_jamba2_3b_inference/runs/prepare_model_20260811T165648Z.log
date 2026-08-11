@@ -1,0 +1,2 @@
+Fetching 13 files:   0%|          | 0/13 [00:00<?, ?it/s]Fetching 13 files:  31%|███       | 4/13 [00:00<00:01,  5.69it/s]Fetching 13 files:  62%|██████▏   | 8/13 [00:01<00:00,  6.05it/s]Fetching 13 files:  92%|█████████▏| 12/13 [00:13<00:01,  1.12s/it]Fetching 13 files: 100%|██████████| 13/13 [00:19<00:00,  1.51s/it]Fetching 13 files: 100%|██████████| 13/13 [00:19<00:00,  1.51s/it]
+{"model_dir": "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/01_jamba2_3b_inference/model", "files": 13, "safetensor_bytes": 6394271296}
