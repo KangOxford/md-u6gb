@@ -31,3 +31,5 @@ The corrective runtime pin is official PyTorch `2.9.1+cu126` from `https://downl
 The repin installed successfully and reduced the task-local environment from 4.6 GB to 863 MB, but its login-node import check cannot find dynamically linked CUDA 12 libraries (`libcudart.so.12` and `libcublas.so`). The next check is the authoritative compute-node library surface; this is not yet a usable runtime claim.
 
 The dependency-resolving retry installed the complete CUDA 12.6 wheel set and expanded the isolated environment to 4.8 GB. `uv pip check` now reports one remaining problem: `nvidia-cusparselt-cu12==0.7.1` has an incompatible platform tag. The package and compute import gates remain open until that wheel is corrected or proven unnecessary and safely removed.
+
+The cuSPARSELt audit found that NVIDIA's installed wheel declares the legacy `manylinux2014_sbsa` tag, which UV does not recognize as AArch64, while the shipped `libcusparseLt.so.0` is independently verified as ELF64 machine `AArch64` (`e_machine=183`). `verify_runtime.py` accepts only this exact one-package/tag/binary combination; all other `uv pip check` failures remain fatal.

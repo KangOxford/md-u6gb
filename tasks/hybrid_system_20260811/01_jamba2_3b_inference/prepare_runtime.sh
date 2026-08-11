@@ -29,7 +29,9 @@ fi
   --index-strategy unsafe-best-match \
   --requirement "$task_dir/requirements.txt"
 
-"$uv_bin" pip check --python "$task_dir/.venv/bin/python"
+"$task_dir/.venv/bin/python" "$task_dir/verify_runtime.py" \
+  --uv "$uv_bin" \
+  --python "$task_dir/.venv/bin/python"
 
 "$task_dir/.venv/bin/python" - <<'PY'
 import importlib.metadata as metadata
