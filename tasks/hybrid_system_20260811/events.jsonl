@@ -32,3 +32,4 @@
 {"time_utc":"2026-08-11T17:57:05Z","event":"source_capture","target":"04_kimi_k3_feasibility","result":"success","details":"github_4_files_model_metadata_22_files_96_weight_shards_skipped_by_capacity_gate","evidence":"04_kimi_k3_feasibility/source_manifest.json"}
 {"time_utc":"2026-08-11T17:58:35Z","event":"recipe_capture","target":"04_kimi_k3_feasibility","result":"success","details":"vllm_and_sglang_pages_downloaded_and_hashed","evidence":"04_kimi_k3_feasibility/recipe_manifest.json"}
 {"time_utc":"2026-08-11T17:59:07Z","event":"portfolio_complete","result":"three_inference_successes_one_source_complete_capacity_gate"}
+{"time_utc":"2026-08-11T18:01:07Z","event":"notion_delivery_verified","page_id":"3b912c45-68fd-806b-9200-ecead77d7bf8","result":"visible_after_refetch"}

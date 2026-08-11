@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T17:59:07Z",
+  "updated_utc": "2026-08-11T18:01:07Z",
   "state": "complete_with_capacity_gate",
   "active_target": null,
   "completed_targets": ["01_jamba2_3b_inference", "02_nemotron_nano_9b_v2_inference", "03_kimi_linear_48b_inference", "04_kimi_k3_feasibility"],
   "alert": null,
-  "next_action": "Update and re-fetch the exact Hybrid Notion page with the verified results and artifact paths."
+  "next_action": "If architecture selection is required, run a controlled benchmark with common data, token budget, context lengths, and hardware budget."
 }

@@ -65,6 +65,11 @@
     "task-local paths are used for model snapshots, environments, logs, and outputs"
   ],
   "success_gate": "Pinned local weights load on GPU, generation exits zero, output is non-empty, and provenance plus GPU evidence are preserved.",
+  "notion_delivery": {
+    "page_id": "3b912c45-68fd-806b-9200-ecead77d7bf8",
+    "verified_utc": "2026-08-11T18:01:07Z",
+    "result": "visible_after_refetch"
+  },
   "stop_policy": {
     "cancel_existing_jobs": false,
     "kill_existing_processes": false,
