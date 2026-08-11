@@ -1,7 +1,7 @@
 # Hybrid inference supervisor summary
 
-State: **running**  
-Updated: `2026-08-11T17:55:04Z`
+State: **complete with K3 capacity gate**  
+Updated: `2026-08-11T17:59:07Z`
 
 The exact Notion target has been fetched and converted into four isolated model tasks. Current primary-source revisions and checkpoint byte sizes are pinned. A live read-only probe found eight empty GPUs inside allocation `5980502`, alongside unrelated GPU-resident processes that must remain untouched.
 
@@ -31,4 +31,4 @@ Nemotron Nano 9B v2 is also functionally deployed. Its repository-provided naive
 
 Kimi Linear 48B-A3B is functionally deployed across two guarded GH200 GPUs. The environment required the checkpoint-compatible `fla-core 0.4.0` API, an explicit `tiktoken` dependency, and a documentation/backend-selection compatibility view. The successful run loaded 98.25 GB of pinned weights without CPU/disk offload and generated a relevant 24-token answer in 44.35 seconds; peak GPU allocations were 45.58 GB and 52.79 GB. Evidence is in `03_kimi_linear_48b_inference/runs/smoke_20260811T175406Z/`.
 
-Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the available pool. Jamba2, Nemotron Nano 9B v2, and Kimi Linear 48B-A3B are all promoted functional deployments.
+Kimi K3 is correctly capacity-gated. The raw checkpoint leaves only 71.15 GB total headroom across 16 GH200 GPUs, while the current supported Hopper SGLang shape is 32 GPUs and the vLLM path requires a CUDA 13/r580+ environment. Its pinned GitHub source, non-weight model repository, license, technical report, vLLM recipe, and SGLang recipe are locally captured and hashed. Jamba2, Nemotron Nano 9B v2, and Kimi Linear 48B-A3B are all promoted functional deployments.

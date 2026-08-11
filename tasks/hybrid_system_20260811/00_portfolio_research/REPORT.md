@@ -2,6 +2,13 @@
 
 Audit time: `2026-08-11T16:41:37Z`
 
+## Verified outcome
+
+- Jamba2 3B: successful pinned one-GPU generation; 6.40 GB peak allocation.
+- Nemotron Nano 9B v2: successful pinned one-GPU generation through compiled upstream Mamba kernels; 18.17 GB peak allocation.
+- Kimi Linear 48B-A3B: successful pinned two-GPU generation with no CPU/disk offload; 45.58 GB and 52.79 GB peak allocations.
+- Kimi K3: pinned source, non-weight model metadata, license, technical report, and engine recipes captured; inference blocked by the supported 32-GPU Hopper shape and current allocation topology.
+
 ## Decision
 
 Use three progressively larger local inference targets and keep Kimi K3 behind an explicit capacity gate:
@@ -48,4 +55,4 @@ Allocation `5980502` was `RUNNING` for user `kangli.u6gb`. A read-only four-node
 - `nid010473`: GPUs 0 and 2
 - `nid011179`: GPUs 1, 2, and 3
 
-The remaining devices held existing Python processes using about 78.6 GB each. This is point-in-time evidence only. Every launch must repeat the process/memory probe immediately before loading a model and restrict `CUDA_VISIBLE_DEVICES` to the revalidated physical indices.
+The remaining devices held existing Python processes using about 78.6 GB each. A later user snapshot showed 16 idle GPUs in `5980502`, but all of them were occupied again before the first smoke; the guard correctly aborted. The promoted runs used only GPUs revalidated inside `5975573` immediately before launch and restricted `CUDA_VISIBLE_DEVICES` to those physical indices.

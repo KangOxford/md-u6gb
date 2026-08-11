@@ -16,6 +16,8 @@ Model weights, virtual environments, cloned upstream repositories, and generated
 
 ## Current status
 
-The user-supplied `gtop` sample at `2026-08-11T17:14:29Z` showed all 16 GPUs in allocation `5980502` physically idle, but a launch-time probe less than two minutes later found that training processes had returned to all four nodes. The guard aborted before CUDA initialization. Allocation `5980745` remains fully active and excluded. A separate launch on an actually empty GPU in the nearly expired allocation `5975573` completed the Jamba2-3B smoke without stopping, moving, or overwriting any process. Every deployment repeats the same inside-allocation GPU process/memory gate at launch time.
+The user-supplied `gtop` sample at `2026-08-11T17:14:29Z` showed all 16 GPUs in allocation `5980502` physically idle, but a launch-time probe less than two minutes later found that training processes had returned to all four nodes. The guard aborted before CUDA initialization. Allocation `5980745` remained fully active and excluded. Freshly empty devices in the expiring allocation `5975573` then completed Jamba2-3B (one GPU), Nemotron Nano 9B v2 (one GPU), and Kimi Linear 48B-A3B (two GPUs) without stopping, moving, or overwriting any process.
+
+Kimi K3 is source-complete but deliberately not labeled deployed: its 1,560,936,091,448-byte checkpoint and the supported Hopper recipe require a 32-GPU shape, while the available independent allocations cannot be merged. Its exact code, non-weight model files, license, technical report, and vLLM/SGLang recipes are stored locally with SHA256 manifests.
 
 The task-wide state machine is recorded in `manifest.json`, `events.jsonl`, `state.json`, and `summary.md`.

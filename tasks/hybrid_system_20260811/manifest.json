@@ -4,7 +4,7 @@
   "created_utc": "2026-08-11T16:41:37Z",
   "source_notion_url": "https://app.notion.com/p/3b912c4568fd806b9200ecead77d7bf8",
   "evidence_question": "Can each selected open hybrid architecture be reproduced as local GPU inference on Isambard-AI without disturbing existing processes?",
-  "state": "running",
+  "state": "complete_with_capacity_gate",
   "candidate_parent_allocation": {
     "job_id": "5980502",
     "owner": "kangli.u6gb",
@@ -52,7 +52,9 @@
       "revision": "9f62e4e9fffbd0a83ddd60e1c209d828994b3569",
       "weight_bytes": 1560936091448,
       "planned_gpus": null,
-      "status": "capacity_gate_failed"
+      "status": "source_captured_capacity_gate",
+      "source_manifest": "04_kimi_k3_feasibility/source_manifest.json",
+      "recipe_manifest": "04_kimi_k3_feasibility/recipe_manifest.json"
     }
   ],
   "launch_gates": [

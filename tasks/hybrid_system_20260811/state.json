@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T17:55:04Z",
-  "state": "running",
-  "active_target": "04_kimi_k3_feasibility",
-  "completed_targets": ["01_jamba2_3b_inference", "02_nemotron_nano_9b_v2_inference", "03_kimi_linear_48b_inference"],
+  "updated_utc": "2026-08-11T17:59:07Z",
+  "state": "complete_with_capacity_gate",
+  "active_target": null,
+  "completed_targets": ["01_jamba2_3b_inference", "02_nemotron_nano_9b_v2_inference", "03_kimi_linear_48b_inference", "04_kimi_k3_feasibility"],
   "alert": null,
-  "next_action": "Capture the pinned Kimi K3 source and document the checkpoint capacity gate, then update and re-fetch the exact Notion page."
+  "next_action": "Update and re-fetch the exact Hybrid Notion page with the verified results and artifact paths."
 }
