@@ -9,3 +9,9 @@
 The current point-in-time pool of eight empty 96 GB GPUs cannot hold the checkpoint weights, even before runtime state, activations, communication buffers, or KV/recurrent state. Therefore this task's first deliverable is a pinned source/recipe capture and an explicit capacity plan. It must not be called locally deployed until a supported distributed engine produces real output from the local weights.
 
 No K3 weights will be downloaded speculatively into a launch configuration that cannot run them. This prevents a 1.56 TB download from being mistaken for deployment progress.
+
+`capture_source.py` non-destructively downloads the exact GitHub archive and every non-safetensor file from the pinned Hugging Face revision into this task folder. It records a SHA256 and byte size for every file in `source_manifest.json`, while explicitly recording that all 96 weight shards were skipped by the capacity gate.
+
+```bash
+./capture_source.py
+```
