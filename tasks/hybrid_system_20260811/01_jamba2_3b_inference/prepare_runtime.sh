@@ -5,6 +5,7 @@ task_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 base_python="${HYBRID_BASE_PYTHON:-/home/u6gb/kangli.u6gb/miniforge3/bin/python3}"
 uv_bin="${HYBRID_UV_BIN:-/projects/public/u6gb/.local/bin/uv}"
 torch_index="${HYBRID_TORCH_INDEX:-https://download.pytorch.org/whl/cu126}"
+export UV_HTTP_TIMEOUT="${HYBRID_UV_HTTP_TIMEOUT:-300}"
 
 if [[ ! -x "$base_python" ]]; then
   echo "Base Python is not executable: $base_python" >&2
