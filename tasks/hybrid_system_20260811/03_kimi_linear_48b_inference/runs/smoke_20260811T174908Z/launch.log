@@ -1,0 +1,113 @@
+Ignoring the provided attention implementation eager
+Using flash_attention_2 backend instead.
+Loading checkpoint shards:   0%|          | 0/20 [00:00<?, ?it/s]Loading checkpoint shards:   5%|▌         | 1/20 [00:01<00:24,  1.31s/it]Loading checkpoint shards:  10%|█         | 2/20 [00:02<00:24,  1.38s/it]Loading checkpoint shards:  15%|█▌        | 3/20 [00:04<00:23,  1.40s/it]Loading checkpoint shards:  20%|██        | 4/20 [00:05<00:22,  1.41s/it]Loading checkpoint shards:  25%|██▌       | 5/20 [00:07<00:21,  1.41s/it]Loading checkpoint shards:  30%|███       | 6/20 [00:08<00:19,  1.42s/it]Loading checkpoint shards:  35%|███▌      | 7/20 [00:09<00:18,  1.43s/it]Loading checkpoint shards:  40%|████      | 8/20 [00:11<00:17,  1.44s/it]Loading checkpoint shards:  45%|████▌     | 9/20 [00:12<00:15,  1.44s/it]Loading checkpoint shards:  50%|█████     | 10/20 [00:14<00:14,  1.45s/it]Loading checkpoint shards:  55%|█████▌    | 11/20 [00:15<00:13,  1.48s/it]Loading checkpoint shards:  60%|██████    | 12/20 [00:17<00:12,  1.53s/it]Loading checkpoint shards:  65%|██████▌   | 13/20 [00:19<00:10,  1.56s/it]Loading checkpoint shards:  70%|███████   | 14/20 [00:20<00:09,  1.59s/it]Loading checkpoint shards:  75%|███████▌  | 15/20 [00:22<00:08,  1.62s/it]Loading checkpoint shards:  80%|████████  | 16/20 [00:24<00:06,  1.64s/it]Loading checkpoint shards:  85%|████████▌ | 17/20 [00:25<00:04,  1.65s/it]Loading checkpoint shards:  90%|█████████ | 18/20 [00:27<00:03,  1.66s/it]Loading checkpoint shards:  95%|█████████▌| 19/20 [00:29<00:01,  1.66s/it]Loading checkpoint shards: 100%|██████████| 20/20 [00:30<00:00,  1.45s/it]Loading checkpoint shards: 100%|██████████| 20/20 [00:30<00:00,  1.50s/it]
+Traceback (most recent call last):
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/utils/generic.py", line 1071, in wrapper
+    outputs = func(self, *args, **kwargs_without_recordable)
+  File "/projects/public/u6gb/.cache/huggingface/modules/transformers_modules/compatibility_model/modeling_kimi.py", line 992, in forward
+    hidden_states = decoder_layer(
+        hidden_states,
+    ...<3 lines>...
+        **kwargs,
+    )
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/accelerate/hooks.py", line 175, in new_forward
+    output = module._old_forward(*args, **kwargs)
+  File "/projects/public/u6gb/.cache/huggingface/modules/transformers_modules/compatibility_model/modeling_kimi.py", line 851, in forward
+    hidden_states = self.self_attn(
+        hidden_states=hidden_states,
+    ...<4 lines>...
+        **kwargs,
+    )
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/accelerate/hooks.py", line 175, in new_forward
+    output = module._old_forward(*args, **kwargs)
+  File "/projects/public/u6gb/.cache/huggingface/modules/transformers_modules/compatibility_model/modeling_kimi.py", line 560, in forward
+    g = fused_kda_gate(g, self.A_log, self.head_dim, g_bias=self.dt_bias)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/_dynamo/eval_frame.py", line 1044, in _fn
+    return fn(*args, **kwargs)
+TypeError: fused_kda_gate() got an unexpected keyword argument 'g_bias'. Did you mean 'dt_bias'?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/smoke.py", line 93, in <module>
+    main()
+    ~~~~^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/smoke.py", line 59, in main
+    output_ids = model.generate(inputs, max_new_tokens=args.max_new_tokens, do_sample=False)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/generation/utils.py", line 2564, in generate
+    result = decoding_method(
+        self,
+    ...<5 lines>...
+        **model_kwargs,
+    )
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/generation/utils.py", line 2784, in _sample
+    outputs = self(**model_inputs, return_dict=True)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/accelerate/hooks.py", line 175, in new_forward
+    output = module._old_forward(*args, **kwargs)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/utils/generic.py", line 918, in wrapper
+    output = func(self, *args, **kwargs)
+  File "/projects/public/u6gb/.cache/huggingface/modules/transformers_modules/compatibility_model/modeling_kimi.py", line 1070, in forward
+    outputs = self.model(
+        input_ids=input_ids,
+    ...<8 lines>...
+        cache_position=cache_position,
+    )
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/utils/generic.py", line 1073, in wrapper
+    raise original_exception
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/utils/generic.py", line 1064, in wrapper
+    outputs = func(self, *args, **kwargs)
+  File "/projects/public/u6gb/.cache/huggingface/modules/transformers_modules/compatibility_model/modeling_kimi.py", line 992, in forward
+    hidden_states = decoder_layer(
+        hidden_states,
+    ...<3 lines>...
+        **kwargs,
+    )
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/accelerate/hooks.py", line 175, in new_forward
+    output = module._old_forward(*args, **kwargs)
+  File "/projects/public/u6gb/.cache/huggingface/modules/transformers_modules/compatibility_model/modeling_kimi.py", line 851, in forward
+    hidden_states = self.self_attn(
+        hidden_states=hidden_states,
+    ...<4 lines>...
+        **kwargs,
+    )
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/accelerate/hooks.py", line 175, in new_forward
+    output = module._old_forward(*args, **kwargs)
+  File "/projects/public/u6gb/.cache/huggingface/modules/transformers_modules/compatibility_model/modeling_kimi.py", line 560, in forward
+    g = fused_kda_gate(g, self.A_log, self.head_dim, g_bias=self.dt_bias)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/torch/_dynamo/eval_frame.py", line 1044, in _fn
+    return fn(*args, **kwargs)
+TypeError: fused_kda_gate() got an unexpected keyword argument 'g_bias'. Did you mean 'dt_bias'?
+srun: error: nid010197: task 0: Exited with exit code 1
+srun: Terminating StepId=5975573.905
