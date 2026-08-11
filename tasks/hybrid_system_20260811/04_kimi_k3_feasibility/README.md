@@ -15,3 +15,11 @@ No K3 weights will be downloaded speculatively into a launch configuration that 
 ```bash
 ./capture_source.py
 ```
+
+## Capacity and engine gate
+
+Sixteen GH200 GPUs provide `1,632,087,572,480` bytes of aggregate VRAM, only `71,151,481,032` bytes above the checkpoint itself (about 4.45 GB per GPU) before engine state, activations, communication buffers, KDA state, MLA KV, or vision tensors. Thus a 16-GPU allocation is not a viable K3 deployment even though the raw byte sum is nominally larger.
+
+The current vLLM recipe is pre-release, requires vLLM 0.27+, a CUDA 13 K3 image and an r580+ host driver, and lists at least eight GB300 GPUs. The current Hopper-class SGLang recipe is the relevant comparison for GH200 and uses four 8-GPU H100 nodes (`TP32/EP32`) plus a K3-specific CUDA image. The available 16-GPU allocations cannot satisfy that supported shape, cannot be merged across independent jobs, and the observed node driver only supports the CUDA 12.7 compatibility level. K3 therefore remains source-complete but inference-capacity-gated.
+
+`capture_recipes.py` saves the exact vLLM and SGLang recipe pages used for this decision, with retrieval time, byte size, and SHA256 in `recipe_manifest.json`.
