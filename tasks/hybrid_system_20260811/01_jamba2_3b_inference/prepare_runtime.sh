@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+task_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+base_python="${HYBRID_BASE_PYTHON:-/home/u6gb/kangli.u6gb/miniforge3/bin/python3}"
+uv_bin="${HYBRID_UV_BIN:-/projects/public/u6gb/.local/bin/uv}"
+
+if [[ ! -x "$base_python" ]]; then
+  echo "Base Python is not executable: $base_python" >&2
+  exit 2
+fi
+if [[ ! -x "$uv_bin" ]]; then
+  echo "uv is not executable: $uv_bin" >&2
+  exit 2
+fi
+
+if [[ ! -x "$task_dir/.venv/bin/python" ]]; then
+  "$uv_bin" venv \
+    --python "$base_python" \
+    --system-site-packages \
+    "$task_dir/.venv"
+fi
+
+"$uv_bin" pip install \
+  --python "$task_dir/.venv/bin/python" \
+  --requirement "$task_dir/requirements.txt"
+
+"$task_dir/.venv/bin/python" - <<'PY'
+import importlib.metadata as metadata
+import torch
+
+packages = ["torch", "transformers", "accelerate", "huggingface-hub", "safetensors", "tokenizers"]
+print({name: metadata.version(name) for name in packages})
+print({"torch_cuda_build": torch.version.cuda, "cuda_built": torch.backends.cuda.is_built()})
+PY
