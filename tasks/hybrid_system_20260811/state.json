@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T16:55:37Z",
+  "updated_utc": "2026-08-11T16:56:29Z",
   "state": "running",
   "active_target": "01_jamba2_3b_inference",
   "completed_targets": [],
-  "alert": null,
-  "next_action": "Download and hash the pinned Jamba2 snapshot on a compute node, then revalidate one empty GPU immediately before the smoke load."
+  "alert": "The first model-preparation step exited before download because bare env resolved to a non-executable user-local path; the launcher now uses /usr/bin/env explicitly.",
+  "next_action": "Retry the pinned Jamba2 download and hash on nid011179, then revalidate one empty GPU immediately before the smoke load."
 }

@@ -9,4 +9,6 @@ The Jamba2 3B smoke runtime and safety launcher are committed. A task-local 4.6 
 
 Recommended next action: download and hash the pinned Jamba2 snapshot on a compute node, then repeat the ownership/state/process probe immediately before launching on one explicitly selected physical GPU.
 
+The first compute-side download command exited before network or model work because Slurm resolved bare `env` to a non-executable user-local file. The committed launcher now invokes `/usr/bin/env` explicitly; this was a wrapper-path failure, not a model or GPU failure.
+
 Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the currently empty device pool. No result has yet been promoted to `completed`.

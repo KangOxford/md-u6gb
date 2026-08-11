@@ -52,7 +52,7 @@ srun \
   --ntasks=1 \
   --cpus-per-task=4 \
   --mem=32G \
-  env \
+  /usr/bin/env \
     HF_HOME="$task_dir/hf_home" \
     "$task_dir/.venv/bin/python" "$task_dir/prepare_model.py" \
       --model-dir "$task_dir/model" \
