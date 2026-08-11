@@ -20,6 +20,8 @@ The first guarded launch passed both GPU gates and then stopped before tokenizer
 
 The next import exposed a documentation-only compatibility defect: Transformers `auto_docstring` assumes annotations have `__name__`, while the pinned remote code uses Python 3.13 `types.UnionType`. `prepare_compatibility_model.py` preserves the full original snapshot and creates a symlink view whose only code change is removing the two runtime documentation decorators; both source hashes are recorded.
 
+After full two-GPU model loading, `fla-core 0.5.2` failed at the first KDA gate because its API renamed `g_bias` to `dt_bias`. A direct audit of the published wheels shows `0.4.0` has the exact five-argument signature used by the pinned model, while every release from `0.4.1` onward has the renamed API. The runtime is therefore pinned to `fla-core==0.4.0`, not the model card's unsafe open-ended `>=0.4.0` range.
+
 - Model: `moonshotai/Kimi-Linear-48B-A3B-Instruct`
 - Revision: `e1df551a447157d4658b573f9a695d57658590e9`
 - Official weight bytes: `98,248,224,120`
