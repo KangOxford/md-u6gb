@@ -22,6 +22,8 @@ The next import exposed a documentation-only compatibility defect: Transformers 
 
 After full two-GPU model loading, `fla-core 0.5.2` failed at the first KDA gate because its API renamed `g_bias` to `dt_bias`. A direct audit of the published wheels shows `0.4.0` has the exact five-argument signature used by the pinned model, while every release from `0.4.1` onward has the renamed API. The runtime is therefore pinned to `fla-core==0.4.0`, not the model card's unsafe open-ended `>=0.4.0` range.
 
+The promoted smoke is `runs/smoke_20260811T175406Z`. Both physical GPUs 2 and 3 on `nid010197` passed the empty-device gate, all 20 pinned shards loaded, and the model produced a relevant 24-token answer. The run exited zero in 44.35 seconds with peak allocations of 45,583,835,648 and 52,793,666,048 bytes. The device map assigned 14 modules to visible GPU 0 and 16 to visible GPU 1, with no CPU or disk offload. The compatibility view changes documentation decoration and backend selection only; KDA runs through the exact `fla-core 0.4.0` API used by the checkpoint code.
+
 - Model: `moonshotai/Kimi-Linear-48B-A3B-Instruct`
 - Revision: `e1df551a447157d4658b573f9a695d57658590e9`
 - Official weight bytes: `98,248,224,120`

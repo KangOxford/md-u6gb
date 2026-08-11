@@ -43,7 +43,8 @@
       "revision": "e1df551a447157d4658b573f9a695d57658590e9",
       "weight_bytes": 98248224120,
       "planned_gpus": 2,
-      "status": "planned"
+      "status": "inference_success",
+      "result_path": "03_kimi_linear_48b_inference/runs/smoke_20260811T175406Z/result.json"
     },
     {
       "task": "04_kimi_k3_feasibility",

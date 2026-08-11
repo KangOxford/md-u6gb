@@ -1,7 +1,7 @@
 # Hybrid inference supervisor summary
 
 State: **running**  
-Updated: `2026-08-11T17:37:53Z`
+Updated: `2026-08-11T17:55:04Z`
 
 The exact Notion target has been fetched and converted into four isolated model tasks. Current primary-source revisions and checkpoint byte sizes are pinned. A live read-only probe found eight empty GPUs inside allocation `5980502`, alongside unrelated GPU-resident processes that must remain untouched.
 
@@ -29,4 +29,6 @@ Jamba2-3B is now functionally deployed. The corrected guarded run on `nid010197`
 
 Nemotron Nano 9B v2 is also functionally deployed. Its repository-provided naive path loaded the checkpoint but generated degenerate text, so it was not promoted. After `causal-conv1d 1.6.2.post1` and `mamba-ssm 2.3.2.post1` were built from source against CUDA 12.6, the byte-identical upstream model implementation generated a relevant 24-token answer in 45.61 seconds with 18.17 GB peak GPU memory. Evidence is in `02_nemotron_nano_9b_v2_inference/runs/smoke_20260811T173651Z/`.
 
-Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the currently empty device pool. Jamba2 and Nemotron Nano 9B v2 are promoted; Kimi Linear remains the next deployable target.
+Kimi Linear 48B-A3B is functionally deployed across two guarded GH200 GPUs. The environment required the checkpoint-compatible `fla-core 0.4.0` API, an explicit `tiktoken` dependency, and a documentation/backend-selection compatibility view. The successful run loaded 98.25 GB of pinned weights without CPU/disk offload and generated a relevant 24-token answer in 44.35 seconds; peak GPU allocations were 45.58 GB and 52.79 GB. Evidence is in `03_kimi_linear_48b_inference/runs/smoke_20260811T175406Z/`.
+
+Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the available pool. Jamba2, Nemotron Nano 9B v2, and Kimi Linear 48B-A3B are all promoted functional deployments.
