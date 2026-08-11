@@ -1,7 +1,9 @@
 # Hybrid 序列模型架构与本地部署报告
 
-**报告日期**：2026-08-11  
-**报告范围**：AI21 Jamba2 3B、NVIDIA Nemotron Nano 9B v2、Moonshot Kimi Linear 48B-A3B、Moonshot Kimi K3  
+**报告日期**：2026-08-11
+
+**报告范围**：AI21 Jamba2 3B、NVIDIA Nemotron Nano 9B v2、Moonshot Kimi Linear 48B-A3B、Moonshot Kimi K3
+
 **证据口径**：固定模型 revision、官方模型配置与技术报告、本地源代码，以及 Isambard-AI GH200 上的真实推理记录。本文区分“架构可分析”“权重已下载”“真实推理成功”三种状态。
 
 ## 执行摘要
@@ -322,4 +324,3 @@ K3 从后训练阶段使用量化感知训练，发布形态为 MXFP4 weights / 
 7. [Kimi Linear 48B-A3B Instruct model card](https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct)
 8. [Kimi K3 repository and technical report](https://github.com/MoonshotAI/Kimi-K3)
 9. [Kimi K3 model card](https://huggingface.co/moonshotai/Kimi-K3)
-
