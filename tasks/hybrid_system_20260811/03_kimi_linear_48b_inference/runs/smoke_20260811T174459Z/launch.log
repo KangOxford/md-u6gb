@@ -1,0 +1,24 @@
+Encountered exception while importing tiktoken: No module named 'tiktoken'
+Traceback (most recent call last):
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/smoke.py", line 91, in <module>
+    main()
+    ~~~~^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/smoke.py", line 41, in main
+    tokenizer = AutoTokenizer.from_pretrained(args.model_dir, local_files_only=True, trust_remote_code=True)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/models/auto/tokenization_auto.py", line 1122, in from_pretrained
+    tokenizer_class = get_class_from_dynamic_module(class_ref, pretrained_model_name_or_path, **kwargs)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/dynamic_module_utils.py", line 604, in get_class_from_dynamic_module
+    final_module = get_cached_module_file(
+        repo_id,
+    ...<8 lines>...
+        repo_type=repo_type,
+    )
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/dynamic_module_utils.py", line 427, in get_cached_module_file
+    modules_needed = check_imports(resolved_module_file)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/dynamic_module_utils.py", line 260, in check_imports
+    raise ImportError(
+    ...<2 lines>...
+    )
+ImportError: This modeling file requires the following packages that were not found in your environment: tiktoken. Run `pip install tiktoken`
+srun: error: nid010197: task 0: Exited with exit code 1
+srun: Terminating StepId=5975573.898
