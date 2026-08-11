@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T17:11:21Z",
+  "updated_utc": "2026-08-11T17:13:24Z",
   "state": "running",
   "active_target": "01_jamba2_3b_inference",
   "completed_targets": [],
-  "alert": "The corrected CUDA 12 dependency transaction hit a recoverable 30-second download timeout on nvidia-cusparse-cu12; completed downloads remain cached.",
-  "next_action": "Retry with the committed 300-second UV timeout, require uv pip check to pass, then verify torch.cuda inside allocation 5980502."
+  "alert": "All CUDA 12.6 dependencies installed, but uv pip check rejects nvidia-cusparselt-cu12 0.7.1 as built for a different platform.",
+  "next_action": "Audit the cuSPARSELt wheel tags and AArch64 availability, correct the package gate, then verify torch.cuda inside allocation 5980502."
 }

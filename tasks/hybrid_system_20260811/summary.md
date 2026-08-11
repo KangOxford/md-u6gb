@@ -17,4 +17,6 @@ The first guarded GPU smoke selected an actually empty GH200 (3 MiB used and no 
 
 Torch has now been repinned locally to the official AArch64 `2.9.1+cu126` wheel and the CUDA 13 packages were removed. The login node does not expose the CUDA 12 shared libraries that this wheel dynamically links, so the next authoritative check is inside the compute allocation. The runtime remains unpromoted.
 
+The dependency-resolving retry installed all CUDA 12.6 packages. The audit is down to one failure: `nvidia-cusparselt-cu12==0.7.1` carries an incompatible platform tag. This must be resolved before the compute import and model generation are retried.
+
 Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the currently empty device pool. No result has yet been promoted to `completed`.
