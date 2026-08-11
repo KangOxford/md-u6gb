@@ -34,7 +34,8 @@
       "revision": "6533e8de2c68e4536bf7c411d7a3ce5734111476",
       "weight_bytes": 17776492512,
       "planned_gpus": 1,
-      "status": "planned"
+      "status": "inference_success",
+      "result_path": "02_nemotron_nano_9b_v2_inference/runs/smoke_20260811T173651Z/result.json"
     },
     {
       "task": "03_kimi_linear_48b_inference",

@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T17:20:53Z",
+  "updated_utc": "2026-08-11T17:37:53Z",
   "state": "running",
-  "active_target": "02_nemotron_nano_9b_v2_inference",
-  "completed_targets": ["01_jamba2_3b_inference"],
+  "active_target": "03_kimi_linear_48b_inference",
+  "completed_targets": ["01_jamba2_3b_inference", "02_nemotron_nano_9b_v2_inference"],
   "alert": null,
-  "next_action": "Prepare and run the isolated Nemotron Nano 9B v2 deployment on a freshly revalidated empty device."
+  "next_action": "Capture the official Kimi Linear implementation and attempt a guarded multi-GPU deployment if a full node is still genuinely idle."
 }
