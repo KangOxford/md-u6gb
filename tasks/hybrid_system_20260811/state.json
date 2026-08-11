@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T16:41:37Z",
-  "state": "planned",
+  "updated_utc": "2026-08-11T16:55:37Z",
+  "state": "running",
   "active_target": "01_jamba2_3b_inference",
   "completed_targets": [],
   "alert": null,
-  "next_action": "Create and commit the isolated Jamba2 runtime and smoke launcher, then revalidate one empty GPU before download/load."
+  "next_action": "Download and hash the pinned Jamba2 snapshot on a compute node, then revalidate one empty GPU immediately before the smoke load."
 }

@@ -1,3 +1,4 @@
 {"time_utc":"2026-08-11T16:35:42Z","event":"notion_fetched","page_id":"3b912c45-68fd-806b-9200-ecead77d7bf8","result":"requirements_derived"}
 {"time_utc":"2026-08-11T16:39:00Z","event":"gpu_preflight","job_id":"5980502","result":"8_point_in_time_empty_gpus","action":"record_only_no_launch"}
 {"time_utc":"2026-08-11T16:41:37Z","event":"portfolio_selected","result":"jamba2_nemotron_kimi_linear_selected_k3_capacity_gated"}
+{"time_utc":"2026-08-11T16:55:37Z","event":"runtime_prepared","target":"01_jamba2_3b_inference","result":"success","details":"isolated_python3.13_torch2.13.0_cu130_transformers4.57.1"}
