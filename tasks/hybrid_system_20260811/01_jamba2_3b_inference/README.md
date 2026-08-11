@@ -25,3 +25,5 @@ Runtime preparation completed at `2026-08-11T16:55:37Z`. The isolated environmen
 The pinned model snapshot completed at `2026-08-11T16:57:14Z`. All 13 files were hashed locally, both safetensor shards total exactly `6,394,271,296` bytes, and the resolved revision equals the requested revision. The committed audit record is `model/download_manifest.json`; the 6.0 GiB snapshot itself remains task-local.
 
 The first GPU smoke (`runs/smoke_20260811T165758Z`) passed the empty-device gate on `nid011179` GPU 1 (3 MiB used, no compute PID), then failed before model load. Torch `2.13.0+cu130` rejected the node's driver compatibility level `12070`. This run is evidence of an environment ABI mismatch only; it is not evidence against Jamba2 inference. The environment must be repinned to a CUDA 12.7-compatible ARM build before retry.
+
+The corrective runtime pin is official PyTorch `2.9.1+cu126` from `https://download.pytorch.org/whl/cu126`. That index publishes a CPython 3.13 AArch64 wheel and CUDA 12.6 is within the node driver's reported compatibility. `prepare_runtime.sh` now resolves this exact build before any retry.

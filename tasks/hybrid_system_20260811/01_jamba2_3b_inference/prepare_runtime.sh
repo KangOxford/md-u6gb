@@ -4,6 +4,7 @@ set -euo pipefail
 task_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 base_python="${HYBRID_BASE_PYTHON:-/home/u6gb/kangli.u6gb/miniforge3/bin/python3}"
 uv_bin="${HYBRID_UV_BIN:-/projects/public/u6gb/.local/bin/uv}"
+torch_index="${HYBRID_TORCH_INDEX:-https://download.pytorch.org/whl/cu126}"
 
 if [[ ! -x "$base_python" ]]; then
   echo "Base Python is not executable: $base_python" >&2
@@ -23,6 +24,8 @@ fi
 
 "$uv_bin" pip install \
   --python "$task_dir/.venv/bin/python" \
+  --index "$torch_index" \
+  --index-strategy unsafe-best-match \
   --requirement "$task_dir/requirements.txt"
 
 "$task_dir/.venv/bin/python" - <<'PY'
