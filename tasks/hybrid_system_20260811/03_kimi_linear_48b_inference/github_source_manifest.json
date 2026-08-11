@@ -1,0 +1,48 @@
+{
+  "created_utc": "2026-08-11T17:58:09.967124+00:00",
+  "url": "https://github.com/MoonshotAI/Kimi-Linear",
+  "revision": "8c1d85eb6b5f8fcefb15758691b0ce50b0827ce3",
+  "archive_url": "https://github.com/MoonshotAI/Kimi-Linear/archive/8c1d85eb6b5f8fcefb15758691b0ce50b0827ce3.tar.gz",
+  "files": [
+    {
+      "path": "LICENSE",
+      "size_bytes": 1068,
+      "sha256": "20f48681e4fb70b2787b752fd6fb887be60332731441818458ed0baf09d8264b"
+    },
+    {
+      "path": "README.md",
+      "size_bytes": 6401,
+      "sha256": "94b884a1ebe7600daf3429c8a7403874aa69d7a25b30c992e367f72289e2817d"
+    },
+    {
+      "path": "figures/arch.png",
+      "size_bytes": 237810,
+      "sha256": "132ae021fa4661ed39e7be784d46f05f22b82aabb9afd2bab8dbdc0a5a61cba0"
+    },
+    {
+      "path": "figures/arxiv.png",
+      "size_bytes": 2066,
+      "sha256": "8a9b6f6422b16d06b4feada756072382a3d9bb0f016e1af646fabb5b79b1950e"
+    },
+    {
+      "path": "figures/banner.png",
+      "size_bytes": 63214,
+      "sha256": "860813b16f049ba7540fe99568729ac62a12cc651d523b4be534ead4fb5a7716"
+    },
+    {
+      "path": "figures/logo.png",
+      "size_bytes": 13101,
+      "sha256": "7870b48105beb49cdb29bb3090abb7bbca688bef862507904c23d9c472df221c"
+    },
+    {
+      "path": "figures/perf_speed.png",
+      "size_bytes": 160274,
+      "sha256": "f8951e618db41ae57fa0cec4845d7b275dffbd7f9db12c6496bfea536c625aea"
+    },
+    {
+      "path": "tech_report.pdf",
+      "size_bytes": 1227634,
+      "sha256": "74f2523f14f52b8a0ba314f8ca3d96d14a1efff2b12aad191e43dd76cc23bf46"
+    }
+  ]
+}
