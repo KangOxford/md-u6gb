@@ -1,0 +1,4 @@
+.venv/
+hf_home/
+model/
+runs/

@@ -3,6 +3,20 @@
 - Model: `moonshotai/Kimi-Linear-48B-A3B-Instruct`
 - Revision: `e1df551a447157d4658b573f9a695d57658590e9`
 - Official weight bytes: `98,248,224,120`
+- Architecture: 27 layers with 20 KDA and seven global MLA layers; 48B total / 3B activated MoE
+- Device gate: two simultaneously empty GH200 GPUs on one node
+
+The runtime pins the official `fla-core==0.5.2` KDA implementation. The two-GPU launcher refuses either device if it has a compute PID or more than 64 MiB allocated, exposes only those physical devices, forbids CPU/disk offload after model dispatch, and records the complete device-map distribution.
+
+```bash
+./prepare_runtime.sh
+./prepare_model_on_allocation.sh JOB_ID NODE
+./run_on_allocation.sh JOB_ID NODE GPU_A GPU_B
+```
+
+- Model: `moonshotai/Kimi-Linear-48B-A3B-Instruct`
+- Revision: `e1df551a447157d4658b573f9a695d57658590e9`
+- Official weight bytes: `98,248,224,120`
 - Architecture: 27 layers, including 20 KDA layers and 7 global MLA layers, with 256 routed experts and 3B active parameters
 - Planned device set: at least two revalidated empty GPUs; four GPUs matches the official vLLM example
 
