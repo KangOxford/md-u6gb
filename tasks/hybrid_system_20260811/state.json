@@ -1,8 +1,8 @@
 {
-  "updated_utc": "2026-08-11T16:57:23Z",
+  "updated_utc": "2026-08-11T16:58:49Z",
   "state": "running",
   "active_target": "01_jamba2_3b_inference",
   "completed_targets": [],
-  "alert": null,
-  "next_action": "Revalidate an explicit empty GPU in allocation 5980502 and run the pinned Jamba2 generation smoke."
+  "alert": "The first GPU smoke passed the empty-device gate but Torch 2.13.0+cu130 could not initialize against driver compatibility 12070; no model weights were loaded.",
+  "next_action": "Pin a CUDA 12.7-compatible ARM Torch runtime, verify torch.cuda on the compute node, then rerun the guarded Jamba2 generation."
 }

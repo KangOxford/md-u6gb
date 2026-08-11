@@ -1,0 +1,11 @@
+/projects/public/u6gb/tasks/hybrid_system_20260811/01_jamba2_3b_inference/.venv/lib/python3.13/site-packages/torch/cuda/__init__.py:188: UserWarning: CUDA initialization: The NVIDIA driver on your system is too old (found version 12070). Please update your GPU driver by downloading and installing a new version from the URL: http://www.nvidia.com/Download/index.aspx Alternatively, go to: https://pytorch.org to install a PyTorch version that has been compiled with your version of the CUDA driver. (Triggered internally at /__w/pytorch/pytorch/c10/cuda/CUDAFunctions.cpp:119.)
+  return torch._C._cuda_getDeviceCount() > 0
+Traceback (most recent call last):
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/01_jamba2_3b_inference/smoke.py", line 117, in <module>
+    main()
+    ~~~~^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/01_jamba2_3b_inference/smoke.py", line 33, in main
+    raise RuntimeError("CUDA is unavailable")
+RuntimeError: CUDA is unavailable
+srun: error: nid011179: task 0: Exited with exit code 1
+srun: Terminating StepId=5980502.28

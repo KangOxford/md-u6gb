@@ -13,4 +13,6 @@ The first compute-side download command exited before network or model work beca
 
 The retry succeeded on `nid011179`: 13 files at the pinned revision were downloaded and locally SHA256-hashed, with exactly 6,394,271,296 safetensor bytes. The next gate is a real one-GPU generation after immediate device revalidation.
 
+The first guarded GPU smoke selected an actually empty GH200 (3 MiB used and no compute PID) but stopped before model load because Torch `2.13.0+cu130` is newer than the node's driver compatibility level `12070`. Raw evidence is preserved in `01_jamba2_3b_inference/runs/smoke_20260811T165758Z/`. The next action is a driver-compatible ARM Torch pin, not a model-code change.
+
 Kimi K3 is correctly capacity-gated: its 1.56 TB checkpoint cannot fit in the currently empty device pool. No result has yet been promoted to `completed`.
