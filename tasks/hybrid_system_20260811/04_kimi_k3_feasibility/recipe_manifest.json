@@ -1,0 +1,17 @@
+{
+  "created_utc": "2026-08-11T17:58:47.249553+00:00",
+  "files": [
+    {
+      "path": "vllm_kimi_k3.html",
+      "url": "https://recipes.vllm.ai/moonshotai/Kimi-K3",
+      "size_bytes": 1314654,
+      "sha256": "a3375be2c2d9898087ddc04e4eba2b733926cc5e9a0ce2dfcad2473df010bee7"
+    },
+    {
+      "path": "sglang_kimi_k3.html",
+      "url": "https://docs.sglang.io/cookbook/autoregressive/Moonshotai/Kimi-K3",
+      "size_bytes": 810849,
+      "sha256": "e41c221b1817242abefeff56063b4cd12b3194f3964c259acd610c1a5882d6d3"
+    }
+  ]
+}
