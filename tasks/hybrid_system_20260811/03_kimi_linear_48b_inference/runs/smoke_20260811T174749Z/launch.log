@@ -1,0 +1,13 @@
+Ignoring the provided attention implementation eager
+Using flash_attention_2 backend instead.
+Loading checkpoint shards:   0%|          | 0/20 [00:00<?, ?it/s]Loading checkpoint shards:   5%|▌         | 1/20 [00:01<00:22,  1.18s/it]Loading checkpoint shards:  10%|█         | 2/20 [00:02<00:21,  1.21s/it]Loading checkpoint shards:  15%|█▌        | 3/20 [00:03<00:22,  1.32s/it]Loading checkpoint shards:  20%|██        | 4/20 [00:05<00:20,  1.29s/it]Loading checkpoint shards:  25%|██▌       | 5/20 [00:06<00:22,  1.49s/it]Loading checkpoint shards:  30%|███       | 6/20 [00:08<00:19,  1.40s/it]Loading checkpoint shards:  35%|███▌      | 7/20 [00:09<00:17,  1.35s/it]Loading checkpoint shards:  40%|████      | 8/20 [00:10<00:15,  1.32s/it]Loading checkpoint shards:  45%|████▌     | 9/20 [00:11<00:14,  1.30s/it]Loading checkpoint shards:  50%|█████     | 10/20 [00:13<00:12,  1.26s/it]Loading checkpoint shards:  55%|█████▌    | 11/20 [00:14<00:11,  1.33s/it]Loading checkpoint shards:  60%|██████    | 12/20 [00:16<00:11,  1.43s/it]Loading checkpoint shards:  65%|██████▌   | 13/20 [00:18<00:10,  1.54s/it]Loading checkpoint shards:  70%|███████   | 14/20 [00:19<00:09,  1.61s/it]Loading checkpoint shards:  75%|███████▌  | 15/20 [00:21<00:08,  1.66s/it]Loading checkpoint shards:  80%|████████  | 16/20 [00:23<00:06,  1.70s/it]Loading checkpoint shards:  85%|████████▌ | 17/20 [00:25<00:05,  1.73s/it]Loading checkpoint shards:  90%|█████████ | 18/20 [00:26<00:03,  1.75s/it]Loading checkpoint shards:  95%|█████████▌| 19/20 [00:28<00:01,  1.77s/it]Loading checkpoint shards: 100%|██████████| 20/20 [00:29<00:00,  1.56s/it]Loading checkpoint shards: 100%|██████████| 20/20 [00:29<00:00,  1.49s/it]
+Traceback (most recent call last):
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/smoke.py", line 91, in <module>
+    main()
+    ~~~~^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/smoke.py", line 55, in main
+    inputs = tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt").to(model.device)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'to'
+srun: error: nid010197: task 0: Exited with exit code 1
+srun: Terminating StepId=5975573.902
