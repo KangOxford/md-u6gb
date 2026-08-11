@@ -40,6 +40,10 @@ def main() -> None:
         raise RuntimeError("The local model snapshot is not the pinned revision")
 
     started = time.perf_counter()
+    torch.cuda.set_device(0)
+    allocator_probe = torch.empty(1, dtype=torch.uint8, device="cuda:0")
+    torch.cuda.synchronize()
+    del allocator_probe
     torch.cuda.reset_peak_memory_stats(0)
     tokenizer = AutoTokenizer.from_pretrained(args.model_dir, local_files_only=True)
     config = AutoConfig.from_pretrained(args.model_dir, local_files_only=True)

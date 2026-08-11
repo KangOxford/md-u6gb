@@ -36,7 +36,7 @@ export CUDA_VISIBLE_DEVICES="$physical_gpu"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export TOKENIZERS_PARALLELISM=false
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export PYTORCH_ALLOC_CONF=expandable_segments:True
 
 exec "$task_dir/.venv/bin/python" "$task_dir/smoke.py" \
   --model-dir "$model_dir" \
