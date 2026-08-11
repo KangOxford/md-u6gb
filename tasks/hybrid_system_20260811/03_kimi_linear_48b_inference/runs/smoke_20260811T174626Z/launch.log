@@ -1,0 +1,57 @@
+Traceback (most recent call last):
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/smoke.py", line 91, in <module>
+    main()
+    ~~~~^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/smoke.py", line 42, in main
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model_dir,
+    ...<4 lines>...
+        trust_remote_code=True,
+    )
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/models/auto/auto_factory.py", line 586, in from_pretrained
+    model_class = get_class_from_dynamic_module(
+        class_ref, pretrained_model_name_or_path, code_revision=code_revision, **hub_kwargs, **kwargs
+    )
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/dynamic_module_utils.py", line 616, in get_class_from_dynamic_module
+    return get_class_in_module(class_name, final_module, force_reload=force_download)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/dynamic_module_utils.py", line 311, in get_class_in_module
+    module_spec.loader.exec_module(module)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/projects/public/u6gb/.cache/huggingface/modules/transformers_modules/model/modeling_kimi.py", line 899, in <module>
+    class KimiLinearModel(KimiPreTrainedModel):
+    ...<106 lines>...
+            )
+  File "/projects/public/u6gb/.cache/huggingface/modules/transformers_modules/model/modeling_kimi.py", line 939, in KimiLinearModel
+    @auto_docstring
+     ^^^^^^^^^^^^^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/utils/auto_docstring.py", line 2063, in auto_docstring
+    return auto_docstring_decorator(obj)
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/utils/auto_docstring.py", line 2056, in auto_docstring_decorator
+    return auto_method_docstring(
+        obj, custom_args=custom_args, custom_intro=custom_intro, checkpoint=checkpoint
+    )
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/utils/auto_docstring.py", line 1759, in auto_method_docstring
+    docstring += _process_parameters_section(
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        func_documentation, sig, func, class_name, model_name_lowercase, parent_class, indent_level, source_args_dict
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/utils/auto_docstring.py", line 1589, in _process_parameters_section
+    param_docstring, missing_args = _process_regular_parameters(
+                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sig, func, class_name, documented_params, indent_level, undocumented_parameters, source_args_dict, parent_class
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/utils/auto_docstring.py", line 1408, in _process_regular_parameters
+    param_type, optional = _process_parameter_type(param, param_name, func)
+                           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/projects/public/u6gb/tasks/hybrid_system_20260811/03_kimi_linear_48b_inference/.venv/lib/python3.13/site-packages/transformers/utils/auto_docstring.py", line 1311, in _process_parameter_type
+    param_type = f"{param_type.__module__.replace('transformers.', '~').replace('builtins', '')}.{param.annotation.__name__}"
+                                                                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'types.UnionType' object has no attribute '__name__'. Did you mean: '__ne__'?
+srun: error: nid010197: task 0: Exited with exit code 1
+srun: Terminating StepId=5975573.901
