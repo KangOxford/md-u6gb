@@ -52,7 +52,9 @@ def main() -> None:
     if any(value in {"cpu", "disk"} for value in assigned):
         raise RuntimeError(f"Unexpected CPU/disk offload: {device_map}")
     messages = [{"role": "user", "content": "In one sentence, explain why hybrid linear and full attention can be useful."}]
-    inputs = tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt").to(model.device)
+    inputs = tokenizer.apply_chat_template(
+        messages, add_generation_prompt=True, tokenize=True, return_tensors="pt"
+    ).to(model.device)
     with torch.inference_mode():
         output_ids = model.generate(inputs, max_new_tokens=args.max_new_tokens, do_sample=False)
     for device in range(2):
