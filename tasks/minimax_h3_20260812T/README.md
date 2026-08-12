@@ -41,7 +41,7 @@ ckpt/h3/                   143 GB 权重（阶段 1 产出）
 data/vggsound/             tarball，**保持打包状态**
 data/latents/              latent 分片 + text_bank.pt（阶段 2 产出）
 runs/                      checkpoint 与评估结果
-venv/                      diffusers 0.40.0.dev0 + transformers 4.57.6 + PyAV
+venv/                      diffusers 0.40.0.dev0 + transformers 5.15.0 + peft 0.20.0 + hub 1.27.0 + PyAV 18
 ```
 
 ---

@@ -1,7 +1,7 @@
 # MiniMax-H3 复刻计划
 
 任务根目录：`/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T/`
-环境：`venv/`（继承宿主 torch 2.8.0+cu129，装 diffusers 0.40.0.dev0 + transformers 4.57.6）
+环境：`venv/`（继承宿主 torch 2.8.0+cu129；装 diffusers 0.40.0.dev0 + transformers 5.15.0 + peft 0.20.0 + huggingface_hub 1.27.0 + PyAV 18.0.0）
 
 ---
 

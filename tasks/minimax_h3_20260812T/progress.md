@@ -87,7 +87,7 @@ PrivateData = accounts,events,jobs,reservations,usage,users
 |---|---|---|
 | `hf download --exclude` 把 json 全滤掉 | glob 语义与预期不符 | 改用 curl 点名拉 19 个配置文件 |
 | diffusers 0.37.1 无 MiniMaxH3 | 只在 main 分支 | venv 装 git main（0.40.0.dev0） |
-| `cannot import HybridCache` | diffusers main 要 transformers 4.x，宿主是 5.5.0 | venv 内钉 `transformers>=4.57,<5` |
+| `cannot import HybridCache` | **归因错了**。要 `HybridCache` 的是 **peft 0.17.1**（它在模块级 import 了这个被 transformers 5.x 删掉的符号），不是 diffusers——`HybridCache` 在 diffusers 全部 `.py` 里出现 0 次 | 最终解：**升 peft 到 0.20.0**（该 import 已挪进函数体的弃用分支）+ transformers 5.15.0 + hub 1.27.0。当初「降 transformers 到 4.57.6」方向相反，还顺手删掉了 H3 需要的 `create_mm_token_type_ids` |
 | `libgomp: Thread creation failed` | 登录节点 pids.max | `taskset -c 0-3` + `OMP_NUM_THREADS=4` |
 | 训练干跑 exit 137 | 登录节点 cgroup 上限 **4 GiB**，已用 3.31 GB | 确认是登录节点限制；计算节点 856 GB 无此问题 |
 | 参数普查 `token_refiner` 只有 0.003 M | 分桶时 `.attn.` 判断在 `token_refiner` 之前，抢走了 refiner 的 attn/ffn | 调整判断顺序（两个文件都改） |
