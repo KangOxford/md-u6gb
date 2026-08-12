@@ -1,6 +1,6 @@
 #!/bin/bash
-# LOB-Bench for Mamba3 35m (33,610,439 params), checkpoint j5877859_30nkkohd_5877859 @ step 32001.
-# Executed in worktree: /projects/public/u6gb/sigma-0-worktrees/eval-j5877859-step32001-20260808
+# LOB-Bench + return bench + refer success，两臂共用。架构与 checkpoint 由 env 给：
+#   ARCHITECTURE / CHECKPOINT_PATH / CHECKPOINT_STEP / ARM_NAME / ARM_ID
 # Protocol: --token_mode=26tok --stock=GOOG --n_cond_msgs=250 --n_gen_msgs=250 --wide_levels=500 --seed=2026
 
 #SBATCH --account=brics.u6gb
@@ -22,7 +22,9 @@ export WORKDIR=/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba
 export QUANT_ROOT=/lus/lfs1aip2/projects/public/s5e/quant_team/quant
 export PYTHON="$QUANT_ROOT/miniforge3/bin/python"
 export BENCHMARK_ROOT="$QUANT_ROOT/AlphaTrade/lob_pipeline"
-export ARCHITECTURE=hybrid_mamba3
+# 两臂用同一份评测代码，只有架构与 checkpoint 不同——这正是受控对照要求的。
+# 本 worktree 同时含 mamba3 与 hybrid_mamba3，所以 baseline 臂也从这里跑。
+export ARCHITECTURE="${ARCHITECTURE:-hybrid_mamba3}"
 
 BENCH_TS="$(date -u +%Y%m%dT%H%M%SZ)"
 export OUTPUT_ROOT="$TASKDIR/bench_${BENCH_TS}_j${SLURM_JOB_ID}"
@@ -70,8 +72,8 @@ if [ ! -d "$CHECKPOINT_PATH/$CHECKPOINT_STEP/state" ]; then
     exit 1
 fi
 echo "[bench] 路径自证通过：运行根有 _ROOT_METADATA，step $CHECKPOINT_STEP 有 state"
-export RUN_NAME="hybrid-m3-nemotron-step${CHECKPOINT_STEP}"
-export LOBBENCH_RUN_ID="hybrid_m3_${CHECKPOINT_STEP}"
+export RUN_NAME="${ARM_NAME:-hybrid-m3-nemotron}-step${CHECKPOINT_STEP}"
+export LOBBENCH_RUN_ID="${ARM_ID:-hybrid_m3}_${CHECKPOINT_STEP}"
 
 # ── 1. Generation（4 GPU）───────────────────────────────────────────────────
 echo "[bench] === generation 开始 $(date -u +%H:%M:%SZ) ==="
