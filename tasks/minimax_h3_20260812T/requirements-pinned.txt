@@ -1,0 +1,38 @@
+# The exact combination this replication runs on, and why each pin is load-bearing.
+#
+# Recreate with:
+#   /projects/public/s5e/quant_team/quant/miniforge3/bin/python -m venv --system-site-packages venv
+#   ./venv/bin/pip install -r requirements-pinned.txt
+#
+# torch is NOT pinned here: the venv inherits the host's 2.8.0+cu129, which is the
+# only build with working aarch64 / GH200 support in this environment. Installing a
+# torch into the venv would shadow it with something that does not run.
+#
+# The three pins below are one interlocking set, arrived at by breaking it twice:
+#
+#   diffusers main is the only version carrying MiniMax-H3 (0.37.1 release does not).
+#   It reaches peft through `PeftAdapterMixin` on the H3 transformer, so
+#   `diffusers.loaders.peft` is on the critical import path and every failure so far
+#   has surfaced there.
+#
+#   peft 0.17.1 imports `HybridCache` from transformers at module level, which
+#   transformers 5.x removed -> transformers must stay on 4.x.
+#
+#   peft 0.20.0 fixes that but instead probes `transformer_engine`, whose import
+#   needs libnvrtc on a path nothing here sets, and the probe does not catch the
+#   RuntimeError -> peft must stay on 0.17.1.
+#
+#   transformers 4.57.6 has no `Qwen3VLProcessor.create_mm_token_type_ids`, which the
+#   reference conditioner path calls. That is why `preprocess_vggsound.py` constructs
+#   the tags directly instead: they are all zero for a text-only prompt by
+#   construction, so the pipeline does not depend on a transformers major at all.
+#
+# Upgrading any one of these three re-opens one of the other two failures. If a
+# future diffusers drops the eager peft import, the whole knot dissolves and
+# transformers 5.x becomes usable again.
+
+diffusers @ git+https://github.com/huggingface/diffusers.git@main
+transformers>=4.57,<5
+huggingface_hub>=0.34,<1
+peft==0.17.1
+av>=14
