@@ -1,0 +1,79 @@
+#!/bin/bash
+# Stage 1 of the MiniMax-H3 replication: stage every asset, then prove the released
+# checkpoint runs end to end and record the facts the scaled-down model is built against.
+#
+# One allocation does both because the download has no GPU work but the smoke test
+# needs the weights that download produces; queueing twice would cost more wall-clock
+# than the GPUs idle during the transfer.
+
+#SBATCH --account=brics.u6gb
+#SBATCH --partition=workq
+#SBATCH --job-name=h3-fetch-smoke
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=4
+#SBATCH --cpus-per-task=72
+#SBATCH --mem=0
+#SBATCH --time=06:00:00
+#SBATCH --output=/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T/logs/fetch_smoke_%j.out
+#SBATCH --error=/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T/logs/fetch_smoke_%j.out
+
+set -uo pipefail
+
+TASKDIR=/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T
+PY="$TASKDIR/venv/bin/python"
+HF="$TASKDIR/venv/bin/hf"
+
+# Per-job output dir: two runs of this script must never share a directory, or they
+# contend on the same Lustre directory lock and overwrite each other's artefacts.
+OUTDIR="$TASKDIR/runs/smoke_${SLURM_JOB_ID}"
+mkdir -p "$OUTDIR"
+
+# Keep every hub cache and temp file off Lustre's metadata path where possible.
+export HF_HUB_ENABLE_HF_TRANSFER=0
+export HF_HOME="${TMPDIR:-/tmp}/hf_home"
+export TOKENIZERS_PARALLELISM=false
+export PYTHONUNBUFFERED=1
+mkdir -p "$HF_HOME"
+
+echo "=== job $SLURM_JOB_ID on $(hostname) at $(date -u +%FT%TZ) ==="
+nvidia-smi --query-gpu=index,name,memory.total,memory.used --format=csv
+echo
+
+# ---------------------------------------------------------------- 1. assets
+echo "=== [1/3] staging assets ==="
+export PATH="$TASKDIR/venv/bin:$PATH"   # fetch_assets.py shells out to `hf`
+"$PY" "$TASKDIR/code/fetch_assets.py" --root "$TASKDIR" --shards 00,01 --workers 8
+RC=$?
+if [ $RC -ne 0 ]; then echo "FATAL: asset staging failed rc=$RC"; exit $RC; fi
+
+# ---------------------------------------------------------------- 2. sanity
+echo
+echo "=== [2/3] checkpoint sanity ==="
+"$PY" - <<'PYEOF'
+import json, pathlib
+root = pathlib.Path("/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T/ckpt/h3")
+for sub in ["transformer", "text_encoder", "vae", "audio_vae"]:
+    d = root / sub
+    files = sorted(p.name for p in d.iterdir()) if d.is_dir() else []
+    n_safe = sum(1 for f in files if f.endswith(".safetensors"))
+    print(f"  {sub:14s} exists={d.is_dir()}  safetensors={n_safe}  files={len(files)}")
+cfg = json.loads((root / "transformer" / "config.json").read_text())
+print("  transformer config:", {k: cfg[k] for k in
+      ("hidden_size", "num_layers", "num_attention_heads", "attention_head_dim",
+       "in_channels", "audio_in_channels", "time_embed_dim")})
+PYEOF
+
+# ---------------------------------------------------------------- 3. smoke
+echo
+echo "=== [3/3] T2VA generation with the released checkpoint ==="
+"$PY" "$TASKDIR/code/h3_smoke_infer.py" \
+    --ckpt "$TASKDIR/ckpt/h3" \
+    --out "$OUTDIR" \
+    --height 544 --width 960 --num-frames 124 --steps 32 --seed 42
+RC=$?
+
+echo
+echo "=== finished rc=$RC at $(date -u +%FT%TZ) ==="
+echo "outputs: $OUTDIR"
+exit $RC

@@ -1,0 +1,7 @@
+# Staged assets and environments are reproducible from code/fetch_assets.py; keeping
+# them out of git avoids a 180 GB repo and the Lustre git I/O storm that comes with it.
+venv/
+ckpt/
+data/
+runs/
+logs/
