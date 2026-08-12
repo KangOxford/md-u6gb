@@ -21,23 +21,44 @@
 | 5998320 | h3-fetch-smoke | PENDING | 1 节点 6h。下载 143 GB checkpoint + 34 GB VGGSound，参数普查，T2VA 冒烟 |
 | 5998498 | h3-nano-pipeline | PENDING (Dependency) | 1 节点 12h。语料 → 闸门 → 预训练 → FL2VA → CFG 蒸馏 → 评估 |
 
-**排队原因诊断（结论：集群侧，非我方配置）**
+**排队原因诊断**
 
-最初我归因到 fair-share，这是**错的**：`PriorityWeightFairShare = 0`，实际上 Age/FairShare/JobSize/QOS/Partition **全部权重都是 0**，所以集群里每个作业的 Priority 都是 1，调度退化为按 job ID 的 FIFO。
+> 更正：本节最初的结论（「调度器停摆或额度耗尽」）是错的，根因是我误读了 `squeue` 的可见范围。下面保留完整的排查过程，因为那条误判本身是最值得记住的部分。
 
-逐项排除：
+第一轮排查逐项排除了这些：
 
 | 假设 | 检验 | 结论 |
 |---|---|---|
-| 资源不足 | `sinfo -p workq -t idle` = **140 节点空闲**；`nid010053` 显示 `CPUAlloc=0 AllocMem=0 gpu:4` | 排除 |
-| `--mem=0` 要整节点内存 | 另投探针作业（`--mem=100G`、32 CPU、5 分钟）→ **同样不动** | 排除 |
-| QOS / 账户限额 | `workq_qos`: MaxJobsPU=256, MaxSubmitPU=512（我只有 8 个）；assoc 无 GrpTRES | 排除 |
-| 优先级被压 | 全集群所有权重为 0，人人 Priority=1 | 非我方特有 |
-| slurmctld 故障 | `scontrol ping` → primary + backup 均 UP | 表面正常 |
+| 资源不足 | `sinfo -p workq -t idle` 一度 155 节点空闲 | 排除 |
+| `--mem=0` 要整节点内存 | 另投探针（`--mem=100G`、32 CPU、5 分钟）→ 同样不动 | 排除 |
+| QOS / 账户限额 | `workq_qos`: MaxJobsPU=256（我 8 个）；assoc 无 GrpTRES | 排除 |
+| fair-share 被压 | `PriorityWeightFairShare = 0` —— 实际上**所有权重都是 0**，全集群人人 Priority=1，调度退化为 FIFO by job ID | 非我方特有 |
+| slurmctld 故障 | `scontrol ping` → primary + backup 均 UP | 正常 |
 
-**关键证据**：全集群 pending 作业总共 8 个且全是我的，其中 `5995844` 于 **04:46 提交，已等 8 小时**（那是本仓库更早的 hybrid bench 作业，不是我这次提交的）。140 节点空闲 + FIFO + 8 小时不调度 = 调度器侧停摆或账户机时额度耗尽（后者我无权限查证：`sacctmgr show account` 返回 Access/permission denied）。
+当时我据此得出「全集群 pending 作业只有 8 个且全是我的，却有 155 节点空闲」，因而判断是调度器停摆或机时耗尽。
 
-这不在我可修复的范围内。作业留在队列中，一旦调度即自动开跑。
+**这个前提是假的。**
+
+```
+PrivateData = accounts,events,jobs,reservations,usage,users
+```
+
+`PrivateData=jobs` 让 Slurm 对我隐藏其他用户的作业。对账即可揭穿：
+
+| | 我能看见 | 集群实际 |
+|---|---|---|
+| 作业数 | 11 | 不可见 |
+| 运行中节点 | 12 | **1148**（`sinfo -t alloc,mix`） |
+
+也就是说 1136 个节点上跑着我看不见的作业，前面还排着我看不见的队列。那 58 个
+`plnd`（planned）节点正是 backfill 在为这些作业预留。**87% 满载的集群 + FIFO
++ 长队 = 我这些作业排 8 小时是正常的**，不是故障。
+
+教训：`PrivateData` 会把 `squeue` 的全局视图裁成一个只含自己的子集，而这个子集
+看起来和「集群空转」完全一样。下这类结论前必须先
+`scontrol show config | grep PrivateData`。
+
+作业留在队列中，一旦调度即自动开跑，监控已挂。
 
 ## 已完成并验证的部分
 
