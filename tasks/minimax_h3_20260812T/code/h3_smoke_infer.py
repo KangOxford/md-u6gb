@@ -45,14 +45,16 @@ def parameter_census(transformer) -> dict:
     """
     buckets: dict[str, int] = {}
     for name, param in transformer.named_parameters():
-        if "adaln_proj" in name:
+        # `token_refiner` must be tested first: its blocks also match `.attn.` / `.ff.`
+        # and would otherwise be counted as part of the 50-block main stack.
+        if "token_refiner" in name:
+            key = "token_refiner"
+        elif "adaln_proj" in name:
             key = "adaln_branches"
         elif ".attn." in name:
             key = "attention"
         elif ".ff." in name:
             key = "feedforward"
-        elif "token_refiner" in name:
-            key = "token_refiner"
         elif name.startswith(("proj_in", "audio_proj_in", "context_embedder")):
             key = "input_projections"
         elif name.startswith(("proj_out", "audio_proj_out", "norm_out")):
