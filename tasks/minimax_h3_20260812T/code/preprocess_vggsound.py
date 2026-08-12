@@ -401,6 +401,47 @@ class _decode_partial:
 
 
 # ----------------------------------------------------------------------------
+def verify_environment() -> None:
+    """Fail in the first seconds of a job rather than three hours into it.
+
+    This lives in Python, not in the batch script, on purpose: `sbatch` snapshots
+    the batch script at submission, so a fix to it never reaches a job that is
+    already queued, while an external module is read at run time and does. Every
+    import below is one the pipeline needs later, and each has already broken once.
+    """
+    problems = []
+    try:
+        import diffusers
+        from diffusers import (  # noqa: F401
+            AutoencoderKLMiniMaxH3, AutoencoderKLMiniMaxH3Audio,
+            MiniMaxH3Scheduler, MiniMaxH3Transformer3DModel,
+        )
+        from diffusers.modular_pipelines.minimax_h3.before_denoise import (  # noqa: F401
+            MiniMaxH3PrepareLayoutStep,
+        )
+        from diffusers.modular_pipelines.minimax_h3.modular_pipeline import (  # noqa: F401
+            align_num_frames,
+        )
+        print(f"[env] diffusers {diffusers.__version__} with MiniMax-H3 OK", flush=True)
+    except Exception as exc:
+        problems.append(f"diffusers: {type(exc).__name__}: {exc}")
+    try:
+        import transformers
+        from transformers import Qwen3VLForConditionalGeneration  # noqa: F401
+        print(f"[env] transformers {transformers.__version__} with Qwen3-VL OK", flush=True)
+    except Exception as exc:
+        problems.append(f"transformers: {type(exc).__name__}: {exc}")
+    try:
+        import av
+        print(f"[env] PyAV {av.__version__} OK", flush=True)
+    except Exception as exc:
+        problems.append(f"PyAV: {type(exc).__name__}: {exc}")
+    if not torch.cuda.is_available():
+        problems.append("no CUDA device visible")
+    if problems:
+        raise SystemExit("[env] FATAL:\n  " + "\n  ".join(problems))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True)
@@ -414,6 +455,8 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--device", default="cuda:0")
     args = parser.parse_args()
+
+    verify_environment()
 
     root = Path(args.root)
     ckpt = root / "ckpt" / "h3"
