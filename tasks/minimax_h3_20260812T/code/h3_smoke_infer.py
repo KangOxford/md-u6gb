@@ -68,17 +68,21 @@ def parameter_census(transformer) -> dict:
     return buckets
 
 
-def dump_layout(state, out_path: Path) -> dict:
-    """Record the packed-sequence layout the pipeline built for this request."""
+LAYOUT_FIELDS = ("token_tags", "position_ids", "video_indices", "audio_indices", "text_indices")
+
+
+def dump_layout(results: dict, out_path: Path) -> dict:
+    """Record the packed-sequence layout the pipeline built for this request.
+
+    The layout lives in the *generation* half's state, not the conditioner's, and a
+    call with an explicit `output=` returns only what it names, so the fields are
+    requested alongside the media rather than read off the conditioner afterwards.
+    This is the contract H3-nano's `build_layout` has to reproduce, so it is worth
+    recording from a real request rather than assumed.
+    """
     facts: dict = {}
-    for field in ("token_tags", "position_ids", "video_indices", "audio_indices", "text_indices",
-                  "timestep_indices"):
-        value = getattr(state, field, None)
-        if value is None and hasattr(state, "get_intermediate"):
-            try:
-                value = state.get_intermediate(field)
-            except Exception:
-                value = None
+    for field in LAYOUT_FIELDS:
+        value = results.get(field)
         if isinstance(value, torch.Tensor):
             facts[field] = {"shape": list(value.shape), "dtype": str(value.dtype)}
             if field == "token_tags":
@@ -170,16 +174,24 @@ def main() -> int:
     state = conditioner(prompt=args.prompt)
     t_cond = time.time() - t0
 
-    t0 = time.time()
-    results = rest(
+    call_kwargs = dict(
         state=state,
         height=args.height,
         width=args.width,
         num_frames=args.num_frames,
         num_inference_steps=args.steps,
         generator=torch.Generator().manual_seed(args.seed),
-        output=["videos", "audio", "sampling_rate"],
     )
+    media = ["videos", "audio", "sampling_rate"]
+    t0 = time.time()
+    try:
+        results = rest(**call_kwargs, output=media + list(LAYOUT_FIELDS))
+    except Exception as exc:
+        # An older block set may not expose the layout by name; the media still is
+        # the point of the run, so fall back rather than lose the generation.
+        print(f"[smoke] layout outputs unavailable ({type(exc).__name__}: {exc}); "
+              f"requesting media only", flush=True)
+        results = rest(**call_kwargs, output=media)
     t_gen = time.time() - t0
 
     video = results["videos"][0]
@@ -194,7 +206,7 @@ def main() -> int:
     encode_video(video, fps=24, output_path=str(mp4), audio=audio, audio_sample_rate=rate)
     print(f"[smoke] wrote {mp4} ({mp4.stat().st_size/1e6:.1f} MB)", flush=True)
 
-    layout = dump_layout(state, out_dir / "packed_layout.json")
+    layout = dump_layout(results, out_dir / "packed_layout.json")
     print(f"[smoke] packed layout: {json.dumps(layout.get('token_tags', {}))}", flush=True)
 
     (out_dir / "timings.json").write_text(json.dumps({

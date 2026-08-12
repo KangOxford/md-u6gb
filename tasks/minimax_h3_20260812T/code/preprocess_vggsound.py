@@ -72,6 +72,19 @@ def context_ir_prompt(label: str) -> str:
     return CONTEXT_IR_TEMPLATE.format(label=label.strip())
 
 
+def stable_seed(key: str) -> int:
+    """A per-clip seed that is the same in every process and every run.
+
+    Not `hash(key)`: CPython randomizes string hashing per process unless
+    `PYTHONHASHSEED` is pinned, so a corpus built twice would draw different video
+    posteriors while the code claimed to be deterministic. blake2b has no such
+    dependence on interpreter state.
+    """
+    import hashlib
+
+    return int.from_bytes(hashlib.blake2b(key.encode(), digest_size=4).digest(), "big") % (2 ** 31)
+
+
 # ----------------------------------------------------------------------------
 # Decoding (CPU, in worker processes)
 # ----------------------------------------------------------------------------
@@ -250,6 +263,68 @@ def encode_media(ckpt: Path, tarballs: list[Path], label_of: dict[str, str], lab
         shard_video, shard_audio, shard_label, shard_ids = [], [], [], []
 
     pool = ProcessPoolExecutor(max_workers=decode_workers)
+
+    def drain(batch: list[tuple[str, bytes]]) -> bool:
+        """Decode one batch in the worker pool and encode it on the GPU.
+
+        Returns True when the requested clip limit has been reached. Factored out of
+        the streaming loop so the *partial* batch at the end of a tarball is
+        processed too; inlined, the tail was silently dropped, which is the kind of
+        loss that never shows up as an error and only ever appears as a slightly
+        smaller corpus than the log claims to have seen.
+        """
+        nonlocal kept, skipped, geometry_checked
+        for result in pool.map(_decode_partial(num_frames, size), batch, chunksize=1):
+            if result is None:
+                skipped += 1
+                continue
+            name, video_np, audio_np = result
+            ytid = name.split("|", 1)[1]
+
+            pixels = torch.from_numpy(video_np).to(device).permute(3, 0, 1, 2)[None]
+            pixels = (pixels.to(torch.float32).div(255.0) - pixel_mean) / pixel_std
+            posterior = vae.encode(pixels.to(torch.bfloat16), return_dict=False)[0]
+            # The released recipe samples the video posterior and rounds it through
+            # float16; the seed is fixed at 42 for conditioning, and a per-clip seed
+            # here keeps the corpus deterministic without giving every clip the same
+            # posterior draw.
+            latents = posterior.sample(
+                generator=torch.Generator(device=device).manual_seed(stable_seed(ytid))
+            ).float().cpu()
+            latents = ((latents.to(torch.float16).float() - lat_mean) / lat_std)[0]
+
+            if not geometry_checked:
+                got = latents.shape[1]
+                if got != expected_latent_frames:
+                    raise SystemExit(
+                        f"[media] FATAL latent-frame geometry mismatch: predicted "
+                        f"{expected_latent_frames} for {num_frames} pixel frames "
+                        f"(17n+5 -> 5n+2), the VAE produced {got}. Fix "
+                        f"h3nano.num_latent_frames_for before training."
+                    )
+                print(f"[media] geometry OK: {num_frames} frames -> {got} latent frames, "
+                      f"latent {tuple(latents.shape)}", flush=True)
+                geometry_checked = True
+
+            wave = torch.from_numpy(audio_np).to(device)[:, None]      # (2, 1, samples)
+            a_post = audio_vae.encode(wave, return_dict=False)[0]
+            # Soundtracks take the posterior mode and are never sampled.
+            a_lat = a_post.mode().float().cpu().transpose(1, 2)        # (2, L, 32)
+            a_lat = ((a_lat - a_mean) / a_std).transpose(1, 2)         # (2, 32, L)
+
+            shard_video.append(latents.to(torch.float16))
+            shard_audio.append(a_lat.to(torch.float16))
+            shard_label.append(label_index[label_of[ytid]])
+            shard_ids.append(ytid)
+            kept += 1
+            if len(shard_video) >= per_shard:
+                flush()
+            if limit is not None and kept >= limit:
+                flush()
+                print(f"[media] limit {limit} reached", flush=True)
+                return True
+        return False
+
     try:
         for tarball in tarballs:
             print(f"[media] streaming {tarball}", flush=True)
@@ -269,59 +344,11 @@ def encode_media(ckpt: Path, tarballs: list[Path], label_of: dict[str, str], lab
                     seen += 1
                     if len(batch) < decode_workers * 2:
                         continue
-
-                    for result in pool.map(
-                        _decode_partial(num_frames, size), batch, chunksize=1
-                    ):
-                        if result is None:
-                            skipped += 1
-                            continue
-                        name, video_np, audio_np = result
-                        ytid = name.split("|", 1)[1]
-
-                        pixels = torch.from_numpy(video_np).to(device).permute(3, 0, 1, 2)[None]
-                        pixels = (pixels.to(torch.float32).div(255.0) - pixel_mean) / pixel_std
-                        posterior = vae.encode(pixels.to(torch.bfloat16), return_dict=False)[0]
-                        # The released recipe samples the video posterior and rounds it
-                        # through float16; the seed is fixed at 42 for conditioning, and a
-                        # per-clip seed here keeps the corpus deterministic without giving
-                        # every clip the same posterior draw.
-                        latents = posterior.sample(
-                            generator=torch.Generator(device=device).manual_seed(abs(hash(ytid)) % (2**31))
-                        ).float().cpu()
-                        latents = ((latents.to(torch.float16).float() - lat_mean) / lat_std)[0]
-
-                        if not geometry_checked:
-                            got = latents.shape[1]
-                            if got != expected_latent_frames:
-                                raise SystemExit(
-                                    f"[media] FATAL latent-frame geometry mismatch: predicted "
-                                    f"{expected_latent_frames} for {num_frames} pixel frames "
-                                    f"(17n+5 -> 5n+2), the VAE produced {got}. Fix "
-                                    f"h3nano.num_latent_frames_for before training."
-                                )
-                            print(f"[media] geometry OK: {num_frames} frames -> {got} latent frames, "
-                                  f"latent {tuple(latents.shape)}", flush=True)
-                            geometry_checked = True
-
-                        wave = torch.from_numpy(audio_np).to(device)[:, None]      # (2, 1, samples)
-                        a_post = audio_vae.encode(wave, return_dict=False)[0]
-                        # Soundtracks take the posterior mode and are never sampled.
-                        a_lat = a_post.mode().float().cpu().transpose(1, 2)        # (2, L, 32)
-                        a_lat = ((a_lat - a_mean) / a_std).transpose(1, 2)         # (2, 32, L)
-
-                        shard_video.append(latents.to(torch.float16))
-                        shard_audio.append(a_lat.to(torch.float16))
-                        shard_label.append(label_index[label_of[ytid]])
-                        shard_ids.append(ytid)
-                        kept += 1
-                        if len(shard_video) >= per_shard:
-                            flush()
-                        if limit is not None and kept >= limit:
-                            flush()
-                            print(f"[media] limit {limit} reached", flush=True)
-                            return
+                    if drain(batch):
+                        return
                     batch = []
+                if batch and drain(batch):
+                    return
     finally:
         pool.shutdown(wait=True)
         flush()
