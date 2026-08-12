@@ -36,7 +36,13 @@ from post_training.heuristic_learning.fidelity import (  # noqa: E402
 EVENT_NAMES = {1: "new", 2: "cancel", 3: "delete", 4: "execution",
                5: "hidden", 6: "cross", 7: "halt"}
 REFERENCING = (2, 3, 4)          # what the task calls cancel / delete / execution
-AGE_BINS = [(1, 10), (11, 25), (26, 50), (51, 100), (101, 250)]
+# 默认分桶配到 250，因为 500 条窗口下 cond 是 250，再远的目标一律在窗口之外。
+# 2,000 条窗口把可达距离推到 2,000，那时 251-2000 会全部塌进 ">250" 一个桶里，
+# 而机制判据 P2 问的恰恰是「命中率怎么随距离变化」——塌桶等于把要测的量测没了。
+# 所以分桶可配，且扩展集的前五个与默认完全相同，跨上下文可以逐桶对齐着比。
+AGE_BINS_500 = [(1, 10), (11, 25), (26, 50), (51, 100), (101, 250)]
+AGE_BINS_2K = AGE_BINS_500 + [(251, 500), (501, 1000), (1001, 2000)]
+AGE_BINS = AGE_BINS_500
 
 
 def sequence_pairs(gen_dir):
@@ -82,9 +88,16 @@ def age_bin(age):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--gen-dir", required=True)
+    ap.add_argument("--age-bins", choices=("500", "2k"), default="500",
+                    help="500 keeps the published bins so old runs reproduce; "
+                         "2k extends them to 2000 for long-context benches")
     ap.add_argument("--out", default=None)
     ap.add_argument("--label", default="arm")
     a = ap.parse_args()
+
+    global AGE_BINS
+    AGE_BINS = AGE_BINS_2K if a.age_bins == "2k" else AGE_BINS_500
+    print(f"[refer] age bins: {a.age_bins} -> {AGE_BINS}")
 
     pairs = sequence_pairs(a.gen_dir)
     if not pairs:

@@ -118,9 +118,11 @@ echo "[bench] score rc=$SCORE_RC $(date -u +%H:%M:%SZ)"
 # 与 (7.3) 用同一份 inference 产物，所以两行指标同源、可以并排放进一张表。
 # baseline 侧走的是同一个脚本同一组参数（n_cond 250，horizons 10/50/100/250）。
 echo "[bench] === (7.2) return bench 开始 $(date -u +%H:%M:%SZ) ==="
+# 地平线随生成长度一起放长。500 版生成 250 条，最远地平线 250 就是整段；
+# 2,000 版生成 1000 条，若还停在 250 就只测了前四分之一。
 "$PYTHON" "$QUANT_ROOT/AlphaTrade/lob_pipeline/return_bench/run_return_bench.py" \
     --infer_dir "$INFERENCE_DIR" --n_cond "$N_COND_MSGS" \
-    --horizons 10,50,100,250 --workers 32 \
+    --horizons "${RETURN_HORIZONS:-10,50,100,250,500,1000}" --workers 32 \
     --output_dir "$OUTPUT_ROOT" --name "$LOBBENCH_RUN_ID"
 echo "[bench] (7.2) rc=$? $(date -u +%H:%M:%SZ)"
 
@@ -128,8 +130,12 @@ echo "[bench] (7.2) rc=$? $(date -u +%H:%M:%SZ)"
 # 读生成时逐消息写下的 provenance 位域，所以量的是这次运行真正做过的解析，
 # 而不是事后重新推断出来的。主判据是 L1 精确率，不是兜底后的合计。
 echo "[bench] === (7.4) refer success 开始 $(date -u +%H:%M:%SZ) ==="
+# --age-bins 2k 把分桶从 250 扩到 2000。500 版的默认分桶在这里会把 251-2000
+# 全部塌进一个 ">250" 桶，而机制判据问的正是命中率怎么随距离变化。
+# 扩展集的前五个桶与默认逐字相同，所以两种上下文可以逐桶对齐着比。
 "$PYTHON" "$TASKDIR/code/refer_success.py" \
     --gen-dir "$INFERENCE_DIR/data_gen" \
+    --age-bins 2k \
     --out "$OUTPUT_ROOT" --label "$LOBBENCH_RUN_ID"
 echo "[bench] (7.4) rc=$? $(date -u +%H:%M:%SZ)"
 
