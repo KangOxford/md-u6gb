@@ -103,6 +103,25 @@ text_rows  =                                          96
 sequence_length                                     1748
 ```
 
+### 显式偏离：时长在 H3 的支持窗口之外
+
+H3 生成 5–15 秒，24 fps，帧数必须是 `17n+5`，所以它只允许
+`num_frames ∈ {124, 141, ..., 345}`，**最小 124 帧 = 5.17 秒**。
+
+本复刻用 **73 帧 = 3.04 秒**，落在窗口之外。这不是架构限制（架构对任意
+`17n+5` 都成立），是他们那份训练好的 checkpoint 的性质。选 73 的理由是算力：
+
+| | 73 帧 | 124 帧 | 倍数 |
+|---|---|---|---|
+| latent 帧 | 22 | 37 | 1.68× |
+| sequence_length | 1748 | 2878 | 1.65× |
+| 注意力 FLOPs ∝ S² | 1.0 | 2.71 | **2.71×** |
+
+在 12 小时的单节点预算里，2.7 倍的注意力成本要从预训练步数里扣。由于
+E1–E7 全部指标都与时长无关（同步性、前向次数、留出损失、锚点消融都在任意
+时长上成立），这笔钱花在步数上比花在时长上更值。改动只需
+`--num-frames 124`，代码无需修改。
+
 ---
 
 ## 硬性工程约束（本集群）
@@ -121,6 +140,8 @@ sequence_length                                     1748
 - [x] 环境：venv + diffusers main + transformers 4.57.6 + PyAV
 - [x] `code/h3nano.py`：模型 config、几何、流匹配、packed 布局 —— CPU 自检通过（101.652 M）
 - [x] `code/train.py`：三阶段训练 —— CPU 干跑通过；checkpoint 保存/剪枝/面包屑/resume 单独验证通过
-- [x] `code/preprocess_vggsound.py`、`code/sample.py` —— 语法与接口就绪
-- [ ] job 5998320 排队中（Priority=1，账户 fair-share 被 16 个在跑节点摊薄）
-- [ ] 阶段 2–6
+- [x] `code/preprocess_vggsound.py`、`code/sample.py`、`code/evaluate.py` —— 就绪
+- [x] 采样回路 CPU 验证（双调度器、CFG 前向次数 4 vs 8）
+- [x] 几何函数改为委托参考实现，输出与手推公式逐值一致
+- [ ] job 5998320 / 5998498 排队中 —— **集群侧停摆**，详见 `progress.md`
+- [ ] 阶段 2–6（全部需要 GPU 分配）
