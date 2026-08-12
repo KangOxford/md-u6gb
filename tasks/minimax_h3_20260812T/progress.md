@@ -91,3 +91,16 @@ PrivateData = accounts,events,jobs,reservations,usage,users
 | `libgomp: Thread creation failed` | 登录节点 pids.max | `taskset -c 0-3` + `OMP_NUM_THREADS=4` |
 | 训练干跑 exit 137 | 登录节点 cgroup 上限 **4 GiB**，已用 3.31 GB | 确认是登录节点限制；计算节点 856 GB 无此问题 |
 | 参数普查 `token_refiner` 只有 0.003 M | 分桶时 `.attn.` 判断在 `token_refiner` 之前，抢走了 refiner 的 attn/ffn | 调整判断顺序（两个文件都改） |
+| `create_mm_token_type_ids` 不存在 | **我自己造的**：当初把 `HybridCache` 报错归因给 diffusers 并降 transformers 到 4.x，但真正要它的是 **peft 0.17.1**（`HybridCache` 在 diffusers 全部 `.py` 中出现 0 次）。降级正好删掉了 H3 文本编码需要的 API | 不打版本仗：纯文本 prompt 的 `mm_token_type_ids` 恒为全零，直接构造 + 断言防止将来喂进带图 prompt |
+
+### 自己写出来的 bug 清单（全部属于「不报错、只出错结果」）
+
+| # | bug | 若不修的后果 |
+|---|---|---|
+| 1 | per-item timestep 与 `(seq_len,)` 的 `timestep_indices` 冲突 | batch 中第 1..B−1 个样本被告知的噪声水平与实际不符 → 模型学会忽略 t |
+| 2 | tarball 尾批静默丢弃 | 每片最多丢 48 个 clip，语料比日志声称的小 |
+| 3 | `hash()` 逐进程随机化 | 注释写「确定性」，实际重建语料会抽到不同后验 |
+| 4 | 参数普查分桶顺序 | token_refiner 显示 0.003 M（真值约 8.8 M） |
+| 5 | `create_mm_token_type_ids` 版本冲突 | 文本库首条 prompt 崩溃 |
+
+第 1 条最贵：它不会报错，损失也不会出现在损失曲线上，只会让模型在采样时对噪声水平失去响应。
