@@ -27,7 +27,12 @@ export BENCHMARK_ROOT="$QUANT_ROOT/AlphaTrade/lob_pipeline"
 export ARCHITECTURE="${ARCHITECTURE:-hybrid_mamba3}"
 
 BENCH_TS="$(date -u +%Y%m%dT%H%M%SZ)"
-export OUTPUT_ROOT="$TASKDIR/bench_${BENCH_TS}_j${SLURM_JOB_ID}"
+# 输出根必须逐次唯一。原写法（时间戳+job id）在独立 sbatch 下够用，因为每个
+# bench 有自己的 job id；attach 到同一个 allocation 后这个前提没了：两臂同秒
+# 启动就落进同一个目录，而生成文件按样本索引命名，于是同名文件互相覆盖，
+# data_gen 变成两个模型输出的混合物，LOB-Bench 照样给出一个看起来正常的分数。
+# 加上臂名与本进程 PID，两者任一都足以拆开。
+export OUTPUT_ROOT="$TASKDIR/bench_${BENCH_TS}_j${SLURM_JOB_ID}_${ARM_ID:-arm}_$$"
 export INFERENCE_DIR="$OUTPUT_ROOT/inference"
 export LOBBENCH_OUTPUT="$OUTPUT_ROOT/lobbench"
 export SUMMARY="$OUTPUT_ROOT/summary.json"

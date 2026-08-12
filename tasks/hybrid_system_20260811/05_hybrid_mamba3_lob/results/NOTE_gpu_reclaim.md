@@ -113,3 +113,31 @@ for LOCAL_RANK in $(seq 0 $((WORLD_SIZE - 1))); do
 2. **判「空跑」看产物 mtime，不看 GPU util。** 生成类作业 util 天然是突发的；`ls -lt <输出目录>` 的最新时间戳才是活性证据。
 3. **物理闸门的粒度要和申请的粒度一致。** 申请的是卡就按卡判；节点级判定在共享 allocation 上会把大量可用算力误锁。
 4. **邻居在真跑就绝不碰。** 用空卡不需要动别人一根手指；反过来，只要产物还在长，util 再低也不是 kill 的理由。
+
+---
+
+## 7. 附记：把两臂并行 attach 到同一 allocation，撞出一次静默污染（2026-08-12T09:27Z）
+
+第一次并行启动两臂后，hybrid 的 rank 日志在第 3 批（共 196 批）处**无错断掉**，而 baseline 却一路跑到打分并写出了 `summary.json`。
+
+根因是输出根的唯一性假设被打破：
+
+```bash
+OUTPUT_ROOT="$TASKDIR/bench_${BENCH_TS}_j${SLURM_JOB_ID}"
+```
+
+`BENCH_TS` 是秒级时间戳，`SLURM_JOB_ID` 在 attach 场景下是 **allocation id**。两臂同秒启动、attach 到同一个 allocation ⇒ 两者**完全相同** ⇒ 写进同一个目录。
+
+危险的不是崩掉的那一臂，而是**没崩的那一臂**：生成文件按样本索引命名（`GOOG_<date>_message_real_id_<i>_gen_id_0.csv`），两臂对同一批 3,136 条冻结索引生成，于是**同名文件互相覆盖**。`inference/data_gen` 变成两个模型输出的混合物，而 LOB-Bench 照样能给出一个看起来完全正常的分数。
+
+> 原设计的 job id 足以区分，是因为**每个 bench 都是独立 sbatch、各有唯一 job id**。我把它改成 attach 之后，这个前提就没了 —— 而脚本不会告诉你前提没了。
+
+**处置**：污染目录改名为 `CONTAMINATED_bench_20260812T092746Z_two_arms_same_dir` 保留（不删，留证据），输出根改为
+
+```bash
+OUTPUT_ROOT="$TASKDIR/bench_${BENCH_TS}_j${SLURM_JOB_ID}_${ARM_ID:-arm}_$$"
+```
+
+臂名与 PID 任一都足以拆开。
+
+**可迁移判据**：改变一个脚本的**运行方式**（sbatch → attach）时，要把它所有依赖运行方式的**隐含唯一性假设**都列出来重查一遍。`$SLURM_JOB_ID` 在 sbatch 下是「这次运行」，在 attach 下是「这批节点」，语义完全不同，而两处写法一字不差。

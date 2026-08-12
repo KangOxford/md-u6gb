@@ -1,0 +1,25 @@
+[gate] nid010053 目标卡 [1,2]，阈值 4096 MiB
+GATE nid010053 target_worst_mib=573
+════════════════════════════════════════════════════════════
+ LOB-Bench + return + refer   arch=hybrid_mamba3  job=5980502  node=nid010053
+ 起 2026-08-12T09:27:46Z
+ Worktree: /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811
+════════════════════════════════════════════════════════════
+[bench] checkpoint=/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811/checkpoints/j5980745_2ska8a8q_5980745 step=12000
+[bench] 路径自证通过：运行根有 _ROOT_METADATA，step 12000 有 state
+[bench] === generation 开始 09:27:46Z ===
+[gen] host=nid010053 ckpt=/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811/checkpoints/j5980745_2ska8a8q_5980745 step=12000
+[gen] sample_indices sha256=0c41de5111b8996b3ac00ca8f481c98b5453dd4c9562e56f9730d364518faf25
+[cuda-preflight] jax=gpu torch=2.8.0+cu129
+[infer-squashfs] 2026-01/GOOG: linked 40 files
+[infer-squashfs] farm=/tmp/kangli.u6gb/m3bench/20260812T092746Z_147873/infer_farm_5980502_0_147873/GOOG (20 message, 20 book) across 1 months
+[infer-wide-squashfs] 2026-01/GOOG: linked 20 orderbook files
+[infer-wide-squashfs] farm=/tmp/kangli.u6gb/m3bench/20260812T092746Z_147873/infer_wide_farm_5980502_0_147873/GOOG (20 orderbook files, L=500, 1 months)
+[gen] sequences=3136 cond=250 gen=250 seed=2026
+[gen] data=/tmp/kangli.u6gb/m3bench/20260812T092746Z_147873/infer_farm_5980502_0_147873/GOOG wide=/tmp/kangli.u6gb/m3bench/20260812T092746Z_147873/infer_wide_farm_5980502_0_147873/GOOG
+[gen] rank 0 失败，见 /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T092746Z_j5980502/inference_rank0.log
+[gen] rank 1 失败，见 /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T092746Z_j5980502/inference_rank1.log
+[bench] generation rc=1 09:28:30Z
+FATAL: generation 失败
+srun: error: nid010053: task 0: Exited with exit code 1
+srun: Terminating StepId=5980502.560

@@ -1,0 +1,19 @@
+[gate] nid011179 目标卡 [1,2]，阈值 4096 MiB
+GATE nid011179 target_worst_mib=2
+════════════════════════════════════════════════════════════
+ LOB-Bench + return + refer   arch=mamba3  job=5980502  node=nid011179
+ 起 2026-08-12T09:54:02Z
+ Worktree: /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811
+════════════════════════════════════════════════════════════
+[bench] checkpoint=/lus/lfs1aip2/projects/public/u6gb/sigma-0/checkpoints/j5877859_30nkkohd_5877859 step=12000
+[bench] 路径自证通过：运行根有 _ROOT_METADATA，step 12000 有 state
+[bench] === generation 开始 09:54:02Z ===
+[gen] host=nid011179 ckpt=/lus/lfs1aip2/projects/public/u6gb/sigma-0/checkpoints/j5877859_30nkkohd_5877859 step=12000
+[gen] sample_indices sha256=0c41de5111b8996b3ac00ca8f481c98b5453dd4c9562e56f9730d364518faf25
+[cuda-preflight] jax=gpu torch=2.8.0+cu129
+[infer-squashfs] 2026-01/GOOG: linked 40 files
+[infer-squashfs] farm=/tmp/kangli.u6gb/m3bench/20260812T095402Z_127722/infer_farm_5980502_0_127722/GOOG (20 message, 20 book) across 1 months
+[infer-wide-squashfs] 2026-01/GOOG: linked 20 orderbook files
+[infer-wide-squashfs] farm=/tmp/kangli.u6gb/m3bench/20260812T095402Z_127722/infer_wide_farm_5980502_0_127722/GOOG (20 orderbook files, L=500, 1 months)
+[gen] sequences=3136 cond=250 gen=250 seed=2026
+[gen] data=/tmp/kangli.u6gb/m3bench/20260812T095402Z_127722/infer_farm_5980502_0_127722/GOOG wide=/tmp/kangli.u6gb/m3bench/20260812T095402Z_127722/infer_wide_farm_5980502_0_127722/GOOG

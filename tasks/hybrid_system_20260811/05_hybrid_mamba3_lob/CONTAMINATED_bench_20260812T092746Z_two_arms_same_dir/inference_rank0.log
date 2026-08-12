@@ -1,0 +1,811 @@
+['/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811/run/base_model/runtime', '/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811/src', '/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811', '/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob', '/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python312.zip', '/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12', '/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/lib-dynload', '/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages', '__editable__.jax_triton-0.3.0.finder.__path_hook__', '/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811']
+[Encoding] Using 26tok encoding (MSG_LEN=26)
+(2112, 640)
+[Optimizer] Using inject_hyperparams (legacy scalar LR)
+configuring standard optimization setup
+[*] Gradient clipping enabled: max_norm=1.0
+[*] Trainable Parameters: 35435423
+[*] State params embedding shape: (2112, 640)
+[Checkpoint] Loading step=12000 from /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811/checkpoints/j5980745_2ska8a8q_5980745 (partial_restore=True)
+[load_checkpoint] StandardRestore failed (User-provided restore item and on-disk value metadata tree structures do not match:
+opt_state[1].inner_states.muon:
+    - Source: MISSING
+    - Target: {'inner_state': [{'count': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=()), 'mu': {'book_encoder': {'post_layers_0': {'norm': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out2': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 640))}, 'seq': {'B_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'B_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'C_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'C_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'D': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'dt_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'in_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 2908))}, 'out_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(80, 640))}}}, 'pre_layers_0': {'norm': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out2': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(503, 503))}, 'seq': {'B_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'B_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'C_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'C_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'D': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'dt_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'in_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(503, 2253))}, 'out_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(60, 503))}}}, 'projection': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(503, 40))}}, 'decoder': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 2112))}, 'fused_s5': {'encoder': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(80, 640))}, 'layers_0': {'norm': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out2': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 640))}, 'seq': {'B_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'B_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'C_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'C_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'D': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'dt_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'in_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 2908))}, 'out_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(80, 640))}}}, 'layers_1': {'norm': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out2': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 640))}, 'seq': {'B_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'B_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'C_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'C_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'D': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'dt_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'in_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 2908))}, 'out_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(80, 640))}}}, 'layers_2': {'norm': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out2': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 640))}, 'seq': {'B_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'B_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'C_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'C_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'D': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'dt_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'in_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 2908))}, 'out_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(80, 640))}}}, 'layers_3': {'seq': {'attn': {'key': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 10, 64))}, 'out': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(10, 4, 640))}, 'query': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 10, 64))}, 'value': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 10, 64))}}, 'ff': {'layers_0': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 2560))}, 'layers_2': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(160, 640))}}, 'norm1': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'norm2': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}}}, 'layers_4': {'norm': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out2': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 640))}, 'seq': {'B_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'B_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'C_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'C_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'D': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'dt_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'in_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 2908))}, 'out_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(80, 640))}}}, 'layers_5': {'norm': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out2': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 640))}, 'seq': {'B_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'B_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'C_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'C_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'D': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'dt_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'in_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 2908))}, 'out_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(80, 640))}}}}, 'message_encoder': {'encoder': {'embedding': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'layers_0': {'norm': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out2': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 640))}, 'seq': {'B_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'B_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'C_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'C_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'D': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'dt_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'in_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 2908))}, 'out_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(80, 640))}}}, 'layers_1': {'norm': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out2': {'bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 640))}, 'seq': {'B_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'B_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'C_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'C_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'D': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'dt_bias': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), 'in_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(40, 2908))}, 'out_norm': {'scale': ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None)}, 'out_proj': {'kernel': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(80, 640))}}}}}, 'ns_coeffs': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=(3,))}, ValueMetadataEntry(value_type='None', skip_deserialize=True, write_shape=None), {'count': ValueMetadataEntry(value_type='jax.Array', skip_deserialize=False, write_shape=())}]}
+
+opt_state[1].inner_states.regular.inner_state:
+    - Sou[load_checkpoint] Loaded 137 param arrays
+(2112, 640)
+[get_dataset] Wide book files: 20 matched from /tmp/kangli.u6gb/m3bench/20260812T092746Z_117843/infer_wide_farm_5980502_0_117843/GOOG
+Dataset length:  226002
+[Rank 0/2] Sample-index manifest: /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T092746Z_j5980502/inference/sample_indices_rank0.json sha256=a0cd27b50105a1028002aa56366cb9b2acf8848e744914892523b774dbb1055a
+[Rank 0/2] Processing 1568 sequences out of 3136 total
+[Rank 0/2] GPU: 1
+[Rank 0/2] First inDataset length:  226002
+Traceback[sample_new] Wide init: 500 levels, nOrders=1050, init_id_range=[-2, -1002]
+  0%|          | 0/196 [00:00<?, ?it/s](8, 13001)
+Before generation, real book is (should be none): None
+WARNING: Compiling the generate function, you should only see this once.
+Generation time for batch of size 8: 5.04 seconds
+num_errors [174 162 174 186 148 152 123 169]
+  1%|          | 1/196 [01:02<3:23:39, 62.66s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [241 153 160 171 225 214 154  91]
+  1%|          | 2/196 [01:09<1:36:42, 29.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [169 201 167 127 130 112 143 217]
+  2%|▏         | 3/196 [01:16<1:02:47, 19.52s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [213 104 136 112 156 108 181 166]
+  2%|▏         | 4/196 [01:23<46:34, 14.55s/it]  (8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [153  78 111 129 163 197 211 160]
+  3%|▎         | 5/196 [01:31<37:58, 11.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [217  99 220 183 233 135 229 137]
+  3%|▎         | 6/196 [01:37<32:18, 10.20s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [125 183 212 183 193 175 228 133]
+  4%|▎         | 7/196 [01:44<28:39,  9.10s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [152 174 240 232 121 109 136 158]
+  4%|▍         | 8/196 [01:51<26:14,  8.38s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [101 165 220 148 205 204 182 117]
+  5%|▍         | 9/196 [01:58<24:31,  7.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [140 192 166 103  86 172 226 203]
+  5%|▌         | 10/196 [02:05<23:21,  7.54s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [196 197 236 130 168 165 155  58]
+  6%|▌         | 11/196 [02:11<22:35,  7.33s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [207 105 168 142 153 159 138 171]
+  6%|▌         | 12/196 [02:18<22:02,  7.19s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [165 226 177 163 115 116 194 112]
+  7%|▋         | 13/196 [02:25<21:33,  7.07s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [ 86 249 179 214 161 170 161 134]
+  7%|▋         | 14/196 [02:32<21:15,  7.01s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [143 170 200 169 194 116 139 157]
+  8%|▊         | 15/196 [02:39<21:20,  7.07s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [127 153 157 223 141 149 185 199]
+  8%|▊         | 16/196 [02:46<21:11,  7.06s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [141 142 178 202 140 172 172 112]
+  9%|▊         | 17/196 [02:53<20:55,  7.02s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [107 135 206  99 180 184 135 141]
+  9%|▉         | 18/196 [03:00<20:43,  6.98s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [119 199 177 147 175 173  95 168]
+ 10%|▉         | 19/196 [03:08<21:05,  7.15s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [160 203 139 206 157 206 216 133]
+ 10%|█         | 20/196 [03:15<20:58,  7.15s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [159 127 134  90 121 152 156  57]
+ 11%|█         | 21/196 [03:22<20:32,  7.04s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [ 99 126 147 188 144 138 178 197]
+ 11%|█         | 22/196 [03:28<20:13,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [149 202  85 152 111 144 166 101]
+ 12%|█▏        | 23/196 [03:35<19:57,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [ 59 172 164 215 124 113  98 143]
+ 12%|█▏        | 24/196 [03:42<19:43,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [145 146 126  57 126  92 161  45]
+ 13%|█▎        | 25/196 [03:49<19:30,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [135  46 178 135  80 126 163 126]
+ 13%|█▎        | 26/196 [03:55<19:19,  6.82s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [145 182 169 235 131 111 143 197]
+ 14%|█▍        | 27/196 [04:03<19:38,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [115 158 176 175 182 182 151 203]
+ 14%|█▍        | 28/196 [04:10<19:29,  6.96s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [160 146 188 112 168 124 107 199]
+ 15%|█▍        | 29/196 [04:17<19:18,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [171 138 137 165 137  78 131 106]
+ 15%|█▌        | 30/196 [04:24<19:13,  6.95s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [115 170 132 153 158 123 138  55]
+ 16%|█▌        | 31/196 [04:30<19:02,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [183 137 169 112 215 115 127 132]
+ 16%|█▋        | 32/196 [04:37<18:56,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [219 210 138 127 197 119 201 224]
+ 17%|█▋        | 33/196 [04:44<18:48,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [149 183 182 111 147 118 172 189]
+ 17%|█▋        | 34/196 [04:51<18:39,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [154 221 107 117 103 165 151 153]
+ 18%|█▊        | 35/196 [04:58<18:37,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [108 135 145 212 249 159 150 180]
+ 18%|█▊        | 36/196 [05:05<18:21,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [132 196 168 137 143 137 133 222]
+ 19%|█▉        | 37/196 [05:14<19:53,  7.50s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [102 184 205 197 206 147 164 169]
+ 19%|█▉        | 38/196 [05:21<19:14,  7.30s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [119 109 202 204 158 137 138 190]
+ 20%|█▉        | 39/196 [05:28<18:45,  7.17s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [189 212 167 139 192 143 236 165]
+ 20%|██        | 40/196 [05:34<18:20,  7.05s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [166 209 156 164 138 108 113 213]
+ 21%|██        | 41/196 [05:41<17:56,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [146 146 207 185 168 128 166 203]
+ 21%|██▏       | 42/196 [05:48<17:39,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [222 100  70 140 207 154 211 174]
+ 22%|██▏       | 43/196 [05:55<17:48,  6.98s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [118 175 166 149 157 143 147 124]
+ 22%|██▏       | 44/196 [06:02<17:53,  7.06s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [202 150 152 139 216 175 104 182]
+ 23%|██▎       | 45/196 [06:09<17:41,  7.03s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.09 seconds
+num_errors [185 125 122  99 152 140 145 136]
+ 23%|██▎       | 46/196 [06:16<17:29,  7.00s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [164 200 125 211 122 111 162 145]
+ 24%|██▍       | 47/196 [06:23<17:12,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [135 155 214 107 243 134 143  86]
+ 24%|██▍       | 48/196 [06:30<16:58,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [112 246 180 108 234 187 214 110]
+ 25%|██▌       | 49/196 [06:37<16:51,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [129 154 197  80 108 118 197 116]
+ 26%|██▌       | 50/196 [06:43<16:46,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [148 154 180 118 181 128 175 189]
+ 26%|██▌       | 51/196 [06:50<16:43,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [180  99 195 114 134 163 112 154]
+ 27%|██▋       | 52/196 [06:57<16:37,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [180 168 204 124 242 180 165 171]
+ 27%|██▋       | 53/196 [07:04<16:28,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [233 175 102 165 189 175 164 179]
+ 28%|██▊       | 54/196 [07:12<16:36,  7.02s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [137 167 156  83 143  79 103 237]
+ 28%|██▊       | 55/196 [07:18<16:17,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [171 143 212 200 164 228 189 131]
+ 29%|██▊       | 56/196 [07:25<16:02,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [235 211 192 115 159 215 197 166]
+ 29%|██▉       | 57/196 [07:32<15:51,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [196 206 242 192 202 165 138 129]
+ 30%|██▉       | 58/196 [07:39<15:41,  6.82s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [145  92  91 113 186 143 135 152]
+ 30%|███       | 59/196 [07:45<15:31,  6.80s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [122 173 169 205 184 175 190 179]
+ 31%|███       | 60/196 [07:52<15:37,  6.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [167 174 207 140 138 199 139 174]
+ 31%|███       | 61/196 [07:59<15:22,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [212  98 196  89 112 164 249 184]
+ 32%|███▏      | 62/196 [08:06<15:12,  6.81s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [155  92 160  92 190 150 155  93]
+ 32%|███▏      | 63/196 [08:13<15:05,  6.81s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [138 174 126 194 150 113 111 161]
+ 33%|███▎      | 64/196 [08:19<14:57,  6.80s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [211 155 195 120 146 102 181 114]
+ 33%|███▎      | 65/196 [08:26<14:52,  6.81s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [110 189 210 156 133 207 136 101]
+ 34%|███▎      | 66/196 [08:33<14:44,  6.81s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [169 121 122 194 197 170 195 206]
+ 34%|███▍      | 67/196 [08:40<14:35,  6.79s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [158 134 193 178 136  86 121 112]
+ 35%|███▍      | 68/196 [08:47<14:29,  6.79s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [104 132 128 169  92 145 136 160]
+ 35%|███▌      | 69/196 [08:53<14:21,  6.79s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [113  87 130 114 171 139 195 140]
+ 36%|███▌      | 70/196 [09:00<14:17,  6.81s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [129 128 158 107 130 203 126 144]
+ 36%|███▌      | 71/196 [09:07<14:09,  6.80s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [100 114 119 151 170 127  33 102]
+ 37%|███▋      | 72/196 [09:14<13:59,  6.77s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [145 136 213 116 117 169 149 144]
+ 37%|███▋      | 73/196 [09:20<13:51,  6.76s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [153 127 196  82 101 133 144 163]
+ 38%|███▊      | 74/196 [09:28<14:08,  6.95s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [158 159 123  63 111 177 103 172]
+ 38%|███▊      | 75/196 [09:37<15:31,  7.70s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [193 133  69 133 136 218 182 210]
+ 39%|███▉      | 76/196 [09:44<14:54,  7.46s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [119 153  72 143 111 192  67 135]
+ 39%|███▉      | 77/196 [09:51<14:22,  7.25s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [171 129 212 208 173  94 134 249]
+ 40%|███▉      | 78/196 [09:58<13:58,  7.11s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [203 116 109 176 155 122 125 121]
+ 40%|████      | 79/196 [10:05<13:44,  7.04s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [185 123 141 163 135  98  87 130]
+ 41%|████      | 80/196 [10:12<13:34,  7.02s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [227 145 151 231 130 152 153 135]
+ 41%|████▏     | 81/196 [10:18<13:21,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [179 158  70 102 142 136 193 205]
+ 42%|████▏     | 82/196 [10:25<13:10,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [146 132 132 167 186 151 146 142]
+ 42%|████▏     | 83/196 [10:32<12:55,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [114 116 191 209 143 110 152 148]
+ 43%|████▎     | 84/196 [10:39<12:47,  6.85s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [ 86 195 201 133 104 141 196 150]
+ 43%|████▎     | 85/196 [10:46<12:37,  6.82s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [158 189 199 162  85 209 215  88]
+ 44%|████▍     | 86/196 [10:52<12:28,  6.80s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [143 101  94 138 114  94 164 214]
+ 44%|████▍     | 87/196 [10:59<12:23,  6.82s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [168 111 242 147 147  55 133 106]
+ 45%|████▍     | 88/196 [11:06<12:19,  6.85s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [121 183 203 188 183 133 107 157]
+ 45%|████▌     | 89/196 [11:16<13:37,  7.64s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [197 134  84 186 151 152 144 211]
+ 46%|████▌     | 90/196 [11:22<13:05,  7.41s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [115 176 178 152 162  81  70 163]
+ 46%|████▋     | 91/196 [11:29<12:44,  7.28s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [120 134 137 125 131 136  95 108]
+ 47%|████▋     | 92/196 [11:36<12:27,  7.19s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [138 134 173 163 152 134 225 188]
+ 47%|████▋     | 93/196 [11:43<12:13,  7.12s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [229 140 200 160 187 139 142 148]
+ 48%|████▊     | 94/196 [11:50<12:01,  7.08s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [191 210 132 152 224 196 207 107]
+ 48%|████▊     | 95/196 [11:57<11:51,  7.04s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [162 167  60 155 168 228  75 194]
+ 49%|████▉     | 96/196 [12:04<11:40,  7.00s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [185 137 143 150 239 166 239  73]
+ 49%|████▉     | 97/196 [12:11<11:28,  6.96s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [150 104 146  77 136 167  96 131]
+ 50%|█████     | 98/196 [12:18<11:16,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [ 97 234 194  94 122 104 174 149]
+ 51%|█████     | 99/196 [12:25<11:05,  6.86s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [111  90  93 118 130 181 138 228]
+ 51%|█████     | 100/196 [12:32<10:59,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [218 206 154 119 151  93 166 159]
+ 52%|█████▏    | 101/196 [12:38<10:49,  6.83s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [140 173 127 191 100 198 161 149]
+ 52%|█████▏    | 102/196 [12:45<10:42,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [158 200 222 177 199 148 148 125]
+ 53%|█████▎    | 103/196 [12:52<10:39,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [120 220 226 170 159 227 172  43]
+ 53%|█████▎    | 104/196 [12:59<10:29,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [221 150 211 161 187 171 187 168]
+ 54%|█████▎    | 105/196 [13:06<10:20,  6.82s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [232 153 190 196 196 200 108 160]
+ 54%|█████▍    | 106/196 [13:12<10:12,  6.81s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [200 188 191 165 216 151 171 197]
+ 55%|█████▍    | 107/196 [13:19<10:07,  6.82s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [186 240 159 135 169 149 235 113]
+ 55%|█████▌    | 108/196 [13:26<10:01,  6.83s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [188 220 197 234 162 161 108 144]
+ 56%|█████▌    | 109/196 [13:33<09:56,  6.86s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [166 196 131  56  98 109 131 122]
+ 56%|█████▌    | 110/196 [13:40<09:51,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [124 112 164 150 128  93 182 138]
+ 57%|█████▋    | 111/196 [13:47<09:50,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [138 102 126 179 127 119  92 206]
+ 57%|█████▋    | 112/196 [13:54<09:43,  6.95s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [164  89 122 171 134 108 183 201]
+ 58%|█████▊    | 113/196 [14:01<09:36,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [104 156 210 185 168 151 213 108]
+ 58%|█████▊    | 114/196 [14:08<09:28,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [154 180 172 171 211 123 207 199]
+ 59%|█████▊    | 115/196 [14:15<09:20,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [141  82  88 168 171 168 122 133]
+ 59%|█████▉    | 116/196 [14:22<09:12,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [183 153 153 120 150 102  77 176]
+ 60%|█████▉    | 117/196 [14:29<09:08,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [155 175 168 161  91 189 129 111]
+ 60%|██████    | 118/196 [14:36<09:01,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [132 161 170 108 216 119 182 139]
+ 61%|██████    | 119/196 [14:42<08:51,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [175  79  96 150 174 140  58 156]
+ 61%|██████    | 120/196 [14:49<08:42,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [132 163 163 168 168 186 128 152]
+ 62%|██████▏   | 121/196 [14:56<08:33,  6.85s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [148 119  84 119 208 201 185 213]
+ 62%|██████▏   | 122/196 [15:03<08:30,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [ 99 155 201 155 103 167 162 180]
+ 63%|██████▎   | 123/196 [15:10<08:22,  6.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [153 202 152 151 177 123 180  88]
+ 63%|██████▎   | 124/196 [15:17<08:11,  6.82s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [ 80 241 135 121  35 169 135 209]
+ 64%|██████▍   | 125/196 [15:23<08:00,  6.77s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [159 111 122  88 228 113 183  93]
+ 64%|██████▍   | 126/196 [15:30<07:54,  6.78s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.00 seconds
+num_errors [215 150  75 198 171  85 106 148]
+ 65%|██████▍   | 127/196 [15:37<07:45,  6.75s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [172 118 188 108 112 151 209 172]
+ 65%|██████▌   | 128/196 [15:43<07:38,  6.75s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [185 156 104 188  83 103 164 120]
+ 66%|██████▌   | 129/196 [15:50<07:31,  6.73s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [168 134 204 104 164 178 180  85]
+ 66%|██████▋   | 130/196 [15:57<07:25,  6.75s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [183 183 216 236 168 189 124 156]
+ 67%|██████▋   | 131/196 [16:04<07:18,  6.74s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [148 222 113 204 116 101 162 161]
+ 67%|██████▋   | 132/196 [16:10<07:10,  6.72s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [187 137 161 177 175 215 154 123]
+ 68%|██████▊   | 133/196 [16:18<07:27,  7.10s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [128 138 111 159 142 106 200 113]
+ 68%|██████▊   | 134/196 [16:25<07:16,  7.04s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [116 160  91 226 114 111 150 173]
+ 69%|██████▉   | 135/196 [16:32<07:06,  6.99s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [135 187  82 201 180 150 120 153]
+ 69%|██████▉   | 136/196 [16:39<06:55,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [238 141 166 203 189 209 140 172]
+ 70%|██████▉   | 137/196 [16:46<06:47,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [143 247 184 237 232 147 171 173]
+ 70%|███████   | 138/196 [16:53<06:39,  6.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [120 168 185 201 113 193 111  90]
+ 71%|███████   | 139/196 [16:59<06:31,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [165 136 172 203 163 249 164 136]
+ 71%|███████▏  | 140/196 [17:06<06:25,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [113 120 179 122 180 222  95 128]
+ 72%|███████▏  | 141/196 [17:13<06:16,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [152 206 183 139 177 188 181 104]
+ 72%|███████▏  | 142/196 [17:20<06:10,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [135 127 173 249 182 101 149 135]
+ 73%|███████▎  | 143/196 [17:27<06:03,  6.86s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [116 165 116 168 141 170 206 163]
+ 73%|███████▎  | 144/196 [17:33<05:54,  6.82s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.00 seconds
+num_errors [179 220 155 209 200 118 233 172]
+ 74%|███████▍  | 145/196 [17:40<05:44,  6.76s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [103 128 170 165 144 228 106 161]
+ 74%|███████▍  | 146/196 [17:47<05:36,  6.74s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [175 164 144 171 124 200 224 178]
+ 75%|███████▌  | 147/196 [17:53<05:28,  6.70s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.01 seconds
+num_errors [ 87 150 112 160 210 238 151 107]
+ 76%|███████▌  | 148/196 [18:00<05:20,  6.67s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.01 seconds
+num_errors [126 156  90  95 186 185 118 191]
+ 76%|███████▌  | 149/196 [18:07<05:14,  6.69s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [191 170 158 160 115 167 211 202]
+ 77%|███████▋  | 150/196 [18:13<05:08,  6.71s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [165 102 113 177 103 171 212 134]
+ 77%|███████▋  | 151/196 [18:20<05:02,  6.72s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [158 165 126 150 189 209 190 135]
+ 78%|███████▊  | 152/196 [18:27<04:55,  6.72s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [130 183 147 202  94 160 144 132]
+ 78%|███████▊  | 153/196 [18:34<04:53,  6.83s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [199 141 181  84 181 205 213 156]
+ 79%|███████▊  | 154/196 [18:41<04:51,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [129 214  99 132 125 121 184 210]
+ 79%|███████▉  | 155/196 [18:48<04:43,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [162 105 238 151 129 138  97 171]
+ 80%|███████▉  | 156/196 [18:55<04:35,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [122 138 109 129 157  98 152 158]
+ 80%|████████  | 157/196 [19:02<04:29,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [182 156 130 125 137 112 123 168]
+ 81%|████████  | 158/196 [19:09<04:21,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [114 133 162 169 110 192 127 100]
+ 81%|████████  | 159/196 [19:15<04:12,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [129 211  96 212 164 187 175 191]
+ 82%|████████▏ | 160/196 [19:22<04:06,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [158  90 162 142 212 239 106 171]
+ 82%|████████▏ | 161/196 [19:29<04:00,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [ 86 156 156 145 182  85 134 180]
+ 83%|████████▎ | 162/196 [19:36<03:54,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [159 194 139  89 161 140 159 152]
+ 83%|████████▎ | 163/196 [19:43<03:47,  6.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [164 152 205 144 129 156 128 184]
+ 84%|████████▎ | 164/196 [19:50<03:39,  6.86s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [176 157  99 188 155 185 105 165]
+ 84%|████████▍ | 165/196 [19:57<03:31,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [169 112 132 136 141 202 114  71]
+ 85%|████████▍ | 166/196 [20:03<03:24,  6.82s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.01 seconds
+num_errors [103 132 112  96 168 183 181 131]
+ 85%|████████▌ | 167/196 [20:10<03:18,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.01 seconds
+num_errors [167  60 125  86 162 173 148 162]
+ 86%|████████▌ | 168/196 [20:17<03:10,  6.80s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [165 128 134 129  93 132  85 110]
+ 86%|████████▌ | 169/196 [20:24<03:02,  6.77s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [136 122 198 128 153 211 124  87]
+ 87%|████████▋ | 170/196 [20:31<02:57,  6.83s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [164 114 140 183 158 164 174  95]
+ 87%|████████▋ | 171/196 [20:38<02:51,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [200 147 204 147 203  95 147 157]
+ 88%|████████▊ | 172/196 [20:45<02:50,  7.09s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [135 133  80  76 182  49  97 177]
+ 88%|████████▊ | 173/196 [20:52<02:41,  7.01s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [ 86 161 153 181 146 126 179 177]
+ 89%|████████▉ | 174/196 [20:59<02:32,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [143 141 227  84 147 188 189 134]
+ 89%|████████▉ | 175/196 [21:06<02:24,  6.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [212 194 220 153 161 170 112 197]
+ 90%|████████▉ | 176/196 [21:12<02:17,  6.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [167 132 232 223 139 122 127 146]
+ 90%|█████████ | 177/196 [21:19<02:10,  6.86s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [193 138 111 174 210 163 138 128]
+ 91%|█████████ | 178/196 [21:26<02:02,  6.82s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [172 104 231 150 137 132 219 181]
+ 91%|█████████▏| 179/196 [21:33<01:55,  6.80s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [102 114 109 198 158 133  90 158]
+ 92%|█████████▏| 180/196 [21:39<01:48,  6.79s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.03 seconds
+num_errors [202 143 174 145 169 191 186 159]
+ 92%|█████████▏| 181/196 [21:46<01:41,  6.76s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [ 94  46 156 102 156  82 165 165]
+ 93%|█████████▎| 182/196 [21:53<01:34,  6.77s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [145 188 121 145 123 166  87 234]
+ 93%|█████████▎| 183/196 [22:00<01:28,  6.79s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [189 161 148 165 153 114 167 117]
+ 94%|█████████▍| 184/196 [22:07<01:22,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.09 seconds
+num_errors [143 174 214 139 149 219 136 134]
+ 94%|█████████▍| 185/196 [22:14<01:15,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.08 seconds
+num_errors [198 176 115 130  94 148 126 164]
+ 95%|█████████▍| 186/196 [22:21<01:08,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [114 154 209 107 193 209 137 174]
+ 95%|█████████▌| 187/196 [22:30<01:08,  7.56s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [156 244 142 105  93  96 172 156]
+ 96%|█████████▌| 188/196 [22:37<00:58,  7.36s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [183 213 186 145 186 139 128 114]
+ 96%|█████████▋| 189/196 [22:44<00:50,  7.19s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [141 128 147 107 172 136 140 123]
+ 97%|█████████▋| 190/196 [22:50<00:42,  7.08s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [181 192  92 184 174  74 107 136]
+ 97%|█████████▋| 191/196 [22:57<00:35,  7.04s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.07 seconds
+num_errors [205 191 177 185 201 194 215 211]
+ 98%|█████████▊| 192/196 [23:04<00:28,  7.02s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.05 seconds
+num_errors [131 192 171 146 141 147 202 100]
+ 98%|█████████▊| 193/196 [23:11<00:20,  6.98s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.06 seconds
+num_errors [148 212 100 170 133 153 139 129]
+ 99%|█████████▉| 194/196 [23:18<00:13,  6.98s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.04 seconds
+num_errors [108 125 169 167 170 130 192 142]
+ 99%|█████████▉| 195/196 [23:25<00:06,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.02 seconds
+num_errors [197 141 148 183 151 190 119 173]
+100%|██████████| 196/196 [23:32<00:00,  6.88s/it]100%|██████████| 196/196 [23:32<00:00,  7.21s/it]
+[Rank 0/2] Generation time for 1568 sequences across 8 batch size: 1412.8794283866882
