@@ -1,0 +1,101 @@
+{
+ "architecture": "hybrid_mamba3",
+ "checkpoint_root": "/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811/checkpoints/j5980745_2ska8a8q_5980745",
+ "convergence_step": null,
+ "results": [
+  {
+   "step": 3000,
+   "validation_accuracy": 0.8674717548076923,
+   "validation_ce": 0.6220220327377319
+  },
+  {
+   "step": 6000,
+   "validation_accuracy": 0.8749323918269231,
+   "validation_ce": 0.5907958149909973
+  },
+  {
+   "step": 9000,
+   "validation_accuracy": 0.8788266225961539,
+   "validation_ce": 0.5765257477760315
+  },
+  {
+   "step": 12000,
+   "validation_accuracy": 0.8827593149038462,
+   "validation_ce": 0.558280885219574
+  },
+  {
+   "step": 15000,
+   "validation_accuracy": 0.8853801081730769,
+   "validation_ce": 0.5479930639266968
+  },
+  {
+   "step": 18000,
+   "validation_accuracy": 0.8871234975961538,
+   "validation_ce": 0.5414237380027771
+  },
+  {
+   "step": 21000,
+   "validation_accuracy": 0.8886709735576923,
+   "validation_ce": 0.5357904434204102
+  },
+  {
+   "step": 24000,
+   "validation_accuracy": 0.8894263822115385,
+   "validation_ce": 0.5323189496994019
+  },
+  {
+   "step": 27000,
+   "validation_accuracy": 0.8899453125,
+   "validation_ce": 0.53021639585495
+  },
+  {
+   "step": 30000,
+   "validation_accuracy": 0.8902881610576923,
+   "validation_ce": 0.5287834405899048
+  },
+  {
+   "step": 32001,
+   "validation_accuracy": 0.8903963341346154,
+   "validation_ce": 0.5283841490745544
+  }
+ ],
+ "schema_version": 1,
+ "seed": 42,
+ "selection": {
+  "best_validation": {
+   "step": 12000,
+   "validation_ce": 0.558280885219574
+  },
+  "iso_ce": {
+   "99": {
+    "delta": -98.37797796726227,
+    "status": "outside_tolerance",
+    "step": 3000,
+    "target": 99.0,
+    "target_reached": true,
+    "validation_ce": 0.6220220327377319
+   }
+  }
+ },
+ "target_tolerance": 0.01,
+ "targets": [
+  99.0
+ ],
+ "token_mode": "26tok",
+ "validation": {
+  "batch_size": 8,
+  "dataset_size": 226002,
+  "date_range": [
+   "2026-01-01",
+   "2026-01-31"
+  ],
+  "max_batches": 32,
+  "sampling": "uniform_ticker_batches_without_replacement",
+  "sampling_seed": 42,
+  "sequences": 256,
+  "tickers": [
+   "GOOG"
+  ],
+  "token_values": 3328000
+ }
+}
