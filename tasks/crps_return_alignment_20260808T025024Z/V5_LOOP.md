@@ -221,3 +221,9 @@ log-w 截断 + ESS 必报；权重按 **rollout 整条**给，不逐 token。
 | 换票（同月不同 stock，如 NVDA/MSFT 2026-01） | ⚠️ 待验证 | 宽账本库有全 SP500 2026-01；合法性取决于 base（j5705912）训练票池是否含该票（SP500 多票训练则 in-distribution）；需查 wandb b30675li 的数据配置；且 collect_rollouts.sh 硬编码 GOOG（55-57 行）需参数化 |
 
 **算力现状**：两条 chain 共 32 卡全部被同门实验占用（5992008 四节点 86GiB 满档；5992007 三节点 89GiB + nid010272 中等占用）。不挤占。已挂登录侧 sacct 监视器（零 job step）盯同门 step 集合变化，空卡出现即起 seed-复现生成（base+wmftb × 95001-2 双卡并行 ~1.5h）。LOB-Bench 3-seed 补档（8 个缺口）CPU 顺序跑中（nid011167，不占卡）。
+
+### S12 执行记录（17:1x–17:4xZ）
+
+- **复现票 NVDA→MSFT**：宽账本库 483 票有 npy 分片但 NVDA/AAPL/TSLA 缺席；MSFT（可选票中最大市值）替换。`v5_repl_idx_msft.txt` 建成（1000 索引，dataset 枚举 + seed 20260812 均匀采样；builder 提交 `aa9f22e`）。
+- **sbatch 双轨**：32 卡持续满占 1.5h+ 触发 A11 hard 条款 → **Job 6000743**（`v5-s9-repl-msft`，1N4G 2.5h，base+wm_ft_b × seeds 95001-3，每 run 独占一卡两波；幂等 .done 跳过使 attach/sbatch 双轨竞速安全）。发现并修正：会话用户实为 **kangli.u6gb / account brics.u6gb**（skill 模板里的 kangli.s5e 过时）。监控 6 档在跑，/moveon 状态已存。
+- **LOB-Bench 3-seed 补档完成**（8 缺口全填）：seed 方差可忽略（ks21 极差 ≤0.0014），单 seed 结论全部在 seed-平均口径下成立——base/wmft/wmftb/wmftc 的 ks21 均值 0.1291/0.1211/0.1164/**0.1095** 单调；spread 均值 0.1848/0.1797/0.1919/**0.1725**（wmftb +0.007 阈内、wmftc 反超 base 确认）。安全面对齐缺口关闭。
