@@ -1,0 +1,123 @@
+[26tok] vocab=2112  SEQ=13000  book_dim=503
+(2112, 640)
+[Optimizer] Using inject_hyperparams (legacy scalar LR)
+configuring Muon optimization (kernel -> NS, SSM -> Adam, rest -> AdamW)
+  Muon kernel LR: 0.01, WD: 0.005
+  AdamW LR: 0.0008, WD: 0.005
+  SSM LR: 0.0008, WD: 0
+[*] Gradient clipping enabled: max_norm=1.0
+[*] Trainable Parameters: 33610439
+[*] State params embedding shape: (2112, 640)
+[Checkpoint] Loading step=32001 from /lus/lfs1aip2/projects/public/u6gb/sigma-0/checkpoints/j5877859_30nkkohd_5877859 (partial_restore=True)
+[load_checkpoint] StandardRestore failed (User-provided restore item and on-disk value metadata tree structures do not match:
+opt_state[1].inner_states.muon.inner_state[2]:
+    - Source: <class 'optax._src.base.EmptyState'>
+    - Target: <class 'dict'>
+
+opt_state[1].inner_states.regular.inner_state:
+    - Source: <class 'dict'>
+    - Target: <class 'list'>
+
+opt_state[1].inner_states.ssm.inner_state:
+    - Source: <class 'dict'>
+    - Target: <class 'list'>
+If this mismatch is intentional, pass `partial_restore=True` to only restore parameters found in `item`.), falling back to direct restore for inference
+[load_checkpoint] Reading 137 param arrays via TensorStore (OCDBT=True)
+[load_checkpoint] Loaded 137 param arrays
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+[26tok] 10/40 序列  已评 1247 touch
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+[26tok] 20/40 序列  已评 2497 touch
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+[26tok] 30/40 序列  已评 3753 touch
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+truncating 0.0000% of prices > 99999900
+truncating 0.0000% of prices < -99999900
+[26tok] 40/40 序列  已评 5015 touch
+{
+  "fails": {
+    "encode_fail": 0,
+    "preproc_fail": 0,
+    "seq_load_fail": 0
+  },
+  "price_ref_exact_pct": 56.3110667996012,
+  "sequences": 40,
+  "size_ref_exact_pct": 82.15353938185444,
+  "time_ref_exact_pct": 86.28115653040878,
+  "time_ref_top1_pct": 99.82053838484546,
+  "touch_scored": 5015
+}

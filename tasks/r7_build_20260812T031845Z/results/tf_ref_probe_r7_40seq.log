@@ -1,0 +1,68 @@
+(15847, 640)
+[Optimizer] Using inject_hyperparams (legacy scalar LR)
+configuring Muon optimization (kernel -> NS, SSM -> Adam, rest -> AdamW)
+  Muon kernel LR: 0.01, WD: 0.005
+  AdamW LR: 0.0008, WD: 0.005
+  SSM LR: 0.0008, WD: 0
+[*] Gradient clipping enabled: max_norm=1.0
+[*] Trainable Parameters: 51204974
+[*] State params embedding shape: (15847, 640)
+[Checkpoint] Loading step=9000 from /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/varlen-R6p1-stepunits-20260811T0526Z/checkpoints/j5975573_kros4d77_5975573 (partial_restore=True)
+[load_checkpoint] StandardRestore failed (User-provided restore item and on-disk value metadata tree structures do not match:
+opt_state[1].inner_states.muon.inner_state[2]:
+    - Source: <class 'optax._src.base.EmptyState'>
+    - Target: <class 'dict'>
+
+opt_state[1].inner_states.regular.inner_state:
+    - Source: <class 'dict'>
+    - Target: <class 'list'>
+
+opt_state[1].inner_states.ssm.inner_state:
+    - Source: <class 'dict'>
+    - Target: <class 'list'>
+If this mismatch is intentional, pass `partial_restore=True` to only restore parameters found in `item`.), falling back to direct restore for inference
+[load_checkpoint] Reading 137 param arrays via TensorStore (OCDBT=True)
+[load_checkpoint] Loaded 137 param arrays
+[tf] 模型与 tokenizer 就绪
+[tf] 10/40 序列  已评 918 touch
+[tf] 20/40 序列  已评 1846 touch
+[tf] 30/40 序列  已评 2799 touch
+[tf] 40/40 序列  已评 3715 touch
+{
+  "misc": {
+    "decode_fail": 0,
+    "pred_ref_undecodable": 17,
+    "pred_ref_unusable": 17,
+    "seq_load_fail": 0
+  },
+  "r6": {
+    "hit": 3579,
+    "miss": 25,
+    "wrong": 94
+  },
+  "r6_hit_pct": 96.78204434829638,
+  "r6_wrong_pct": 2.541914548404543,
+  "r7": {
+    "hit": 3633,
+    "miss": 0,
+    "wrong": 65
+  },
+  "r7_hit_pct": 98.24229313142239,
+  "r7_wrong_pct": 1.7577068685776096,
+  "ref_exact_pct": 96.33916554508748,
+  "ref_n_error_hist": {
+    "-1": 49,
+    "-2": 9,
+    "-3": 3,
+    "-4": 1,
+    "-5": 1,
+    "0": 3579,
+    "1": 51,
+    "2": 3,
+    "4": 1,
+    "5": 1
+  },
+  "ref_tok_top1_pct": 96.33916554508748,
+  "sequences": 40,
+  "touch_scored": 3715
+}
