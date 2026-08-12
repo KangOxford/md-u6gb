@@ -1,0 +1,55 @@
+[attach] 已生成 /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/code/train_full_autoreg.attach.prod.batch
+[preflight] 清理 allocation 5980745 上的残留 squashfuse 挂载
+[preflight] nid010669 stale_mounts=0
+0 now=0
+0 dirs_removed
+[preflight] nid010670 stale_mounts=0
+0 now=0
+0 dirs_removed
+[preflight] nid010580 stale_mounts=0
+0 now=0
+[gpu-gate] 检查 4 个节点的物理占用（阈值 4096 MiB / 零 compute PID）
+GATE nid010631 worst_used_mib=3 pids=[]
+GATE nid010669 worst_used_mib=4 pids=[]
+GATE nid010670 worst_used_mib=3 pids=[]
+GATE nid010580 worst_used_mib=21 pids=[]
+[gpu-gate] 通过
+════════════════════════════════════════════════════════════════
+ Hybrid Mamba3 x Nemotron — SP500 2022-2025 — attach 5980745 [prod]
+════════════════════════════════════════════════════════════════
+ architecture=hybrid_mamba3  attention: nemotron rule (L=6 -> layer 3)
+   heads=10 head_dim=64
+   flash=True  positional_encoding=False
+ d_model=640 n_layers=6 blocks=20 d_state=128
+ per_gpu_bsz=4 global_bsz=64
+ opt=muon muon_lr=0.01 ssm_lr=8.0e-4 wd=0.005
+ token_mode=26tok msg_seq_len=500 months=48 tickers=8
+ curtail=32000 cosine=32000 ckpt_every=3000
+ max_job_hours=5.5  wandb=sp500-hybrid-mamba3-35m@oxford-lob
+════════════════════════════════════════════════════════════════
+============================================
+Job started at: Wed 12 Aug 02:46:01 UTC 2026
+Job ID: 5980745
+Running on nodes: nid[010580,010631,010669-010670]
+Number of nodes: 4
+GPUs per node: 4
+Total GPUs: 16
+============================================
+[*] Model config: 360M (26tok, padded_large)
+    d_model=640, n_layers=6, blocks=20
+    ssm_size_base=640, ssm_lr_base=8.0e-4
+    per_gpu_bsz=4, opt_config=muon, architecture=hybrid_mamba3, model_preset=<implicit>
+    muon_lr=0.01, weight_decay=0.005
+[*] Curtail epochs: 32000 steps (quick test mode)
+[*] train-only mode: val_split=0.0, test_split=0.0
+[*] token_mode: 26tok (26 tokens/msg, context=13000 tokens)
+[*] Mid-epoch checkpoint: every=3000, max_job_hours=5.5
+[*] Per GPU batch size: 4
+[*] Total GPUs: 16 (4 nodes × 4 GPUs/node)
+[*] Global batch size: 64 (per-process: 16)
+[*] Multi-node DDP: 4 nodes, coordinator=nid010580:29500, timeout=600000ms, kv_timeout=120s
+[*] Multi-ticker mode: 8 tickers × 4 years
+    TICKERS=GOOG,AAPL,NVDA,AMZN,META,TSLA,MSFT,AMD
+    DATA_ROOT=/lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs
+    TRAIN_DATE_RANGE=2022-01-01,2025-12-31
+    TEST_DATE_RANGE=2026-01-01,2026-01-31

@@ -1,0 +1,32 @@
+[attach] 已生成 /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/code/train_full_autoreg.attach.smoke.batch
+[preflight] 清理 allocation 5980502 上的残留 squashfuse 挂载
+[preflight] nid011179 stale_mounts=0
+0 now=0
+0
+[preflight] nid010053 stale_mounts=0
+0 now=0
+0
+[preflight] nid010371 stale_mounts=2 now=0
+0
+════════════════════════════════════════════════════════════════
+ Hybrid Mamba3 x Nemotron — SP500 2022-2025 — attach 5980502 [smoke]
+════════════════════════════════════════════════════════════════
+ architecture=hybrid_mamba3  attention: nemotron rule (L=6 -> layer 3)
+   heads=10 head_dim=64
+   flash=True  positional_encoding=False
+ d_model=640 n_layers=6 blocks=20 d_state=128
+ per_gpu_bsz=4 global_bsz=64
+ opt=muon muon_lr=0.01 ssm_lr=8.0e-4 wd=0.005
+ token_mode=26tok msg_seq_len=500 months=48 tickers=8
+ curtail=150 cosine=32000 ckpt_every=50
+ max_job_hours=0.6  wandb=sp500-hybrid-mamba3-35m@oxford-lob
+════════════════════════════════════════════════════════════════
+============================================
+Job started at: Wed 12 Aug 02:24:00 UTC 2026
+Job ID: 5980502
+Running on nodes: nid[010053,010371,010473,011179]
+Number of nodes: 4
+GPUs per node: 4
+Total GPUs: 16
+============================================
+ERROR: Unknown ARCHITECTURE='hybrid_mamba3'.
