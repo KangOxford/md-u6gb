@@ -226,6 +226,32 @@ Ref2VA 另有 `subject_definitions:` / `retention_analysis:` / `summary:`。
 
 ---
 
+## 6.5 「2K 不是超分做的」：一个被描述了机制但没开源模块的部分
+
+官方博客对 H3-Regenerate-2K 的说法值得单独记一笔，因为它描述的是**机制**而不只是产品：
+
+> *"Instead of using a conventional dedicated super-resolution module, the H3 base
+> model regenerates its own low-resolution output in-context, which lets it draw on
+> the original multimodal context again to produce high-resolution output,
+> recovering details that traditional super-resolution can only 'guess' at."*
+
+翻译成架构语言：**把自己刚生成的低分辨率视频，当作一条 reference 塞回同一条 packed
+序列，连同原始文本条件一起，在高分辨率画布上重新生成一遍。** 这正是 `ref2va`
+工作流的能力（diffusers 文档里有「把一次 t2va 的生成结果直接喂回去当
+`MiniMaxH3VideoReference`」的完整示例），所以它不需要任何新结构——超分被表达成了
+「同一个模型的第二次条件生成」。
+
+配套的 `H3-VAE` 那条 *"4x gain in effective sequence length"* 是让这件事在经济上
+成立的前提：没有那 4 倍压缩，2K 的序列长度会让第二次生成不可承受。
+
+**本复刻不做这一步**，理由不是机制不清楚，而是：(a) `H3-Regenerate-2K` 模块本身
+闭源，无从对照；(b) 在 256px 上「重生成到 512px」会让序列从 1748 涨到约 5000，
+注意力成本约 8 倍；(c) 一个 101.7 M 模型在 256px 上的输出质量还不足以让「重生成
+恢复细节」这个论断有意义——那是对已经很好的低分辨率结果才成立的。这属于
+**理解了但按预算不做**，不是没看懂。
+
+---
+
 ## 7. 复刻边界（诚实清单）
 
 | 能复刻 | 不能复刻 | 原因 |
