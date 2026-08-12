@@ -93,6 +93,22 @@ PrivateData = accounts,events,jobs,reservations,usage,users
 | 参数普查 `token_refiner` 只有 0.003 M | 分桶时 `.attn.` 判断在 `token_refiner` 之前，抢走了 refiner 的 attn/ffn | 调整判断顺序（两个文件都改） |
 | `create_mm_token_type_ids` 不存在 | **我自己造的**：当初把 `HybridCache` 报错归因给 diffusers 并降 transformers 到 4.x，但真正要它的是 **peft 0.17.1**（`HybridCache` 在 diffusers 全部 `.py` 中出现 0 次）。降级正好删掉了 H3 文本编码需要的 API | 不打版本仗：纯文本 prompt 的 `mm_token_type_ids` 恒为全零，直接构造 + 断言防止将来喂进带图 prompt |
 
+### 环境版本互锁（拧断两次才看清）
+
+`diffusers.loaders.peft` 是整条导入链的单点：diffusers main 是唯一带 MiniMax-H3 的版本，
+而它通过 `PeftAdapterMixin` **急切导入** peft。
+
+| 尝试 | 结果 |
+|---|---|
+| 初始：transformers 5.5.0 + peft 0.17.1 | ❌ peft 模块级 `from transformers import HybridCache`，5.x 已删 |
+| 第一次修：降 transformers 到 4.57.6 | ✅ 能导入，但**删掉了** H3 要的 `create_mm_token_type_ids` |
+| 第二次修：升 transformers 5.15 + peft 0.20 | ❌ peft 0.20 改去探测 `transformer_engine`，其 import 要 libnvrtc 且**探测不捕获异常** |
+| 最终：transformers 4.57.6 + peft 0.17.1 + 代码不依赖那个 API | ✅ |
+
+真正的解法不是选对版本组合，而是**让代码不需要那个 API**：`mm_token_type_ids` 对纯文本
+prompt 恒为全零，直接构造并加断言，于是 transformers 大版本从依赖里消失。互锁关系与理由
+已写进 `requirements-pinned.txt`。
+
 ### 自己写出来的 bug 清单（全部属于「不报错、只出错结果」）
 
 | # | bug | 若不修的后果 |
