@@ -441,6 +441,21 @@ def verify_environment() -> None:
     if problems:
         raise SystemExit("[env] FATAL:\n  " + "\n  ".join(problems))
 
+    # Then the conventions themselves. These are seconds of CPU arithmetic and they
+    # catch the class of bug that costs the most: a flipped sign in the flow-matching
+    # convention, a transposed audio axis, a timestep the architecture cannot express.
+    # None of those raise on their own and none show up in a loss curve, so finding
+    # them at minute one instead of hour three is worth the seconds.
+    try:
+        import test_h3nano
+
+        failures = test_h3nano.main()
+    except Exception as exc:
+        raise SystemExit(f"[env] FATAL: convention checks could not run: {type(exc).__name__}: {exc}")
+    if failures:
+        raise SystemExit("[env] FATAL: convention checks failed; training on this would be worthless")
+    print("[env] convention checks passed", flush=True)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
