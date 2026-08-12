@@ -37,7 +37,10 @@ def main():
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 5.2))
     fig.subplots_adjust(wspace=0.30)
-    fig.suptitle(f"Reference recall of {names[0]}  (3,136 sequences, 383,739 cancel/delete messages)", fontsize=11, y=1.04)
+    counts = "  ".join(f"{n}: {sum(v['n'] for v in a['by_age'].values()):,} cancel/delete"
+                       for a, n in zip(arms, names))
+    fig.suptitle(f"Reference recall, {arms[0]['sequences']:,} sequences   |   {counts}",
+                 fontsize=10.5, y=1.05)
 
     # -------------------------------------------------- panel 1: the decay
     ax = axes[0]
