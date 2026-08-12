@@ -177,3 +177,9 @@ log-w 截断 + ESS 必报；权重按 **rollout 整条**给，不逐 token。
 2. **代价**：raw CRPS 点估计从 −5.1% 回吐到 −3.4%（z=−1.89，掉出 2σ）。CRPS 权重集中在 bulk 位置；shape/scale 拉开的同时 bulk 位置微移。**wm_ft_a 与 wm_ft_b 构成两点 frontier**：CRPS 最优 vs 分布最优。
 3. 安全面（前节）：CE −8.2% 保留、LB 聚合再进（ks21 0.1158）、spread +0.0079 监视中、1/21 恶化。
 4. **剂量-响应两轮汇总**：sd +0.064/+0.043（递减但实），qL1 0/−0.048（r2 突现），spread −0.003/+0.011（转差）。**下一步 = IPF r3**（wmftb rollouts 重估权重 → wm_ft_c），观察 sd 是否继续爬、spread 是否破 0.01 闸——spread 破闸即停在 frontier。
+
+### S11 IPF r3 启动（15:2x–15:4xZ）
+
+- **v5w3 dump**：6 seeds（94000-94005）双卡并行 22 分钟完成（7.5 min/seed，热 farm + JIT 缓存比 r2 快 ~3×），全部过完备性闸门（24 shards × plog/gplog/seq）。
+- **v5w3 权重审计**（wm_ft_b 自身 rollouts，n=1152）：ESS **69.0%**（50.4→65.4→69.0，边际 +15pp→+3.6pp 递减）；**w∈[0.085, 8.14] 首次出现双向修正**——min 0.085 说明模型已在某些收益率区域**过度**产出被强降权（此前两轮全是欠覆盖上调）；ceiling sd→0.979 / qL1→0.0436 稳定；clip 0.26%。
+- **wm_ft_c 训练启动**：--ckpt wm_ft_b + v5w3，train 94000-3 / hold 94004-5，同超参（lr 1e-5, λ=1.0, 3 epochs, micro=2），nid011167 GPU2（launch 前逐卡实探：GPU2/3 均 2 MiB 空）。预注册停机准则不变：spread 破 0.01 或 sd 增量 <0.02 即停在 frontier。
