@@ -164,3 +164,24 @@ Claude Code 进程退出时把它一并带走。
 1. hybrid 训练**重新 sbatch**（独立生命周期），跑满 32,000 步
 2. bench hybrid **@12000**
 3. bench baseline **@12000**（不能拿 @32001 比，会把架构差异与训练长度混在一起）
+
+
+---
+
+## 2026-08-12 13:58Z 收口：32,000 步正牌对照完成
+
+| 步骤 | 状态 |
+|---|---|
+| (1) hybrid 建成并与 baseline 三项对照 | ✅ 见 `results/STAGE_8_FINAL_32001.md` |
+| (5) 能不能长时间训练 | ✅ 32,000/32,000 步，无发散 |
+| (7.1) message-level perplexity | ✅ hybrid 0.528384 vs baseline 0.532610 |
+| (7.2) 方向准确率 / return IC | ✅ 已测；IC 判定为噪声，不成立 |
+| (7.3) LOB-Bench | ✅ hybrid 三项全胜（WS −11.0%） |
+| (7.4) 引用订单成功率 | ✅ hybrid −0.61 pp（32k 时略差） |
+| **主结论** | **回指优势是收敛速度，不是能力；分布优势保持到终点** |
+
+**期间修掉的自身缺陷**：NoPE 解码泄漏（`results/STAGE_7_ROOT_CAUSE_NOPE_LEAK.md`，commit `facf656`），
+已补路径一致性回归测试 `src/s5/tests/test_transformer_decode_parity.py`。
+
+**下一轮**：LOB-Bench 逐特征分解（区分「回指更好」与「事件混合更真实」两条因果链）、
+32001 补第三个 seed、参数配平臂。
