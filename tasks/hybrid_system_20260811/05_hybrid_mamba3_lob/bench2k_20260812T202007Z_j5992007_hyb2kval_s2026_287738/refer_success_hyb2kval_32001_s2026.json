@@ -1,0 +1,94 @@
+{
+ "label": "hyb2kval_32001_s2026",
+ "gen_dir": "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T202007Z_j5992007_hyb2kval_s2026_287738/inference/data_gen",
+ "sequences": 64,
+ "messages": 64000,
+ "by_event": {
+  "new": {
+   "n": 25297,
+   "exact": 0,
+   "fallback": 0,
+   "miss": 0,
+   "not_a_cancel": 25297
+  },
+  "cancel": {
+   "n": 694,
+   "exact": 5,
+   "fallback": 522,
+   "miss": 167,
+   "not_a_cancel": 0
+  },
+  "delete": {
+   "n": 23788,
+   "exact": 1109,
+   "fallback": 18935,
+   "miss": 3744,
+   "not_a_cancel": 0
+  },
+  "execution": {
+   "n": 14221,
+   "exact": 0,
+   "fallback": 0,
+   "miss": 0,
+   "not_a_cancel": 14221
+  }
+ },
+ "by_age": {
+  "1-10": {
+   "n": 2980,
+   "exact": 218,
+   "fallback": 2762,
+   "miss": 0
+  },
+  "11-25": {
+   "n": 2140,
+   "exact": 178,
+   "fallback": 1962,
+   "miss": 0
+  },
+  "26-50": {
+   "n": 2012,
+   "exact": 129,
+   "fallback": 1883,
+   "miss": 0
+  },
+  "51-100": {
+   "n": 2040,
+   "exact": 77,
+   "fallback": 1963,
+   "miss": 0
+  },
+  "101-250": {
+   "n": 2307,
+   "exact": 29,
+   "fallback": 2278,
+   "miss": 0
+  },
+  "251-500": {
+   "n": 1311,
+   "exact": 0,
+   "fallback": 1311,
+   "miss": 0
+  },
+  "501-1000": {
+   "n": 559,
+   "exact": 0,
+   "fallback": 559,
+   "miss": 0
+  },
+  "before-window": {
+   "n": 11133,
+   "exact": 483,
+   "fallback": 6739,
+   "miss": 3911
+  }
+ },
+ "cancel_delete": {
+  "n": 24482,
+  "exact": 1114,
+  "fallback": 19457,
+  "miss": 3911
+ },
+ "nan_branch_fired": 0,
+ "price_differs_from_ref": 16963
+}
