@@ -1,0 +1,93 @@
+(15847, 640)
+[Optimizer] Using inject_hyperparams (legacy scalar LR)
+configuring Muon optimization (kernel -> NS, SSM -> Adam, rest -> AdamW)
+  Muon kernel LR: 0.01, WD: 0.005
+  AdamW LR: 0.0008, WD: 0.005
+  SSM LR: 0.0008, WD: 0
+[*] Gradient clipping enabled: max_norm=1.0
+[*] Trainable Parameters: 51204974
+[*] State params embedding shape: (15847, 640)
+[Checkpoint] Loading step=9000 from /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/varlen-R6p1-stepunits-20260811T0526Z/checkpoints/j5975573_kros4d77_5975573 (partial_restore=True)
+[load_checkpoint] StandardRestore failed (User-provided restore item and on-disk value metadata tree structures do not match:
+opt_state[1].inner_states.muon.inner_state[2]:
+    - Source: <class 'optax._src.base.EmptyState'>
+    - Target: <class 'dict'>
+
+opt_state[1].inner_states.regular.inner_state:
+    - Source: <class 'dict'>
+    - Target: <class 'list'>
+
+opt_state[1].inner_states.ssm.inner_state:
+    - Source: <class 'dict'>
+    - Target: <class 'list'>
+If this mismatch is intentional, pass `partial_restore=True` to only restore parameters found in `item`.), falling back to direct restore for inference
+[load_checkpoint] Reading 137 param arrays via TensorStore (OCDBT=True)
+[load_checkpoint] Loaded 137 param arrays
+[tf] 模型与 tokenizer 就绪
+[tf] 10/255 序列  已评 918 touch
+[tf] 20/255 序列  已评 1846 touch
+[tf] 30/255 序列  已评 2799 touch
+[tf] 40/255 序列  已评 3715 touch
+[tf] 50/255 序列  已评 4572 touch
+[tf] 60/255 序列  已评 5401 touch
+[tf] 70/255 序列  已评 6221 touch
+[tf] 80/255 序列  已评 7089 touch
+[tf] 90/255 序列  已评 7959 touch
+[tf] 100/255 序列  已评 8821 touch
+[tf] 110/255 序列  已评 9710 touch
+[tf] 120/255 序列  已评 10585 touch
+[tf] 130/255 序列  已评 11432 touch
+[tf] 140/255 序列  已评 12326 touch
+[tf] 150/255 序列  已评 13174 touch
+[tf] 160/255 序列  已评 13993 touch
+[tf] 170/255 序列  已评 14821 touch
+[tf] 180/255 序列  已评 15640 touch
+[tf] 190/255 序列  已评 16553 touch
+[tf] 200/255 序列  已评 17369 touch
+[tf] 210/255 序列  已评 18166 touch
+[tf] 220/255 序列  已评 18990 touch
+[tf] 230/255 序列  已评 19811 touch
+[tf] 240/255 序列  已评 20698 touch
+[tf] 250/255 序列  已评 21551 touch
+{
+  "misc": {
+    "decode_fail": 0,
+    "pred_ref_undecodable": 170,
+    "pred_ref_unusable": 170,
+    "seq_load_fail": 0
+  },
+  "r6": {
+    "hit": 20796,
+    "miss": 209,
+    "wrong": 798
+  },
+  "r6_hit_pct": 95.38136953630234,
+  "r6_wrong_pct": 3.6600467825528598,
+  "r7": {
+    "hit": 21229,
+    "miss": 0,
+    "wrong": 574
+  },
+  "r7_hit_pct": 97.36733477044443,
+  "r7_wrong_pct": 2.632665229555566,
+  "ref_exact_pct": 94.64342602284621,
+  "ref_n_error_hist": {
+    "-1": 419,
+    "-2": 74,
+    "-3": 17,
+    "-4": 3,
+    "-5": 2,
+    "-7": 1,
+    "0": 20796,
+    "1": 418,
+    "2": 48,
+    "3": 15,
+    "4": 5,
+    "5": 3,
+    "6": 1,
+    "7": 1
+  },
+  "ref_tok_top1_pct": 94.64342602284621,
+  "sequences": 255,
+  "touch_scored": 21973
+}
