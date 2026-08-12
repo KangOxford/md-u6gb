@@ -1,0 +1,171 @@
+#!/bin/bash
+# The whole replication in one small-footprint allocation.
+#
+# Why a second variant: `--gpus-per-node=4 --mem=0` needs an *entirely empty* node,
+# and on a 94 %-full cluster that is the scarcest thing there is. Asking for one GPU
+# and a bounded slice of memory lets the job land on any of the ~180 partially
+# allocated nodes instead of waiting for one of the ~60 fully idle ones.
+#
+# Nothing about the recipe changes. The 143 GB download needs no GPU at all; the
+# released 33B checkpoint runs on one card through the ComponentsManager offload
+# recipe the diffusers docs give for a single 80 GB device; the VAEs are 11 GB; and
+# H3-nano is 101.7 M. Only wall-clock changes, and only for the stages that would
+# have been data-parallel.
+
+#SBATCH --account=brics.u6gb
+#SBATCH --partition=workq
+#SBATCH --job-name=h3-nano-small
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=200G
+#SBATCH --time=20:00:00
+#SBATCH --output=/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T/logs/small_%j.out
+#SBATCH --error=/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T/logs/small_%j.out
+
+set -uo pipefail
+
+TASKDIR=/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T
+PY="$TASKDIR/venv/bin/python"
+RUNS="$TASKDIR/runs"
+EVAL="$RUNS/eval_${SLURM_JOB_ID}"
+mkdir -p "$RUNS" "$EVAL"
+
+export PATH="$TASKDIR/venv/bin:$PATH"
+export PYTHONUNBUFFERED=1
+export TOKENIZERS_PARALLELISM=false
+export HF_HOME="${TMPDIR:-/tmp}/hf_home"
+export HF_HUB_ENABLE_HF_TRANSFER=0
+export WANDB_DIR="${TMPDIR:-/tmp}"
+export WANDB_MODE=online
+export OMP_NUM_THREADS=8
+mkdir -p "$HF_HOME"
+
+NGPU=$(nvidia-smi -L 2>/dev/null | wc -l)
+[ "$NGPU" -lt 1 ] && { echo "FATAL: no GPU visible"; exit 1; }
+
+# This variant exists as an alternative route to the same artefacts, not as a second
+# copy of them. If the four-GPU pair is live it owns `ckpt/h3` and `data/latents`, and
+# two writers would race on the download and could each decide the corpus is missing
+# and build it twice. Standing down is the cheap side of that trade.
+CONFLICT=$(squeue -u "$USER" -h -t RUNNING -o "%i %j" 2>/dev/null | grep -E "h3-fetch-smoke|h3-nano-pipeline" | head -2)
+if [ -n "$CONFLICT" ]; then
+    echo "STANDING DOWN: the four-GPU route is already running and owns the same outputs:"
+    echo "$CONFLICT"
+    exit 0
+fi
+
+MODEL=${MODEL:-nano}
+PRETRAIN_STEPS=${PRETRAIN_STEPS:-16000}
+SFT_STEPS=${SFT_STEPS:-4000}
+DISTILL_STEPS=${DISTILL_STEPS:-3000}
+BATCH=${BATCH:-8}
+ACCUM=${ACCUM:-2}
+CLIP_LIMIT=${CLIP_LIMIT:-12000}
+GUIDANCE=${GUIDANCE:-5.0}
+SHARDS=${SHARDS:-00}
+
+PRE_RUN="pretrain-${MODEL}-${SLURM_JOB_ID}"
+SFT_RUN="sft_fl2va-${MODEL}-${SLURM_JOB_ID}"
+DIS_RUN="distill_cfg-${MODEL}-${SLURM_JOB_ID}"
+
+echo "=== job $SLURM_JOB_ID on $(hostname) at $(date -u +%FT%TZ) ==="
+nvidia-smi --query-gpu=index,name,memory.total,memory.used --format=csv,noheader
+echo "gpus=$NGPU model=$MODEL pretrain=$PRETRAIN_STEPS batch=$BATCH x accum $ACCUM shards=$SHARDS"
+
+SOFT_FAILURES=0
+note () { SOFT_FAILURES=$((SOFT_FAILURES + 1)); echo "WARN: $1"; }
+banner () { echo; echo "================================================================"; echo "=== $1  ($(date -u +%FT%TZ))"; echo "================================================================"; }
+
+# --------------------------------------------------------------- [1] assets
+if [ -f "$TASKDIR/ckpt/h3/transformer/config.json" ] && [ -f "$TASKDIR/data/vggsound/vggsound.csv" ]; then
+    banner "[1/6] assets already staged, skipping"
+else
+    banner "[1/6] staging assets (no GPU work here)"
+    "$PY" "$TASKDIR/code/fetch_assets.py" --root "$TASKDIR" --shards "$SHARDS" --workers 8
+    RC=$?; [ $RC -ne 0 ] && { echo "FATAL: asset staging failed rc=$RC"; exit $RC; }
+fi
+
+# --------------------------------------------------------------- [2] the real model
+banner "[2/6] running the released 33B checkpoint"
+SMOKE_ARGS=""
+[ "$NGPU" -lt 2 ] && SMOKE_ARGS="--single-gpu"
+"$PY" "$TASKDIR/code/h3_smoke_infer.py" --ckpt "$TASKDIR/ckpt/h3" --out "$EVAL/h3_reference" \
+    --height 544 --width 960 --num-frames 124 --steps 32 --seed 42 $SMOKE_ARGS
+RC=$?; [ $RC -ne 0 ] && note "reference generation failed rc=$RC (continuing; the small model does not depend on it)"
+
+# --------------------------------------------------------------- [3] corpus
+if [ -f "$TASKDIR/data/latents/manifest.json" ]; then
+    banner "[3/6] latent corpus already present, skipping"
+else
+    banner "[3/6] building the latent corpus"
+    "$PY" "$TASKDIR/code/preprocess_vggsound.py" --root "$TASKDIR" --phase both --shards "$SHARDS" \
+        --num-frames 73 --size 256 --max-text-tokens 96 --per-shard 2000 \
+        --decode-workers 12 --limit "$CLIP_LIMIT" --device cuda:0
+    RC=$?; [ $RC -ne 0 ] && { echo "FATAL: preprocessing failed rc=$RC"; exit $RC; }
+fi
+
+banner "[G] VAE round-trip gate"
+"$PY" "$TASKDIR/code/evaluate.py" --root "$TASKDIR" --device cuda:0 \
+    --out "$EVAL/E6_roundtrip.json" roundtrip --shard "${SHARDS%%,*}" --n 12 --num-frames 73 --size 256
+RC=$?; [ $RC -ne 0 ] && { echo "FATAL: round-trip gate failed rc=$RC"; exit $RC; }
+
+# --------------------------------------------------------------- [4] pretrain
+banner "[4/6] pretraining T2VA from scratch on $NGPU GPU(s)"
+torchrun --nproc_per_node="$NGPU" --master_port=29521 "$TASKDIR/code/train.py" \
+    --root "$TASKDIR" --stage pretrain --model "$MODEL" --run-name "$PRE_RUN" \
+    --steps "$PRETRAIN_STEPS" --batch-size "$BATCH" --grad-accum "$ACCUM" \
+    --lr 3e-4 --warmup 800 --cfg-dropout 0.1 --ckpt-every 2000 --log-every 100
+RC=$?; [ $RC -ne 0 ] && { echo "FATAL: pretraining failed rc=$RC"; exit $RC; }
+
+"$PY" "$TASKDIR/code/evaluate.py" --root "$TASKDIR" --device cuda:0 \
+    --out "$EVAL/E3_heldout_pretrain.json" heldout --checkpoint "$RUNS/$PRE_RUN/checkpoints" --n 192
+
+# --------------------------------------------------------------- [5] post-training
+banner "[5/6] FL2VA post-training, then guidance distillation"
+torchrun --nproc_per_node="$NGPU" --master_port=29522 "$TASKDIR/code/train.py" \
+    --root "$TASKDIR" --stage sft_fl2va --model "$MODEL" --run-name "$SFT_RUN" \
+    --teacher "$RUNS/$PRE_RUN/checkpoints" --anchors first,last \
+    --steps "$SFT_STEPS" --batch-size "$BATCH" --grad-accum "$ACCUM" \
+    --lr 1e-4 --warmup 200 --cfg-dropout 0.1 --ckpt-every 1000 --log-every 100
+RC=$?; [ $RC -ne 0 ] && note "fl2va post-training failed rc=$RC"
+
+"$PY" "$TASKDIR/code/evaluate.py" --root "$TASKDIR" --device cuda:0 \
+    --out "$EVAL/E4_anchors.json" anchors --checkpoint "$RUNS/$SFT_RUN/checkpoints" --n 96 \
+    || note "E4 anchor sweep failed"
+
+torchrun --nproc_per_node="$NGPU" --master_port=29523 "$TASKDIR/code/train.py" \
+    --root "$TASKDIR" --stage distill_cfg --model "$MODEL" --run-name "$DIS_RUN" \
+    --teacher "$RUNS/$PRE_RUN/checkpoints" --guidance-scale "$GUIDANCE" \
+    --steps "$DISTILL_STEPS" --batch-size "$BATCH" --grad-accum "$ACCUM" \
+    --lr 5e-5 --warmup 200 --ckpt-every 1000 --log-every 100
+RC=$?; [ $RC -ne 0 ] && note "distillation failed rc=$RC"
+
+# --------------------------------------------------------------- [6] evaluate
+banner "[6/6] sampling and evaluating"
+"$PY" "$TASKDIR/code/sample.py" --root "$TASKDIR" --checkpoint "$RUNS/$PRE_RUN/checkpoints" \
+    --out "$EVAL/samples_guided" --steps 32 --guidance-scale "$GUIDANCE" --save-decoded --device cuda:0 \
+    || note "guided sampling failed"
+"$PY" "$TASKDIR/code/sample.py" --root "$TASKDIR" --checkpoint "$RUNS/$DIS_RUN/checkpoints" \
+    --out "$EVAL/samples_distilled" --steps 32 --guidance-scale 0 --save-decoded --device cuda:0 \
+    || note "distilled sampling failed"
+
+for V in guided distilled; do
+    [ -f "$EVAL/samples_${V}/samples.pt" ] && "$PY" "$TASKDIR/code/evaluate.py" --root "$TASKDIR" \
+        --device cuda:0 --out "$EVAL/E1_avsync_${V}.json" avsync --samples "$EVAL/samples_${V}/samples.pt"
+done
+[ -f "$RUNS/$DIS_RUN/checkpoints/latest_checkpoint.json" ] && "$PY" "$TASKDIR/code/evaluate.py" \
+    --root "$TASKDIR" --device cuda:0 --out "$EVAL/E3_heldout_distilled.json" \
+    heldout --checkpoint "$RUNS/$DIS_RUN/checkpoints" --n 192
+
+echo
+echo "=== finished at $(date -u +%FT%TZ) ==="
+echo "evaluation: $EVAL"
+ls "$EVAL"
+if [ "$SOFT_FAILURES" -gt 0 ]; then
+    echo "=== $SOFT_FAILURES stage(s) failed; exiting non-zero so sacct records it ==="
+    exit 1
+fi
+echo "=== all stages OK ==="
+exit 0

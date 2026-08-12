@@ -107,6 +107,8 @@ def main() -> int:
     parser.add_argument("--num-frames", type=int, default=124, help="Snapped up to the next 17*n+5")
     parser.add_argument("--steps", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--single-gpu", action="store_true",
+                        help="Force the one-card offload recipe even when more cards are visible")
     parser.add_argument(
         "--prompt",
         default=(
@@ -134,26 +136,41 @@ def main() -> int:
         free, total = torch.cuda.mem_get_info(i)
         print(f"[smoke]   cuda:{i} {torch.cuda.get_device_name(i)}  free {free/2**30:.1f} / {total/2**30:.1f} GiB",
               flush=True)
-    if n_gpu < 2:
-        raise SystemExit("[smoke] need >= 2 GPUs for the split-pipeline recipe")
+    if n_gpu < 1:
+        raise SystemExit("[smoke] no CUDA device")
 
-    # The conditioner half and the generation half each get their own device: with
-    # ~62 GB per half and 85.5 GB per GH200 there is room for both to stay resident,
-    # which avoids paying host-RAM round trips on every denoising step.
-    print("[smoke] building split pipeline (conditioner on cuda:1, denoiser on cuda:0)", flush=True)
     t0 = time.time()
-    workflow = ModularPipeline.from_pretrained(args.ckpt).blocks.get_workflow("t2va")
+    single = n_gpu < 2 or args.single_gpu
+    if single:
+        # One card: the transformer (61.7 GB) and the conditioner (62.1 GB) cannot both
+        # be resident on 85.5 GB, so a ComponentsManager moves each onto the accelerator
+        # as the blocks reach it and evicts whatever frees enough room. Slower per step
+        # than the split recipe, but it makes the job schedulable on a *shared* node,
+        # which on a 94 %-full cluster is the difference between running and queueing.
+        from diffusers import ComponentsManager
 
-    conditioner = workflow.sub_blocks.pop("text_encoder").init_pipeline(args.ckpt)
-    conditioner.load_components(dtype=torch.bfloat16)
-    conditioner.text_encoder.to("cuda:1")
+        print("[smoke] single-GPU recipe: ComponentsManager auto CPU offload", flush=True)
+        manager = ComponentsManager()
+        manager.enable_auto_cpu_offload(device="cuda", memory_reserve_margin="12GB")
+        pipe = ModularPipeline.from_pretrained(args.ckpt, components_manager=manager)
+        pipe.load_components(workflow="t2va", dtype=torch.bfloat16)
+        conditioner, rest = None, pipe
+    else:
+        # Two cards: the conditioner half and the generation half each get their own,
+        # so nothing is evicted back to host memory once resident.
+        print("[smoke] split pipeline (conditioner on cuda:1, denoiser on cuda:0)", flush=True)
+        workflow = ModularPipeline.from_pretrained(args.ckpt).blocks.get_workflow("t2va")
 
-    rest = workflow.init_pipeline(args.ckpt)
-    rest.load_components(dtype=torch.bfloat16)
-    for name in ("transformer", "vae", "audio_vae"):
-        component = getattr(rest, name, None)
-        if component is not None:
-            component.to("cuda:0")
+        conditioner = workflow.sub_blocks.pop("text_encoder").init_pipeline(args.ckpt)
+        conditioner.load_components(dtype=torch.bfloat16)
+        conditioner.text_encoder.to("cuda:1")
+
+        rest = workflow.init_pipeline(args.ckpt)
+        rest.load_components(dtype=torch.bfloat16)
+        for name in ("transformer", "vae", "audio_vae"):
+            component = getattr(rest, name, None)
+            if component is not None:
+                component.to("cuda:0")
     print(f"[smoke] components loaded in {time.time()-t0:.0f}s", flush=True)
 
     # Hopper: FlashAttention-3 kernels are fetched from the Hub and are ~3x faster.
@@ -171,11 +188,15 @@ def main() -> int:
 
     print(f"[smoke] generating {args.width}x{args.height}, {args.num_frames} frames, {args.steps} steps", flush=True)
     t0 = time.time()
-    state = conditioner(prompt=args.prompt)
+    if conditioner is not None:
+        state = conditioner(prompt=args.prompt)
+        call_kwargs_extra = {"state": state}
+    else:
+        # One pipeline holds every block, so the prompt goes straight into the call.
+        state, call_kwargs_extra = None, {"prompt": args.prompt}
     t_cond = time.time() - t0
 
     call_kwargs = dict(
-        state=state,
         height=args.height,
         width=args.width,
         num_frames=args.num_frames,
@@ -185,13 +206,13 @@ def main() -> int:
     media = ["videos", "audio", "sampling_rate"]
     t0 = time.time()
     try:
-        results = rest(**call_kwargs, output=media + list(LAYOUT_FIELDS))
+        results = rest(**call_kwargs_extra, **call_kwargs, output=media + list(LAYOUT_FIELDS))
     except Exception as exc:
         # An older block set may not expose the layout by name; the media still is
         # the point of the run, so fall back rather than lose the generation.
         print(f"[smoke] layout outputs unavailable ({type(exc).__name__}: {exc}); "
               f"requesting media only", flush=True)
-        results = rest(**call_kwargs, output=media)
+        results = rest(**call_kwargs_extra, **call_kwargs, output=media)
     t_gen = time.time() - t0
 
     video = results["videos"][0]
