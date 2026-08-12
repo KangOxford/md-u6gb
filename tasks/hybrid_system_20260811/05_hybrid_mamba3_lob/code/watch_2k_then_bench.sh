@@ -1,37 +1,64 @@
 #!/bin/bash
-# 训练一到目标步就接 2k bench。不空等，也不提前抢卡。
+# 训练一停就用两臂共有的最高 checkpoint 跑 2k bench。
 #
-# 判据用 checkpoint 目录而不是日志或 squeue：日志里 tqdm 的计数是 micro 步，
-# squeue RUNNING 也不代表训练在推进（2026-08-12 有过 4h27m 空转）。产物存在
-# 才是产物存在。
+# 判据不是「到某个固定步」。两条臂的 MAX_JOB_HOURS 不同、速率也不同，会停在
+# 不同步数上；盯死 32001 的守望器永远不会触发。受控对照要的是**同步长**，不是
+# 某个特定步长，所以取两臂都存在的最高 checkpoint。
 #
-# 必需 env: CKPT_ROOT TARGET_STEP ARCHITECTURE ARM_ID ARM_NAME NODELIST ATTACH_JOBID
+# 训练是否结束用 GPU 上还有没有本臂的进程判断，不用 squeue：RUNNING 不代表在训
+# （有过 4h27m 空转），而 GPU 进程消失是训练真的停了。
+#
+# 必需 env: CKPT_A CKPT_B ARM_ID ARCHITECTURE NODELIST ATTACH_JOBID TRAIN_NODE
 set -uo pipefail
-: "${CKPT_ROOT:?}" "${TARGET_STEP:?}" "${ARCHITECTURE:?}" "${ARM_ID:?}" "${NODELIST:?}" "${ATTACH_JOBID:?}"
+: "${CKPT_A:?}" "${CKPT_B:?}" "${ARM_ID:?}" "${ARCHITECTURE:?}" "${NODELIST:?}" "${ATTACH_JOBID:?}" "${TRAIN_NODE:?}"
 TASKDIR=/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob
 POLL=${POLL:-600}
-MAXWAIT=${MAXWAIT:-64800}          # 18h
-GEN_SEED=${GENERATION_SEED:-2026}
+MAXWAIT=${MAXWAIT:-72000}
 
-echo "[watch] $ARM_ID 等 $CKPT_ROOT/$TARGET_STEP/state 出现（每 ${POLL}s 看一次）"
-t0=$(date +%s)
+steps_of() {   # 目录名里的纯数字步号；checkpoint 目录条目很少（2000 步一存），ls 安全
+    ls "$1" 2>/dev/null | grep -E '^[0-9]+$' | sort -n
+}
+
+echo "[watch] $ARM_ID 等训练结束（看 $TRAIN_NODE 上还有没有 GPU 进程）"
+t0=$(date +%s); idle=0
 while true; do
-    if [ -d "$CKPT_ROOT/$TARGET_STEP/state" ]; then
-        # 目录出现不等于写完。连续两次大小不变才算稳定。
-        a=$(du -s "$CKPT_ROOT/$TARGET_STEP" 2>/dev/null | awk '{print $1}')
-        sleep 60
-        b=$(du -s "$CKPT_ROOT/$TARGET_STEP" 2>/dev/null | awk '{print $1}')
-        [ -n "$a" ] && [ "$a" = "$b" ] && { echo "[watch] $ARM_ID checkpoint $TARGET_STEP 稳定"; break; }
+    n=$(timeout 60 srun --jobid="$ATTACH_JOBID" --overlap --nodes=1 --ntasks=1 \
+        -w "$TRAIN_NODE" --cpu-bind=none \
+        nvidia-smi --query-compute-apps=pid --format=csv,noheader 2>/dev/null | sort -u | wc -l)
+    if [ "${n:-1}" -eq 0 ]; then
+        idle=$((idle+1))
+        # 连续两次为空才算停，避开 checkpoint 保存期间的短暂空窗
+        [ "$idle" -ge 2 ] && { echo "[watch] $ARM_ID 训练已停"; break; }
+    else
+        idle=0
     fi
     now=$(date +%s)
-    [ $((now - t0)) -gt "$MAXWAIT" ] && { echo "[watch] FATAL 等超过 ${MAXWAIT}s，放弃" >&2; exit 2; }
+    [ $((now - t0)) -gt "$MAXWAIT" ] && { echo "[watch] FATAL 等超时" >&2; exit 2; }
     sleep "$POLL"
 done
 
-echo "[watch] $ARM_ID 起 2k bench $(date -u +%H:%M:%SZ)"
-exec env ATTACH_JOBID="$ATTACH_JOBID" NODE="${NODELIST}" \
+# 两臂停止时刻不同（MAX_JOB_HOURS 与速率都不同），先停的那个算出的共有最高步
+# 会低于后停的。若各算各的，两臂就会在不同步号上评测，对照当场失效。
+# 所以第一个算出来的把步号落盘，第二个照抄。用 O_EXCL 的 noclobber 做原子占位。
+STEP_FILE="${STEP_FILE:-$TASKDIR/results/.ctx2k_bench_step}"
+mkdir -p "$(dirname "$STEP_FILE")"
+COMMON=$(comm -12 <(steps_of "$CKPT_A") <(steps_of "$CKPT_B") | sort -n | tail -1)
+[ -n "$COMMON" ] || { echo "[watch] FATAL 两臂没有共同步号" >&2; exit 3; }
+if (set -o noclobber; echo "$COMMON" > "$STEP_FILE") 2>/dev/null; then
+    echo "[watch] $ARM_ID 首个到达，定步号 = $COMMON（已落 $STEP_FILE）"
+else
+    COMMON=$(cat "$STEP_FILE")
+    echo "[watch] $ARM_ID 沿用已定步号 = $COMMON"
+fi
+[ -d "$([ "$ARM_ID" = "base2k" ] && echo "$CKPT_A" || echo "$CKPT_B")/$COMMON/state" ] || {
+    echo "[watch] FATAL $ARM_ID 没有步号 $COMMON 的 checkpoint" >&2; exit 4; }
+
+MY_CKPT=$([ "$ARM_ID" = "base2k" ] && echo "$CKPT_A" || echo "$CKPT_B")
+echo "[watch] $ARM_ID 起 2k bench @ $COMMON  $(date -u +%H:%M:%SZ)"
+exec env ATTACH_JOBID="$ATTACH_JOBID" NODE="$NODELIST" \
      BENCH_WORLD_SIZE="${BENCH_WORLD_SIZE:-4}" BENCH_GPU_OFFSET="${BENCH_GPU_OFFSET:-0}" \
      ARCHITECTURE="$ARCHITECTURE" ARM_ID="$ARM_ID" ARM_NAME="${ARM_NAME:-$ARM_ID}" \
-     CHECKPOINT_PATH="$CKPT_ROOT" CHECKPOINT_STEP="$TARGET_STEP" GENERATION_SEED="$GEN_SEED" \
+     CHECKPOINT_PATH="$MY_CKPT" CHECKPOINT_STEP="$COMMON" \
+     GENERATION_SEED="${GENERATION_SEED:-2026}" \
      BENCH_BATCH="$TASKDIR/bench_scripts/bench_2k.batch" \
      bash "$TASKDIR/code/run_bench_attached.sh"
