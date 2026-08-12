@@ -27,12 +27,17 @@ export BENCHMARK_ROOT="$QUANT_ROOT/AlphaTrade/lob_pipeline"
 export ARCHITECTURE="${ARCHITECTURE:-hybrid_mamba3}"
 
 BENCH_TS="$(date -u +%Y%m%dT%H%M%SZ)"
+# 种子可配。2026 是与已发表 baseline 对齐的那个；跑 seed 复制时换别的。
+# 复制的动机：既有标定的跨 seed 散布（WS-21）是 16.6%，与本任务观察到的
+# 效应同量级，单点无法与 seed 噪声区分。
+export GENERATION_SEED=${GENERATION_SEED:-2026}
+
 # 输出根必须逐次唯一。原写法（时间戳+job id）在独立 sbatch 下够用，因为每个
 # bench 有自己的 job id；attach 到同一个 allocation 后这个前提没了：两臂同秒
 # 启动就落进同一个目录，而生成文件按样本索引命名，于是同名文件互相覆盖，
 # data_gen 变成两个模型输出的混合物，LOB-Bench 照样给出一个看起来正常的分数。
 # 加上臂名与本进程 PID，两者任一都足以拆开。
-export OUTPUT_ROOT="$TASKDIR/bench_${BENCH_TS}_j${SLURM_JOB_ID}_${ARM_ID:-arm}_$$"
+export OUTPUT_ROOT="$TASKDIR/bench_${BENCH_TS}_j${SLURM_JOB_ID}_${ARM_ID:-arm}_s${GENERATION_SEED}_$$"
 export INFERENCE_DIR="$OUTPUT_ROOT/inference"
 export LOBBENCH_OUTPUT="$OUTPUT_ROOT/lobbench"
 export SUMMARY="$OUTPUT_ROOT/summary.json"
@@ -40,11 +45,10 @@ mkdir -p "$OUTPUT_ROOT" "$TASKDIR/logs"
 
 # 冻结的 3136 条 GOOG Jan-2026 索引
 export SAMPLE_INDICES_FILE="$WORKDIR/run/benchmarking/model_zoo_GOOG_jan2026_3136_seq500_seed42.txt"
-export N_SEQUENCES=3136
-export BATCH_SIZE=8          # 3136 / (4 GPU × 8) = 98
+export N_SEQUENCES=${N_SEQUENCES:-3136}   # 冒烟可覆盖；正式一律 3136 冻结索引
+export BATCH_SIZE=${BATCH_SIZE:-8}          # 3136 / (4 GPU × 8) = 98
 export N_COND_MSGS=250
 export N_GEN_MSGS=250
-export GENERATION_SEED=2026
 export LOBBENCH_WORKERS=48
 export EXPECTED_DATASET_LENGTH=226002
 export WIDE_LEVELS=500
@@ -78,7 +82,7 @@ if [ ! -d "$CHECKPOINT_PATH/$CHECKPOINT_STEP/state" ]; then
 fi
 echo "[bench] 路径自证通过：运行根有 _ROOT_METADATA，step $CHECKPOINT_STEP 有 state"
 export RUN_NAME="${ARM_NAME:-hybrid-m3-nemotron}-step${CHECKPOINT_STEP}"
-export LOBBENCH_RUN_ID="${ARM_ID:-hybrid_m3}_${CHECKPOINT_STEP}"
+export LOBBENCH_RUN_ID="${ARM_ID:-hybrid_m3}_${CHECKPOINT_STEP}_s${GENERATION_SEED}"
 
 # ── 1. Generation（4 GPU）───────────────────────────────────────────────────
 echo "[bench] === generation 开始 $(date -u +%H:%M:%SZ) ==="
