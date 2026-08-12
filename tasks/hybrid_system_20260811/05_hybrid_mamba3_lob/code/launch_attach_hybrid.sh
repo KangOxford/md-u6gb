@@ -181,8 +181,22 @@ else
     # 退火段恰恰是 loss 降得最多、也是生成质量真正成型的一段。
     export COSINE_STEPS=32000
     export CURTAIL_EPOCHS=32000   # 单位是步不是 epoch
-    export MAX_JOB_HOURS=5.5      # hybrid 每步慢 10.5%，比 baseline 的 5.0 放宽
+    export MAX_JOB_HOURS=${MAX_JOB_HOURS:-5.5}   # hybrid 每步慢 10.5%，baseline 是 5.0
     export CHECKPOINT_EVERY=3000
+fi
+
+# 续训：RESTORE_PATH 给运行根（不带步号），RESTORE_STEP 单独给。
+# sigma-0 的 train.py:506-512 会由 state.step 自行推出 epoch 与 batch_idx，
+# 所以 dataloader 不会从头重放，LR 也从该步继续退火——LOBS5 那个已知的
+# mid-epoch resume 缺陷在这一支里是修好的，已逐行核对。
+if [ -n "${RESTORE_PATH:-}" ]; then
+    export RESTORE_PATH
+    export RESTORE_STEP="${RESTORE_STEP:?RESTORE_STEP is required when RESTORE_PATH is set}"
+    [ -f "$RESTORE_PATH/metadata/_ROOT_METADATA" ] || {
+        echo "FATAL: $RESTORE_PATH/metadata/_ROOT_METADATA 不存在——RESTORE_PATH 应为运行根" >&2; exit 4; }
+    [ -d "$RESTORE_PATH/$RESTORE_STEP/state" ] || {
+        echo "FATAL: $RESTORE_PATH/$RESTORE_STEP/state 不存在——步号不对" >&2; exit 4; }
+    echo "[resume] 从 $RESTORE_PATH @ $RESTORE_STEP 续训，目标 $CURTAIL_EPOCHS 步"
 fi
 export DISABLE_STEP_WATCHDOG=0
 export WATCHDOG_TIMEOUT=1800
