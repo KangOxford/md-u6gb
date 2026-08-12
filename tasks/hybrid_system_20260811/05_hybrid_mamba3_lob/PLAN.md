@@ -26,17 +26,18 @@
 
 | 步 | 指令原文 | 具体动作 | 状态 |
 |---|---|---|---|
-| (1) | 新建 worktree，跟 Nemotron 设置，用 mamba3 | worktree `hybrid-mamba3-nemotron-20260811`；配方见 `research/C_nemotron_recipe.md` | ✅ 完成 |
-| (2) | 先给 baseline 建 memory | `memory/project_hybrid_mamba3_{baseline,code_map}.md`，MEMORY.md 已加指针 | ✅ 完成 |
-| (3) | 找到好的 baseline 结果，汇成 md | `results/BASELINE.md`（锁定 M1 + 预注册 P1–P4 + 噪声底 + 陷阱） | ✅ 完成 |
-| (4) | 造 hybrid 模型 | commit `c0bcd15`/`5090421`/`636512c`；CPU+GPU 双冒烟通过，参数量与已发表基线逐位对上 | ✅ 完成 |
-| (5) | 训练它，看能否长时间稳定训 | 冒烟 1–3 失败（三处白名单 / 残留挂载 / 显存争用），第 4 次进入训练循环 | 🟡 进行中 |
-| (6) | 8 只股票 2022–2025 上训练 | 数据配置与 baseline 逐字相同，48 月 × 8 票已挂载成功 | 🟡 随 (5) |
-| (7.1) | message-level perplexity | baseline 侧待补（B1） | ⬜ 未开始 |
-| (7.2) | 方向准确率 + return IC | **baseline 侧已补测完成**，见 `results/baseline_backfill/` | 🟢 baseline 已就位 |
-| (7.3) | LOB-Bench | baseline 侧已有（0.20714/0.10458/0.16451） | 🟢 baseline 已就位 |
-| (7.4) | refer order success rate | baseline 侧有 cancel+delete 混算数；execution 拆分需新写（B3） | 🟡 部分 |
-| (8) | 26 tok plan | 前置审计已完成（三候选设计 A/B/C），见 §5 | 🟡 待选型 |
+| (1) | 新建 worktree，跟 Nemotron 设置，用 mamba3 | worktree + `hybrid_mamba3` 架构，attention 在 trunk 第 3 层 | ✅ |
+| (2) | 先给 baseline 建 memory | 四条持久记忆，MEMORY.md 已加指针 | ✅ |
+| (3) | 找到好的 baseline 结果，汇成 md | `results/BASELINE.md`，含预注册判据 P1–P4 与噪声底 | ✅ |
+| (4) | 造 hybrid 模型 | 参数量与已发表基线逐位对上；+5.43% 参数 / +10.5% 步长 / −6.3% 显存 | ✅ |
+| (5) | 训练稳定性 | 冒烟 4 次定位三类环境问题；正式训练稳定在 2.05 it/s，无 NaN | ✅ |
+| (6) | 8 票 2022–2025 | 48 月 × 8 票，与 baseline 数据配置逐字相同 | 🟡 训练至 28.9k/32k |
+| (7.1) | message-level perplexity | `code/run_ce_attached.sh`，两臂在 2026-01 留出集上跑 | 🟡 进行中 |
+| (7.2) | 方向准确率 + return IC | @12000 两臂已出；h=250 IC 0.1362 → 0.1557 | ✅ @12000 |
+| (7.3) | LOB-Bench | @12000 两臂已出；WS-21 0.22073 → 0.18380 | ✅ @12000 |
+| (7.4) | refer order success rate | @12000 两臂已出；L1 63.46% → 65.03%，年龄分层见阶段3 | ✅ @12000 |
+| (8) | 26 tok plan | `results/PLAN_26TOK.md`：推荐设计 B，给出与 hybrid 的叠加论证与 2×2 实验序 | ✅ |
+| A4 | 循环到超过 baseline | @12000 四项中三项已超；@32000 对照与 3-seed 复制进行中 | 🟡 |
 
 ---
 
