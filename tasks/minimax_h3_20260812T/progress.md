@@ -73,6 +73,34 @@ PrivateData = accounts,events,jobs,reservations,usage,users
 | checkpoint | 独立测试 | 原子面包屑 ✓、精确保留 3 个 ✓、resume 状态一致 ✓ |
 | 采样回路 | CPU，5 步 | guidance=0 → 4 次前向；guidance=5 → 8 次前向；输出有限 ✓ |
 | 双 shift | scheduler σ 网格 | video 5 步中 4 步在 σ>0.75；audio 均匀分布 |
+| **约定断言套件** | `code/test_h3nano.py`，13 项 | **13/13 通过**，见下 |
+
+### 约定断言套件结果（`./venv/bin/python code/test_h3nano.py`）
+
+```
+PASS  velocity_target_is_data_minus_noise             v = x0 - eps at t in {0.05, 0.4, 0.95}
+PASS  denoising_a_perfect_velocity_lands_on_x0        64 steps from pure noise land within 8.34e-07 of x0
+PASS  the_two_shifts_produce_different_grids          fraction of grid above sigma=0.5: video 0.91 vs audio 0.73
+PASS  patchify_round_trips_exactly                    (3, 24, 7, 8, 8) <-> (3, 112, 96) exact
+PASS  audio_packing_is_channel_major_and_exact        channel-major order confirmed and exact on round trip
+PASS  frame_geometry_matches_the_reference            17n+5 -> 5n+2 and 40 Hz audio confirmed over 8 frame counts
+PASS  layout_row_counts_follow_the_geometry           seq=1748 = text 96 + audio 244 + video 1408
+PASS  keyframe_anchors_add_leading_conditioning_rows  two anchors add 32 leading video rows
+PASS  text_rows_inherit_the_video_timestep            text follows video (0.3); audio independent (0.7); table has 2 rows
+PASS  anchors_sit_at_the_documented_noise_level       anchor rows held at max(t, 0.999)
+PASS  a_batch_shares_one_timestep_pair                batch shares one (t_video, t_audio); per-item draws raise
+PASS  loss_ignores_conditioning_rows                  perturbing 16 anchor rows by 1000 leaves the loss unchanged
+PASS  model_forward_shapes_match_the_layout           micro forward OK; 32.73 M params, refiner 3.93 M
+
+13/13 checks passed
+```
+
+第 2 项是最强的单项证据：它用**参考实现的调度器**（不是我写的欧拉步）把一个完美速度
+从纯噪声走 64 步，落点距 x₀ 仅 8.34e-07。这同时检验了「速度朝向数据」「目标是
+x₀−ε」「t=1−σ 且 t=1 为干净」三件事——任一符号搞反都会发散。
+
+该套件已接入 `verify_environment()`，在作业第一分钟运行，因此**对已排队的作业同样生效**
+（sbatch 快照的是 batch 脚本，外部 Python 是运行时读取）。
 
 ## 待办
 
