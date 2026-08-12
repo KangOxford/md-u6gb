@@ -1,31 +1,30 @@
 #!/bin/bash
-# baseline mamba3，上下文 2,000 条消息（52,000 token）。
+# hybrid mamba3 x Nemotron，上下文 2,000 条消息（52,000 token）。
 #
-# 从 launch_attach_hybrid.sh 派生，逐行只改四处，其余每一项都要与既有 baseline
-# 逐字相同，因为这次要问的只有一个变量：同样每步 2,000 条消息，切成四段互不
-# 相干的 500 条，还是一段连续的 2,000 条。
+# 与 launch_2k_baseline.sh 成对，两者只差 ARCHITECTURE 与五个 HYBRID_ATTN_*，
+# 其余逐字相同。四条臂的关系：
 #
-#   ARCHITECTURE   hybrid_mamba3 -> mamba3        （先看 baseline）
+#            上下文 500 条            上下文 2,000 条
+#   baseline  已完成 j5877859@32001    launch_2k_baseline.sh
+#   hybrid    已完成 j5980745@32001    launch_2k_hybrid.sh   <- 本脚本
+#
+# 从 launch_attach_hybrid.sh 派生，逐行只改三处：
 #   PER_GPU_BSZ    4 -> 1
 #   MSG_SEQ_LEN    500 -> 2000
 #   WANDB_PROJECT  新设置起新 project
-#   （并删掉五个 HYBRID_ATTN_*，纯递归主干用不上）
+#   MAX_JOB_HOURS  5.5 -> 9.0
 #
-# 为什么这是一个没有算力混淆的对照，三项实测支撑：
+# 为什么 hybrid 的时限比 baseline 的 6.5 还要多：注意力那一层的计算是二次的。
 #
-#   显存只取决于每步消息总数，与怎么切成样本无关。同样每步 1,000 条消息，
-#   bsz4x250 / bsz2x500 / bsz1x1000 三种切法峰值分别是 35.79 / 35.78 / 35.71 GB。
+#   单层注意力 FLOPs = 4 x L^2 x d_model
+#                    = 4 x 52000^2 x 640
+#                    = 6.9e12 / 样本 / 层
 #
-#   每步 token 数不变。4 x 500 x 26 = 1 x 2000 x 26 = 52,000。
+#   L=13,000 时同一项是 4.3e11，所以长度 4 倍、这一项 16 倍。六个 fused 层里只有
+#   一个是注意力，但它从占比很小变成不可忽略。9.0 小时是留足余量，不是估算值；
+#   真实步时由冒烟测出来后再收紧。
 #
-#   步时只贵约 16%。同一组三点是 0.523 / 0.573 / 0.608 秒。associative scan 沿
-#   长度方向并行得很好，batch 维在这个尺度上不是占用率的必需品。
-#
-# 峰值预计 70.9 GB（三点线性外推，斜率 35.2-35.4 GB/千条，只外推 33%）。
-# MEM_FRACTION=0.85 约 83 GB，余量 12 GB。
-#
-# 用法与 launch_attach_hybrid.sh 相同：
-#   ATTACH_JOBID=<alloc> SMOKE=1 bash launch_2k_baseline.sh
+# 用法：ATTACH_JOBID=<alloc> SMOKE=1 bash launch_2k_hybrid.sh
 
 set -uo pipefail
 
@@ -41,7 +40,7 @@ SMOKE=${SMOKE:-0}
 TAG=$([ "$SMOKE" = "1" ] && echo smoke || echo prod)
 # 带臂名：两条臂并行跑时若共用一个路径，后起的那个会覆盖先起的，而先起的
 # 已经把它读进 srun 了，症状是两条臂用同一份配置且没有任何报错。
-GEN_BATCH="$TASKDIR/code/train_full_autoreg.attach.base.${TAG}.batch"
+GEN_BATCH="$TASKDIR/code/train_full_autoreg.attach.hyb.${TAG}.batch"
 
 # ── 1. 生成 attach 版训练脚本 ────────────────────────────────────────────────
 # 只改 srun 那一行：加 --jobid / --overlap，让 step 落进已有 allocation。
@@ -145,7 +144,7 @@ export SLURM_SUBMIT_DIR="$WORKDIR"
 # 日志，而 attach 场景下两条臂共用同一个 SLURM_JOB_ID、procid 也都是 0..N-1，
 # 于是两条臂会 exec> 到同一个文件上，各写各的，内容交错且互相截断。
 # NODE_LOG_DIR 是 node_wrapper.sh:29 留出的覆盖点。
-export NODE_LOG_DIR="$WORKDIR/logs_lobs5/ctx2k_base"
+export NODE_LOG_DIR="$WORKDIR/logs_lobs5/ctx2k_hyb"
 
 export SLURM_TIMELIMIT="05:00:00"
 export SBATCH_TIMELIMIT="05:00:00"
@@ -159,7 +158,7 @@ export CONDA_ENV=base
 export DATA_ROOT=/lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs
 
 # ── 3. 模型：与 baseline 逐项相同，只换 ARCHITECTURE 与 attention 配置 ──────
-export ARCHITECTURE=mamba3
+export ARCHITECTURE=hybrid_mamba3
 export SSM_TYPE=                  # 留空：hybrid 由 --architecture 单独决定
 export D_MODEL=640
 export N_LAYERS=6
@@ -182,6 +181,9 @@ export MSG_SEQ_LEN=2000
 # Hybrid：不指定 HYBRID_ATTN_LAYERS，让 registry 按 Nemotron 规则自己算
 # （L=6 -> 位置 3）。heads=10 使 head_dim=640/10=64，正好满足 Pallas 因果核
 # 的 head_dim<=256 且 %8==0；否则会退回物化 LxL，13k token 下必然 OOM。
+export HYBRID_ATTN_HEADS=10
+export HYBRID_ATTN_FLASH=True
+export HYBRID_ATTN_PE=False       # Nemotron 的 attention 不带位置编码，
                                   # 且 mamba3 已在状态里做 RoPE
 # HYBRID_ATTN_D_FF 不设 = 4*d_model = 2560（Nemotron 忠实档）。
 # 参数配平臂用 HYBRID_ATTN_D_FF=1135，届时另起。
@@ -235,11 +237,12 @@ else
     # 退火段恰恰是 loss 降得最多、也是生成质量真正成型的一段。
     export COSINE_STEPS=${COSINE_STEPS:-32000}          # 优化器步
     export CURTAIL_EPOCHS=${CURTAIL_EPOCHS:-32000}      # micro-batch，K>1 要乘 K
-    # 纯递归主干没有二次项，2k 的代价只是 batch 维塌缩（实测同工作量下
-    # bsz4x250 0.523 秒 vs bsz1x1000 0.608 秒，+16%）。500 上下文是 0.313
-    # 秒/步，故 2k 约 0.36 秒。K=2 时 micro 步数翻倍：64,001 x 0.36 = 6.4 小时。
-    # 取 7.5 留启动与 48 分片挂载。
-    export MAX_JOB_HOURS=${MAX_JOB_HOURS:-7.5}
+    # 冒烟实测回填：2 节点、每卡每步 2,000 条消息，稳态 1.375 it/s = 0.727 秒。
+    # 对比 500 上下文的 0.313 秒，慢 2.32 倍，与注意力 FLOPs 之比一致：
+    #   (1 x 52000^2) / (4 x 13000^2) = 4.0
+    # 把四段 500 拼成一段 2000，注意力代价正好 4 倍——这不是开销，这就是长程
+    # 注意力的定价。K=2 时 64,001 x 0.727 = 12.9 小时，取 13.5。
+    export MAX_JOB_HOURS=${MAX_JOB_HOURS:-13.5}
     export CHECKPOINT_EVERY=${CHECKPOINT_EVERY:-3000}
 fi
 
@@ -265,7 +268,7 @@ export NO_AUTO_RESUME_DEPTH=99    # attach 场景禁止自动 sbatch 续投
 export USE_WANDB=True
 export WANDB_MODE=online
 export WANDB_ENTITY=oxford-lob
-export WANDB_PROJECT=sp500-mamba3-35m-ctx2k
+export WANDB_PROJECT=sp500-hybrid-mamba3-35m-ctx2k
 export WANDB_DIR=/local/user/1483804540
 
 export WORKDIR
@@ -274,10 +277,8 @@ echo "════════════════════════�
 echo " Hybrid Mamba3 x Nemotron — SP500 2022-2025 — attach $ATTACH_JOBID [$TAG]"
 echo "════════════════════════════════════════════════════════════════"
 echo " architecture=$ARCHITECTURE  attention: nemotron rule (L=6 -> layer 3)"
-# 纯递归主干没有 attention 层。删 export 时漏掉这两行横幅，set -u 下就是
-# "HYBRID_ATTN_HEADS: unbound variable" 并在起飞前一刻中止——删配置要连引用
-# 一起删，只删定义会把错误推迟到运行期。
-echo "   （baseline 无 attention 层）"
+echo "   heads=$HYBRID_ATTN_HEADS head_dim=$((D_MODEL / HYBRID_ATTN_HEADS))"
+echo "   flash=$HYBRID_ATTN_FLASH  positional_encoding=$HYBRID_ATTN_PE"
 echo " d_model=$D_MODEL n_layers=$N_LAYERS blocks=$BLOCKS d_state=$MAMBA3_D_STATE"
 echo " per_gpu_bsz=$PER_GPU_BSZ global_bsz=$((PER_GPU_BSZ * GPUS_PER_NODE * NNODES_ATTACH))"
 echo " nodes=$NNODES_ATTACH nodelist=$NODELIST msg_seq_len=$MSG_SEQ_LEN"

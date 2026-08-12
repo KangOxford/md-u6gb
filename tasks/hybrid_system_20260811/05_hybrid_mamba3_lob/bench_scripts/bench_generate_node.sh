@@ -10,7 +10,10 @@ CHECKPOINT_PATH="${CHECKPOINT_PATH:?}"
 CHECKPOINT_STEP="${CHECKPOINT_STEP:?}"
 INFERENCE_DIR="${INFERENCE_DIR:?}"
 OUTPUT_ROOT="${OUTPUT_ROOT:?}"
-SAMPLE_INDICES_FILE="${SAMPLE_INDICES_FILE:?}"
+# 允许为空 = 随机模式（inference.py 用 seed 42 对 arange(len(ds)) 无放回抽样）。
+# 500 上下文一律走冻结文件；2,000 上下文没有对应的冻结件，因为那份文件存的是
+# 数据集下标，窗口一变长下标指向的东西就完全不同，复用会静默错位。
+SAMPLE_INDICES_FILE="${SAMPLE_INDICES_FILE-}"
 N_SEQUENCES="${N_SEQUENCES:-3136}"
 BATCH_SIZE="${BATCH_SIZE:-8}"
 N_COND_MSGS="${N_COND_MSGS:-250}"
@@ -30,8 +33,17 @@ if [ $((N_SEQUENCES % (WORLD_SIZE * BATCH_SIZE))) -ne 0 ]; then
     echo "[gen] FATAL: $N_SEQUENCES 不能被 $WORLD_SIZE x $BATCH_SIZE 整除" >&2
     exit 2
 fi
-[ -f "$SAMPLE_INDICES_FILE" ] || { echo "[gen] FATAL: 缺样本索引 $SAMPLE_INDICES_FILE" >&2; exit 2; }
-echo "[gen] sample_indices sha256=$(sha256sum "$SAMPLE_INDICES_FILE" | awk '{print $1}')"
+IDX_ARGS=()
+VAL_IDX_ARGS=()
+if [ -n "$SAMPLE_INDICES_FILE" ]; then
+    [ -f "$SAMPLE_INDICES_FILE" ] || { echo "[gen] FATAL: 缺样本索引 $SAMPLE_INDICES_FILE" >&2; exit 2; }
+    echo "[gen] sample_indices sha256=$(sha256sum "$SAMPLE_INDICES_FILE" | awk '{print $1}')"
+    IDX_ARGS=(--sample_indices_file="$SAMPLE_INDICES_FILE")
+    VAL_IDX_ARGS=(--expected-indices-file "$SAMPLE_INDICES_FILE")
+else
+    echo "[gen] sample_indices: 随机模式 seed=42（无冻结文件）。两臂的 len(ds) 与种子相同，"
+    echo "[gen]                 所选池子必然逐位相同；运行后 index_manifest 即为存档件。"
+fi
 
 JOB_TMP="/tmp/${USER:-kangli.u6gb}/m3bench/$(date -u +%Y%m%dT%H%M%SZ)_$$"
 mkdir -p "$INFERENCE_DIR" "$OUTPUT_ROOT" "$JOB_TMP"
@@ -83,7 +95,7 @@ for LOCAL_RANK in $(seq 0 $((WORLD_SIZE - 1))); do
         --n_cond_msgs="$N_COND_MSGS" \
         --n_gen_msgs="$N_GEN_MSGS" \
         --test_split=1.0 \
-        --sample_indices_file="$SAMPLE_INDICES_FILE" \
+        ${IDX_ARGS[@]+"${IDX_ARGS[@]}"} \
         --seed="$GENERATION_SEED" \
         --rank="$LOCAL_RANK" --world_size="$WORLD_SIZE" \
         > "$OUTPUT_ROOT/inference_rank${LOCAL_RANK}.log" 2>&1 &
@@ -102,8 +114,8 @@ done
 "$PYTHON" "$WORKDIR/run/benchmarking/validate_model_zoo_evaluation.py" inference \
     "$INFERENCE_DIR" --expected-sequences "$N_SEQUENCES" \
     --rows "$N_GEN_MSGS" --world-size "$WORLD_SIZE" \
-    --expected-indices-file "$SAMPLE_INDICES_FILE" \
-    --expected-dataset-length "${EXPECTED_DATASET_LENGTH:-226002}" \
+    ${VAL_IDX_ARGS[@]+"${VAL_IDX_ARGS[@]}"} \
+    ${EXPECTED_DATASET_LENGTH:+--expected-dataset-length "$EXPECTED_DATASET_LENGTH"} \
     > "$OUTPUT_ROOT/inference_inventory.json"
 
 echo "[gen] 完成，inventory 见 $OUTPUT_ROOT/inference_inventory.json"

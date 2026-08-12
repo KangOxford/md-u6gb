@@ -1,0 +1,142 @@
+#!/bin/bash
+# LOB-Bench + return bench + refer success，两臂共用。架构与 checkpoint 由 env 给：
+#   ARCHITECTURE / CHECKPOINT_PATH / CHECKPOINT_STEP / ARM_NAME / ARM_ID
+# Protocol: --token_mode=26tok --stock=GOOG --n_cond_msgs=250 --n_gen_msgs=250 --wide_levels=500 --seed=2026
+
+#SBATCH --account=brics.u6gb
+#SBATCH --partition=workq
+#SBATCH --job-name=hybrid-m3-nemotron-bench
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=4
+#SBATCH --cpus-per-task=72
+#SBATCH --mem=0
+#SBATCH --time=03:00:00
+#SBATCH --output=/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/logs/bench_%j.out
+#SBATCH --error=/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/logs/bench_%j.out
+
+set -uo pipefail
+
+TASKDIR=/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob
+export WORKDIR=/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811
+export QUANT_ROOT=/lus/lfs1aip2/projects/public/s5e/quant_team/quant
+export PYTHON="$QUANT_ROOT/miniforge3/bin/python"
+export BENCHMARK_ROOT="$QUANT_ROOT/AlphaTrade/lob_pipeline"
+# 两臂用同一份评测代码，只有架构与 checkpoint 不同——这正是受控对照要求的。
+# 本 worktree 同时含 mamba3 与 hybrid_mamba3，所以 baseline 臂也从这里跑。
+export ARCHITECTURE="${ARCHITECTURE:-hybrid_mamba3}"
+
+BENCH_TS="$(date -u +%Y%m%dT%H%M%SZ)"
+# 种子可配。2026 是与已发表 baseline 对齐的那个；跑 seed 复制时换别的。
+# 复制的动机：既有标定的跨 seed 散布（WS-21）是 16.6%，与本任务观察到的
+# 效应同量级，单点无法与 seed 噪声区分。
+export GENERATION_SEED=${GENERATION_SEED:-2026}
+
+# 输出根必须逐次唯一。原写法（时间戳+job id）在独立 sbatch 下够用，因为每个
+# bench 有自己的 job id；attach 到同一个 allocation 后这个前提没了：两臂同秒
+# 启动就落进同一个目录，而生成文件按样本索引命名，于是同名文件互相覆盖，
+# data_gen 变成两个模型输出的混合物，LOB-Bench 照样给出一个看起来正常的分数。
+# 加上臂名与本进程 PID，两者任一都足以拆开。
+export OUTPUT_ROOT="$TASKDIR/bench2k_${BENCH_TS}_j${SLURM_JOB_ID}_${ARM_ID:-arm}_s${GENERATION_SEED}_$$"
+export INFERENCE_DIR="$OUTPUT_ROOT/inference"
+export LOBBENCH_OUTPUT="$OUTPUT_ROOT/lobbench"
+export SUMMARY="$OUTPUT_ROOT/summary.json"
+mkdir -p "$OUTPUT_ROOT" "$TASKDIR/logs"
+
+# ── 2,000 条上下文的 half-half：cond 1000 / gen 1000 ────────────────────────
+#
+# 协议与 500 版逐项相同，只有窗口长度变了。half-half 的含义不变：前一半作条件，
+# 后一半自回归生成。
+export N_COND_MSGS=${N_COND_MSGS:-1000}
+export N_GEN_MSGS=${N_GEN_MSGS:-1000}
+
+# 索引：500 版用的是冻结文件 model_zoo_..._seq500_seed42.txt，那些是**数据集下标**，
+# 而 2,000 条窗口下 len(ds) 会小约 4 倍，同一批下标指向的东西完全不同，直接复用
+# 会静默错位。
+#
+# 这里改用 inference.py 的随机模式：seed 42 对 arange(len(ds)) 做无放回抽样。
+# 两条臂看到的 len(ds) 相同、种子相同，所以选出的池子逐位相同——冻结文件是为了
+# 事后可审计，不是为了两臂一致。首次运行后把 index_manifest 存档即成为冻结件。
+export SAMPLE_INDICES_FILE="${SAMPLE_INDICES_FILE:-}"
+
+# 3136 是 2^6 x 7^2，没有因子 3；world_size x batch_size 必须整除它。
+# 4 GPU x 8 = 32 -> 98 批。若 2,000 条窗口下 len(ds) 不足 3136，用 N_SEQUENCES
+# 显式调小，不要让它静默截断。
+export N_SEQUENCES=${N_SEQUENCES:-3136}
+export BATCH_SIZE=${BATCH_SIZE:-8}
+export LOBBENCH_WORKERS=48
+# 500 版是 226002。2,000 条窗口下这个数会变，交由运行时自证而不是写死一个错的。
+export EXPECTED_DATASET_LENGTH=${EXPECTED_DATASET_LENGTH:-}
+export WIDE_LEVELS=500
+
+echo "════════════════════════════════════════════════════════════"
+echo " LOB-Bench + return + refer [ctx2k half-half]   arch=$ARCHITECTURE  job=$SLURM_JOB_ID  node=$(hostname)"
+echo " 起 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo " Worktree: $WORKDIR"
+echo "════════════════════════════════════════════════════════════"
+
+# CHECKPOINT_PATH 必须是**运行根**，不带步号——步号由 CHECKPOINT_STEP 单独给。
+#
+# 第一版把 /32001 拼进了路径，于是步号被指定了两次（路径里一次、--checkpoint_step
+# 一次），而下游两处对路径层级的要求不同：
+#   load_metadata(ckpt_path)             读 <运行根>/metadata/_ROOT_METADATA
+#   load_checkpoint(state, ckpt_path,    Orbax CheckpointManager(<运行根>) + step
+#                   step=CHECKPOINT_STEP)
+# 实际布局是 _ROOT_METADATA 只在运行根下，step 目录里没有，所以拼上步号后
+# FileNotFoundError: .../32001/metadata/_ROOT_METADATA。
+export CHECKPOINT_PATH="${CHECKPOINT_PATH:?CHECKPOINT_PATH is required}"
+export CHECKPOINT_STEP="${CHECKPOINT_STEP:?CHECKPOINT_STEP is required}"
+echo "[bench] checkpoint=$CHECKPOINT_PATH step=$CHECKPOINT_STEP"
+# 起飞前自证：路径层级错一层就直接停，不要跑 24 秒再报 FileNotFoundError
+if [ ! -f "$CHECKPOINT_PATH/metadata/_ROOT_METADATA" ]; then
+    echo "FATAL: $CHECKPOINT_PATH/metadata/_ROOT_METADATA 不存在——CHECKPOINT_PATH 应为运行根" >&2
+    exit 1
+fi
+if [ ! -d "$CHECKPOINT_PATH/$CHECKPOINT_STEP/state" ]; then
+    echo "FATAL: $CHECKPOINT_PATH/$CHECKPOINT_STEP/state 不存在——步号不对" >&2
+    exit 1
+fi
+echo "[bench] 路径自证通过：运行根有 _ROOT_METADATA，step $CHECKPOINT_STEP 有 state"
+export RUN_NAME="${ARM_NAME:-hybrid-m3-nemotron}-step${CHECKPOINT_STEP}"
+export LOBBENCH_RUN_ID="${ARM_ID:-hybrid_m3}_${CHECKPOINT_STEP}_s${GENERATION_SEED}"
+
+# ── 1. Generation（4 GPU）───────────────────────────────────────────────────
+echo "[bench] === generation 开始 $(date -u +%H:%M:%SZ) ==="
+bash "$TASKDIR/bench_scripts/bench_generate_node.sh"
+GEN_RC=$?
+echo "[bench] generation rc=$GEN_RC $(date -u +%H:%M:%SZ)"
+[ "$GEN_RC" -eq 0 ] || { echo "FATAL: generation 失败"; exit "$GEN_RC"; }
+
+# ── 2. Score（CPU）──────────────────────────────────────────────────────────
+echo "[bench] === score 开始 $(date -u +%H:%M:%SZ) ==="
+bash "$TASKDIR/bench_scripts/bench_score_node.sh"
+SCORE_RC=$?
+echo "[bench] score rc=$SCORE_RC $(date -u +%H:%M:%SZ)"
+[ "$SCORE_RC" -eq 0 ] || { echo "FATAL: score 失败"; exit "$SCORE_RC"; }
+
+# ── 3. (7.2) 方向准确率与 return IC（CPU）───────────────────────────────────
+# 与 (7.3) 用同一份 inference 产物，所以两行指标同源、可以并排放进一张表。
+# baseline 侧走的是同一个脚本同一组参数（n_cond 250，horizons 10/50/100/250）。
+echo "[bench] === (7.2) return bench 开始 $(date -u +%H:%M:%SZ) ==="
+"$PYTHON" "$QUANT_ROOT/AlphaTrade/lob_pipeline/return_bench/run_return_bench.py" \
+    --infer_dir "$INFERENCE_DIR" --n_cond "$N_COND_MSGS" \
+    --horizons 10,50,100,250 --workers 32 \
+    --output_dir "$OUTPUT_ROOT" --name "$LOBBENCH_RUN_ID"
+echo "[bench] (7.2) rc=$? $(date -u +%H:%M:%SZ)"
+
+# ── 4. (7.4) 引用型订单成功率（CPU）─────────────────────────────────────────
+# 读生成时逐消息写下的 provenance 位域，所以量的是这次运行真正做过的解析，
+# 而不是事后重新推断出来的。主判据是 L1 精确率，不是兜底后的合计。
+echo "[bench] === (7.4) refer success 开始 $(date -u +%H:%M:%SZ) ==="
+"$PYTHON" "$TASKDIR/code/refer_success.py" \
+    --gen-dir "$INFERENCE_DIR/data_gen" \
+    --out "$OUTPUT_ROOT" --label "$LOBBENCH_RUN_ID"
+echo "[bench] (7.4) rc=$? $(date -u +%H:%M:%SZ)"
+
+echo "════════════════════════════════════════════════════════════"
+echo " 完成 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo " summary   $SUMMARY                    (7.3 LOB-Bench)"
+echo " return    $OUTPUT_ROOT/return_bench_${LOBBENCH_RUN_ID}.csv   (7.2)"
+echo " refer     $OUTPUT_ROOT/refer_success_${LOBBENCH_RUN_ID}.json (7.4)"
+echo " lobbench  $LOBBENCH_OUTPUT"
+echo "════════════════════════════════════════════════════════════"
