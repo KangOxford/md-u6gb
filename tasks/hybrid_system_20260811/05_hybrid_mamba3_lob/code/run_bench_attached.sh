@@ -1,5 +1,7 @@
 #!/bin/bash
-# 把 bench_hybrid.batch 挂到已有 allocation 的一个空闲节点上跑。
+# 把 bench 脚本挂到已有 allocation 的一个空闲节点上跑。
+# 默认 bench_hybrid.batch（500 条上下文，cond250/gen250）；
+# BENCH_BATCH 可换成 bench_2k.batch（2,000 条，cond1000/gen1000）。
 #
 # 用途是「用掉本来空转的卡」，不是省排队：评测约 1-3 小时，仍属可 attach 的
 # 量级，但必须 setsid 起，否则会随会话一起死（2026-08-12 丢过 12,735 步）。
@@ -71,4 +73,4 @@ export SLURM_JOB_ID="$ATTACH_JOBID"
 
 exec srun --jobid="$ATTACH_JOBID" --overlap --exact --nodes=1 --ntasks=1 \
      -w "$NODE" --cpus-per-task=72 --cpu-bind=none \
-     bash "$TASKDIR/bench_scripts/bench_hybrid.batch"
+     bash "${BENCH_BATCH:-$TASKDIR/bench_scripts/bench_hybrid.batch}"
