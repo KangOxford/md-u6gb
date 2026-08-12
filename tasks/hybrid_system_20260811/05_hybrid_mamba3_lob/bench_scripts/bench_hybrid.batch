@@ -45,7 +45,7 @@ export EXPECTED_DATASET_LENGTH=226002
 export WIDE_LEVELS=500
 
 echo "════════════════════════════════════════════════════════════"
-echo " LOB-Bench  Mamba3 35m (j5877859 step 32001)  job=$SLURM_JOB_ID  node=$(hostname)"
+echo " LOB-Bench + return + refer   arch=$ARCHITECTURE  job=$SLURM_JOB_ID  node=$(hostname)"
 echo " 起 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo " Worktree: $WORKDIR"
 echo "════════════════════════════════════════════════════════════"
