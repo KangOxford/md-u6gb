@@ -193,22 +193,41 @@ def motion_energy(frames: np.ndarray) -> np.ndarray:
 
 
 def sync_lag(audio_env: np.ndarray, motion: np.ndarray, max_lag: int) -> tuple[int, float]:
-    """Lag (in frames) and peak of the normalized cross-correlation."""
+    """Lag (in frames) and peak of the cross-correlation, normalized per lag.
+
+    Each lag is scored as a Pearson correlation over *its own* overlap. Normalizing
+    by the full-length norms instead would divide a shrinking numerator (fewer terms
+    survive as the lag grows) by a constant denominator, which biases the peak
+    toward lag 0 -- and lag 0 is exactly what this measurement is trying to
+    establish, so the estimator would be answering its own question.
+
+    **Sign convention**: a *negative* lag means the soundtrack trails the picture,
+    i.e. the sound of an impact arrives after the impact is visible. Checked against
+    a planted shift: `audio = roll(motion, +4)` (audio delayed by four frames) is
+    recovered as lag `-4`. A well-synchronized generation should sit near 0; a
+    consistent non-zero lag is a real finding, not noise, and its sign says which
+    modality the model is leading with.
+    """
     n = min(len(audio_env), len(motion))
-    a = audio_env[:n] - audio_env[:n].mean()
-    m = motion[:n] - motion[:n].mean()
-    denom = np.sqrt((a ** 2).sum() * (m ** 2).sum()) + 1e-12
-    lags = range(-max_lag, max_lag + 1)
+    audio_env, motion = audio_env[:n], motion[:n]
+    lags = list(range(-max_lag, max_lag + 1))
     scores = []
     for lag in lags:
         if lag < 0:
-            scores.append(float((a[-lag:] * m[: n + lag]).sum() / denom))
+            left, right = audio_env[-lag:], motion[: n + lag]
         elif lag > 0:
-            scores.append(float((a[: n - lag] * m[lag:]).sum() / denom))
+            left, right = audio_env[: n - lag], motion[lag:]
         else:
-            scores.append(float((a * m).sum() / denom))
+            left, right = audio_env, motion
+        if len(left) < 8:
+            scores.append(0.0)
+            continue
+        a = left - left.mean()
+        m = right - right.mean()
+        denom = np.sqrt((a ** 2).sum() * (m ** 2).sum())
+        scores.append(float((a * m).sum() / denom) if denom > 1e-12 else 0.0)
     best = int(np.argmax(scores))
-    return list(lags)[best], scores[best]
+    return lags[best], scores[best]
 
 
 def cmd_avsync(args) -> dict:
