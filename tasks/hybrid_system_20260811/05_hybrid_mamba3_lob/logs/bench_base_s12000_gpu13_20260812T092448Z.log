@@ -1,0 +1,16 @@
+[gate] nid011179 目标卡 [1,2,3]，阈值 4096 MiB
+GATE nid011179 target_worst_mib=574
+════════════════════════════════════════════════════════════
+ LOB-Bench + return + refer   arch=mamba3  job=5980502  node=nid011179
+ 起 2026-08-12T09:24:53Z
+ Worktree: /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811
+════════════════════════════════════════════════════════════
+[bench] checkpoint=/lus/lfs1aip2/projects/public/u6gb/sigma-0/checkpoints/j5877859_30nkkohd_5877859 step=12000
+[bench] 路径自证通过：运行根有 _ROOT_METADATA，step 12000 有 state
+[bench] === generation 开始 09:24:53Z ===
+[gen] host=nid011179 ckpt=/lus/lfs1aip2/projects/public/u6gb/sigma-0/checkpoints/j5877859_30nkkohd_5877859 step=12000
+[gen] FATAL: 3136 不能被 3 x 8 整除
+[bench] generation rc=2 09:24:53Z
+FATAL: generation 失败
+srun: error: nid011179: task 0: Exited with exit code 2
+srun: Terminating StepId=5980502.555

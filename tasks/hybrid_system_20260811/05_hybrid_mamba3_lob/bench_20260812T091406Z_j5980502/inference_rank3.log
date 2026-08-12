@@ -1,0 +1,15 @@
+['/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811/run/base_model/runtime', '/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811/src', '/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811', '/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob', '/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python312.zip', '/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12', '/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/lib-dynload', '/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages', '__editable__.jax_triton-0.3.0.finder.__path_hook__', '/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811']
+[Encoding] Using 26tok encoding (MSG_LEN=26)
+usage: inference.py [-h] [--stock STOCK] [--checkpoint_step CHECKPOINT_STEP]
+                    [--test_split TEST_SPLIT] [--batch_size BATCH_SIZE]
+                    [--n_sequences N_SEQUENCES] [--n_cond_msgs N_COND_MSGS]
+                    [--n_gen_msgs N_GEN_MSGS] [--data_dir DATA_DIR]
+                    [--ckpt_path CKPT_PATH] [--save_dir SAVE_DIR]
+                    [--sample_indices_file SAMPLE_INDICES_FILE]
+                    [--wide_book_dir WIDE_BOOK_DIR]
+                    [--wide_levels WIDE_LEVELS]
+                    [--architecture {mamba3,s5,gdn,kda,transformer,nsa}]
+                    [--rank RANK] [--world_size WORLD_SIZE]
+                    [--model_code_dir MODEL_CODE_DIR] [--token_mode {26tok}]
+                    [--gt_compare] [--save_format SAVE_FORMAT] [--seed SEED]
+inference.py: error: argument --architecture: invalid choice: 'hybrid_mamba3' (choose from mamba3, s5, gdn, kda, transformer, nsa)

@@ -17,7 +17,12 @@ N_COND_MSGS="${N_COND_MSGS:-250}"
 N_GEN_MSGS="${N_GEN_MSGS:-250}"
 GENERATION_SEED="${GENERATION_SEED:-2026}"
 ARCHITECTURE="${ARCHITECTURE:-mamba3}"
-WORLD_SIZE=4
+# 可配的 rank 数与 GPU 偏移。默认 4 张卡从 GPU0 起，与原版一致。
+# 需要偏移是因为 attach 到共享节点时 GPU0 常被别人的单卡作业占着，而
+# GPU1-3 是真空闲的：那种作业跑 --world_size=1，只在 GPU0 预分配，其余三张
+# 卡上只留 context，gtop 因为看到 PID 就标 held，实际可用。
+WORLD_SIZE=${BENCH_WORLD_SIZE:-4}
+GPU_OFFSET=${BENCH_GPU_OFFSET:-0}
 
 echo "[gen] host=$(hostname) ckpt=$CHECKPOINT_PATH step=$CHECKPOINT_STEP"
 
@@ -59,10 +64,10 @@ echo "[gen] sequences=$N_SEQUENCES cond=$N_COND_MSGS gen=$N_GEN_MSGS seed=$GENER
 echo "[gen] data=$INFER_DATA_DIR_NODE wide=$INFER_WIDE_BOOK_DIR_NODE"
 
 PIDS=()
-for LOCAL_RANK in 0 1 2 3; do
+for LOCAL_RANK in $(seq 0 $((WORLD_SIZE - 1))); do
     RANK_TMP="$JOB_TMP/rank_$LOCAL_RANK"
     mkdir -p "$RANK_TMP"
-    CUDA_VISIBLE_DEVICES=$LOCAL_RANK TMPDIR="$RANK_TMP" "$PYTHON" -u -B \
+    CUDA_VISIBLE_DEVICES=$((LOCAL_RANK + GPU_OFFSET)) TMPDIR="$RANK_TMP" "$PYTHON" -u -B \
         "$WORKDIR/run/base_model/runtime/inference.py" \
         --architecture="$ARCHITECTURE" \
         --token_mode=26tok \
