@@ -21,7 +21,23 @@
 | 5998320 | h3-fetch-smoke | PENDING | 1 节点 6h。下载 143 GB checkpoint + 34 GB VGGSound，参数普查，T2VA 冒烟 |
 | 5998498 | h3-nano-pipeline | PENDING (Dependency) | 1 节点 12h。语料 → 闸门 → 预训练 → FL2VA → CFG 蒸馏 → 评估 |
 
-排队原因：账户 fair-share 已用 82%，`FairShare=0.038`，全部作业 `Priority=1`。无 QOS/账户 TRES 硬限额，集群此刻有 99 节点空闲，等 backfill。
+**排队原因诊断（结论：集群侧，非我方配置）**
+
+最初我归因到 fair-share，这是**错的**：`PriorityWeightFairShare = 0`，实际上 Age/FairShare/JobSize/QOS/Partition **全部权重都是 0**，所以集群里每个作业的 Priority 都是 1，调度退化为按 job ID 的 FIFO。
+
+逐项排除：
+
+| 假设 | 检验 | 结论 |
+|---|---|---|
+| 资源不足 | `sinfo -p workq -t idle` = **140 节点空闲**；`nid010053` 显示 `CPUAlloc=0 AllocMem=0 gpu:4` | 排除 |
+| `--mem=0` 要整节点内存 | 另投探针作业（`--mem=100G`、32 CPU、5 分钟）→ **同样不动** | 排除 |
+| QOS / 账户限额 | `workq_qos`: MaxJobsPU=256, MaxSubmitPU=512（我只有 8 个）；assoc 无 GrpTRES | 排除 |
+| 优先级被压 | 全集群所有权重为 0，人人 Priority=1 | 非我方特有 |
+| slurmctld 故障 | `scontrol ping` → primary + backup 均 UP | 表面正常 |
+
+**关键证据**：全集群 pending 作业总共 8 个且全是我的，其中 `5995844` 于 **04:46 提交，已等 8 小时**（那是本仓库更早的 hybrid bench 作业，不是我这次提交的）。140 节点空闲 + FIFO + 8 小时不调度 = 调度器侧停摆或账户机时额度耗尽（后者我无权限查证：`sacctmgr show account` 返回 Access/permission denied）。
+
+这不在我可修复的范围内。作业留在队列中，一旦调度即自动开跑。
 
 ## 已完成并验证的部分
 

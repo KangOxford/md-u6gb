@@ -130,30 +130,41 @@ def parameter_census(model) -> dict[str, int]:
 # ----------------------------------------------------------------------------
 # Geometry
 # ----------------------------------------------------------------------------
+# The three geometry relations are the reference implementation's, not paraphrases:
+# `align_num_frames` snaps to `17n + 5`, `video_latent_num_frames` returns `5n + 2`,
+# and `audio_latent_num_frames` puts audio on the same wall-clock. Delegating rather
+# than keeping local copies is the same choice made for `build_packed_sequence`: a
+# copy that agrees today is a copy that can silently stop agreeing.
+from diffusers.modular_pipelines.minimax_h3.modular_pipeline import (  # noqa: E402
+    align_num_frames as _align_num_frames,
+    audio_latent_num_frames as _audio_latent_num_frames,
+    video_latent_num_frames as _video_latent_num_frames,
+)
+
+
 def snap_num_frames(num_frames: int) -> int:
-    """Round up to the next frame count the video VAE can decode, i.e. `17n + 5`."""
-    if num_frames <= 5:
-        return 5
-    return 17 * math.ceil((num_frames - 5) / 17) + 5
+    """Round up to the next frame count the video VAE can encode, i.e. `17n + 5`."""
+    return _align_num_frames(max(1, num_frames), VAE_FRAMES_PER_CHUNK, VAE_LATENTS_PER_CHUNK)
 
 
 def num_latent_frames_for(num_frames: int) -> int:
-    """Latent frames a `17n + 5` pixel-frame clip decodes from.
+    """Latent frames a `17n + 5` pixel-frame clip encodes to, i.e. `5n + 2`.
 
-    The VAE groups 17 pixel frames into 5 latent frames, and the `+5` tail is one
-    further group's worth of leading frames, so `17n + 5` pixel frames become
-    `5n + 2` latents. `_ROPE_FRAMES_PER_LATENT = (1, 4, 4, 4, 4)` is the same
-    grouping seen from the rotary clock: `1 + 4 + 4 + 4 + 4 == 17`.
+    The VAE encodes in 17-pixel-frame chunks keeping 5 latent frames each and drops
+    `token_drop = 3` trailing latents, so `17n + 5` frames give `5(n+1) - 3`. The
+    rotary clock states the same grouping from the other side:
+    `_ROPE_FRAMES_PER_LATENT = (1, 4, 4, 4, 4)` sums to 17.
 
-    This is the *predicted* relation; `preprocess_vggsound.py` asserts it against
-    the real VAE on the first clip it encodes and fails loudly if it is wrong.
+    `preprocess_vggsound.py` still asserts this against the real VAE on the first
+    clip it encodes, because agreeing with the reference's arithmetic is not the
+    same as agreeing with the reference's weights.
     """
-    return 5 * ((num_frames - 5) // 17) + 2
+    return _video_latent_num_frames(num_frames, VAE_FRAMES_PER_CHUNK, VAE_LATENTS_PER_CHUNK)
 
 
 def num_audio_latents_for(num_frames: int) -> int:
     """Audio latents per channel covering the same wall-clock as `num_frames`."""
-    return int(round(num_frames / FPS * AUDIO_LATENT_RATE))
+    return _audio_latent_num_frames(num_frames, FPS, AUDIO_LATENT_RATE)
 
 
 def patchify_video_latents(latents: torch.Tensor, patch_size=(1, 2, 2)) -> torch.Tensor:
