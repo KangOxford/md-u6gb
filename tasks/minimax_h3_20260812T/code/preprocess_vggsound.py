@@ -190,6 +190,32 @@ def build_text_bank(ckpt: Path, labels: list[str], out_path: Path, max_tokens: i
         ckpt / "text_encoder", dtype=torch.bfloat16
     ).to(device).eval()
 
+    # Qwen3-VL's `mm_token_type_ids` tag every token as 0 text / 1 image / 2 video and
+    # drive its per-modality rotary layout. The reference derives them with
+    # `processor.create_mm_token_type_ids`, which only exists in transformers >= 5.
+    # These prompts carry no vision block at all, so the tags are all zero by
+    # construction and the processor call is not needed -- but the assertion below
+    # has to stay, or a prompt that ever does carry an image would be silently
+    # encoded as if it were plain text.
+    vision_ids = {
+        getattr(processor, name, None)
+        for name in ("image_token_id", "video_token_id", "vision_start_token_id", "vision_end_token_id")
+    } | {
+        tokenizer.convert_tokens_to_ids(token)
+        for token in ("<|image_pad|>", "<|video_pad|>", "<|vision_start|>", "<|vision_end|>")
+        if token in tokenizer.get_vocab()
+    }
+    vision_ids.discard(None)
+
+    def mm_token_type_ids_for(token_ids: list[int]) -> torch.Tensor:
+        if vision_ids & set(token_ids):
+            raise SystemExit(
+                "[text] a prompt carries vision tokens; the all-text shortcut for "
+                "`mm_token_type_ids` no longer holds. Use "
+                "`processor.create_mm_token_type_ids` (transformers >= 5)."
+            )
+        return torch.zeros((1, len(token_ids)), dtype=torch.long, device=device)
+
     pad_id = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id
     # One extra row holds the *unconditional* embedding. The released H3 is
     # guidance-distilled and has no negative prompt at all, so the null branch is not
@@ -205,7 +231,7 @@ def build_text_bank(ckpt: Path, labels: list[str], out_path: Path, max_tokens: i
         lengths.append(len(token_ids))
         token_ids = (token_ids[:max_tokens] + [pad_id] * max(0, max_tokens - len(token_ids)))[:max_tokens]
         input_ids = torch.tensor([token_ids], dtype=torch.long, device=device)
-        mm_types = torch.tensor(processor.create_mm_token_type_ids([token_ids]), dtype=torch.long, device=device)
+        mm_types = mm_token_type_ids_for(token_ids)
         out = encoder.model(input_ids=input_ids, mm_token_type_ids=mm_types, output_hidden_states=True)
         embeds[index] = out.hidden_states[H.TEXT_ENCODER_LAYER][0].to(torch.float16).cpu()
         if index % 50 == 0:
