@@ -127,6 +127,8 @@ def main() -> int:
     parser.add_argument("--steps", type=int, default=32)
     parser.add_argument("--guidance-scale", type=float, default=5.0, help="0 for a distilled checkpoint")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--save-decoded", action="store_true",
+                        help="Also store decoded frames and waveforms, which evaluate.py avsync needs")
     parser.add_argument("--device", default="cuda:0")
     args = parser.parse_args()
 
@@ -185,9 +187,17 @@ def main() -> int:
             export_to_video(frames, str(path), fps=int(H.FPS))
         print(f"[sample] wrote {path}", flush=True)
 
-    torch.save({"video_latents": video_lat.cpu(), "audio_latents": audio_lat.cpu(),
-                "labels": wanted, "step": blob["step"], "guidance": args.guidance_scale},
-               out_dir / "samples.pt")
+    payload = {"video_latents": video_lat.cpu(), "audio_latents": audio_lat.cpu(),
+               "labels": wanted, "step": blob["step"], "guidance": args.guidance_scale,
+               "steps": args.steps, "forward_passes": passes, "sample_seconds": time.time() - t0}
+    if args.save_decoded:
+        # `evaluate.py avsync` correlates the soundtrack envelope against visible
+        # motion, so it needs the decoded media, not the latents.
+        payload["frames"] = [pixels[i].permute(1, 2, 3, 0).numpy() for i in range(len(wanted))]
+        payload["waves"] = [waves[i].numpy() for i in range(len(wanted))]
+    torch.save(payload, out_dir / "samples.pt")
+    print(f"[sample] wrote {out_dir/'samples.pt'}"
+          f"{' (with decoded media)' if args.save_decoded else ''}", flush=True)
     return 0
 
 

@@ -419,7 +419,10 @@ class FlowBatch:
 def make_flow_batch(video_latents: torch.Tensor, audio_latents: torch.Tensor,
                     text_embeds: torch.Tensor, layout: PackedLayout,
                     generator=None, timestep_mode: str = "uniform",
-                    condition_rows: torch.Tensor | None = None) -> FlowBatch:
+                    condition_rows: torch.Tensor | None = None,
+                    video_shift: float = VIDEO_FLOW_SHIFT,
+                    audio_shift: float = AUDIO_FLOW_SHIFT,
+                    fixed_t: tuple[float, float] | None = None) -> FlowBatch:
     """Noise one batch and assemble the transformer's arguments.
 
     Args:
@@ -440,8 +443,15 @@ def make_flow_batch(video_latents: torch.Tensor, audio_latents: torch.Tensor,
     device = video_latents.device
     batch = video_latents.shape[0]
 
-    video_t = sample_timesteps(batch, VIDEO_FLOW_SHIFT, device, generator, timestep_mode)
-    audio_t = sample_timesteps(batch, AUDIO_FLOW_SHIFT, device, generator, timestep_mode)
+    if fixed_t is not None:
+        # Held-out evaluation pins the timesteps so two checkpoints are scored on the
+        # same noise levels; a fresh draw per checkpoint would put most of the
+        # variance between runs into the draw rather than into the models.
+        video_t = torch.full((batch,), float(fixed_t[0]), device=device)
+        audio_t = torch.full((batch,), float(fixed_t[1]), device=device)
+    else:
+        video_t = sample_timesteps(batch, video_shift, device, generator, timestep_mode)
+        audio_t = sample_timesteps(batch, audio_shift, device, generator, timestep_mode)
 
     video_rows = patchify_video_latents(video_latents)                 # (B, Nv_gen, 96)
     audio_rows = pack_audio_channel_major(audio_latents)               # (B, Na, 32)

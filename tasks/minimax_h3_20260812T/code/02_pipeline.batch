@@ -1,0 +1,147 @@
+#!/bin/bash
+# Stages 2-6 of the MiniMax-H3 replication in one allocation.
+#
+# One job rather than five because this account's fair share is spread thin across
+# other running experiments and every submission sits at Priority=1; five queue waits
+# would dominate the wall-clock. Every stage checkpoints, so a timeout resumes rather
+# than restarts, and each stage is gated on the previous one's exit code.
+#
+#   [2] latent corpus (text bank + VAE encoding)   -> data/latents/
+#   [G] VAE round-trip gate                        -> stop if the corpus is wrong
+#   [3] pretrain T2VA from scratch                 -> runs/pretrain-*/
+#   [4] post-train FL2VA (anchors at t=0.999)      -> runs/sft_fl2va-*/
+#   [5] distill guidance into the weights          -> runs/distill_cfg-*/
+#   [6] sample + evaluate E1..E4, E7               -> runs/eval-*/
+
+#SBATCH --account=brics.u6gb
+#SBATCH --partition=workq
+#SBATCH --job-name=h3-nano-pipeline
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=4
+#SBATCH --cpus-per-task=72
+#SBATCH --mem=0
+#SBATCH --time=12:00:00
+#SBATCH --output=/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T/logs/pipeline_%j.out
+#SBATCH --error=/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T/logs/pipeline_%j.out
+
+set -uo pipefail
+
+TASKDIR=/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T
+PY="$TASKDIR/venv/bin/python"
+RUNS="$TASKDIR/runs"
+EVAL="$RUNS/eval_${SLURM_JOB_ID}"
+mkdir -p "$RUNS" "$EVAL"
+
+export PYTHONUNBUFFERED=1
+export TOKENIZERS_PARALLELISM=false
+export HF_HOME="${TMPDIR:-/tmp}/hf_home"
+export WANDB_DIR="${TMPDIR:-/tmp}"
+export WANDB_MODE=online
+export OMP_NUM_THREADS=8
+mkdir -p "$HF_HOME"
+
+# Configuration shared by every stage. `PRETRAIN_STEPS` is deliberately modest: the
+# point of this run is a working recipe end to end, not a converged generator.
+MODEL=${MODEL:-nano}
+PRETRAIN_STEPS=${PRETRAIN_STEPS:-24000}
+SFT_STEPS=${SFT_STEPS:-6000}
+DISTILL_STEPS=${DISTILL_STEPS:-4000}
+BATCH=${BATCH:-8}
+CLIP_LIMIT=${CLIP_LIMIT:-20000}
+GUIDANCE=${GUIDANCE:-5.0}
+
+PRE_RUN="pretrain-${MODEL}-${SLURM_JOB_ID}"
+SFT_RUN="sft_fl2va-${MODEL}-${SLURM_JOB_ID}"
+DIS_RUN="distill_cfg-${MODEL}-${SLURM_JOB_ID}"
+
+echo "=== job $SLURM_JOB_ID on $(hostname) at $(date -u +%FT%TZ) ==="
+nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader
+echo "model=$MODEL pretrain=$PRETRAIN_STEPS sft=$SFT_STEPS distill=$DISTILL_STEPS batch=$BATCH/gpu"
+echo
+
+step_banner () { echo; echo "======================================================================"; echo "=== $1  ($(date -u +%FT%TZ))"; echo "======================================================================"; }
+
+# A trailing `ls` would otherwise become the script's exit status and report success
+# for a run whose middle stages failed. Non-fatal failures accumulate here instead.
+SOFT_FAILURES=0
+note_failure () { SOFT_FAILURES=$((SOFT_FAILURES + 1)); echo "WARN: $1"; }
+
+# --------------------------------------------------------------- [2] corpus
+if [ -f "$TASKDIR/data/latents/manifest.json" ]; then
+    step_banner "[2/6] latent corpus already present, skipping"
+else
+    step_banner "[2/6] building the latent corpus"
+    "$PY" "$TASKDIR/code/preprocess_vggsound.py" \
+        --root "$TASKDIR" --phase both --shards 00,01 \
+        --num-frames 73 --size 256 --max-text-tokens 96 \
+        --per-shard 2000 --decode-workers 24 --limit "$CLIP_LIMIT" --device cuda:0
+    RC=$?; [ $RC -ne 0 ] && { echo "FATAL: preprocessing failed rc=$RC"; exit $RC; }
+fi
+
+# --------------------------------------------------------------- [G] gate
+step_banner "[G] VAE round-trip gate"
+# A corpus built with the wrong pixel convention or the wrong latent statistics still
+# trains to a plausible loss curve and generates noise. This is the cheap way to catch
+# that before spending the rest of the allocation on it.
+"$PY" "$TASKDIR/code/evaluate.py" --root "$TASKDIR" --device cuda:0 \
+    --out "$EVAL/E6_roundtrip.json" roundtrip --shard 0 --n 16 --num-frames 73 --size 256
+RC=$?; [ $RC -ne 0 ] && { echo "FATAL: round-trip gate failed rc=$RC"; exit $RC; }
+
+# --------------------------------------------------------------- [3] pretrain
+step_banner "[3/6] pretraining T2VA from scratch"
+torchrun --nproc_per_node=4 --master_port=29511 "$TASKDIR/code/train.py" \
+    --root "$TASKDIR" --stage pretrain --model "$MODEL" --run-name "$PRE_RUN" \
+    --steps "$PRETRAIN_STEPS" --batch-size "$BATCH" --lr 3e-4 --warmup 1000 \
+    --cfg-dropout 0.1 --ckpt-every 2000 --log-every 100
+RC=$?; [ $RC -ne 0 ] && { echo "FATAL: pretraining failed rc=$RC"; exit $RC; }
+
+"$PY" "$TASKDIR/code/evaluate.py" --root "$TASKDIR" --device cuda:0 \
+    --out "$EVAL/E3_heldout_pretrain.json" heldout --checkpoint "$RUNS/$PRE_RUN/checkpoints" --n 256
+
+# --------------------------------------------------------------- [4] fl2va
+step_banner "[4/6] post-training FL2VA (anchors held at t=0.999)"
+torchrun --nproc_per_node=4 --master_port=29512 "$TASKDIR/code/train.py" \
+    --root "$TASKDIR" --stage sft_fl2va --model "$MODEL" --run-name "$SFT_RUN" \
+    --teacher "$RUNS/$PRE_RUN/checkpoints" --anchors first,last \
+    --steps "$SFT_STEPS" --batch-size "$BATCH" --lr 1e-4 --warmup 200 \
+    --cfg-dropout 0.1 --ckpt-every 1000 --log-every 100
+RC=$?; [ $RC -ne 0 ] && note_failure "fl2va post-training failed rc=$RC (continuing)"
+
+"$PY" "$TASKDIR/code/evaluate.py" --root "$TASKDIR" --device cuda:0 \
+    --out "$EVAL/E4_anchors.json" anchors --checkpoint "$RUNS/$SFT_RUN/checkpoints" --n 128
+
+# --------------------------------------------------------------- [5] distill
+step_banner "[5/6] distilling guidance into the weights (w=$GUIDANCE)"
+torchrun --nproc_per_node=4 --master_port=29513 "$TASKDIR/code/train.py" \
+    --root "$TASKDIR" --stage distill_cfg --model "$MODEL" --run-name "$DIS_RUN" \
+    --teacher "$RUNS/$PRE_RUN/checkpoints" --guidance-scale "$GUIDANCE" \
+    --steps "$DISTILL_STEPS" --batch-size "$BATCH" --lr 5e-5 --warmup 200 \
+    --ckpt-every 1000 --log-every 100
+RC=$?; [ $RC -ne 0 ] && note_failure "distillation failed rc=$RC (continuing)"
+
+# --------------------------------------------------------------- [6] evaluate
+step_banner "[6/6] sampling and evaluating"
+# E2: the guided teacher pays two forward passes per step, the distilled student one.
+"$PY" "$TASKDIR/code/sample.py" --root "$TASKDIR" --checkpoint "$RUNS/$PRE_RUN/checkpoints" \
+    --out "$EVAL/samples_guided" --steps 32 --guidance-scale "$GUIDANCE" --save-decoded --device cuda:0
+"$PY" "$TASKDIR/code/sample.py" --root "$TASKDIR" --checkpoint "$RUNS/$DIS_RUN/checkpoints" \
+    --out "$EVAL/samples_distilled" --steps 32 --guidance-scale 0 --save-decoded --device cuda:0
+
+for VARIANT in guided distilled; do
+    "$PY" "$TASKDIR/code/evaluate.py" --root "$TASKDIR" --device cuda:0 \
+        --out "$EVAL/E1_avsync_${VARIANT}.json" avsync --samples "$EVAL/samples_${VARIANT}/samples.pt"
+done
+"$PY" "$TASKDIR/code/evaluate.py" --root "$TASKDIR" --device cuda:0 \
+    --out "$EVAL/E3_heldout_distilled.json" heldout --checkpoint "$RUNS/$DIS_RUN/checkpoints" --n 256
+
+echo
+echo "=== finished at $(date -u +%FT%TZ) ==="
+echo "evaluation: $EVAL"
+ls "$EVAL"
+if [ "$SOFT_FAILURES" -gt 0 ]; then
+    echo "=== $SOFT_FAILURES stage(s) failed; exiting non-zero so sacct records it ==="
+    exit 1
+fi
+echo "=== all stages OK ==="
+exit 0

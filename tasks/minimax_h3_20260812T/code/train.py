@@ -170,19 +170,22 @@ def lr_at(step: int, base_lr: float, warmup: int, total: int, min_ratio: float =
 # Stages
 # ----------------------------------------------------------------------------
 def make_condition_rows(video_latents: torch.Tensor, anchors: tuple[str, ...],
-                        generator=None) -> torch.Tensor:
+                        generator=None, anchor_t: float = H.KEYFRAME_NOISE_AUG) -> torch.Tensor:
     """Build the keyframe anchor rows of an `fl2va` batch.
 
-    The anchors are the clean latent frames themselves, noised to `t = 0.999`
-    exactly as `keyframe_noise_aug` prescribes, then patchified. They lead the video
+    The anchors are the clean latent frames themselves, noised to `t = 0.999` --
+    what `keyframe_noise_aug` prescribes -- and then patchified. They lead the video
     rows in the packed sequence and never contribute to the loss.
+
+    `anchor_t` is a parameter rather than the constant so that evaluation can sweep
+    it: if 0.999 really is a property of how the released model was trained, a model
+    trained the same way should degrade at exactly `t = 1.0`, which it never saw.
     """
     rows = []
     for anchor in anchors:
         frame = video_latents[:, :, :1] if anchor == "first" else video_latents[:, :, -1:]
         noise = torch.randn(frame.shape, device=frame.device, dtype=frame.dtype, generator=generator)
-        noised = H.add_noise(frame, noise, torch.full((frame.shape[0],), H.KEYFRAME_NOISE_AUG,
-                                                      device=frame.device))
+        noised = H.add_noise(frame, noise, torch.full((frame.shape[0],), anchor_t, device=frame.device))
         rows.append(H.patchify_video_latents(noised))
     return torch.cat(rows, dim=1)
 
@@ -201,6 +204,10 @@ def main() -> int:
     parser.add_argument("--cfg-dropout", type=float, default=0.1)
     parser.add_argument("--audio-weight", type=float, default=1.0)
     parser.add_argument("--timestep-mode", choices=["uniform", "logit_normal"], default="uniform")
+    parser.add_argument("--video-shift", type=float, default=H.VIDEO_FLOW_SHIFT,
+                        help="Video sigma shift; 12.0 is the released checkpoint's")
+    parser.add_argument("--audio-shift", type=float, default=H.AUDIO_FLOW_SHIFT,
+                        help="Audio sigma shift; 3.0 is the released checkpoint's")
     parser.add_argument("--anchors", default="first", help="fl2va anchors, e.g. 'first' or 'first,last'")
     parser.add_argument("--guidance-scale", type=float, default=5.0, help="w baked in by distill_cfg")
     parser.add_argument("--teacher", default=None, help="Checkpoint dir the stage initializes/distills from")
@@ -335,7 +342,8 @@ def main() -> int:
 
         condition_rows = make_condition_rows(video, anchors) if anchors else None
         batch = H.make_flow_batch(video, audio, text, layout, timestep_mode=args.timestep_mode,
-                                  condition_rows=condition_rows)
+                                  condition_rows=condition_rows,
+                                  video_shift=args.video_shift, audio_shift=args.audio_shift)
 
         if args.stage == "distill_cfg":
             null_text = corpus.text[torch.full_like(labels, corpus.null_index)].to(device, torch.float32)
