@@ -1,0 +1,101 @@
+{
+  "architecture": "mamba3",
+  "checkpoint_root": "/lus/lfs1aip2/projects/public/u6gb/sigma-0/checkpoints/j5877859_30nkkohd_5877859",
+  "convergence_step": 27000,
+  "results": [
+    {
+      "step": 3000,
+      "validation_accuracy": 0.8258371394230769,
+      "validation_ce": 0.7495752573013306
+    },
+    {
+      "step": 6000,
+      "validation_accuracy": 0.874516826923077,
+      "validation_ce": 0.5905571579933167
+    },
+    {
+      "step": 9000,
+      "validation_accuracy": 0.8808326322115385,
+      "validation_ce": 0.5681487917900085
+    },
+    {
+      "step": 12000,
+      "validation_accuracy": 0.8823245192307693,
+      "validation_ce": 0.5632061958312988
+    },
+    {
+      "step": 15000,
+      "validation_accuracy": 0.8848467548076923,
+      "validation_ce": 0.5524027347564697
+    },
+    {
+      "step": 18000,
+      "validation_accuracy": 0.8863897235576923,
+      "validation_ce": 0.5443620085716248
+    },
+    {
+      "step": 21000,
+      "validation_accuracy": 0.8876090745192308,
+      "validation_ce": 0.5398598909378052
+    },
+    {
+      "step": 24000,
+      "validation_accuracy": 0.8883563701923077,
+      "validation_ce": 0.5364702343940735
+    },
+    {
+      "step": 27000,
+      "validation_accuracy": 0.8888611778846154,
+      "validation_ce": 0.5344997048377991
+    },
+    {
+      "step": 30000,
+      "validation_accuracy": 0.8891268028846154,
+      "validation_ce": 0.5331306457519531
+    },
+    {
+      "step": 32001,
+      "validation_accuracy": 0.8893143028846154,
+      "validation_ce": 0.5326104164123535
+    }
+  ],
+  "schema_version": 1,
+  "seed": 42,
+  "selection": {
+    "best_validation": {
+      "step": 32001,
+      "validation_ce": 0.5326104164123535
+    },
+    "iso_ce": {
+      "99": {
+        "delta": -98.25042474269867,
+        "status": "outside_tolerance",
+        "step": 3000,
+        "target": 99.0,
+        "target_reached": true,
+        "validation_ce": 0.7495752573013306
+      }
+    }
+  },
+  "target_tolerance": 0.01,
+  "targets": [
+    99.0
+  ],
+  "token_mode": "26tok",
+  "validation": {
+    "batch_size": 8,
+    "dataset_size": 226002,
+    "date_range": [
+      "2026-01-01",
+      "2026-01-31"
+    ],
+    "max_batches": 32,
+    "sampling": "uniform_ticker_batches_without_replacement",
+    "sampling_seed": 42,
+    "sequences": 256,
+    "tickers": [
+      "GOOG"
+    ],
+    "token_values": 3328000
+  }
+}
