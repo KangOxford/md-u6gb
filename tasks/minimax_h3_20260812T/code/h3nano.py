@@ -434,11 +434,14 @@ def make_flow_batch(video_latents: torch.Tensor, audio_latents: torch.Tensor,
             None for the text-only task. Anchors are held at `KEYFRAME_NOISE_AUG`
             and are prepended to the video rows, matching the packed order.
 
-    One timestep is drawn *per modality per batch item*, but a single layout serves
-    the whole batch, so the row-timestep table is built from item 0's draw and every
-    item is noised at its own. That is a deliberate simplification of the reference,
-    which serves one request at a time: see `README` in the task directory. With
-    `--batch-size 1` the two coincide exactly.
+    **One timestep pair per batch, not per item.** `timestep_indices` is a
+    `(seq_len,)` tensor, not `(batch, seq_len)`: the transformer's batch axis is a
+    pure replication axis and the architecture cannot express a different noise level
+    per item. Drawing per item and noising each at its own `t` while the AdaLN table
+    states item 0's would train the model against a timestep its input does not have,
+    which teaches it to ignore `t`. The two modalities still draw *independently* of
+    each other, which is the part that matters: video and audio each get their own
+    shifted schedule inside the same forward pass.
     """
     device = video_latents.device
     batch = video_latents.shape[0]
@@ -450,8 +453,8 @@ def make_flow_batch(video_latents: torch.Tensor, audio_latents: torch.Tensor,
         video_t = torch.full((batch,), float(fixed_t[0]), device=device)
         audio_t = torch.full((batch,), float(fixed_t[1]), device=device)
     else:
-        video_t = sample_timesteps(batch, video_shift, device, generator, timestep_mode)
-        audio_t = sample_timesteps(batch, audio_shift, device, generator, timestep_mode)
+        video_t = sample_timesteps(1, video_shift, device, generator, timestep_mode).expand(batch)
+        audio_t = sample_timesteps(1, audio_shift, device, generator, timestep_mode).expand(batch)
 
     video_rows = patchify_video_latents(video_latents)                 # (B, Nv_gen, 96)
     audio_rows = pack_audio_channel_major(audio_latents)               # (B, Na, 32)
@@ -471,6 +474,14 @@ def make_flow_batch(video_latents: torch.Tensor, audio_latents: torch.Tensor,
         noisy_video = torch.cat([condition_rows, noisy_video], dim=1)
         video_target = torch.cat([torch.zeros_like(condition_rows), video_target], dim=1)
 
+    # Guard against a regression to per-item timesteps: the row-timestep table below
+    # can only state one value per modality, so a batch whose items were noised at
+    # different levels would be trained against a timestep it does not have.
+    if batch > 1 and not (bool(video_t.eq(video_t[0]).all()) and bool(audio_t.eq(audio_t[0]).all())):
+        raise ValueError(
+            "MiniMax-H3 shares one `timestep_indices` across the batch, so every item "
+            "must be noised at the same (video, audio) timestep pair."
+        )
     timestep, timestep_indices = build_row_timesteps(
         layout, float(video_t[0]), float(audio_t[0])
     )

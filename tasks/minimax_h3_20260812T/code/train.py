@@ -46,6 +46,7 @@ from pathlib import Path
 
 import torch
 import torch.distributed as dist
+from contextlib import nullcontext
 from torch.nn.parallel import DistributedDataParallel
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -197,7 +198,9 @@ def main() -> int:
     parser.add_argument("--run-name", default=None)
     parser.add_argument("--model", choices=["micro", "nano", "small"], default="nano")
     parser.add_argument("--steps", type=int, default=40000)
-    parser.add_argument("--batch-size", type=int, default=8, help="Per GPU")
+    parser.add_argument("--batch-size", type=int, default=8, help="Per GPU, per micro-batch")
+    parser.add_argument("--grad-accum", type=int, default=2,
+                        help="Micro-batches per optimizer step. MiniMax-H3 shares one timestep\n                             across the batch, so each micro-batch is the unit of timestep\n                             diversity: K of them means K noise levels per update.")
     parser.add_argument("--lr", type=float, default=3e-4)
     parser.add_argument("--warmup", type=int, default=1000)
     parser.add_argument("--weight-decay", type=float, default=0.01)
@@ -338,32 +341,42 @@ def main() -> int:
         # branches for the teacher, so it draws without dropout and builds the null
         # branch explicitly.
         dropout = 0.0 if args.stage == "distill_cfg" else args.cfg_dropout
-        video, audio, text, labels = corpus.sample(args.batch_size, device, generator, dropout)
+        accum_logs = []
+        for micro in range(args.grad_accum):
+            video, audio, text, labels = corpus.sample(args.batch_size, device, generator, dropout)
 
-        condition_rows = make_condition_rows(video, anchors) if anchors else None
-        batch = H.make_flow_batch(video, audio, text, layout, timestep_mode=args.timestep_mode,
-                                  condition_rows=condition_rows,
-                                  video_shift=args.video_shift, audio_shift=args.audio_shift)
+            condition_rows = make_condition_rows(video, anchors) if anchors else None
+            batch = H.make_flow_batch(video, audio, text, layout, timestep_mode=args.timestep_mode,
+                                      condition_rows=condition_rows,
+                                      video_shift=args.video_shift, audio_shift=args.audio_shift)
 
-        if args.stage == "distill_cfg":
-            null_text = corpus.text[torch.full_like(labels, corpus.null_index)].to(device, torch.float32)
-            with torch.no_grad():
-                cond_v, cond_a = teacher(**batch.transformer_kwargs())
-                uncond_kwargs = dict(batch.transformer_kwargs())
-                uncond_kwargs["encoder_hidden_states"] = null_text
-                unc_v, unc_a = teacher(**uncond_kwargs)
-                w = args.guidance_scale
-                batch.video_target = unc_v + w * (cond_v - unc_v)
-                batch.audio_target = unc_a + w * (cond_a - unc_a)
+            if args.stage == "distill_cfg":
+                null_text = corpus.text[torch.full_like(labels, corpus.null_index)].to(device, torch.float32)
+                with torch.no_grad():
+                    cond_v, cond_a = teacher(**batch.transformer_kwargs())
+                    uncond_kwargs = dict(batch.transformer_kwargs())
+                    uncond_kwargs["encoder_hidden_states"] = null_text
+                    unc_v, unc_a = teacher(**uncond_kwargs)
+                    w = args.guidance_scale
+                    batch.video_target = unc_v + w * (cond_v - unc_v)
+                    batch.audio_target = unc_a + w * (cond_a - unc_a)
 
-        video_pred, audio_pred = model(**batch.transformer_kwargs())
-        loss, logs = H.flow_loss(video_pred, audio_pred, batch, audio_weight=args.audio_weight)
+            video_pred, audio_pred = model(**batch.transformer_kwargs())
+            loss, logs = H.flow_loss(video_pred, audio_pred, batch, audio_weight=args.audio_weight)
 
-        loss.backward()
+            # DDP all-reduces on every backward; suppress it on all but the last
+            # micro-batch so one optimizer step costs one gradient exchange.
+            is_last = micro == args.grad_accum - 1
+            context = model.no_sync() if (world > 1 and not is_last) else nullcontext()
+            with context:
+                (loss / args.grad_accum).backward()
+            accum_logs.append(logs)
+
         grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
         optimizer.step()
         optimizer.zero_grad(set_to_none=True)
 
+        logs = {k: sum(d[k] for d in accum_logs) / len(accum_logs) for k in accum_logs[0]}
         window.append(logs)
         if is_main and (step + 1) % args.log_every == 0:
             mean = {k: sum(d[k] for d in window) / len(window) for k in window[0]}
