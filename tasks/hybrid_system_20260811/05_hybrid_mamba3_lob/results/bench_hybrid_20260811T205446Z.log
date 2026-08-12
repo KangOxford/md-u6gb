@@ -1,0 +1,13 @@
+device: NVIDIA GH200 120GB (gpu)  jax 0.9.0.1
+[backbone] architecture=hybrid_mamba3 wrapper=external
+[backbone] hybrid attention at trunk layers (3,)
+shape: batch=4 seq=13000 (500 msg x 26 tok) d_model=640 n_layers=6
+params: 35,435,423   (init 73.6s)
+compile + first step: 206.1s   loss=8.5441
+  step 0: 0.409s  loss=8.2798
+  step 1: 0.408s  loss=8.1054
+  step 2: 0.424s  loss=8.0064
+  step 3: 0.406s  loss=7.9057
+  step 4: 0.410s  loss=7.8111
+
+RESULT arch=hybrid_mamba3 params=35435423 median_s_per_step=0.4092 tokens_per_s=127089 peak_hbm_gb=67.1 attn_layers=(3,)

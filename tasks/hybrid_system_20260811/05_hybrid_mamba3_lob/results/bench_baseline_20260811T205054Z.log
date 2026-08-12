@@ -1,0 +1,12 @@
+device: NVIDIA GH200 120GB (gpu)  jax 0.9.0.1
+[backbone] architecture=mamba3 wrapper=external
+shape: batch=4 seq=13000 (500 msg x 26 tok) d_model=640 n_layers=6
+params: 33,610,439   (init 57.7s)
+compile + first step: 158.3s   loss=8.3801
+  step 0: 0.370s  loss=8.0585
+  step 1: 0.375s  loss=7.9419
+  step 2: 0.376s  loss=7.8276
+  step 3: 0.368s  loss=7.7346
+  step 4: 0.370s  loss=7.6558
+
+RESULT arch=mamba3 params=33610439 median_s_per_step=0.3703 tokens_per_s=140413 peak_hbm_gb=71.6 attn_layers=()
