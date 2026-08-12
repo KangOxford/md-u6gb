@@ -9,6 +9,32 @@ set -uo pipefail
 : "${ATTACH_JOBID:?}" "${NODE:?}" "${ARCHITECTURE:?}" "${CHECKPOINT_PATH:?}" "${CHECKPOINT_STEP:?}"
 TASKDIR=/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob
 
+# 时间闸门：attach 的 step 是宿主 allocation 的孩子，**宿主到点，step 一起死**。
+#
+# 2026-08-12 12:59:45：三个 bench 同时被 CANCELLED，同一秒。查下来是宿主
+# 5980745 跑满 24h 自然 COMPLETED（Elapsed 23:58:14），而我在它只剩约 18 分钟
+# 时挂了三个各需约 40 分钟的任务。三份生成全部作废。
+# 物理闸门只回答「卡是不是空的」，回答不了「这个分配还能活多久」。
+MIN_WALLTIME_MIN=${MIN_WALLTIME_MIN:-60}
+LEFT=$(squeue -j "$ATTACH_JOBID" -h -o "%L" 2>/dev/null | tr -d ' ')
+if [ -n "$LEFT" ]; then
+  # %L 形如 D-HH:MM:SS / HH:MM:SS / MM:SS
+  LEFT_MIN=$(python3 -c "
+import sys
+s=sys.argv[1]; d=0
+if '-' in s: d,s=s.split('-',1); d=int(d)
+p=[int(x) for x in s.split(':')]
+while len(p)<3: p.insert(0,0)
+print(d*1440 + p[0]*60 + p[1] + (1 if p[2] else 0))" "$LEFT" 2>/dev/null)
+  echo "[gate] 宿主 $ATTACH_JOBID 剩余 walltime: $LEFT (${LEFT_MIN:-?} min)"
+  if [ -n "$LEFT_MIN" ] && [ "$LEFT_MIN" -lt "$MIN_WALLTIME_MIN" ]; then
+    echo "FATAL 宿主只剩 ${LEFT_MIN} min，低于所需 ${MIN_WALLTIME_MIN} min。换一个分配，别挂在这。"
+    exit 2
+  fi
+else
+  echo "[gate] 警告：读不到 $ATTACH_JOBID 的剩余时间，跳过时间闸门"
+fi
+
 # 物理闸门：**只看我要用的那几张卡**，不看整个节点。
 #
 # 节点级判定在共享 allocation 上过严。这里的邻居跑的是 --world_size=1 的单卡
