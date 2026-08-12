@@ -1,0 +1,125 @@
+{
+  "benchmark_revision": "1128d37c9ceeaf5a74db25396d8bb238ef0ceb16",
+  "benchmark_root": "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/AlphaTrade/lob_pipeline",
+  "distances": {
+    "ks": 0.10435253489496585,
+    "l1": 0.15157552987982775,
+    "wasserstein": 0.18878346829179113
+  },
+  "expected_feature_count": 21,
+  "feature_count": 21,
+  "feature_scores": {
+    "ask_cancellation_depth": {
+      "ks": 0.14870686270917632,
+      "l1": 0.1727048885598641,
+      "wasserstein": 0.29943475052373875
+    },
+    "ask_cancellation_ticks": {
+      "ks": 0.14787812271349432,
+      "l1": 0.2183878640838808,
+      "wasserstein": 0.29930692937656794
+    },
+    "ask_volume": {
+      "ks": 0.04639923469387752,
+      "l1": 0.06897321428571429,
+      "wasserstein": 0.06373803991156032
+    },
+    "ask_volume_touch": {
+      "ks": 0.05868367346938774,
+      "l1": 0.15548852040816324,
+      "wasserstein": 0.06555214377205862
+    },
+    "bid_cancellation_depth": {
+      "ks": 0.15668883961566893,
+      "l1": 0.1914303166211955,
+      "wasserstein": 0.3029351436606402
+    },
+    "bid_cancellation_ticks": {
+      "ks": 0.15669446196744075,
+      "l1": 0.2300793573105234,
+      "wasserstein": 0.3025232580857789
+    },
+    "bid_volume": {
+      "ks": 0.04474617346938775,
+      "l1": 0.06791964285714286,
+      "wasserstein": 0.07161388160062893
+    },
+    "bid_volume_touch": {
+      "ks": 0.054130102040816336,
+      "l1": 0.15943112244897958,
+      "wasserstein": 0.052684954188657686
+    },
+    "limit_ask_order_depth": {
+      "ks": 0.15078318133660173,
+      "l1": 0.173412995716799,
+      "wasserstein": 0.2163736562772109
+    },
+    "limit_ask_order_ticks": {
+      "ks": 0.145997294483865,
+      "l1": 0.23549830547604206,
+      "wasserstein": 0.21995743191051303
+    },
+    "limit_bid_order_depth": {
+      "ks": 0.17151146341839807,
+      "l1": 0.1971434599037275,
+      "wasserstein": 0.32004083499051206
+    },
+    "limit_bid_order_ticks": {
+      "ks": 0.1714651673602502,
+      "l1": 0.2430390547882203,
+      "wasserstein": 0.3189224111878324
+    },
+    "log_inter_arrival_time": {
+      "ks": 0.01424831980985164,
+      "l1": 0.026966283501352332,
+      "wasserstein": 0.012617005313832627
+    },
+    "log_time_to_cancel": {
+      "ks": 0.0955252358863331,
+      "l1": 0.11689150264184792,
+      "wasserstein": 0.1834099010558904
+    },
+    "ofi": {
+      "ks": 0.07922406462585033,
+      "l1": 0.16047831632653062,
+      "wasserstein": 0.23623532990734847
+    },
+    "ofi_down": {
+      "ks": 0.11128113927699186,
+      "l1": 0.13456378638423983,
+      "wasserstein": 0.18602990592932717
+    },
+    "ofi_stay": {
+      "ks": 0.07972182987768514,
+      "l1": 0.1606177971853803,
+      "wasserstein": 0.23782606225288283
+    },
+    "ofi_up": {
+      "ks": 0.10033023514579856,
+      "l1": 0.11220564464893075,
+      "wasserstein": 0.18867032551109592
+    },
+    "orderbook_imbalance": {
+      "ks": 0.049137755102040825,
+      "l1": 0.10224872448979593,
+      "wasserstein": 0.10230243027997886
+    },
+    "spread": {
+      "ks": 0.1070267857142857,
+      "l1": 0.1070969387755102,
+      "wasserstein": 0.24092266963297698
+    },
+    "vol_per_min": {
+      "ks": 0.1012232900770807,
+      "l1": 0.14850839106254268,
+      "wasserstein": 0.04335576875858056
+    }
+  },
+  "ks21": 0.10435253489496585,
+  "l1_21": 0.15157552987982775,
+  "period": "2026-01",
+  "run_name": "hybrid-m3-nemotron-pefix-step32001",
+  "score_path": "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T130833Z_j5992008_hybfix_s2027_102701/lobbench/results/scores/scores_uncond_GOOG_hybrid-m3-nemotron-pefix-step32001_hybfix_32001_s2027.pkl",
+  "stock": "GOOG",
+  "ws21": 0.18878346829179113
+}
