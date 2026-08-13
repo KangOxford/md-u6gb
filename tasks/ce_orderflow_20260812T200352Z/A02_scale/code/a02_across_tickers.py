@@ -84,6 +84,9 @@ def boot_ci(v, n_boot, rng):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rollouts", required=True)
+    ap.add_argument("--prefix", default="dfm_a02_",
+                    help="产物名前缀；换 checkpoint 时它带着 checkpoint 身份，"
+                         "所以分析必须能指定，否则会去 glob 上一个残差的 npz")
     ap.add_argument("--month", default="2026-01")
     ap.add_argument("--out", required=True)
     ap.add_argument("--tick", type=int, default=100)
@@ -94,12 +97,12 @@ def main():
     ap.add_argument("--seed", type=int, default=20260813)
     a = ap.parse_args()
 
-    pat = os.path.join(a.rollouts, f"dfm_a02_*_{a.month}_learned.npz")
+    pat = os.path.join(a.rollouts, f"{a.prefix}*_{a.month}_learned.npz")
     per, skipped = {}, {}
     files = sorted(glob.glob(pat))
     print(f"[A02] {len(files)} learned npz under {a.rollouts}", flush=True)
     for i, f in enumerate(files):
-        tk = os.path.basename(f).replace("dfm_a02_", "").replace(
+        tk = os.path.basename(f).replace(a.prefix, "").replace(
             f"_{a.month}_learned.npz", "")
         r = f.replace("_learned.npz", "_random.npz")
         res, err = one_ticker(f, r, a.tick, a.bins, a.window, a.step, a.seed)
@@ -156,7 +159,7 @@ def main():
               f"{f'[{lo:+.4f},{hi:+.4f}]':>22s}{v:>9s}{100*better:7.1f}%",
               flush=True)
 
-    json.dump({"month": a.month, "n_tickers": len(per), "skipped": skipped,
+    json.dump({"month": a.month, "prefix": a.prefix, "n_tickers": len(per), "skipped": skipped,
                "window": a.window, "step": a.step, "bins": a.bins,
                "n_boot": a.n_boot, "seed": a.seed,
                "aggregate": agg, "per_ticker": per},
