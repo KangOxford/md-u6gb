@@ -136,21 +136,40 @@ done
 
 # 两臂必须在同一步号上评测。先算的落盘，后到的照抄。
 DA=$(ckpt_dir_of "$LOG_A"); DB=$(ckpt_dir_of "$LOG_B")
-COMMON=$(comm -12 <(steps_of "$DA") <(steps_of "$DB") | sort -n | tail -1)
-[ -n "$COMMON" ] || { log "FATAL 两臂没有共同步号"; exit 3; }
+# 不能求交集。CHECKPOINT_EVERY=auto 是按**时间**存点的，而两条臂速度不同
+# （实测 1.91 vs 1.35 it/s），所以它们的步号永远不会相同：
+#   A: 1430 1895 2675 2987 3143 ... 4300 4339
+#   B:  140  365 1265 1491 1604 ... 2507 2536
+# comm -12 在这两串上返回空，控制器会在训练刚结束时 FATAL 退出——恰好是最不该
+# 失效的时刻。旧的固定步数存点（2000/4000/6000...）碰巧对齐，把这个依赖藏住了；
+# 换成 auto 修好了存点频率，同时破坏了依赖它的这一步。
+#
+# 正确的语义是「在最接近的训练进度上比」而不是「步号必须相同」：取两臂最高步的
+# 较小者作上界，各自取自己不超过该上界的最高 checkpoint，然后把两个真实步号都
+# 报出来。两者相差多少是可读的，不是被隐藏的。
+BOUND_A=$(top_step "$DA"); BOUND_B=$(top_step "$DB")
+[ -n "$BOUND_A" ] && [ -n "$BOUND_B" ] || { log "FATAL 读不到步号"; exit 3; }
+BOUND=$(( BOUND_A < BOUND_B ? BOUND_A : BOUND_B ))
+STEP_A=$(steps_of "$DA" | awk -v b="$BOUND" '$1 <= b' | tail -1)
+STEP_B=$(steps_of "$DB" | awk -v b="$BOUND" '$1 <= b' | tail -1)
+[ -n "$STEP_A" ] && [ -n "$STEP_B" ] || { log "FATAL 没有不超过 $BOUND 的 checkpoint"; exit 3; }
+DIFF=$(( STEP_A > STEP_B ? STEP_A - STEP_B : STEP_B - STEP_A ))
 mkdir -p "$(dirname "$STEP_FILE")"
-echo "$COMMON" > "$STEP_FILE"
-log "评测步号 = $COMMON  (A=$DA  B=$DB)"
+printf 'base=%s hyb=%s bound=%s diff=%s\n' "$STEP_A" "$STEP_B" "$BOUND" "$DIFF" > "$STEP_FILE"
+log "评测步号 base=$STEP_A  hyb=$STEP_B  (上界 $BOUND，相差 $DIFF 步)"
+# 相差超过 5% 时明确告警：那已经不是「最接近」，而是两个不同训练量的模型。
+PCT=$(( DIFF * 100 / (BOUND > 0 ? BOUND : 1) ))
+[ "$PCT" -gt 5 ] && log "警告 两臂步数相差 ${PCT}%，对照的可比性下降，报告里必须写出这两个数"
 
 for arm in base hyb; do
-    if [ "$arm" = base ]; then D="$DA"; ARCH=mamba3; ND="$NODE_A"; else D="$DB"; ARCH=hybrid_mamba3; ND="$NODE_B"; fi
+    if [ "$arm" = base ]; then D="$DA"; ARCH=mamba3; ND="$NODE_A"; STEP="$STEP_A"; else D="$DB"; ARCH=hybrid_mamba3; ND="$NODE_B"; STEP="$STEP_B"; fi
     setsid nohup env ATTACH_JOBID="$CUR_ALLOC" NODE="$ND" BENCH_WORLD_SIZE=4 BENCH_GPU_OFFSET=0 \
         ARCHITECTURE="$ARCH" ARM_ID="${arm}2k" ARM_NAME="${arm}-m3-ctx2k" \
-        CHECKPOINT_PATH="$D" CHECKPOINT_STEP="$COMMON" GENERATION_SEED=2026 \
+        CHECKPOINT_PATH="$D" CHECKPOINT_STEP="$STEP" GENERATION_SEED=2026 \
         BENCH_BATCH="$TASKDIR/bench_scripts/bench_2k.batch" \
         bash "$TASKDIR/code/run_bench_attached.sh" \
         > "$TASKDIR/logs/chainbench_${arm}_$(date -u +%H%M%S).log" 2>&1 &
-    log "已起 ${arm} 的 bench @ $COMMON on $ND"
+    log "已起 ${arm} 的 bench @ $STEP on $ND"
     sleep 20
 done
 log "两臂 bench 均已起，控制器完成"
