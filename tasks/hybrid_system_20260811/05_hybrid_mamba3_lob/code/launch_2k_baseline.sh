@@ -157,6 +157,20 @@ export SLURM_SUBMIT_DIR="$WORKDIR"
 # NODE_LOG_DIR 是 node_wrapper.sh:29 留出的覆盖点。
 export NODE_LOG_DIR="$WORKDIR/logs_lobs5/ctx2k_base"
 
+# 起飞前把上一轮的节点日志归档。日志名是 training_<allocid>_node<N>.log，同一个
+# allocation 上续训会 exec > 把它截断 —— 于是每次自愈重启都抹掉上一次的死因。
+#
+# 2026-08-13：hybrid 死了三次，只有我恰好在场的那一次拿到了
+# "FATAL: Step watchdog timeout ... Likely NCCL deadlock"；另外两次的证据被下一轮
+# 启动覆盖，事后 grep 一无所获。**自愈链路越好用，事后可诊断性越差** —— 它默默
+# 重启，把现场一起清了。归档是把这两件事解耦。
+mkdir -p "$NODE_LOG_DIR/archive"
+for _f in "$NODE_LOG_DIR"/training_*_node*.log; do
+    [ -e "$_f" ] || continue
+    cp -p "$_f" "$NODE_LOG_DIR/archive/$(basename "${_f%.log}")_$(date -u +%Y%m%dT%H%M%SZ).log" 2>/dev/null
+done
+
+
 # 这两个变量不是装饰。srun 会把 SLURM_TIMELIMIT 当作**这个 step 的时限**来读，
 # 所以写死 05:00:00 的后果是：无论 MAX_JOB_HOURS 设成多少、无论分配还剩多久，
 # 训练都会在整 5 小时被 srun 杀掉，sacct 记 State=TIMEOUT ExitCode=0:15。
