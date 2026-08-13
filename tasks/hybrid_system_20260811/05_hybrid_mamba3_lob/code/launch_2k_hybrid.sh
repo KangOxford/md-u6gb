@@ -225,6 +225,12 @@ export TP_SIZE=1
 export GRAD_ACCUM_STEPS=${GRAD_ACCUM_STEPS:-1}
 export HIERARCHICAL=True
 export REMAT=0
+# profiling 指标。梯度范数按参数组分开（global/muon/ssm/regular/in_proj/out_proj）
+# 外加 clip_ratio——后者直接回答「裁剪是不是一直在饱和」，那是发散诊断的第一问。
+# 成本是每次记录时多算一棵树的平方和，相对一步训练可忽略。
+export LOG_GRAD_NORMS=${LOG_GRAD_NORMS:-1}
+# 显式 CHECKPOINT_EVERY 时 step_loss 的记录频率（auto 档不用它）。
+export LOG_EVERY=${LOG_EVERY:-250}
 # 4 节点档 node_wrapper.sh 默认 0.90（≈88/97.9 GB）。实测 hybrid 峰值只有
 # 67.1 GB，0.90 既无必要又会在共享 allocation 上把邻居挤死，还让 cuBLAS 拿不到
 # 初始化用的那几百 MB。0.85 ≈ 83 GB，比实测峰值高 24%，留 15 GB 给核与邻居。
@@ -269,7 +275,12 @@ else
     # 把四段 500 拼成一段 2000，注意力代价正好 4 倍——这不是开销，这就是长程
     # 注意力的定价。K=2 时 64,001 x 0.727 = 12.9 小时，取 13.5。
     export MAX_JOB_HOURS=${MAX_JOB_HOURS:-13.5}
-    export CHECKPOINT_EVERY=${CHECKPOINT_EVERY:-3000}
+    # auto 是原本就有的正确档位，而给一个显式数字会同时踩两个坑：
+    #   (1) checkpoint 变稀（3000 步在 2k 上是 50 分钟以上）
+    #   (2) step_loss 被绑到同一个频率上，观测精度跟着一起塌
+    # auto 走的是时间判据：checkpoint 每 15 分钟、wandb 每 1 分钟、首存在 5 分钟。
+    # 26tok 那一代用的就是这个，我先前用数字覆盖掉了。
+    export CHECKPOINT_EVERY=${CHECKPOINT_EVERY:-auto}
 fi
 
 # 续训：RESTORE_PATH 给运行根（不带步号），RESTORE_STEP 单独给。

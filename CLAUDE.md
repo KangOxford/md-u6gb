@@ -2,22 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# 📒 Per-Round Recording Discipline (MANDATORY, 2026-05-28)
-
-**Every conversation round MUST append timestamped, ID-prefixed entries to all four local task-record files in the workspace root (`/projects/public/u6gb/`):**
-
-| File | ID prefix | Example |
-|------|-----------|---------|
-| `plans.md` | `P###` | `P001 UTC 2026-05-28T22:50:00Z: ...` |
-| `findings.md` | `F###` | `F002 UTC 2026-05-28T22:50:00Z: ...` |
-| `progress.md` | `PG###` | `PG003 UTC 2026-05-28T22:50:00Z: ...` |
-| `learnt_lessons.md` | `L###` | `L004 UTC 2026-05-28T22:50:00Z: ...` |
-
-- IDs are sequential per file, never reused, monotonically increasing.
-- Always include a UTC timestamp after the ID (`UTC <ISO8601>`).
-- Append with `echo >>` / Edit, never overwrite existing entries.
-- This applies to EVERY round, including interrupts and corrections.
-
 # 🚨🚨🚨 ISAMBARD-AI / LUSTRE Cluster Safety (Highest Priority, 2026-05-08)
 
 **Isambard-AI is a BriCS national-level HPC, with 1000+ users sharing the Lustre parallel filesystem. Metadata storms triggered by LLM agents have already caused the entire group's jobs to be suspended once (BriCS administrators documented this explicitly in `/lus/lfs1aip2/projects/public/s5e/quant_team/quant/isambard-requirement`). Any violation of the rules below may lead to the team being banned again. These rules take precedence over all other content in this file, including "First Principles."**
@@ -199,6 +183,60 @@ The table below summarizes the 9 anti-patterns identified by the HPC team (Rich,
 
 > "Please note we are also disabling the use of AI agents on the login nodes. These are also prone to using the harmful patterns below, and could well be launching large numbers of compute node jobs that themselves contain those same patterns."
 > — Rich, BriCS HPC team, 2026-05-08
+
+---
+
+
+## 🚨 训练观测频率：checkpoint 与 loss 是两件事，不许共用一个频率（2026-08-13）
+
+### 硬约束
+
+| 项 | 频率 | 理由 |
+|---|---|---|
+| **checkpoint** | **平均每 ~15 分钟一次** | 写整个参数树到 Lustre，按「恢复一次损失 <10% 时间」定 |
+| **step_loss / lr / grad_norms** | **每 1 分钟（auto）或每 250 步（显式）** | 只是几个标量打到 wandb，几乎免费 |
+
+**默认一律用 `CHECKPOINT_EVERY=auto`。** 那条路径已经按时间判据把两者分开：
+
+```
+AUTO_CKPT_INTERVAL  = 900s  = 15 分钟   checkpoint
+AUTO_WANDB_INTERVAL =  60s  =  1 分钟   wandb
+首次 checkpoint 在 ~5 分钟（防早期 NCCL 死锁丢掉全部进度）
+```
+
+### 反面教训（2026-08-12，hybrid ctx2k）
+
+给了显式的 `CHECKPOINT_EVERY=2000` 覆盖掉 auto，同时踩了两个坑：
+
+1. **checkpoint 变稀**：2k 上下文下 2000 步 = 50 分钟以上，一次崩溃丢 50 分钟
+2. **`step_loss` 被绑到同一个频率上**——`train_helpers.py` 里原本是
+   `should_ckpt = should_wandb = (step % N == 0)`
+
+后果：hybrid 发散时**只能定位到「4000 到 6000 步之间」**，分不出是突然尖峰还是持续
+爬升。而想看密的 loss 就得调小 checkpoint 频率，**等于用 Lustre 元数据去买观测精度，
+代价差三个数量级**。
+
+已修：`LOG_EVERY`（默认 250）独立控制显式档下的记录频率，与 `CHECKPOINT_EVERY` 解耦。
+
+### 必须记录的 profiling 指标
+
+```bash
+export LOG_GRAD_NORMS=1     # 分组梯度范数 + clip_ratio
+```
+
+| 指标 | 为什么必需 |
+|---|---|
+| `grad_norms/{global,muon,ssm,regular,in_proj,out_proj}` | 发散时第一件事是看**哪一组**先炸 |
+| `grad_norms/clip_ratio` | 直接回答「裁剪是不是一直饱和」——饱和说明裁剪只是在掩盖问题 |
+| `lr` / `ssm_lr` | 排除「是不是 schedule 在这一段把 LR 抬起来了」；**必须与 loss 同频**，否则两条曲线对不齐就没法说话 |
+| `throughput/{step_time_s,mfu_pct,tflops,tokens_per_sec}` | 步时突变往往先于 loss 异常 |
+
+### 起跑前自查
+
+- [ ] `CHECKPOINT_EVERY` 是 `auto`，或显式值 × 步时 ≈ 15 分钟
+- [ ] `LOG_GRAD_NORMS=1`
+- [ ] 显式档下 `LOG_EVERY` ≤ 250
+- [ ] wandb 上能看到 `lr` 与 `step_loss` 在同一批 step 上有点
 
 ---
 
