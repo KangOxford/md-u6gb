@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""nodelock —— 声明「这个节点留给谁」，并看清声明与现实是否一致。
+
+  nodelock lock nid010547 --who claude-dfm [-j 5992007] [--note "..."]
+  nodelock lock 5992007 --who crps-wm_ft        # jobid 展开成它持有的全部节点
+  nodelock unlock nid010547                      # 整节点
+  nodelock unlock nid010367:1,2                  # 只放两张卡，整节点锁自动收窄
+  nodelock ls [--json] [--prune]
+  nodelock status                                # 声明 vs squeue 现实
+
+节点名支持 SLURM 方括号（nid[011165-011167]），冒号后跟卡号选具体的卡。
+状态文件见 nodelock.py 的模块 docstring；`gtop` 与 `sgpur` 读同一份。
+"""
+import argparse
+import json
+import os
+import subprocess
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import nodelock as NL              # noqa: E402
+
+
+def _fmt_gpus(gs):
+    return "all" if gs is None else ",".join(map(str, gs))
+
+
+def cmd_ls(a):
+    locks = NL.load()
+    ids = NL.running_ids()
+    if a.prune:
+        gone = [h for h, e in locks.items() if not NL.is_live(e, ids)]
+        for h in gone:
+            locks.pop(h)
+        NL.save(locks)
+        print(f"pruned {len(gone)} stale" + (f": {' '.join(gone)}" if gone else ""))
+    if a.json:
+        print(json.dumps(locks, ensure_ascii=False, indent=1, sort_keys=True))
+        return 0
+    if not locks:
+        print(f"没有锁  ({NL.path()})")
+        return 0
+    if ids is None:
+        print("# squeue 查不到，stale 判定不可靠（一律按 live 显示）", file=sys.stderr)
+    print(f"{'node':<13}{'gpus':<7}{'who':<16}{'jobid':<10}{'state':<7}note")
+    for h in sorted(locks):
+        e = locks[h]
+        print(f"{h:<13}{_fmt_gpus(e['gpus']):<7}{e['who']:<16}"
+              f"{(e['jobid'] or '-'):<10}"
+              f"{('live' if NL.is_live(e, ids) else 'STALE'):<7}{e['note']}")
+    return 0
+
+
+def cmd_lock(a):
+    n = NL.do_lock(a.targets, a.who, a.jobid, a.note or "")
+    print(f"locked {n} -> {NL.path()}\n")
+    return cmd_ls(argparse.Namespace(json=False, prune=False))
+
+
+def cmd_unlock(a):
+    if a.all:
+        n = len(NL.load())
+        NL.save({})
+        print(f"unlocked all ({n})")
+        return 0
+    if not a.targets:
+        print("给出节点名，或用 --all", file=sys.stderr)
+        return 2
+    NL.do_unlock(a.targets)
+    print(f"unlocked -> {NL.path()}\n")
+    return cmd_ls(argparse.Namespace(json=False, prune=False))
+
+
+def cmd_status(a):
+    """声明 vs 现实。三种不一致，每一种都值得动手。"""
+    locks, ids = NL.load(), NL.running_ids()
+    try:
+        p = subprocess.run(
+            ["squeue", "-h", "-u", os.environ.get("USER", ""), "-t", "RUNNING",
+             "-o", "%i|%j|%N"], capture_output=True, text=True, timeout=30)
+        rows = [l.split("|") for l in p.stdout.splitlines() if l.strip()]
+    except (OSError, subprocess.TimeoutExpired):
+        print("squeue 失败", file=sys.stderr)
+        return 1
+
+    held = {}                      # host -> (jobid, jobname)
+    for jid, name, nl in rows:
+        for h in NL.expand_nodes(nl):
+            held[h] = (jid, name)
+
+    print(f"{'node':<13}{'declared':<16}{'holding job':<28}判定")
+    bad = 0
+    for h in sorted(set(held) | set(locks)):
+        e = locks.get(h)
+        jid_name = held.get(h)
+        who = e["who"] if e else "-"
+        job = f"{jid_name[0]} {jid_name[1][:20]}" if jid_name else "-"
+        if e and not NL.is_live(e, ids):
+            verdict, bad = "STALE 锁（job 已结束）", bad + 1
+        elif e and not jid_name:
+            verdict, bad = "锁着但我没持有这个节点", bad + 1
+        elif jid_name and not e:
+            verdict, bad = "持有但无人认领", bad + 1
+        else:
+            verdict = "ok"
+        print(f"{h:<13}{who:<16}{job:<28}{verdict}")
+    print(f"\n{bad} 处不一致" if bad else "\n一致")
+    return 0
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="nodelock", description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd")
+
+    p = sub.add_parser("lock", help="声明节点归属")
+    p.add_argument("targets", nargs="+", metavar="NODE[:GPUS] | JOBID")
+    p.add_argument("--who", required=True, help="占用者名字（会话名 / 实验名）")
+    p.add_argument("-j", "--jobid", default=None,
+                   help="挂在这个 job 上；job 结束后锁自动变 stale")
+    p.add_argument("--note", default=None)
+    p.set_defaults(fn=cmd_lock)
+
+    p = sub.add_parser("unlock", help="撤销声明")
+    p.add_argument("targets", nargs="*", metavar="NODE[:GPUS] | JOBID")
+    p.add_argument("--all", action="store_true")
+    p.set_defaults(fn=cmd_unlock)
+
+    for name in ("ls", "locks", "list"):
+        p = sub.add_parser(name, help="列出锁")
+        p.add_argument("--prune", action="store_true", help="删掉 job 已结束的 stale 锁")
+        p.add_argument("--json", action="store_true")
+        p.set_defaults(fn=cmd_ls)
+
+    p = sub.add_parser("status", help="声明 vs squeue 现实")
+    p.set_defaults(fn=cmd_status)
+
+    a = ap.parse_args()
+    if not a.cmd:
+        return cmd_ls(argparse.Namespace(json=False, prune=False))
+    return a.fn(a)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
