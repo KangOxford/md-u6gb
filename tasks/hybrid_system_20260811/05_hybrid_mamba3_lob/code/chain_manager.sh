@@ -69,24 +69,50 @@ recall()     { cat "$(state_file "$1")" 2>/dev/null; }
 # 两条都读不到时返回「在跑」：误判成停了会让 bench 在半截 checkpoint 上起跑，
 # 误判成在跑只是晚一轮。
 arm_alive() {
-    local alloc="$1" stepname="$2" logdir="$3" f age
-    if [ -n "$(squeue -s -j "$alloc" -h -o '%j' 2>/dev/null | grep -Fx "$stepname")" ]; then
-        return 0
-    fi
+    local alloc="$1" stepname="$2" logdir="$3" f age last
     f=$(latest_log "$logdir")
     [ -z "$f" ] && return 0
-    # 收尾标记优先于新鲜度。**关停序列本身要写日志**：看门狗开火后还要卸载 48 个
-    # squashfs 分片，那 48 行让「日志很新鲜」在刚死的那一刻恰好成立。
-    # 2026-08-13 11:12 控制器就因此判 hybrid「在跑」，而它两分钟前才被看门狗打死；
-    # 靠 LOG_FRESH 自然过期要再等 25 分钟。
-    # 判据是**最后一行**是不是收尾产物，而不是全文有没有出现过这些词。
-    local last
+
+    # ① 收尾标记最优先，**排在 step 名之前**。
+    #
+    # 2026-08-13 14:18 的教训：baseline 的看门狗 14:12 已开火、日志尾部是
+    # squashfs 卸载序列，但控制器判「在跑」，白躺 11 分钟。原因是老版本**先查
+    # Slurm step 名，命中就直接返回**，根本走不到下面的日志检查 ——
+    # 而 **srun 的 step 在进程死后还会存活一段**（等清理），于是这条规则永远
+    # 够不着。
+    #
+    # 顺序反映的是可信度：日志尾部是训练进程**自己写下的**最后遗言，
+    # 而 step 存在只说明 srun 还没收摊。**当事人的自述优先于旁观者的状态。**
     last=$(tr '\r' '\n' < "$f" 2>/dev/null | grep -av "^ *$" | tail -1)
     case "$last" in
         *"squashfs] unmounted"*|*"Step watchdog timeout"*|*"Training complete"*|*"[squashfs] umount"*)
             return 1 ;;
     esac
-    age=$(( $(date +%s) - $(stat -c %Y "$f" 2>/dev/null || echo 0) ))
+
+    # ② 步号停滞：死锁时 step 名还在、日志刚被 tqdm 写过，两个信号都「正常」，
+    # 唯一变了的是**步号不再前进**。这是死锁期间唯一可靠的判据。
+    # 状态存文件，因为控制器每轮是同一个进程但要跨轮比较。
+    local cnt_f="$TASKDIR/results/.ctx2k_progress_$(basename "$logdir")"
+    local cur now_t; local prev=""; local prev_t=""
+    cur=$(tr '\r' '\n' < "$f" 2>/dev/null | grep -aoE "[0-9]+/[0-9]+ \[" | tail -1 | cut -d/ -f1)
+    now_t=$(date +%s)
+    if [ -n "$cur" ]; then
+        # 先判存在再读：`read < 不存在的文件` 的报错发生在重定向阶段，
+        # 那时 2>/dev/null 还没生效，错误会漏到 stderr 上。
+        [ -f "$cnt_f" ] && read -r prev prev_t < "$cnt_f"
+        if [ "$cur" != "${prev:-}" ]; then
+            printf '%s %s\n' "$cur" "$now_t" > "$cnt_f"
+        elif [ -n "${prev_t:-}" ] && [ $(( now_t - prev_t )) -gt "${STALL_SECS:-900}" ]; then
+            log "  ${logdir##*/} 步号停在 $cur 已 $(( (now_t - prev_t)/60 )) 分钟 → 判死"
+            return 1
+        fi
+    fi
+
+    # ③ step 名还在就算活着
+    [ -n "$(squeue -s -j "$alloc" -h -o '%j' 2>/dev/null | grep -Fx "$stepname")" ] && return 0
+
+    # ④ 兜底：日志新鲜度
+    age=$(( now_t - $(stat -c %Y "$f" 2>/dev/null || echo 0) ))
     [ "$age" -lt "${LOG_FRESH:-1500}" ] && return 0
     return 1
 }
