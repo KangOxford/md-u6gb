@@ -422,9 +422,28 @@ def verify_environment() -> None:
         from diffusers.modular_pipelines.minimax_h3.modular_pipeline import (  # noqa: F401
             align_num_frames,
         )
-        print(f"[env] diffusers {diffusers.__version__} with MiniMax-H3 OK", flush=True)
+        # These two are the ones job 5998320 actually died on, and neither was covered
+        # by the class imports above: `ModularPipeline.from_pretrained` pulls in
+        # `DiffusionPipeline`, which pulls `diffusers.pipelines.pipeline_utils`, which
+        # needs `get_cached_repo_tree` from huggingface_hub >= 1.x. Checking only the
+        # imports one happens to think of is how a version mismatch reaches a compute
+        # node; check the path the job takes.
+        from diffusers import DiffusionPipeline, ModularPipeline  # noqa: F401
+        import diffusers.pipelines.pipeline_utils  # noqa: F401
+        print(f"[env] diffusers {diffusers.__version__} with MiniMax-H3 and pipeline_utils OK",
+              flush=True)
     except Exception as exc:
         problems.append(f"diffusers: {type(exc).__name__}: {exc}")
+    try:
+        # peft is on the import path to the H3 transformer via `PeftAdapterMixin`, and
+        # peft >= 0.18 probes transformer_engine, whose import needs libnvrtc from
+        # LD_LIBRARY_PATH. Importing it here turns that into a first-minute failure
+        # with a clear name instead of a RuntimeError three frames deep in diffusers.
+        import peft
+        print(f"[env] peft {peft.__version__} OK", flush=True)
+    except Exception as exc:
+        problems.append(f"peft: {type(exc).__name__}: {exc} "
+                        f"(is LD_LIBRARY_PATH carrying the nvidia lib dirs? see code/env.sh)")
     try:
         import transformers
         from transformers import Qwen3VLForConditionalGeneration  # noqa: F401

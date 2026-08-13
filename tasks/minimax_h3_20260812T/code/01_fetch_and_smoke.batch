@@ -21,7 +21,6 @@
 set -uo pipefail
 
 TASKDIR=/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T
-PY="$TASKDIR/venv/bin/python"
 HF="$TASKDIR/venv/bin/hf"
 
 # Per-job output dir: two runs of this script must never share a directory, or they
@@ -33,8 +32,7 @@ mkdir -p "$OUTDIR"
 export HF_HUB_ENABLE_HF_TRANSFER=0
 export HF_HOME="${TMPDIR:-/tmp}/hf_home"
 export TOKENIZERS_PARALLELISM=false
-export PYTHONUNBUFFERED=1
-mkdir -p "$HF_HOME"
+source "/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T/code/env.sh"
 
 echo "=== job $SLURM_JOB_ID on $(hostname) at $(date -u +%FT%TZ) ==="
 nvidia-smi --query-gpu=index,name,memory.total,memory.used --format=csv
@@ -42,7 +40,6 @@ echo
 
 # ---------------------------------------------------------------- 1. assets
 echo "=== [1/3] staging assets ==="
-export PATH="$TASKDIR/venv/bin:$PATH"   # fetch_assets.py shells out to `hf`
 "$PY" "$TASKDIR/code/fetch_assets.py" --root "$TASKDIR" --shards 00,01 --workers 8
 RC=$?
 if [ $RC -ne 0 ]; then echo "FATAL: asset staging failed rc=$RC"; exit $RC; fi
@@ -74,6 +71,20 @@ echo "=== [3/3] T2VA generation with the released checkpoint ==="
 RC=$?
 
 echo
-echo "=== finished rc=$RC at $(date -u +%FT%TZ) ==="
+echo "=== finished at $(date -u +%FT%TZ) ==="
 echo "outputs: $OUTDIR"
-exit $RC
+
+# The smoke generation is a *reference measurement*, not a prerequisite: the small
+# model trains from the VAEs and the conditioner, none of which the generation
+# touches. Job 5998320 failed its smoke stage, exited 1, and that turned the queued
+# pipeline into DependencyNeverSatisfied -- a downstream stage cancelled by an
+# upstream stage it does not depend on. The assets are the contract, so they decide
+# the exit code.
+if [ ! -f "$TASKDIR/ckpt/h3/transformer/config.json" ]; then
+    echo "FATAL: checkpoint not staged"; exit 1
+fi
+if [ $RC -ne 0 ]; then
+    echo "WARN: reference generation failed rc=$RC, but the assets are staged; exiting 0"
+    echo "      so the dependent pipeline still runs."
+fi
+exit 0

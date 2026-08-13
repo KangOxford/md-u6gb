@@ -1,38 +1,51 @@
-# The exact combination this replication runs on, and why each pin is load-bearing.
+# The environment this replication runs on. Arrived at by getting it wrong twice, so
+# the reasoning is written down rather than just the versions.
 #
-# Recreate with:
 #   /projects/public/s5e/quant_team/quant/miniforge3/bin/python -m venv --system-site-packages venv
 #   ./venv/bin/pip install -r requirements-pinned.txt
+#   bash code/setup_te_stub.sh          # <- required, see "The stub" below
 #
-# torch is NOT pinned here: the venv inherits the host's 2.8.0+cu129, which is the
-# only build with working aarch64 / GH200 support in this environment. Installing a
-# torch into the venv would shadow it with something that does not run.
+# torch is deliberately NOT pinned: the venv inherits the host's 2.8.0+cu129, the only
+# build with working aarch64 / GH200 support here. Installing torch into the venv would
+# shadow it with something that does not run.
 #
-# The three pins below are one interlocking set, arrived at by breaking it twice:
+# ---------------------------------------------------------------- the forced chain
 #
-#   diffusers main is the only version carrying MiniMax-H3 (0.37.1 release does not).
-#   It reaches peft through `PeftAdapterMixin` on the H3 transformer, so
-#   `diffusers.loaders.peft` is on the critical import path and every failure so far
-#   has surfaced there.
+# There is no freedom in the first three links. Each one is forced by the one above:
 #
-#   peft 0.17.1 imports `HybridCache` from transformers at module level, which
-#   transformers 5.x removed -> transformers must stay on 4.x.
+#   diffusers main            is the only version carrying MiniMax-H3 (0.37.1 has none)
+#     -> needs huggingface_hub >= 1.23   for `get_cached_repo_tree`, which
+#        `diffusers.pipelines.pipeline_utils` imports and `ModularPipeline.from_pretrained`
+#        reaches through `DiffusionPipeline`
+#     -> hub 1.x needs transformers 5.x  (transformers 4.x wants hub < 1.0 and breaks on
+#        `refresh_xet_connection_info`)
+#     -> transformers 5.x removed `HybridCache`, which peft 0.17.1 imports at module
+#        level, so peft must be >= 0.18
+#     -> peft >= 0.18 probes transformer_engine, unguarded  ->  see "The stub"
 #
-#   peft 0.20.0 fixes that but instead probes `transformer_engine`, whose import
-#   needs libnvrtc on a path nothing here sets, and the probe does not catch the
-#   RuntimeError -> peft must stay on 0.17.1.
+# An earlier attempt went the other way -- pin transformers down to 4.57.6 to satisfy
+# peft 0.17.1 -- and it *looked* fine because `from diffusers import
+# MiniMaxH3Transformer3DModel` succeeded. It failed on a compute node two minutes in,
+# on `ModularPipeline.from_pretrained`, a path that was never checked. Verify the
+# import the job takes, not the import you thought of.
 #
-#   transformers 4.57.6 has no `Qwen3VLProcessor.create_mm_token_type_ids`, which the
-#   reference conditioner path calls. That is why `preprocess_vggsound.py` constructs
-#   the tags directly instead: they are all zero for a text-only prompt by
-#   construction, so the pipeline does not depend on a transformers major at all.
+# ---------------------------------------------------------------- the stub
 #
-# Upgrading any one of these three re-opens one of the other two failures. If a
-# future diffusers drops the eager peft import, the whole knot dissolves and
-# transformers 5.x becomes usable again.
+# peft's probe is `import transformer_engine` with no try/except, and TE's import loads
+# cudnn, nvrtc and **curand** -- and libcurand exists nowhere in this environment,
+# neither in the torch `nvidia/*` wheels nor on the system. So TE can never work here,
+# and no amount of LD_LIBRARY_PATH fixes it: the first two libraries can be found, the
+# third does not exist.
+#
+# `code/setup_te_stub.sh` writes an empty `transformer_engine` package into the venv,
+# which shadows the host one. The probe then imports successfully and finds no
+# `pytorch` attribute, so peft concludes TE-pytorch is unavailable -- which is true.
+#
+# (`code/env.sh` also puts the nvidia wheel lib dirs on LD_LIBRARY_PATH. That is not
+# what fixes TE; it is there because other CUDA libraries are found the same way.)
 
 diffusers @ git+https://github.com/huggingface/diffusers.git@main
-transformers>=4.57,<5
-huggingface_hub>=0.34,<1
-peft==0.17.1
+transformers>=5.5,<6
+huggingface_hub>=1.23,<2
+peft>=0.18
 av>=14

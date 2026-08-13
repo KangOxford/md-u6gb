@@ -75,23 +75,36 @@ def shallow_bytes(path: Path, max_depth: int = 2) -> int:
 
 
 def fetch_h3(dest: Path, workers: int) -> None:
-    cmd = ["hf", "download", "MiniMaxAI/MiniMax-H3", "--local-dir", str(dest), "--max-workers", str(workers)]
-    for pattern in H3_PATTERNS:
-        cmd += ["--include", pattern]
+    # `--include` takes *many* patterns after one flag (nargs='+'). Repeating the flag
+    # does not accumulate -- the last occurrence wins and every earlier one is
+    # silently discarded. Job 5998320 lost 143 GB to this: nine `--include` flags
+    # fetched exactly one file, the last pattern's, and `hf` exited 0 while doing it.
+    cmd = ["hf", "download", "MiniMaxAI/MiniMax-H3", "--local-dir", str(dest),
+           "--max-workers", str(workers), "--include", *H3_PATTERNS]
     run(cmd, what="MiniMax-H3 checkpoint (diffusers layout, ~143 GB)")
-    print(f"[fetch] checkpoint size: {shallow_bytes(dest) / 1e9:.1f} GB", flush=True)
+    size = shallow_bytes(dest) / 1e9
+    print(f"[fetch] checkpoint size: {size:.1f} GB", flush=True)
+    # `hf download` exits 0 having downloaded nothing at all, so the size is the only
+    # signal that the patterns actually matched.
+    if size < 100:
+        raise SystemExit(
+            f"[fetch] FATAL: checkpoint is {size:.1f} GB, expected ~143 GB. The include "
+            f"patterns did not match what they were meant to."
+        )
 
 
 def fetch_vggsound(dest: Path, shards: list[int], workers: int) -> None:
     dest.mkdir(parents=True, exist_ok=True)
+    # One `--include`, many patterns -- see the note in `fetch_h3`.
+    patterns = ["vggsound.csv"] + [f"vggsound_{shard:02d}.tar.gz" for shard in shards]
     cmd = [
         "hf", "download", VGGSOUND_REPO, "--repo-type", "dataset",
         "--local-dir", str(dest), "--max-workers", str(workers),
-        "--include", "vggsound.csv",
+        "--include", *patterns,
     ]
-    for shard in shards:
-        cmd += ["--include", f"vggsound_{shard:02d}.tar.gz"]
     run(cmd, what=f"VGGSound shards {shards} + label CSV")
+    if not (dest / "vggsound.csv").exists():
+        raise SystemExit("[fetch] FATAL: vggsound.csv missing; the label map is not optional")
     # The tarballs are deliberately *not* unpacked. Each holds ~10k mp4s; exploding
     # them onto Lustre would turn every preprocessing epoch into ~10k MDT opens per
     # shard. The encoder streams the tarball sequentially instead, so the data stays

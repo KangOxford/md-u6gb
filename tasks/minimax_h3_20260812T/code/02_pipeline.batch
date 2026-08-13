@@ -28,18 +28,11 @@
 set -uo pipefail
 
 TASKDIR=/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T
-PY="$TASKDIR/venv/bin/python"
 RUNS="$TASKDIR/runs"
 EVAL="$RUNS/eval_${SLURM_JOB_ID}"
 mkdir -p "$RUNS" "$EVAL"
 
-export PYTHONUNBUFFERED=1
-export TOKENIZERS_PARALLELISM=false
-export HF_HOME="${TMPDIR:-/tmp}/hf_home"
-export WANDB_DIR="${TMPDIR:-/tmp}"
-export WANDB_MODE=online
-export OMP_NUM_THREADS=8
-mkdir -p "$HF_HOME"
+source "/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T/code/env.sh"
 
 # Configuration shared by every stage. `PRETRAIN_STEPS` is deliberately modest: the
 # point of this run is a working recipe end to end, not a converged generator.

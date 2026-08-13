@@ -27,20 +27,11 @@
 set -uo pipefail
 
 TASKDIR=/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T
-PY="$TASKDIR/venv/bin/python"
 RUNS="$TASKDIR/runs"
 EVAL="$RUNS/eval_${SLURM_JOB_ID}"
 mkdir -p "$RUNS" "$EVAL"
 
-export PATH="$TASKDIR/venv/bin:$PATH"
-export PYTHONUNBUFFERED=1
-export TOKENIZERS_PARALLELISM=false
-export HF_HOME="${TMPDIR:-/tmp}/hf_home"
-export HF_HUB_ENABLE_HF_TRANSFER=0
-export WANDB_DIR="${TMPDIR:-/tmp}"
-export WANDB_MODE=online
-export OMP_NUM_THREADS=8
-mkdir -p "$HF_HOME"
+source "/lus/lfs1aip2/projects/public/u6gb/tasks/minimax_h3_20260812T/code/env.sh"
 
 NGPU=$(nvidia-smi -L 2>/dev/null | wc -l)
 [ "$NGPU" -lt 1 ] && { echo "FATAL: no GPU visible"; exit 1; }
