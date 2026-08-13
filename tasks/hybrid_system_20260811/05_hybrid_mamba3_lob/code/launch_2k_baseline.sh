@@ -150,8 +150,31 @@ export SLURM_SUBMIT_DIR="$WORKDIR"
 # NODE_LOG_DIR 是 node_wrapper.sh:29 留出的覆盖点。
 export NODE_LOG_DIR="$WORKDIR/logs_lobs5/ctx2k_base"
 
-export SLURM_TIMELIMIT="05:00:00"
-export SBATCH_TIMELIMIT="05:00:00"
+# 这两个变量不是装饰。srun 会把 SLURM_TIMELIMIT 当作**这个 step 的时限**来读，
+# 所以写死 05:00:00 的后果是：无论 MAX_JOB_HOURS 设成多少、无论分配还剩多久，
+# 训练都会在整 5 小时被 srun 杀掉，sacct 记 State=TIMEOUT ExitCode=0:15。
+#
+# 2026-08-12 就是这样：hybrid 在 Elapsed 05:00:21 被 TIMEOUT，我却按
+# MAX_JOB_HOURS=13.5 排的期，以为它能跑到 32,000 步。MAX_JOB_HOURS 管的是训练
+# 脚本自己的优雅停机，在更内一层；srun 的 step 时限先到先杀，MAX_JOB_HOURS
+# 再大也没用。
+#
+# 取分配的剩余时间，留 10 分钟给收尾（存 checkpoint + 卸载 48 个分片）。
+_LEFT=$(squeue -j "${ATTACH_JOBID}" -h -o "%L" 2>/dev/null | tr -d ' ')
+if [ -n "$_LEFT" ]; then
+    _LEFT_MIN=$(python3 -c "
+import sys
+s=sys.argv[1]; d=0
+if '-' in s: d,s=s.split('-',1); d=int(d)
+p=[int(x) for x in s.split(':')]
+while len(p)<3: p.insert(0,0)
+print(max(10, d*1440+p[0]*60+p[1]-10))" "$_LEFT" 2>/dev/null)
+    export SLURM_TIMELIMIT=$(printf "%02d:%02d:00" $((_LEFT_MIN/60)) $((_LEFT_MIN%60)))
+else
+    export SLURM_TIMELIMIT="23:00:00"
+fi
+export SBATCH_TIMELIMIT="$SLURM_TIMELIMIT"
+echo "[time] step 时限设为 $SLURM_TIMELIMIT（分配剩 ${_LEFT:-?}）"
 
 # ── 2.5 去匿名化：sigma-0 按双盲发布准备，真实路径被换成 /path/to/... ───────
 # 还原本应由 credentials/real_env.sh 完成，但仓库里 `credentials` 是一个存
