@@ -1348,8 +1348,16 @@ def cmd_set_inbox(url: str) -> int:
         print("sgpur --set-inbox: expected an https:// worker url",
               file=sys.stderr)
         return 1
-    cfg = read_inbox()
-    token = cfg.get("token")
+    # read_inbox() gates on `url`, so a token seeded before the Worker existed
+    # would read back as {} and be replaced -- silently invalidating the secret
+    # already pasted into the dashboard.  Read the file raw.
+    try:
+        with open(INBOX_PATH) as f:
+            stored = json.load(f)
+        token = stored.get("token") if isinstance(stored, dict) else None
+    except (OSError, ValueError):
+        token = None
+    token = token or os.environ.get("SGPUR_INBOX_TOKEN", "").strip()
     if not token:
         import getpass
         token = getpass.getpass("Cloudflare Worker TOKEN: ").strip()

@@ -87,6 +87,21 @@ class WebRefreshTests(unittest.TestCase):
         self.assertNotIn(token, output.getvalue())
         self.assertEqual(0o600, stat.S_IMODE(path.stat().st_mode))
 
+    def test_set_inbox_preserves_token_seeded_before_url(self):
+        token = "preseeded-secret"
+        path = self.write_config({"token": token})
+        output = io.StringIO()
+        with mock.patch.object(
+            getpass, "getpass", side_effect=AssertionError("must not prompt")
+        ), patch_urlopen("0"), contextlib.redirect_stdout(output):
+            rc = self.module.cmd_set_inbox("https://new.example")
+        self.assertEqual(0, rc)
+        self.assertEqual(
+            {"url": "https://new.example", "token": token},
+            json.loads(path.read_text()),
+        )
+        self.assertNotIn(token, output.getvalue())
+
     def test_set_inbox_prompts_for_missing_token_without_echo(self):
         output = io.StringIO()
         with mock.patch.object(getpass, "getpass", return_value="prompted-secret"), \
