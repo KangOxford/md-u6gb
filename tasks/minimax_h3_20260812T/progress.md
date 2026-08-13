@@ -16,10 +16,43 @@
 
 ## 作业
 
-| Job ID | 名称 | 状态 | 说明 |
+| Job ID | 名称 | 结果 | 说明 |
 |---|---|---|---|
-| 5998320 | h3-fetch-smoke | PENDING | 1 节点 6h。下载 143 GB checkpoint + 34 GB VGGSound，参数普查，T2VA 冒烟 |
-| 5998498 | h3-nano-pipeline | PENDING (Dependency) | 1 节点 12h。语料 → 闸门 → 预训练 → FL2VA → CFG 蒸馏 → 评估 |
+| ~~5998320~~ | h3-fetch-smoke | **FAILED**（08-13T02:15，2m16s，exit 1:0） | 两个 bug，见下 |
+| ~~5998498~~ | h3-nano-pipeline | **DependencyNeverSatisfied** | 被上游的非零退出码连坐，永不执行 |
+| 6011373 | h3-fetch-smoke | PENDING | 重投，两个 bug 已修 |
+| 6011374 | h3-nano-pipeline | PENDING (Dependency) | 依赖 6011373 |
+
+### 5998320 失败复盘（两个独立根因，都是我造成的）
+
+**根因 A：`hf download` 的 `--include` 重复给会互相覆盖。**
+
+`--include` 是 `nargs='+'`，一次接多个模式。我在 `fetch_assets.py` 里写成
+`cmd += ["--include", pattern]` 的循环，于是 9 个 `--include` 只有最后一个生效——
+下载了 1 个文件（`audio_scheduler/scheduler_config.json`），checkpoint 目录 **0.0 GB**，
+而 `hf` **退出码是 0**。VGGSound 同样只下到最后一个分片，标签 CSV 丢失。
+
+> 这是同一个 bug 在本会话的**第二次**。第一次是会话开头 `--exclude` 把全部 json 滤掉，
+> 我当时归因成「glob 语义与预期不符」。**那次误诊直接导致了这次重犯**，代价是一次完整
+> 的作业分配。已加大小断言：`hf` 无论如何都返回 0，文件体积是唯一可信的信号。
+
+**根因 B：我验证的是自己想得到的导入，不是作业实际走的路径。**
+
+```
+ImportError: cannot import name 'get_cached_repo_tree' from 'huggingface_hub'
+  ← diffusers.pipelines.pipeline_utils 需要，只在 hub ≥1.x 存在
+```
+
+我把 transformers 降到 4.57.6（连带 hub 降到 0.36.2）后，验证的是
+`from diffusers import MiniMaxH3Transformer3DModel`——通过了。但作业走的是
+`ModularPipeline.from_pretrained` → `DiffusionPipeline` → `pipeline_utils`，
+那条路径我从没测过。pip 当初警告过 `requires huggingface-hub>=1.23.0`，我因为
+「导入都过了」而忽略。
+
+**根因 C（设计缺陷）：冒烟失败不该连坐下游。**
+冒烟只是参考测量，小模型的训练只依赖 VAE 和 conditioner，与它无关。但它的非零退出码
+让排队中的流水线变成 `DependencyNeverSatisfied`——一个下游阶段被它并不依赖的上游阶段
+取消了。现已改为**由资产是否落地决定退出码**。
 
 **排队原因诊断**
 
@@ -142,16 +175,30 @@ x₀−ε」「t=1−σ 且 t=1 为干净」三件事——任一符号搞反都
 `diffusers.loaders.peft` 是整条导入链的单点：diffusers main 是唯一带 MiniMax-H3 的版本，
 而它通过 `PeftAdapterMixin` **急切导入** peft。
 
+依赖链是**单向强制**的，没有选择余地：
+
+```
+diffusers main         唯一带 MiniMax-H3 的版本
+  → 需要 hub ≥1.23     (get_cached_repo_tree，被 pipeline_utils 导入)
+    → hub 1.x 需要 transformers 5.x   (4.x 要 hub<1.0，会死在 refresh_xet_connection_info)
+      → transformers 5.x 删了 HybridCache → peft 必须 ≥0.18
+        → peft ≥0.18 无保护地探测 transformer_engine
+```
+
 | 尝试 | 结果 |
 |---|---|
-| 初始：transformers 5.5.0 + peft 0.17.1 | ❌ peft 模块级 `from transformers import HybridCache`，5.x 已删 |
-| 第一次修：降 transformers 到 4.57.6 | ✅ 能导入，但**删掉了** H3 要的 `create_mm_token_type_ids` |
-| 第二次修：升 transformers 5.15 + peft 0.20 | ❌ peft 0.20 改去探测 `transformer_engine`，其 import 要 libnvrtc 且**探测不捕获异常** |
-| 最终：transformers 4.57.6 + peft 0.17.1 + 代码不依赖那个 API | ✅ |
+| 初始：transformers 5.5.0 + peft 0.17.1 | ❌ peft 模块级 `from transformers import HybridCache` |
+| 第一次修：**降** transformers 到 4.57.6 | ❌ 方向反了。类导入过了，但作业走的 `pipeline_utils` 需要 hub ≥1.x —— **这就是 5998320 的死因** |
+| 第二次修：升到 transformers 5.15 + peft 0.20 | ❌ peft 探测 `transformer_engine` 抛 RuntimeError |
+| 尝试用 `LD_LIBRARY_PATH` 喂 libnvrtc | ❌ TE 找的是 `libnvrtc.so`（无版本号），磁盘上只有 `libnvrtc.so.12`；**而且 `libcurand` 在这个环境里根本不存在**，路走不通 |
+| **最终：加 TE 存根** | ✅ TE 在此环境**不可能工作**，正确的动作不是让它工作，而是让探测得到正确答案 |
 
-真正的解法不是选对版本组合，而是**让代码不需要那个 API**：`mm_token_type_ids` 对纯文本
-prompt 恒为全零，直接构造并加断言，于是 transformers 大版本从依赖里消失。互锁关系与理由
-已写进 `requirements-pinned.txt`。
+`code/setup_te_stub.sh` 在 venv 里放一个空的 `transformer_engine` 包（遮蔽宿主的那个）。
+peft 的探测于是能正常 import、发现没有 `pytorch` 属性、判定不可用——**这正是事实**。
+
+最终环境：`diffusers 0.40.0.dev0 + transformers 5.15.0 + hub 1.27.0 + peft 0.20.0 + TE 存根`，
+真实导入路径（含 `ModularPipeline` / `DiffusionPipeline` / `pipeline_utils`）已验证通过，
+13/13 约定断言在此环境下重跑仍全过。
 
 ### 自己写出来的 bug 清单（全部属于「不报错、只出错结果」）
 
