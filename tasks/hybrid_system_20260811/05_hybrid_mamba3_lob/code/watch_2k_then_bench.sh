@@ -10,6 +10,11 @@
 #
 # 必需 env: CKPT_A CKPT_B ARM_ID ARCHITECTURE NODELIST ATTACH_JOBID TRAIN_NODE
 set -uo pipefail
+# 上一版死得无声无息：进程没了，日志最后一行还停在「等训练结束」，看不出是超时、
+# 是 srun 出错、还是被谁杀了。守望器的价值全在它还活着，所以它必须在退出时说明
+# 自己为什么退出。
+trap 'echo "[watch] ${ARM_ID:-?} 退出 rc=$? 于 $(date -u +%H:%M:%SZ)"' EXIT
+# 每次轮询都写一行心跳，这样「最后一次醒着是什么时候」是可读的，而不是靠猜。
 : "${CKPT_A:?}" "${CKPT_B:?}" "${ARM_ID:?}" "${ARCHITECTURE:?}" "${NODELIST:?}" "${ATTACH_JOBID:?}" "${TRAIN_NODE:?}"
 TASKDIR=/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob
 POLL=${POLL:-600}
@@ -27,10 +32,12 @@ while true; do
         nvidia-smi --query-compute-apps=pid --format=csv,noheader 2>/dev/null | sort -u | wc -l)
     if [ "${n:-1}" -eq 0 ]; then
         idle=$((idle+1))
+        echo "[watch] $(date -u +%H:%M:%SZ) ${ARM_ID} 卡上无进程（连续 $idle 次）"
         # 连续两次为空才算停，避开 checkpoint 保存期间的短暂空窗
         [ "$idle" -ge 2 ] && { echo "[watch] $ARM_ID 训练已停"; break; }
     else
         idle=0
+        echo "[watch] $(date -u +%H:%M:%SZ) ${ARM_ID} 训练仍在跑（$n 个进程）"
     fi
     now=$(date +%s)
     [ $((now - t0)) -gt "$MAXWAIT" ] && { echo "[watch] FATAL 等超时" >&2; exit 2; }

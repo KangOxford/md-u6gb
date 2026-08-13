@@ -139,7 +139,10 @@ export SLURM_JOB_ID="${ATTACH_JOBID}"
 export SLURM_NNODES="${NNODES_ATTACH}"
 export SLURM_JOB_NUM_NODES="${NNODES_ATTACH}"
 export SLURM_JOB_NODELIST="${NODELIST}"
-export SLURM_JOB_NAME="hybrid-m3-nemotron-${TAG}"
+# 作业名要能把两条臂分开。派生脚本时沿用了 hybrid 的名字，结果 gtop 上四个
+# 节点全写 hybrid-mamba3-nemotron，看不出哪两个在跑 baseline——观测工具读的是
+# 这个名字，不是脚本文件名。
+export SLURM_JOB_NAME="base-m3-ctx2k-${TAG}"
 export SLURM_SUBMIT_DIR="$WORKDIR"
 # 按臂分开的节点日志目录。node_wrapper.sh 用 SLURM_JOB_ID + SLURM_PROCID 命名
 # 日志，而 attach 场景下两条臂共用同一个 SLURM_JOB_ID、procid 也都是 0..N-1，
