@@ -57,7 +57,7 @@ echo "[claim] 身份 who=${OWNER} tier=${TIER} alloc=${ALLOC}"
 # 是把只读操作做成了副作用。
 if [ -x "$NODELOCK" ]; then
     FOREIGN=$(timeout 120 "$NODELOCK" ls --json --no-probe 2>/dev/null | \
-      NODES="$NODES" OWNER="$OWNER" python3 -c '
+      NODES="$NODES" OWNER="$OWNER" ALLOW_SHARED="${GATE_ALLOW_SHARED:-0}" python3 -c '
 import json, os, sys
 try:
     reg = json.load(sys.stdin)
@@ -66,8 +66,29 @@ except Exception:
 me = os.environ["OWNER"]
 for n in os.environ["NODES"].split():
     e = reg.get(n)
-    if e and e.get("who") and e["who"] != me:
-        print("%s\t%s\t%s" % (n, e["who"], (e.get("note") or "")[:70]))
+    if not e or not e.get("who") or e["who"] == me:
+        continue
+    # 认注册表自己的过期规则，别把死锁当活锁。
+    # 判据是 last_probe - last_activity > ttl，**不是 now - last_activity**：
+    # 「没观测到活动」不等于「观测到空闲」，用 now 会在没人跑 refresh 的时候
+    # 把所有锁一起放出去 —— 恰好在最需要锁的时刻（谁都没盯着）。
+    la  = e.get("last_activity") or 0
+    lp  = e.get("last_probe") or 0
+    ttl = e.get("ttl") or 600
+    if lp and la and (lp - la) > ttl:
+        sys.stderr.write("  [claim] %s 的 %s 锁已过期（闲置 %ds > ttl %ds），按无锁处理\n"
+                         % (n, e["who"], lp - la, ttl))
+        continue
+    # 对方自己声明 shared 时允许共租（需 GATE_ALLOW_SHARED=1 显式打开）。
+    # 这不是绕过 R4：R4 禁止的是**抢占**，而 shared 是占用者主动让出的邀请。
+    # 判据必须是**对方写的**，不是我自己认为「应该能挤一挤」——
+    # 后者就是 R4 要防的那种单方面判断。共租仍然要过显存闸门。
+    note = (e.get("note") or "")
+    if os.environ.get("ALLOW_SHARED") == "1" and "shared" in note.lower():
+        sys.stderr.write("  [claim] %s 的 %s 声明为 shared，允许共租：%s\n"
+                         % (n, e["who"], note[:60]))
+        continue
+    print("%s\t%s\t%s" % (n, e["who"], note[:70]))
 ')
     if [ -n "$FOREIGN" ]; then
         echo "FATAL: 这些节点已被别人声明，不碰（规则 R4：抢占只向下且永不由 agent 执行）" >&2
@@ -104,8 +125,12 @@ sys.exit(0 if all((reg.get(n) or {}).get("who") == me for n in ns) else 1)
     fi
 fi
 
+# 共租模式下不写锁：注册表是每节点单主的，写进去等于抹掉对方的声明 ——
+# 那正是 R4 禁止的单方面动作，只不过换成了在注册表里做而不是 kill 进程。
 LOCKED=0
-if [ -x "$NODELOCK" ]; then
+if [ "${GATE_ALLOW_SHARED:-0}" = "1" ]; then
+    echo "[claim] ② 共租模式：不写锁，不覆盖对方的声明"
+elif [ -x "$NODELOCK" ]; then
     if timeout 120 "$NODELOCK" lock "$NODELIST" --who "$OWNER" -j "$ALLOC" \
          --ttl "$TTL" --note "${TIER}: ${NOTE}" >/dev/null 2>&1; then
         LOCKED=1
@@ -129,13 +154,34 @@ unlock_and_die() {
 # 锁表是意图，nvidia-smi 是事实。两者都会单独骗人：
 #   只信锁表 → 没声明就闯进来的邻居看不见（vLLM 那次）
 #   只信 nvidia-smi → 声明了但进程还没起来的邻居看不见（本次）
+#
+# **严格程度随判错代价缩放，而这恰好就是 tier 的定义：**
+#
+#   T0  启动窗口 8 分钟，邻居可能在窗口里长大（实测 nid010556 从 658 MiB 涨到
+#       10,108 MiB）。判错 = 整条臂死掉 + 两条臂步数岔开。→ 判据「零 compute PID」，
+#       因为一个持有 CUDA context 却只占 658 MiB 的进程，是「即将分配」不是「空闲」。
+#
+#   T1/T2 判错只是重跑几分钟。→ 判据「剩余显存 ≥ 需求」，进程数只记录不否决。
+#       用零 PID 卡 T1 会为了邻居的 0.7 GB 白等几小时（另一个会话 2026-08-13
+#       正是这样把 OOM 归因成「有别人的进程」，造出过严判据）。
+#
+# 一个判据套所有场景，必然在一头过严、另一头过松。
+GATE_NEED_MIB=${GATE_NEED_MIB:-85000}      # 训练需要的空闲显存（MEM_FRACTION 0.85 × 95.6G）
+case "$TIER" in
+    T0) GATE_REQUIRE_ZERO_PIDS=${GATE_REQUIRE_ZERO_PIDS:-1} ;;
+    *)  GATE_REQUIRE_ZERO_PIDS=${GATE_REQUIRE_ZERO_PIDS:-0} ;;
+esac
+
 _CLEAN_ENV=$(env | grep -oE '^SLURM[A-Z_]*' | sed 's/^/-u /' | tr '\n' ' ')
 GATE_OUT=$(timeout 200 env $_CLEAN_ENV srun --jobid="$ALLOC" --overlap \
     --nodes="$NNODES" --ntasks="$NNODES" --ntasks-per-node=1 -w "$NODELIST" --cpu-bind=none \
     bash -c '
       pids=$(nvidia-smi --query-compute-apps=pid --format=csv,noheader | tr "\n" " ")
       worst=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | sort -n | tail -1)
-      echo "GATE $(hostname) worst_used_mib=${worst:-0} pids=[${pids}]"
+      # 最小可用 = 该节点所有卡里剩得最少的那张
+      minfree=$(nvidia-smi --query-gpu=memory.total,memory.used --format=csv,noheader,nounits \
+                | awk -F", *" "{f=\$1-\$2; if(m==\"\"||f<m) m=f} END{print m+0}")
+      echo "GATE $(hostname) worst_used_mib=${worst:-0} min_free_mib=${minfree:-0} pids=[${pids}]"
     ' 2>&1 | grep "^GATE")
 echo "$GATE_OUT"
 
@@ -144,16 +190,17 @@ if [ "$GOT" -ne "$NNODES" ]; then
     echo "FATAL: 只收到 ${GOT}/${NNODES} 个节点的体检回报，视同不通过。" >&2
     unlock_and_die 3
 fi
-if echo "$GATE_OUT" | grep -q "pids=\[[0-9]"; then
-    echo "FATAL: 有节点存在 compute PID —— 有人没声明就在用这批卡。中止，不动它。" >&2
+if [ "$GATE_REQUIRE_ZERO_PIDS" = "1" ] && echo "$GATE_OUT" | grep -q "pids=\[[0-9]"; then
+    echo "FATAL: [${TIER}] 有节点存在 compute PID —— 持有 context 的进程随时会长大。中止，不动它。" >&2
+    unlock_and_die 3
+fi
+MINFREE=$(echo "$GATE_OUT" | sed -E 's/.*min_free_mib=([0-9]+).*/\1/' | sort -n | head -1)
+if [ -n "$MINFREE" ] && [ "$MINFREE" -lt "$GATE_NEED_MIB" ]; then
+    echo "FATAL: 最紧的一张卡只剩 ${MINFREE} MiB < 需求 ${GATE_NEED_MIB} MiB。中止。" >&2
     unlock_and_die 3
 fi
 WORST=$(echo "$GATE_OUT" | sed -E 's/.*worst_used_mib=([0-9]+).*/\1/' | sort -n | tail -1)
-if [ -n "$WORST" ] && [ "$WORST" -gt "$MAX_RESIDUAL_MIB" ]; then
-    echo "FATAL: 残留显存 ${WORST} MiB > ${MAX_RESIDUAL_MIB} MiB。中止。" >&2
-    unlock_and_die 3
-fi
 
-echo "[claim] ③ 物理体检通过（最坏残留 ${WORST} MiB）"
+echo "[claim] ③ 物理体检通过（tier=${TIER} 零PID要求=${GATE_REQUIRE_ZERO_PIDS}，最坏残留 ${WORST} MiB，最小可用 ${MINFREE} MiB ≥ ${GATE_NEED_MIB}）"
 echo "[claim] ✅ 可以起飞，锁已持有"
 exit 0

@@ -156,6 +156,31 @@ export SLURM_SUBMIT_DIR="$WORKDIR"
 # 于是两条臂会 exec> 到同一个文件上，各写各的，内容交错且互相截断。
 # NODE_LOG_DIR 是 node_wrapper.sh:29 留出的覆盖点。
 export NODE_LOG_DIR="$WORKDIR/logs_lobs5/ctx2k_base"
+ARCH_TAG=base
+# ── XLA 持久化编译缓存 ──────────────────────────────────────────────────────
+# 实测：一次重启到稳态约 3.5 分钟，其中 **XLA 编译训练步占 50 秒**
+# （node 日志里第一条 tqdm 是 `[00:50<`，之后掉到 ~1.3s/步）。
+# 剩下的是 preflight、挂 48 个 squashfs 分片、JAX 分布式 init、载 checkpoint——
+# 那些编译缓存救不了。所以这里省的是每次重启 ~50 秒，不是「8 分钟」；
+# 那个 8 分钟是 baseline 那次**故障**的耗时（含 2 分钟 JAX 分布式超时）。
+#
+# 失效机制不用自己设计，JAX 的缓存键（cache_key.py:get）已经哈希了：
+#   computation（HLO 模块）/ jaxlib 版本 / backend 平台 / XLA flags
+# **它键在编译产物上而不是源码文本上**，所以两个方向都对：改注释、改 print
+# 不会失效（HLO 没变，本就该复用）；改一行影响计算图的代码则必然失效。
+# 不存在「改了代码缓存没失效」，也不存在「只改注释却全量重编译」。
+#
+# 按配置分子目录：单个目录在 Lustre 上无限膨胀是元数据负担，而且不同配置
+# （架构/节点数/序列长度）的产物本来就互不复用，分开放便于整目录丢弃。
+JAX_CACHE_ROOT=${JAX_CACHE_ROOT:-$WORKDIR/.jax_cache}
+_CACHE_SIG="${ARCH_TAG}_n${NNODES_ATTACH}_L${MSG_SEQ_LEN:-2000}_b${PER_GPU_BSZ:-1}"
+export JAX_COMPILATION_CACHE_DIR="$JAX_CACHE_ROOT/$_CACHE_SIG"
+mkdir -p "$JAX_COMPILATION_CACHE_DIR"
+# 只缓存真正贵的：低于 1 秒的编译存下来反而是净亏（一次 Lustre 往返）
+export JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS=${JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS:-1.0}
+export JAX_PERSISTENT_CACHE_MIN_ENTRY_SIZE_BYTES=${JAX_PERSISTENT_CACHE_MIN_ENTRY_SIZE_BYTES:-0}
+echo "[jax-cache] $JAX_COMPILATION_CACHE_DIR"
+
 
 # 起飞前把上一轮的节点日志归档。日志名是 training_<allocid>_node<N>.log，同一个
 # allocation 上续训会 exec > 把它截断 —— 于是每次自愈重启都抹掉上一次的死因。
