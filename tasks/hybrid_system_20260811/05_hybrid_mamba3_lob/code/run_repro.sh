@@ -38,6 +38,13 @@ timeout 1800 env $_CLEAN srun --jobid="$ALLOC" --overlap \
     export LD_PRELOAD=$NCCL_LIB/libnccl.so.2
     export LD_LIBRARY_PATH=$NCCL_LIB:/lus/lfs1aip2/projects/public/s5e/quant_team/quant/aws-ofi-nccl-1.18.0/lib:${LD_LIBRARY_PATH:-}
     export NCCL_BUFFSIZE=2097152
+    # NCCL_DEBUG=INFO 会在每次 commInitRank 时打日志 —— 这是唯一能直接回答
+    # 「broadcast_one_to_all 到底有没有新建 communicator」的证据。
+    # 只在需要时打开：INFO 很吵，且会拖慢启动。
+    if [ "'"${NCCLDBG:-0}"'" = "1" ]; then
+      export NCCL_DEBUG=INFO
+      export NCCL_DEBUG_SUBSYS=INIT,ENV
+    fi
     export CUDA_VISIBLE_DEVICES=0,1,2,3
     # 共租：只拿一小块显存，别影响邻居
     export XLA_PYTHON_CLIENT_PREALLOCATE=false
