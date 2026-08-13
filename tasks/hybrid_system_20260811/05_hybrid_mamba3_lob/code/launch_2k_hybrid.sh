@@ -318,7 +318,24 @@ else
     # 而 COSINE_STEPS 数的是优化器步。两者差一个 K，靠人记得乘的后果是：忘了乘
     # 就在 目标/K 步处静默早停，没有任何报错，曲线看起来只是"跑得短了些"。
     # 所以这里自己乘，调用方只需要给优化器步数。
-    export CURTAIL_EPOCHS=${CURTAIL_EPOCHS:-$(( COSINE_STEPS * GRAD_ACCUM_STEPS ))}
+    #
+    # 续训时还要减掉已经跑过的部分，而且**减法要在 micro 域里做**。
+    # 2026-08-13 实测：从 optimizer 4462 续起时，batch_idx 也从 ≈4461 开始 ——
+    # 训练侧拿「上一次的优化器步号」当 micro-batch 索引的起点，两个单位混用。
+    # 于是 CURTAIL=32000 不是「再跑 6400 优化器步」，而是「跑到 batch_idx=32000」，
+    # 即 4462 + (32000-4461)/5 ≈ optimizer **9970**，超目标 56%。
+    # 验算（实测数据）：batch_idx 8801 ↔ optimizer 5330，
+    #                  4462 + (8801-4461)/5 = 5330 ✓
+    #
+    # 后果不只是浪费：控制器判达标后转入评测，而训练**还在同一批卡上跑**，
+    # 评测被挤；配对点也会漂到 9970 而不是设计的 6400（那里 cosine 已经退火完，
+    # 是另一个训练状态）。
+    _rs=${RESTORE_STEP:-0}
+    if [ "${_rs}" -gt 0 ] 2>/dev/null && [ "${_rs}" -lt "${COSINE_STEPS}" ]; then
+        export CURTAIL_EPOCHS=${CURTAIL_EPOCHS:-$(( _rs + (COSINE_STEPS - _rs) * GRAD_ACCUM_STEPS ))}
+    else
+        export CURTAIL_EPOCHS=${CURTAIL_EPOCHS:-$(( COSINE_STEPS * GRAD_ACCUM_STEPS ))}
+    fi
     # 冒烟实测回填：2 节点、每卡每步 2,000 条消息，稳态 1.375 it/s = 0.727 秒。
     # 对比 500 上下文的 0.313 秒，慢 2.32 倍，与注意力 FLOPs 之比一致：
     #   (1 x 52000^2) / (4 x 13000^2) = 4.0

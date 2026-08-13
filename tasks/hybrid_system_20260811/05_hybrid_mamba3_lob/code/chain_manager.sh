@@ -197,6 +197,37 @@ for n in os.environ["NODES"].split():
 sys.exit(1)'
 }
 
+# 达标后停掉这条臂的训练。**不这样做整条流水线就跑不通**：评测起在同一批卡上，
+# 而训练占着 87 GB/卡，评测必然 OOM。
+#
+# 之所以需要它，是因为续训时 CURTAIL 的单位对不上（batch_idx 从「上一次的优化器
+# 步号」起算），臂不会在目标处自己停 —— baseline 从 4462 续起会一路跑到 ≈9970。
+# launcher 已修，但**已经在跑的进程里烧的是旧值**。
+#
+# 只杀本实验的进程：按 worktree 路径匹配命令行，匹配不上的一律不动。
+# 这与 PRIORITY.md 的 R4 不冲突：R4 禁止的是抢占**别人的**工作。
+declare -A STOPPED
+stop_at_target() {
+    local arm="$1" alloc="$2"
+    [ "${STOP_AT_TARGET:-1}" = "1" ] || return 0
+    [ -n "${STOPPED[$arm]:-}" ] && return 0
+    local nl; nl=$(nodes_of "$alloc"); [ -z "$nl" ] && return 0
+    local nn; nn=$(scontrol show hostnames "$nl" 2>/dev/null | wc -l)
+    log "$arm 达标，停掉它的训练进程好把卡让给评测（alloc=$alloc）"
+    timeout 200 srun --jobid="$alloc" --overlap --nodes="$nn" --ntasks="$nn" \
+        --ntasks-per-node=1 -w "$nl" --cpu-bind=none bash -c '
+          K=""
+          for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader | sort -u); do
+            tr "\0" " " < /proc/$p/cmdline 2>/dev/null \
+              | grep -q "hybrid-mamba3-nemotron" && K="$K $p"
+          done
+          [ -z "$K" ] && { echo "[stop] $(hostname) 无本实验进程"; exit 0; }
+          kill $K 2>/dev/null; sleep 10
+          echo "[stop] $(hostname) killed=[$K]"
+        ' 2>&1 | grep "^\[stop\]" | sed 's/^/  /'
+    STOPPED[$arm]=1
+}
+
 resume_arm() {   # $1=arm(A|B) $2=alloc $3=ckpt_dir $4=step
     local arm="$1" alloc="$2" dir="$3" step="$4" nl nn script tag who
     nl=$(nodes_of "$alloc")
@@ -263,7 +294,11 @@ while true; do
     for arm in A B; do
         if [ "$arm" = A ]; then dn=$a_done; al=$ALLOC_A; ld=$LOGDIR_A; sn=$STEP_NAME_A; dir=${DA:-}; st=${SA:-}
                            else dn=$b_done; al=$ALLOC_B; ld=$LOGDIR_B; sn=$STEP_NAME_B; dir=${DB:-}; st=${SB:-}; fi
-        [ "$dn" = 1 ] && { log "$arm 已达标 step=$st"; continue; }
+        if [ "$dn" = 1 ]; then
+            log "$arm 已达标 step=$st"
+            stop_at_target "$arm" "$al"
+            continue
+        fi
         # 冷却期内不判死活：启动那 8 分钟里 step 还没注册、日志还没写
         since=$(( now - ${LAUNCHED_AT[$arm]:-0} ))
         [ "${LAUNCHED_AT[$arm]:-0}" -gt 0 ] && [ "$since" -lt "$COOLDOWN" ] && \
@@ -294,6 +329,16 @@ DA=$(ckpt_dir_of "$LOGDIR_A"); DB=$(ckpt_dir_of "$LOGDIR_B")
 BOUND_A=$(top_step "$DA"); BOUND_B=$(top_step "$DB")
 [ -n "$BOUND_A" ] && [ -n "$BOUND_B" ] || { log "FATAL 读不到步号"; exit 3; }
 BOUND=$(( BOUND_A < BOUND_B ? BOUND_A : BOUND_B ))
+# 上限压到 TARGET_STEP。2026-08-13 发现续训时 CURTAIL 的单位对不上（batch_idx
+# 从「上一次的优化器步号」起算），臂会冲过目标 —— baseline 从 4462 续起时会一路
+# 跑到 optimizer ≈9970 而不是 6400。launcher 已修，但**已经在跑的那两个进程里
+# 烧的还是旧值**，而且任何未来的单位错误都会以同样的方式表现出来。
+# 设计的比较点是 cosine 退火结束处（6400）；9970 那里 LR 已经在地板上待了很久，
+# 是另一个训练状态。这里兜住，比较点永远不超过设计值。
+if [ "$BOUND" -gt "$TARGET_STEP" ]; then
+    log "两臂冲过目标（A=$BOUND_A B=$BOUND_B），比较点压回 $TARGET_STEP"
+    BOUND=$TARGET_STEP
+fi
 STEP_A=$(steps_of "$DA" | awk -v b="$BOUND" '$1 <= b' | tail -1)
 STEP_B=$(steps_of "$DB" | awk -v b="$BOUND" '$1 <= b' | tail -1)
 [ -n "$STEP_A" ] && [ -n "$STEP_B" ] || { log "FATAL 没有不超过 $BOUND 的 checkpoint"; exit 3; }
