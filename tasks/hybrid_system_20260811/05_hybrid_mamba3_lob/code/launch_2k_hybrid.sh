@@ -308,7 +308,17 @@ if [ -n "${RESTORE_PATH:-}" ]; then
     echo "[resume] 从 $RESTORE_PATH @ $RESTORE_STEP 续训，目标 $CURTAIL_EPOCHS 步"
 fi
 export DISABLE_STEP_WATCHDOG=0
-export WATCHDOG_TIMEOUT=1800
+# 看门狗阈值按「稳态一步的多少倍」定，不是拍脑袋的整数。
+#
+# 2026-08-13 11:06 这条臂在 batch 3760 撞上 NCCL 死锁：主线程 futex_wait，4 个
+# GPU 线程 100% 自旋（NCCL 集合是忙等，所以 nvidia-smi 照报满载——util 不能用来
+# 判断训练是否活着）。看门狗在 1800s 后正确开火，但那是 **30 分钟 × 16 GPU** 白烧。
+#
+# 2k 上下文稳态一步 ~1.3s（micro-batch），看门狗是按 micro-batch kick 的：
+#   1800s = 1400 倍余量   ← 之前
+#    600s =  460 倍余量   ← 现在，仍然远超任何正常抖动，挂死代价降到 1/3
+# warmup 那 50 步保持 900s 不动：JIT 编译 + NCCL 建通道确实要几百秒。
+export WATCHDOG_TIMEOUT=${WATCHDOG_TIMEOUT:-600}
 export STEP_TIMEOUT=600
 export NO_AUTO_RESUME_DEPTH=99    # attach 场景禁止自动 sbatch 续投
 

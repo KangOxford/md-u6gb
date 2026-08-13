@@ -74,12 +74,21 @@ arm_alive() {
         return 0
     fi
     f=$(latest_log "$logdir")
-    if [ -n "$f" ]; then
-        age=$(( $(date +%s) - $(stat -c %Y "$f" 2>/dev/null || echo 0) ))
-        [ "$age" -lt "${LOG_FRESH:-1500}" ] && return 0
-        return 1
-    fi
-    return 0
+    [ -z "$f" ] && return 0
+    # 收尾标记优先于新鲜度。**关停序列本身要写日志**：看门狗开火后还要卸载 48 个
+    # squashfs 分片，那 48 行让「日志很新鲜」在刚死的那一刻恰好成立。
+    # 2026-08-13 11:12 控制器就因此判 hybrid「在跑」，而它两分钟前才被看门狗打死；
+    # 靠 LOG_FRESH 自然过期要再等 25 分钟。
+    # 判据是**最后一行**是不是收尾产物，而不是全文有没有出现过这些词。
+    local last
+    last=$(tr '\r' '\n' < "$f" 2>/dev/null | grep -av "^ *$" | tail -1)
+    case "$last" in
+        *"squashfs] unmounted"*|*"Step watchdog timeout"*|*"Training complete"*|*"[squashfs] umount"*)
+            return 1 ;;
+    esac
+    age=$(( $(date +%s) - $(stat -c %Y "$f" 2>/dev/null || echo 0) ))
+    [ "$age" -lt "${LOG_FRESH:-1500}" ] && return 0
+    return 1
 }
 
 # 找一个能接手的 allocation：自己的、RUNNING、四节点、剩余够久、且卡是空的。

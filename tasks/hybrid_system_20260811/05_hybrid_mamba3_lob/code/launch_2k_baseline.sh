@@ -305,7 +305,11 @@ if [ -n "${RESTORE_PATH:-}" ]; then
     echo "[resume] 从 $RESTORE_PATH @ $RESTORE_STEP 续训，目标 $CURTAIL_EPOCHS 步"
 fi
 export DISABLE_STEP_WATCHDOG=0
-export WATCHDOG_TIMEOUT=1800
+# 看门狗阈值按「稳态一步的多少倍」定。2k 稳态 ~1.3s/micro-batch：
+#   1800s = 1400 倍余量（之前）→ 600s = 460 倍余量（现在）
+# 仍远超任何正常抖动，而一次 NCCL 死锁的代价从 30 分钟降到 10 分钟。
+# 详见 launch_2k_hybrid.sh 同处注释（2026-08-13 hybrid 在 batch 3760 的死锁）。
+export WATCHDOG_TIMEOUT=${WATCHDOG_TIMEOUT:-600}
 export STEP_TIMEOUT=600
 export NO_AUTO_RESUME_DEPTH=99    # attach 场景禁止自动 sbatch 续投
 
