@@ -311,3 +311,16 @@ log-w 截断 + ESS 必报；权重按 **rollout 整条**给，不逐 token。
 ### 方法卡片（用户四问定稿，15:0xZ）：On-policy 终点密度比蒸馏
 
 **定义**：老师 = 自样本 × w(r)=p̂_real/p̂_θ（「终点被扭成真实分布的自己」），学生 = 同模型全参数；on-policy = 材料为当前策略自采 rollout；safe = real-CE 锚 + I-projection 最小改动本性 + 事后非劣效闸门。**无 return 预测头无 critic**：被训练的是 action（消息 token）分布，r 从终点 state（账本 mid）算出、只进权重。**马尔可夫链只在前向经历**：likelihood-ratio 梯度不反传穿引擎（不可微无碍）；全轨迹共享同一 w（目标是终点边缘分布，不做逐步信用分配）。**Sparse terminal reward**（每轨迹一标量，(w−1) 中心化 + log 截断 ±2.5 控方差），但效果 dense（序列级权重重塑逐步条件分布 → 全 horizon 改善 + 方向中程 +4pp）。三恒等式：REINFORCE 等价（绕过引擎）、I-projection（安全面的理论根源）、可计算天花板（每轮对上界报账）。Notion 方法卡片页 3bb12c45-68fd-81b5-86e0-ecb0acd5de72。
+
+### S15 终判：wm_ft_multi 全管线闭环（训练→inference→benchmarking→scoring，16:5xZ）
+
+**训练**：2400 步 1 epoch 零故障（futex 卡死一次换卡+线程帽复活；hold gen 全程下降 −0.95%，多票池独有）。**Inference**：8 票 × 500 契机 × 2 seeds × 双臂 = 32 run 全绿（GPU3 被 ram_repro 压制的 4 缺 rid 移卡补齐）。**Benchmarking**：LOB-Bench ks21 0.1397→0.1247（−10.7%）、**spread 0.196→0.181 反而改善**、1/21 恶化；ceFIX **0.513864 = 全任务历史最优**（base 0.5607、a 0.5144、b 0.5147）。**Scoring**（v5m_scoreboard.json，天块 z）：
+
+| 票 | ΔqL1 | z | sd | 票 | ΔqL1 | z | sd |
+|---|---|---|---|---|---|---|---|
+| GOOG | −35.2% | −2.21 | 0.78→0.67 | AMD | −23.5% | −1.89 | 0.66→0.66 |
+| MSFT | −39.5% | −2.13 | 0.50→0.48 | INTC | −0.8% | ns | 0.70→0.78 |
+| AMZN | −19.6% | −1.29 | 0.83→0.79 | NFLX | −17.0% | −1.85 | 0.87→0.94 |
+| META | −39.3% | −3.18 | 0.79→0.68 | JPM | −7.2% | ns | 0.87→0.78 |
+
+**判读**：① **shape 普适化达成**——八票全降、四票 ≥1.85σ、混池标准化 qL1 −26%（0.138→0.102）：逐票权重把 shape 修复推广到了全横截面（S9 单票权重做不到的事）；② **sd 轴一剂未兑现**（混池 0.760→0.734 微降）——与单票弧线同构：r1 剂量先出 shape、sd 要第二剂（且矩阵图显示 GOOG h=100/250 raw 尾部大幅外扩=尾质量先于二阶矩恢复）；③ 安全面三绿创纪录。**自然下一剂 = multi-IPF r2**（从 wm_ft_multi 重采重估逐票权重再训一轮，对照单票 r2 出 sd 的先例）。产物：v5m_scoreboard.json、fig_v5m_matrix.png（全红版，Overleaf 84fb9d2）、ceFIX_wm_ft_multi、lobbench2/hp_v5me{b,m}_GOOG。注意口径：eval 集 n=500×2seed 比多日集噪；跨集比较无效，只读集内配对 delta。
