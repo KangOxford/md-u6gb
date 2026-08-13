@@ -315,7 +315,19 @@ while true; do
     a_done=0; b_done=0
     [ -n "${SA:-}" ] && [ "$SA" -ge "$TARGET_STEP" ] && a_done=1
     [ -n "${SB:-}" ] && [ "$SB" -ge "$TARGET_STEP" ] && b_done=1
-    [ "$a_done" = 1 ] && [ "$b_done" = 1 ] && { log "两臂均达 $TARGET_STEP（A=$SA B=$SB），转入评测"; break; }
+    if [ "$a_done" = 1 ] && [ "$b_done" = 1 ]; then
+        log "两臂均达 $TARGET_STEP（A=$SA B=$SB），转入评测"
+        # 收尾前必须先把两条臂都停掉，**这一步不能省**。
+        #
+        # 2026-08-13 17:31 的教训：这个 break 原本直接跳出，而 stop_at_target 是
+        # 在下面的按臂循环里调的。两臂在**同一轮**达标时，B 从来没被停过 ——
+        # 于是 hybrid 的训练（87 GB/卡）还占着卡，它自己的 bench 起来后被自带闸门
+        # 挡下：「残留 86876 MiB > 4096，中止，不动别人的进程」。
+        # bench 的闸门做对了，错的是这里的顺序。
+        stop_at_target A "$ALLOC_A"
+        stop_at_target B "$ALLOC_B"
+        break
+    fi
 
     for arm in A B; do
         if [ "$arm" = A ]; then dn=$a_done; al=$ALLOC_A; ld=$LOGDIR_A; sn=$STEP_NAME_A; dir=${DA:-}; st=${SA:-}
