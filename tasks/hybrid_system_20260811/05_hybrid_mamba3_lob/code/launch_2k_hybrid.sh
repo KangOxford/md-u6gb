@@ -222,7 +222,7 @@ export TP_SIZE=1
 #   16 x 2000 条 = 32,000 条消息/步 = 500 上下文时的 64 x 500，两者一致。
 # 注意 train.py:413 的 curtail_epochs 数的是 micro-batch，K>1 时必须乘 K，
 # 否则会在 32000/K 步静默早停；COSINE_STEPS 数的是优化器步，不乘。
-export GRAD_ACCUM_STEPS=${GRAD_ACCUM_STEPS:-1}
+export GRAD_ACCUM_STEPS=${GRAD_ACCUM_STEPS:-10}
 export HIERARCHICAL=True
 export REMAT=0
 # profiling 指标。梯度范数按参数组分开（global/muon/ssm/regular/in_proj/out_proj）
@@ -268,7 +268,11 @@ else
     # 939,147 步，按它铺 schedule 会让 warmup 吃掉 30% 训练且全程不退火；而
     # 退火段恰恰是 loss 降得最多、也是生成质量真正成型的一段。
     export COSINE_STEPS=${COSINE_STEPS:-32000}          # 优化器步
-    export CURTAIL_EPOCHS=${CURTAIL_EPOCHS:-32000}      # micro-batch，K>1 要乘 K
+    # CURTAIL_EPOCHS 数的是 micro-batch（train.py:413 是 curtail_epochs+1），
+    # 而 COSINE_STEPS 数的是优化器步。两者差一个 K，靠人记得乘的后果是：忘了乘
+    # 就在 目标/K 步处静默早停，没有任何报错，曲线看起来只是"跑得短了些"。
+    # 所以这里自己乘，调用方只需要给优化器步数。
+    export CURTAIL_EPOCHS=${CURTAIL_EPOCHS:-$(( COSINE_STEPS * GRAD_ACCUM_STEPS ))}
     # 冒烟实测回填：2 节点、每卡每步 2,000 条消息，稳态 1.375 it/s = 0.727 秒。
     # 对比 500 上下文的 0.313 秒，慢 2.32 倍，与注意力 FLOPs 之比一致：
     #   (1 x 52000^2) / (4 x 13000^2) = 4.0

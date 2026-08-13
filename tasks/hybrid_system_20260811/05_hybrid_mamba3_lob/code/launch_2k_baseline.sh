@@ -220,7 +220,7 @@ export TP_SIZE=1
 #   16 x 2000 条 = 32,000 条消息/步 = 500 上下文时的 64 x 500，两者一致。
 # 注意 train.py:413 的 curtail_epochs 数的是 micro-batch，K>1 时必须乘 K，
 # 否则会在 32000/K 步静默早停；COSINE_STEPS 数的是优化器步，不乘。
-export GRAD_ACCUM_STEPS=${GRAD_ACCUM_STEPS:-1}
+export GRAD_ACCUM_STEPS=${GRAD_ACCUM_STEPS:-10}
 export HIERARCHICAL=True
 export REMAT=0
 # profiling 指标。梯度范数按参数组分开（global/muon/ssm/regular/in_proj/out_proj）
@@ -266,7 +266,11 @@ else
     # 939,147 步，按它铺 schedule 会让 warmup 吃掉 30% 训练且全程不退火；而
     # 退火段恰恰是 loss 降得最多、也是生成质量真正成型的一段。
     export COSINE_STEPS=${COSINE_STEPS:-32000}          # 优化器步
-    export CURTAIL_EPOCHS=${CURTAIL_EPOCHS:-32000}      # micro-batch，K>1 要乘 K
+    # CURTAIL_EPOCHS 数的是 micro-batch（train.py:413 是 curtail_epochs+1），
+    # 而 COSINE_STEPS 数的是优化器步。两者差一个 K，靠人记得乘的后果是：忘了乘
+    # 就在 目标/K 步处静默早停，没有任何报错，曲线看起来只是"跑得短了些"。
+    # 所以这里自己乘，调用方只需要给优化器步数。
+    export CURTAIL_EPOCHS=${CURTAIL_EPOCHS:-$(( COSINE_STEPS * GRAD_ACCUM_STEPS ))}
     # 纯递归主干没有二次项，2k 的代价只是 batch 维塌缩（实测同工作量下
     # bsz4x250 0.523 秒 vs bsz1x1000 0.608 秒，+16%）。500 上下文是 0.313
     # 秒/步，故 2k 约 0.36 秒。K=2 时 micro 步数翻倍：64,001 x 0.36 = 6.4 小时。

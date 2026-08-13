@@ -20,7 +20,20 @@ trap 'echo "[watch] ${ARM_ID:-?} 退出 rc=$? 于 $(date -u +%H:%M:%SZ)"' EXIT
 # 探测。TERM 与 INT 保留，否则就没法正常收掉它了。
 trap '' HUP PIPE
 # 每次轮询都写一行心跳，这样「最后一次醒着是什么时候」是可读的，而不是靠猜。
-: "${CKPT_A:?}" "${CKPT_B:?}" "${ARM_ID:?}" "${ARCHITECTURE:?}" "${NODELIST:?}" "${ATTACH_JOBID:?}" "${TRAIN_NODE:?}"
+: "${ARM_ID:?}" "${ARCHITECTURE:?}" "${NODELIST:?}" "${ATTACH_JOBID:?}" "${TRAIN_NODE:?}"
+: "${LOG_A:?}" "${LOG_B:?}"
+
+# checkpoint 目录不能写死。目录名是 j<jobid>_<wandb_run_id>_<jobid>，而 wandb id
+# 每次启动都是新的，所以每续训一次目录就换一个。守望器启动时记下的那个，续训之后
+# 就再也不会有新 checkpoint 写进去——闹钟指着一个永远不再更新的地方，而且不会
+# 报错，只是永远不响。2026-08-13 就是这样：两条臂续训后写进 kxh7dex0 与 1a0o8bns，
+# 守望器还盯着 4af7059l 与 e5p5ku58。
+#
+# 改为从该臂的节点日志里读。NODE_LOG_DIR 已按臂分开，所以这个来源是自描述的：
+# 日志里最后一行 "Checkpoint dir:" 就是这条臂此刻在写的目录。
+ckpt_dir_of() {   # $1 = 该臂的节点日志
+    grep -a "Checkpoint dir:" "$1" 2>/dev/null | tail -1 | sed 's|.*Checkpoint dir: ||' | tr -d ' \r'
+}
 TASKDIR=/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob
 POLL=${POLL:-600}
 MAXWAIT=${MAXWAIT:-72000}
@@ -56,6 +69,9 @@ done
 # 所以第一个算出来的把步号落盘，第二个照抄。用 O_EXCL 的 noclobber 做原子占位。
 STEP_FILE="${STEP_FILE:-$TASKDIR/results/.ctx2k_bench_step}"
 mkdir -p "$(dirname "$STEP_FILE")"
+CKPT_A=$(ckpt_dir_of "$LOG_A"); CKPT_B=$(ckpt_dir_of "$LOG_B")
+echo "[watch] 当前 checkpoint 目录  A=$CKPT_A  B=$CKPT_B"
+[ -n "$CKPT_A" ] && [ -n "$CKPT_B" ] || { echo "[watch] FATAL 读不到 checkpoint 目录" >&2; exit 5; }
 COMMON=$(comm -12 <(steps_of "$CKPT_A") <(steps_of "$CKPT_B") | sort -n | tail -1)
 [ -n "$COMMON" ] || { echo "[watch] FATAL 两臂没有共同步号" >&2; exit 3; }
 if (set -o noclobber; echo "$COMMON" > "$STEP_FILE") 2>/dev/null; then
