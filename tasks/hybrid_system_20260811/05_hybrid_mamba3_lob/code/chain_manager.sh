@@ -214,18 +214,44 @@ stop_at_target() {
     local nl; nl=$(nodes_of "$alloc"); [ -z "$nl" ] && return 0
     local nn; nn=$(scontrol show hostnames "$nl" 2>/dev/null | wc -l)
     log "$arm 达标，停掉它的训练进程好把卡让给评测（alloc=$alloc）"
-    timeout 200 srun --jobid="$alloc" --overlap --nodes="$nn" --ntasks="$nn" \
+    # 必须清掉继承的 SLURM_*。控制器是从交互 shell 起的，那里有 SLURM_STEP_ID /
+    # SLURM_NODEID / SLURM_NNODES=1，srun 会据此以为「只分到 1 个节点」并报
+    # `Only allocated 1 nodes asked for 4` 直接退出 —— 2026-08-13 16:07 第一次
+    # 触发时就是这样静默失败的。
+    local _ce; _ce=$(env | grep -oE '^SLURM[A-Z_]*' | sed 's/^/-u /' | tr '\n' ' ')
+    local out
+    out=$(timeout 200 env $_ce srun --jobid="$alloc" --overlap --nodes="$nn" --ntasks="$nn" \
         --ntasks-per-node=1 -w "$nl" --cpu-bind=none bash -c '
           K=""
           for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader | sort -u); do
             tr "\0" " " < /proc/$p/cmdline 2>/dev/null \
               | grep -q "hybrid-mamba3-nemotron" && K="$K $p"
           done
-          [ -z "$K" ] && { echo "[stop] $(hostname) 无本实验进程"; exit 0; }
+          [ -z "$K" ] && { echo "[stop] $(hostname) left=0 (无本实验进程)"; exit 0; }
           kill $K 2>/dev/null; sleep 10
-          echo "[stop] $(hostname) killed=[$K]"
-        ' 2>&1 | grep "^\[stop\]" | sed 's/^/  /'
-    STOPPED[$arm]=1
+          kill -9 $K 2>/dev/null; sleep 3
+          L=0
+          for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader | sort -u); do
+            tr "\0" " " < /proc/$p/cmdline 2>/dev/null \
+              | grep -q "hybrid-mamba3-nemotron" && L=$((L+1))
+          done
+          echo "[stop] $(hostname) killed=[$K] left=$L"
+        ' 2>&1)
+    printf '%s\n' "$out" | grep "^\[stop\]" | sed 's/^/  /'
+    # 只有确认进程真的没了才算完成。**「没有输出」不等于「没有进程要杀」** ——
+    # srun 失败时 grep 同样一无所获，首版据此把 STOPPED 置位，于是永不重试，
+    # 而 87 GB/卡 的训练一直占着，评测起不来。
+    local got left
+    got=$(printf '%s\n' "$out" | grep -c "^\[stop\]")
+    left=$(printf '%s\n' "$out" | grep -oE "left=[0-9]+" | cut -d= -f2 \
+           | awk '{s+=$1} END{print s+0}')
+    if [ "$got" -eq "$nn" ] && [ "${left:-1}" -eq 0 ]; then
+        STOPPED[$arm]=1
+        log "$arm 已停妥（$nn/$nn 节点回报，残留 0）"
+    else
+        log "$arm 停训未确认（回报 $got/$nn，残留 ${left:-?}），下轮重试"
+        printf '%s\n' "$out" | grep -iv "^\[stop\]" | head -3 | sed 's/^/    /'
+    fi
 }
 
 resume_arm() {   # $1=arm(A|B) $2=alloc $3=ckpt_dir $4=step
