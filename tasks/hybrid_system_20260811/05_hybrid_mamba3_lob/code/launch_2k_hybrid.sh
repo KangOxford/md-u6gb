@@ -305,7 +305,10 @@ export NO_AUTO_RESUME_DEPTH=99    # attach 场景禁止自动 sbatch 续投
 export USE_WANDB=True
 export WANDB_MODE=online
 export WANDB_ENTITY=oxford-lob
-export WANDB_PROJECT=sp500-hybrid-mamba3-35m-ctx2k
+# 认调用方的覆盖。无条件 export 会把外面设的值吃掉：诊断跑本想进 -diag
+# project，结果全写进主 project，和正式 run 混在一起，事后要靠创建时间去猜
+# 哪个是哪个。默认值该是默认值，不该是硬性。
+export WANDB_PROJECT=${WANDB_PROJECT:-sp500-hybrid-mamba3-35m-ctx2k}
 export WANDB_DIR=/local/user/1483804540
 
 export WORKDIR
