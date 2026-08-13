@@ -40,15 +40,46 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 GPUS_PER_NODE = 4          # GH200 固定 4 卡；逐卡解锁整节点锁时用来展开
 
 
+GTOP = os.path.join(os.path.dirname(HERE), "gtop_20260810T182343Z", "gtop")
+
+
 def rich_path():
-    """gtop 读的那份。路径与 gtop 的 locks_path() 必须一致。"""
-    return os.environ.get("GTOP_LOCKS") or os.path.join(HERE, "gpu_locks.json")
+    """gtop 读的那份 —— **问 gtop 自己**，不要猜。
+
+    这个功能同时有多个会话在改。路径被翻过一次（gtop 目录 <-> node_status/），
+    而任何一侧硬编码另一侧的路径，翻的那一下就会让注册表分叉：一边写、
+    另一边读到空。所以这里直接 import gtop 的 locks_path()，
+    它翻到哪儿桥就跟到哪儿。导不进来才回退到本目录。
+    """
+    if os.environ.get("GTOP_LOCKS"):
+        return os.environ["GTOP_LOCKS"]
+    try:
+        import importlib.machinery as m
+        import importlib.util as u
+        # 必须用 spec_from_file_location：spec_from_loader 不设 __file__，
+        # 而 gtop 的 HERE = dirname(realpath(__file__))，取不到就整个导入失败，
+        # 静默退到兜底路径 —— 那正是分叉本身。
+        spec = u.spec_from_file_location(
+            "_gtop", GTOP, loader=m.SourceFileLoader("_gtop", GTOP))
+        mod = u.module_from_spec(spec)
+        # exec 之前必须先登记进 sys.modules：gtop 里有 @dataclass，
+        # 而 dataclasses 在装饰时要靠 sys.modules[cls.__module__] 反查命名空间，
+        # 查不到就抛 AttributeError，整个导入静默失败退到兜底路径。
+        sys.modules["_gtop"] = mod
+        try:
+            spec.loader.exec_module(mod)
+            return mod.locks_path()
+        finally:
+            sys.modules.pop("_gtop", None)
+    except Exception:
+        return os.path.join(HERE, "gpu_locks.json")
 
 
 def flat_path():

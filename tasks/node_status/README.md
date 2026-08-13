@@ -71,8 +71,21 @@ nid010547（未锁时）
 
 | 文件 | 谁读 | schema |
 |---|---|---|
-| `tasks/node_status/gpu_locks.json` | `gtop`、`sgpur` | `{"locks":[{node,gpus,jobid,who,note,at}]}` —— **真相**，有逐卡粒度与 jobid 过期 |
-| `~/.config/nodelocks.json`（`$NODE_LOCKS_PATH`） | `sgpur` | `{host: session}` —— **投影**，只保留 who |
+| **gtop 的 `locks_path()` 所指**（现为 `tasks/gtop_.../gpu_locks.json`） | `gtop` | `{"locks":[{node,gpus,jobid,who,note,at}]}` —— **真相**，有逐卡粒度与 jobid 过期 |
+| `~/.config/nodelocks.json`（`$NODE_LOCKS_PATH`） | `sgpur` 的旧直读路径 | `{host: session}` —— **投影**，只保留 who |
+
+**富格式的路径不写死，是 import gtop 去问它自己的 `locks_path()`。**
+这个路径在 2026-08-13 被两个会话来回翻过一次（gtop 目录 ↔ `node_status/`），
+任何一侧硬编码另一侧，翻的那一下就让注册表分叉：一边写、另一边读到空文件。
+问它自己就不会。`$GTOP_LOCKS` 仍然优先，import 失败才退回本目录。
+
+> 那次 import 连挂三轮，全被 `except Exception` 吞掉、静默退到兜底路径，
+> 表现为「桥写了、gtop 还是看不见」：
+> ① `spec_from_loader` 不设 `__file__` → gtop 的 `HERE` 求值失败；
+> ② `@dataclass` 装饰时要 `sys.modules[cls.__module__]` 反查命名空间，
+> exec 前必须先把模块登记进 `sys.modules`；
+> ③ `nodelock.py` 忘了 `import sys`，`NameError` 同样被那个宽 except 吃掉。
+> **宽 except 把三个不同的 bug 表现成同一个症状。**
 
 扁平格式不能塞额外的 key：`sgpur` 的读法是把**每个顶层 key 当成节点名**，
 放个 `"locks": [...]` 进去，网页上就会多出一个叫 `locks` 的幽灵节点。
@@ -103,3 +116,25 @@ nid010547（未锁时）
 收敛的判据不是「谁的 schema 赢」，而是**让每个消费者都不用改**。
 最终：显式声明胜出（默认全锁表达不了 `stale`），路径统一到本目录，格式差异由本模块桥接。
 旧文件保留为 `../gtop_20260810T182343Z/gpu_locks.json.superseded`，没有删。
+
+## sgpur 侧的接法（网页消费者，2026-08-13 01:30 记）
+
+`sgpur` **不直接读这两个 JSON**，而是动态 import 本目录的 `nodelock.py`，
+只用四个函数：
+
+| 函数 | sgpur 用它做什么 |
+|---|---|
+| `load()` | 每次刷新读一次；返回的 `{host:{who,jobid,...}}` 直接驱动节点行的徽章 |
+| `running_ids()` | 每次刷新读一次，供 `is_live` 判 stale |
+| `is_live(entry, ids)` | 决定徽章是正常四态还是 `stale` |
+| `do_lock` / `do_unlock` | `sgpur --lock/--unlock` 只是转发，不自己写文件 |
+
+**改这四个的签名会影响网页**，其余随便动。反过来 sgpur 侧做了防御：
+import 失败或函数缺失时静默退化成「不显示徽章」，绝不让整页挂掉——所以这个
+目录正在开发时，网页不会因为一次中途保存而 500。
+
+另有一个与本模块无关但同源的坑：`gtop` 的 `probe.sh` 把每条命令行 `cut -c1-120`，
+而实验名通常在绝对路径的**末尾**，光一个 conda interpreter 路径就能吃掉 74 字符，
+于是 4 张卡在网页上显示成 `python/108865`。`sgpur` 的做法是读进 probe.sh 后在
+内存里把 120 放宽到 400 再灌给 srun，**不改这里的文件**；那行若变了 replace 自动
+失效、退回原宽度。要根治的话就在 `probe.sh` 里把 120 调大。
