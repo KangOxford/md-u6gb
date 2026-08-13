@@ -25,7 +25,21 @@ def _fmt_gpus(gs):
     return "all" if gs is None else ",".join(map(str, gs))
 
 
+def _age(entry):
+    """锁离闲置过期还有多远，用**观测到的**空闲时长表示。"""
+    lp, la = entry.get("last_probe", 0), entry.get("last_activity", 0)
+    ttl = entry.get("ttl", NL.DEFAULT_TTL)
+    if not lp or not la:
+        return "未观测"
+    idle = max(0, lp - la)
+    return f"{idle//60}/{ttl//60}min"
+
+
 def cmd_ls(a):
+    if not getattr(a, "no_probe", False):
+        n, ok = NL.refresh()
+        if not ok:
+            print("# 活动探测失败，闲置计时未推进（锁不会因此过期）", file=sys.stderr)
     locks = NL.load()
     ids = NL.running_ids()
     if a.prune:
@@ -42,19 +56,37 @@ def cmd_ls(a):
         return 0
     if ids is None:
         print("# squeue 查不到，stale 判定不可靠（一律按 live 显示）", file=sys.stderr)
-    print(f"{'node':<13}{'gpus':<7}{'who':<16}{'jobid':<10}{'state':<7}note")
+    print(f"{'node':<13}{'gpus':<7}{'who':<16}{'jobid':<10}{'idle':<11}"
+          f"{'state':<20}note")
     for h in sorted(locks):
         e = locks[h]
+        live = NL.is_live(e, ids)
+        st = "live" if live else f"DEAD({NL.why_dead(e, ids)})"
         print(f"{h:<13}{_fmt_gpus(e['gpus']):<7}{e['who']:<16}"
-              f"{(e['jobid'] or '-'):<10}"
-              f"{('live' if NL.is_live(e, ids) else 'STALE'):<7}{e['note']}")
+              f"{(e['jobid'] or '-'):<10}{_age(e):<11}{st:<20}{e['note']}")
     return 0
 
 
 def cmd_lock(a):
-    n = NL.do_lock(a.targets, a.who, a.jobid, a.note or "")
-    print(f"locked {n} -> {NL.path()}\n")
-    return cmd_ls(argparse.Namespace(json=False, prune=False))
+    n = NL.do_lock(a.targets, a.who, a.jobid, a.note or "", a.ttl)
+    print(f"locked {n} (ttl {a.ttl//60}min) -> {NL.path()}\n")
+    return cmd_ls(argparse.Namespace(json=False, prune=False, no_probe=True))
+
+
+def cmd_touch(a):
+    n = NL.touch(a.targets)
+    print(f"touched {n}（闲置计时归零）")
+    return 0
+
+
+def cmd_refresh(a):
+    n, ok = NL.refresh()
+    if not ok:
+        print("活动探测失败：last_probe 未推进，没有锁因此向过期靠近一步",
+              file=sys.stderr)
+        return 1
+    print(f"探测完成：{n} 个被锁节点上有活动")
+    return cmd_ls(argparse.Namespace(json=False, prune=False, no_probe=True))
 
 
 def cmd_unlock(a):
@@ -68,7 +100,7 @@ def cmd_unlock(a):
         return 2
     NL.do_unlock(a.targets)
     print(f"unlocked -> {NL.path()}\n")
-    return cmd_ls(argparse.Namespace(json=False, prune=False))
+    return cmd_ls(argparse.Namespace(json=False, prune=False, no_probe=True))
 
 
 def cmd_status(a):
@@ -169,6 +201,8 @@ def main():
     p.add_argument("-j", "--jobid", default=None,
                    help="挂在这个 job 上；job 结束后锁自动变 stale")
     p.add_argument("--note", default=None)
+    p.add_argument("--ttl", type=int, default=NL.DEFAULT_TTL,
+                   help=f"闲置多少秒自动开锁，默认 {NL.DEFAULT_TTL}（10 分钟）")
     p.set_defaults(fn=cmd_lock)
 
     p = sub.add_parser("unlock", help="撤销声明")
@@ -180,10 +214,19 @@ def main():
         p = sub.add_parser(name, help="列出锁")
         p.add_argument("--prune", action="store_true", help="删掉 job 已结束的 stale 锁")
         p.add_argument("--json", action="store_true")
+        p.add_argument("--no-probe", action="store_true",
+                       help="不打 srun 探活动（省一次 ~8s 的探测）")
         p.set_defaults(fn=cmd_ls)
 
     p = sub.add_parser("status", help="声明 vs squeue 现实")
     p.set_defaults(fn=cmd_status)
+
+    p = sub.add_parser("touch", help="手动心跳，闲置计时归零")
+    p.add_argument("targets", nargs="+", metavar="NODE")
+    p.set_defaults(fn=cmd_touch)
+
+    p = sub.add_parser("refresh", help="探一次活动并写回（cron 里跑这个）")
+    p.set_defaults(fn=cmd_refresh)
 
     p = sub.add_parser("free", help="我能往哪些节点上放东西")
     p.add_argument("--who", default=os.environ.get("NODELOCK_WHO", ""),
@@ -193,7 +236,7 @@ def main():
 
     a = ap.parse_args()
     if not a.cmd:
-        return cmd_ls(argparse.Namespace(json=False, prune=False))
+        return cmd_ls(argparse.Namespace(json=False, prune=False, no_probe=False))
     return a.fn(a)
 
 

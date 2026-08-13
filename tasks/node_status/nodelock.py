@@ -45,6 +45,8 @@ import time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 GPUS_PER_NODE = 4          # GH200 固定 4 卡；逐卡解锁整节点锁时用来展开
+DEFAULT_TTL = 600          # 秒。10 分钟没动静的锁自动打开（用户 2026-08-13 定）
+MEM_FLOOR_MIB = 64         # 空卡本底 1-3 MiB；超过就算「有人占着」，与 gtop 一致
 
 
 GTOP = os.path.join(os.path.dirname(HERE), "gtop_20260810T182343Z", "gtop")
@@ -126,11 +128,16 @@ def load():
         out[h] = {"who": e.get("who") or e.get("jobid") or "?",
                   "gpus": sorted(gs) if isinstance(gs, list) else None,
                   "jobid": e.get("jobid") or None,
-                  "note": e.get("note", ""), "at": e.get("at", "")}
+                  "note": e.get("note", ""), "at": e.get("at", ""),
+                  "ttl": e.get("ttl", DEFAULT_TTL),
+                  # 上锁那一刻算一次活动 —— 否则刚锁完还没来得及起任务就过期了
+                  "last_activity": e.get("last_activity", e.get("ts", 0)) or 0,
+                  "last_probe": e.get("last_probe", 0) or 0}
     for h, who in _read(flat_path(), {}).items():
         if isinstance(who, str) and h not in out:
             out[h] = {"who": who, "gpus": None, "jobid": None,
-                      "note": "(来自 nodelocks.json)", "at": ""}
+                      "note": "(来自 nodelocks.json)", "at": "",
+                      "ttl": DEFAULT_TTL, "last_activity": 0, "last_probe": 0}
     return out
 
 
@@ -142,7 +149,10 @@ def save(locks):
     """
     _write(rich_path(), {"locks": [
         {"node": h, "gpus": e["gpus"], "jobid": e["jobid"],
-         "who": e["who"], "note": e["note"], "at": e["at"]}
+         "who": e["who"], "note": e["note"], "at": e["at"],
+         "ttl": e.get("ttl", DEFAULT_TTL),
+         "last_activity": e.get("last_activity", 0),
+         "last_probe": e.get("last_probe", 0)}
         for h, e in sorted(locks.items())]})
     _write(flat_path(), {h: e["who"] for h, e in locks.items()})
 
@@ -158,16 +168,142 @@ def running_ids(user=None):
         return None                    # None = 查不到，别把所有锁误判成 stale
 
 
-def is_live(entry, ids):
-    """挂在 jobid 上的锁随 job 结束失效；无 jobid 的手动锁永久有效。
+def idle_expired(entry):
+    """闲置过期：我**一直在看**，看了 ttl 秒都没动静。
 
-    ids 为 None（squeue 失败）时一律当 live —— 把锁误判成 stale 会让别人
-    去抢一张有主的卡，方向比误判成 live 更危险。
+    判据是两个时间戳的差 `last_probe - last_activity`，不是 `now - last_activity`。
+    这个区别是承重的：**「没观测到活动」不等于「观测到空闲」。**
+    用 now 的话，没人跑 refresh 的时候所有锁都会自动打开 —— 恰好在最需要锁的
+    时候（谁都没盯着）把所有卡放出去。用 last_probe，没人看时它不前进，锁不过期。
     """
+    ttl = entry.get("ttl", DEFAULT_TTL) or DEFAULT_TTL
+    lp, la = entry.get("last_probe", 0) or 0, entry.get("last_activity", 0) or 0
+    return bool(lp and la and (lp - la) > ttl)
+
+
+def is_live(entry, ids):
+    """三个条件同时成立才算 live：
+
+      1. 挂在 jobid 上的锁，该 job 还在 RUNNING（无 jobid 的手动锁跳过此条）
+      2. 没有闲置过期（见 idle_expired）
+
+    ids 为 None（squeue 失败）时第 1 条一律通过 —— 把锁误判成 stale 会让别人
+    去抢一张有主的卡，方向比误判成 live 更危险。注意这与第 2 条不矛盾：
+    那一条要的是**正面证据**（确实看了、确实没动静），观测失败不构成证据。
+    """
+    if idle_expired(entry):
+        return False
     jid = entry.get("jobid")
     if not jid or ids is None:
         return True
     return jid in ids
+
+
+def why_dead(entry, ids):
+    if idle_expired(entry):
+        m = int((entry["last_probe"] - entry["last_activity"]) // 60)
+        return f"闲置 {m}min"
+    jid = entry.get("jobid")
+    if jid and ids is not None and jid not in ids:
+        return "job 已结束"
+    return ""
+
+
+# ---------------------------------------------------------------- 活动探测
+def probe_activity(user=None):
+    """-> ({host: busy_bool}, probed_ok)
+
+    对每个 RUNNING 分配打一枪 srun，问每张卡的 util 与显存。
+    与 gtop 同一条合规通道：--overlap --exact 附着到自己已持有的分配，
+    只读、采完即退，计算节点上不留常驻进程，也不碰 Lustre。
+
+    busy 的判据与 gtop 的 run/held 一致：util>0 或显存 > 64 MiB。
+    「占着显存但没在算」也算活动 —— 那是有人在用这张卡（哪怕用得浪费），
+    不是无主。闲置过期要处理的是「彻底没人碰」。
+    """
+    user = user or os.environ.get("USER", "")
+    env = {k: v for k, v in os.environ.items()
+           if not k.startswith("SLURM") or k == "SLURM_CONF"}
+    try:
+        p = subprocess.run(["squeue", "-h", "-u", user, "-t", "RUNNING",
+                            "-o", "%i|%D|%N"], capture_output=True, text=True,
+                           timeout=30, env=env)
+    except (OSError, subprocess.TimeoutExpired):
+        return {}, False
+    busy, ok_any = {}, False
+    for line in p.stdout.splitlines():
+        parts = line.split("|")
+        if len(parts) != 3:
+            continue
+        jid, nn, nl = parts
+        hosts = expand_nodes(nl)
+        for h in hosts:
+            busy.setdefault(h, False)
+        cmd = ["srun", f"--jobid={jid}", "--overlap", "--exact",
+               "--cpus-per-task=1", f"--nodes={nn}", f"--ntasks={nn}",
+               "--ntasks-per-node=1", "--cpu-bind=none",
+               "--job-name=nodelock-probe", "bash", "-c",
+               'echo "$(hostname)|$(nvidia-smi '
+               '--query-gpu=utilization.gpu,memory.used '
+               '--format=csv,noheader,nounits | tr "\\n" ";")"']
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True,
+                               timeout=90, env=env)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if r.returncode != 0:
+            continue
+        ok_any = True
+        for ln in r.stdout.splitlines():
+            if "|" not in ln:
+                continue
+            h, gpus = ln.split("|", 1)
+            h = h.strip()
+            for g in gpus.split(";"):
+                if "," not in g:
+                    continue
+                try:
+                    u, mem = (int(x.strip()) for x in g.split(",", 1))
+                except ValueError:
+                    continue
+                if u > 0 or mem > MEM_FLOOR_MIB:
+                    busy[h] = True
+    return busy, ok_any
+
+
+def refresh(user=None):
+    """探一次活动，把结果写回注册表。-> (探到几个 busy, 是否探测成功)
+
+    探测失败时**只字不改**：last_probe 不前进，于是没有任何锁会因为
+    这次失败而向过期靠近一步。
+    """
+    busy, ok = probe_activity(user)
+    if not ok:
+        return 0, False
+    locks, now_s, n = load(), int(time.time()), 0
+    for h, e in locks.items():
+        if h not in busy:
+            continue                       # 这个节点不在我手上，无从观测
+        e["last_probe"] = now_s
+        if busy[h]:
+            e["last_activity"] = now_s
+            n += 1
+        elif not e.get("last_activity"):
+            e["last_activity"] = now_s     # 首次观测：从现在开始计时，不追溯
+    save(locks)
+    return n, True
+
+
+def touch(targets):
+    """手动心跳：马上要用但还没起进程时，用它防止锁被闲置过期收走。"""
+    locks, now_s, n = load(), int(time.time()), 0
+    for t in targets:
+        for host, _ in parse_target(t):
+            if host in locks:
+                locks[host]["last_activity"] = now_s
+                n += 1
+    save(locks)
+    return n
 
 
 def owner_of(locks, host, gpu_idx, ids=None):
@@ -228,12 +364,14 @@ def now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
-def do_lock(targets, who, jobid=None, note=""):
-    locks, n = load(), 0
+def do_lock(targets, who, jobid=None, note="", ttl=DEFAULT_TTL):
+    locks, n, now_s = load(), 0, int(time.time())
     for t in targets:
         for host, gs in parse_target(t):
             locks[host] = {"who": who, "gpus": gs, "jobid": jobid,
-                           "note": note, "at": now()}
+                           "note": note, "at": now(), "ttl": ttl,
+                           # 上锁即算一次活动：给一整个 ttl 的宽限期把任务起来
+                           "last_activity": now_s, "last_probe": 0}
             n += 1
     save(locks)
     return n
