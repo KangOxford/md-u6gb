@@ -15,10 +15,10 @@ set -u
 TAG=${TAG:?need TAG}
 STATE=${STATE:?need STATE}
 JOB=${JOB:?need JOB}
-NODE=${NODE:?need NODE}
+NODES=${NODES:?need NODES}          # 空格分隔，可跨节点
 MONTHS=${MONTHS:-"2026-01 2026-02"}
 NSEQ=${NSEQ:-8}
-NGPU=${NGPU:-4}
+GPUS_PER_NODE=${GPUS_PER_NODE:-4}
 GPU0=${GPU0:-0}
 
 S0=/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/dfm-post-training-20260801
@@ -27,31 +27,36 @@ OUT=/lus/lfs1aip2/projects/public/u6gb/tasks/dfm_largescale_20260813
 W=$S0/post_training/dfm/eval/run_eval_node.sh
 mkdir -p $OUT/{rollouts,logs,out}
 
-TK=$A/logs/tk_feb.txt          # 487 个 ticker，index.json 已剔除
+TK=${TKLIST:-$A/logs/tk_feb.txt}   # 可用 TKLIST 覆盖，冒烟时给小表
 [ -f "$TK" ] || { echo "missing ticker list $TK"; exit 2; }
 
-run () {  # gpu chunk month arm extra...
-  local gpu=$1 chunk=$2 mo=$3 arm=$4; shift 4
+run () {  # node gpu chunk month arm extra...
+  local NODE=$1 gpu=$2 chunk=$3 mo=$4 arm=$5; shift 5
   env -u SLURM_NNODES -u SLURM_NTASKS -u SLURM_JOB_ID -u SLURMD_NODENAME \
   srun --jobid=$JOB --overlap --exact --cpus-per-task=8 -w $NODE -N1 -n1 \
     --cpu-bind=none --job-name=pipe-$TAG-$arm-g$gpu \
-    --export=ALL,DFM_GPU=$gpu,DFM_SCRIPT=dfm_correct_runner.py,XLA_PYTHON_CLIENT_MEM_FRACTION=0.40 \
+    --export=ALL,DFM_GPU=$gpu,DFM_SCRIPT=dfm_correct_runner.py,XLA_PYTHON_CLIENT_MEM_FRACTION=${MEMFRAC:-0.15} \
     bash $W --month $mo --n-cond 500 --n-gen 500 \
       --stocks $chunk --index-dir $A/idx --group-size 8 --validate-first 8 \
       --gate-batches 2 --state "$STATE" --t-start 0.80 --n-steps 8 \
       --n-seq $NSEQ --batch-size 4 --corr-batch 4 --skip-existing "$@" \
       --out-template "$OUT/rollouts/${TAG}_{stock}_{month}_$arm.npz" \
-      > $OUT/logs/${TAG}_${arm}_${mo}_g${gpu}.log 2>&1 &
+      > $OUT/logs/${TAG}_${arm}_${mo}_${NODE#nid}g${gpu}.log 2>&1 &
 }
 
-split -n l/$NGPU -d $TK $OUT/logs/${TAG}_chunk_
+NSLOT=0
+for _n in $NODES; do for _g in $(seq 0 $((GPUS_PER_NODE-1))); do
+  SLOT_NODE[$NSLOT]=$_n; SLOT_GPU[$NSLOT]=$_g; NSLOT=$((NSLOT+1)); done; done
+echo "slots: $NSLOT ($NODES x $GPUS_PER_NODE)"
+split -n l/$NSLOT -d -a 2 $TK $OUT/logs/${TAG}_chunk_
 
 for MO in $MONTHS; do
   for ARM in learned random; do
     echo "=== $TAG $MO $ARM $(date -u +%H:%M:%SZ) ==="
-    for k in $(seq 0 $((NGPU-1))); do
+    for k in $(seq 0 $((NSLOT-1))); do
       ex=""; [ "$ARM" = random ] && ex="--random-p --random-p-seed 7"
-      run $(( (GPU0 + k) % 4 )) $OUT/logs/${TAG}_chunk_0$k $MO $ARM $ex
+      run ${SLOT_NODE[$k]} ${SLOT_GPU[$k]} \
+          $OUT/logs/${TAG}_chunk_$(printf %02d $k) $MO $ARM $ex
     done
     wait
     echo "  npz: $(ls $OUT/rollouts/${TAG}_*_${MO}_${ARM}.npz 2>/dev/null | wc -l)"
