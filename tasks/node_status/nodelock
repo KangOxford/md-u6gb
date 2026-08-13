@@ -108,6 +108,56 @@ def cmd_status(a):
     return 0
 
 
+def cmd_free(a):
+    """我现在可以往哪些节点上放东西。
+
+    规则（用户 2026-08-13 定）：
+      - 锁给我的节点     -> 独占，别人不能用
+      - 没有锁的节点     -> 可用，**即便上面已经在跑任务**
+      - 别人锁着的节点   -> 不能碰
+
+    「忙」和「不可用」是两回事：忙只是此刻有人在算，不可用是有人声明了归属。
+    把这两件事混起来，正是这套锁要防的事故。
+    """
+    locks, ids = NL.load(), NL.running_ids()
+    try:
+        p = subprocess.run(
+            ["squeue", "-h", "-u", os.environ.get("USER", ""), "-t", "RUNNING",
+             "-o", "%i|%N"], capture_output=True, text=True, timeout=30)
+        rows = [l.split("|") for l in p.stdout.splitlines() if l.strip()]
+    except (OSError, subprocess.TimeoutExpired):
+        print("squeue 失败", file=sys.stderr)
+        return 1
+
+    mine, free, taken = [], [], []
+    for jid, nl in rows:
+        for h in NL.expand_nodes(nl):
+            e = locks.get(h)
+            live = e and NL.is_live(e, ids)
+            if not live:
+                free.append((h, jid, "（锁已 stale）" if e else ""))
+            elif e["who"] == a.who:
+                mine.append((h, jid))
+            else:
+                taken.append((h, jid, e["who"]))
+
+    print(f"# 以 who='{a.who}' 的身份问：我能用哪些节点\n")
+    print(f"独占（锁给我，别人不能用）  {len(mine)}")
+    for h, j in sorted(mine):
+        print(f"    {h}  job {j}")
+    print(f"\n可用（无锁；忙也可以放）    {len(free)}")
+    for h, j, why in sorted(free):
+        print(f"    {h}  job {j} {why}")
+    print(f"\n不可碰（别人锁着）          {len(taken)}")
+    for h, j, who in sorted(taken):
+        print(f"    {h}  job {j}  -> {who}")
+    if a.quiet:
+        return 0
+    print("\n可放置的节点：" + " ".join(sorted(h for h, _ in mine)
+                                   + sorted(h for h, _, _ in free)))
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(prog="nodelock", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -134,6 +184,12 @@ def main():
 
     p = sub.add_parser("status", help="声明 vs squeue 现实")
     p.set_defaults(fn=cmd_status)
+
+    p = sub.add_parser("free", help="我能往哪些节点上放东西")
+    p.add_argument("--who", default=os.environ.get("NODELOCK_WHO", ""),
+                   help="以谁的身份问（默认 $NODELOCK_WHO）")
+    p.add_argument("-q", "--quiet", action="store_true", help="不打印末尾的一行清单")
+    p.set_defaults(fn=cmd_free)
 
     a = ap.parse_args()
     if not a.cmd:
