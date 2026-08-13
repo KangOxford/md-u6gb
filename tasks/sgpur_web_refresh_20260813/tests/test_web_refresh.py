@@ -114,6 +114,20 @@ class WebRefreshTests(unittest.TestCase):
             )
         self.assertIsNone(value)
 
+    def test_inbox_get_uses_cloudflare_compatible_user_agent(self):
+        seen = {}
+
+        def open_request(request, timeout):
+            seen["user_agent"] = request.get_header("User-agent")
+            return FakeResponse("0")
+
+        with mock.patch("urllib.request.urlopen", side_effect=open_request):
+            value = self.module.inbox_get(
+                {"url": "https://worker.example", "token": "s"}
+            )
+        self.assertEqual("0", value)
+        self.assertIn("sgpur/", seen["user_agent"])
+
     def test_read_inbox_rejects_invalid_shape(self):
         self.write_config({"url": "http://worker.example", "token": "s"})
         self.assertEqual({}, self.module.read_inbox())
