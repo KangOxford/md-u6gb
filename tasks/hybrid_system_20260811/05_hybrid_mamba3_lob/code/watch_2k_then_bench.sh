@@ -14,6 +14,11 @@ set -uo pipefail
 # 是 srun 出错、还是被谁杀了。守望器的价值全在它还活着，所以它必须在退出时说明
 # 自己为什么退出。
 trap 'echo "[watch] ${ARM_ID:-?} 退出 rc=$? 于 $(date -u +%H:%M:%SZ)"' EXIT
+# 守望器必须比它守望的东西更耐活。它每轮用 srun 探一次卡，而清理节点、杀残留
+# 进程这类动作会连带把探测 step 打断；上一版就是这样在 01:15 被信号带走的，
+# 连 EXIT trap 都没来得及打印。忽略 HUP/PIPE，让一次失败的探测只是一次失败的
+# 探测。TERM 与 INT 保留，否则就没法正常收掉它了。
+trap '' HUP PIPE
 # 每次轮询都写一行心跳，这样「最后一次醒着是什么时候」是可读的，而不是靠猜。
 : "${CKPT_A:?}" "${CKPT_B:?}" "${ARM_ID:?}" "${ARCHITECTURE:?}" "${NODELIST:?}" "${ATTACH_JOBID:?}" "${TRAIN_NODE:?}"
 TASKDIR=/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob
@@ -30,7 +35,9 @@ while true; do
     n=$(timeout 60 srun --jobid="$ATTACH_JOBID" --overlap --nodes=1 --ntasks=1 \
         -w "$TRAIN_NODE" --cpu-bind=none \
         nvidia-smi --query-compute-apps=pid --format=csv,noheader 2>/dev/null | sort -u | wc -l)
-    if [ "${n:-1}" -eq 0 ]; then
+    # 探测失败时 n 为空，按 1 处理 = 当作训练还在跑。误判成「停了」会让
+    # bench 在半个 checkpoint 上起跑；误判成「还在跑」只是晚一轮。
+    if [ "${n:-1}" -eq 0 ] 2>/dev/null; then
         idle=$((idle+1))
         echo "[watch] $(date -u +%H:%M:%SZ) ${ARM_ID} 卡上无进程（连续 $idle 次）"
         # 连续两次为空才算停，避开 checkpoint 保存期间的短暂空窗
