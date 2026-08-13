@@ -1,0 +1,2724 @@
+#!/usr/bin/env python3
+"""sgpur -- publish the sgpu GPU-time ledger as a web page on surge.sh.
+
+sgpu draws the ledger into a character grid; this draws the same ledger into
+real vector geometry and pushes it to a public URL.  The data layer is not
+duplicated: `collect()` and every parsing rule (identity extraction, interval
+union, the three cleaning rules) are imported straight out of sgpu, so the two
+tools can never disagree about what happened.
+
+Why a separate script rather than a third backend inside sgpu: the ANSI and
+curses backends share `Renderer.build() -> [(text, style)]` because both paint
+a character grid.  A terminal cell here is ~34 minutes wide.  HTML addresses
+time continuously, so it wants a different renderer, not the same one behind a
+flag.
+
+There is no daemon.  BriCS forbids resident pollers on login nodes, so the page
+is a snapshot: every `sgpur` invocation resamples sacct and overwrites the same
+URL.  The page shows its own age in real time and turns amber, then red, as it
+goes stale, so a reader can always tell how old the numbers are.
+"""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import concurrent.futures
+import gzip
+import hashlib
+import html
+import importlib.machinery
+import importlib.util
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+# sacct hands back naive datetimes in the server's local zone (UTC on this
+# cluster).  The reader is in London, so every displayed time is converted;
+# nothing is ever formatted straight off the naive value.
+DISPLAY_TZ = ZoneInfo(os.environ.get("SGPUR_TZ", "Europe/London"))
+
+
+def L(dt: datetime) -> datetime:
+    """naive server-local -> aware, in the reader's zone."""
+    return dt.astimezone(DISPLAY_TZ)
+
+
+SGPU_PATH = os.environ.get("SGPU_PATH", "/projects/public/u6gb/.local/bin/sgpu")
+DEFAULT_DOMAIN = os.environ.get("SGPUR_DOMAIN", "gpu-ledger-q7x2m4.surge.sh")
+SITE_DIR = os.environ.get(
+    "SGPUR_SITE",
+    os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")),
+                 "sgpur", "site"))
+SECRET_PATH = os.path.join(
+    os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+    "sgpur", "secret.json")
+PBKDF2_ITERS = 600_000          # OWASP 2023 floor for PBKDF2-HMAC-SHA256
+
+
+def load_sgpu(path: str):
+    """Import sgpu, which has no .py suffix, as a module.
+
+    The sys.modules registration is mandatory, not tidiness: @dataclass
+    resolves annotations through sys.modules[cls.__module__], and sgpu's
+    dataclasses reference each other (Job holds list[Lane]).  Without it the
+    import dies on `NoneType has no attribute __dict__`.
+    """
+    if not os.path.exists(path):
+        sys.exit(f"sgpur: cannot find sgpu at {path} (set SGPU_PATH)")
+    loader = importlib.machinery.SourceFileLoader("sgpumod", path)
+    spec = importlib.util.spec_from_loader("sgpumod", loader)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["sgpumod"] = mod
+    loader.exec_module(mod)
+    return mod
+
+
+S = load_sgpu(SGPU_PATH)
+
+# --- presentation ---------------------------------------------------------
+
+# Keys match sgpu's STYLES so the web page and the terminal never disagree
+# about what a colour means.  Values are the print-friendly palette from the
+# hand-drawn R6 timeline the user asked this to look like.
+FILL = {
+    "full":    ("#a6d3a6", "#79b479"),   # >= 80% of the allocation computing
+    "mid":     ("#f2d98a", "#d9b74e"),   # 35 - 80%
+    "low":     ("#eeb98c", "#d99356"),   # < 35%
+    "held":    ("#eceef0", "#d3d8dd"),   # allocated, nothing running on it
+    "pending": ("#f7f8f9", "#dfe3e7"),   # queued, holds no GPU
+}
+BAD_COLOR = "#e58f8f"
+RUN_COLOR = "#7fb3e8"
+# The two live tracks must not share a hue, or the eye reads them as one long
+# bar in two pieces.  Green is the page's "computing" colour already (the
+# allocations legend), blue its "occupied" one; red replaces the blue when the
+# memory is held without being used.
+COMPUTE_COLOR, COMPUTE_EDGE = "#a6d3a6", "#79b479"
+MEM_COLOR, MEM_EDGE = "#7fb3e8", "#5c93c9"
+# Node rows get a warm pair against the cards' cool one.  Same two quantities,
+# but one level up the hierarchy: sharing green/blue with the GPU rows made a
+# machine's line and a card's line indistinguishable at a glance, which is the
+# one thing a grouped list has to get right.
+NODE_CPU_COLOR, NODE_CPU_EDGE = "#e8956f", "#c96f4a"
+NODE_MEM_COLOR, NODE_MEM_EDGE = "#f2c96a", "#d9a63e"
+
+STATE_LABEL = {
+    "COMPLETED": "done", "RUNNING": "running", "FAILED": "FAILED",
+    "TIMEOUT": "TIMEOUT", "CANCELLED": "cancelled", "NODE_FAIL": "NODE_FAIL",
+    "OUT_OF_ME": "OOM", "PREEMPTED": "preempted", "REQUEUED": "requeued",
+}
+
+CSS = """
+*{box-sizing:border-box}
+:root{
+  --bg:#fff; --panel:#fff; --fg:#16191d; --dim:#6b7280; --faint:#9aa1aa;
+  --line:#e6e9ec; --rule:#f0f2f4; --accent:#2f6fb5; --bad:#c0392b; --good:#3d7a3d;
+  --tipbg:#1d2126; --tipfg:#f2f4f6;
+  --lw:250px;           /* label column: gantt rows, lanes and history alike */
+  --tailw:190px;        /* every stats box, every section, identical */
+  --barfill:rgba(47,111,181,.20);
+  /* Two backgrounds, not three: everything that is a chart sits on white, and
+     the raw-detail tail keeps its tint so the eye knows the charts ended. */
+  --bandA:#fff; --bandB:#fff; --bandC:#f5f7f8;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#14171a; --panel:#191d21; --fg:#e6e9ec; --dim:#9aa4ae; --faint:#6b7681;
+    --line:#2a3037; --rule:#22272c; --accent:#7fb3e8; --bad:#e58f8f; --good:#8fce8f;
+    --tipbg:#e9edf1; --tipfg:#14171a;
+    --barfill:rgba(127,179,232,.24);
+    --bandA:#14171a; --bandB:#14171a; --bandC:#101315;
+  }
+  .s-hot{color:#5fd35f} .s-ok{color:#7fc07f} .s-warn{color:#d9b74e}
+  .s-crit{color:#e58f8f} .s-accent{color:#7fb3e8}
+}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font:14px/1.45 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+/* Three bands: what is true now, what the charts show, and the raw detail.
+   Full-bleed background, content still on the same centred column so the
+   label/track/stats rules run straight through all of them. */
+.band{width:100%}
+.b-live{background:var(--bandA); border-bottom:1px solid var(--line)}
+.b-charts{background:var(--bandB)}
+.b-detail{background:var(--bandC); border-top:1px solid var(--line)}
+.wrap{max-width:1500px; margin:0 auto; padding:24px 22px 30px}
+.b-detail .wrap{padding-bottom:60px}
+
+/* live GPUs: gtop's terminal layout, column for column.  Monospace plus ch
+   widths reproduces the alignment exactly; the bars are divs so their fill is
+   exact rather than quantised to a block glyph. */
+.lwrap{padding-bottom:4px}
+.lhead-row,.lrow{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:11.5px; line-height:1.62; white-space:pre}
+/* Scoped to .m on purpose.  A bare `.lrow span` also matches .lmid/.lgrow --
+   which are spans and must remain flex containers -- and wins on specificity,
+   which silently collapsed every bar back to its content width. */
+.lrow .m,.lhead-row .m{display:inline-block; vertical-align:baseline}
+.lhead-row{font-size:12.5px; margin-bottom:2px}
+/* Same two vertical rules as every chart below: the label column ends at
+   --lw, so a GPU's bars start exactly where a gantt track starts. */
+.lrow{display:flex; align-items:baseline}
+.lrow.full{display:block}
+.llabel{flex:0 0 var(--lw); padding-right:10px; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis}
+.llabel.node{color:var(--fg)}
+.llabel.gpu{padding-left:18px}
+.llabel.gpu .gi{width:4ch}
+.lbody{flex:1 1 auto; min-width:0; overflow:hidden}
+/* The five-slot skeleton.  .lmid occupies exactly the gantt track's span, and
+   the two .lgrow slots split whatever the fixed columns leave, so the bars
+   end on the same right edge as the charts below however wide the window is. */
+.lmid{flex:1 1 auto; min-width:0; display:flex; align-items:center}
+.lfix{flex:0 0 21ch}
+.lfix2{flex:0 0 15ch; padding-left:11px}
+.lgrow{flex:1 1 0; min-width:20px; display:flex; align-items:center}
+.lgrow .cbar{display:block; width:100%}
+/* Same box as .tail in the charts below: identical width, border, radius and
+   the same left/right split of its two values. */
+.lend{flex:0 0 var(--tailw); margin-left:11px; padding:0 9px; overflow:hidden;
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  border:1px solid var(--line); border-radius:5px; white-space:nowrap}
+/* one hairline per node, so four cards read as one machine */
+.row.node-top{border-top:1px solid var(--line); margin-top:5px; padding-top:4px}
+.row.gpu .lbl.idx{padding-left:20px; gap:8px}
+.row.gpu .lbl .gi{color:var(--accent); font-weight:640}
+.track.twin{flex:1 1 0; height:20px}
+.track.twin+.track.twin{margin-left:9px}
+.row.gpu .tail,.row.node-top .tail{gap:6px}
+/* column captions for the two live tracks */
+.lcols{display:flex; align-items:center; margin:4px 0 2px; font-size:10.5px;
+  text-transform:uppercase; letter-spacing:.05em; color:var(--faint)}
+.lcols .lbl{flex:0 0 var(--lw)}
+.lcols .cap{flex:1 1 0}
+.lcols .cap+.cap{margin-left:9px}
+.lcols .tail{border-color:transparent}
+.lrule{height:2px; background:var(--accent); opacity:.45; margin:2px 0 7px;
+  border-radius:1px}
+.lgap{height:11px}
+.lrow.gpu{cursor:default; border-radius:3px}
+.lrow.gpu:hover{background:var(--rule)}
+/* Same geometry as the gantt segments below: 4px radius, a grey track that
+   shows the empty part, fill in the row's semantic colour. */
+.cbar{position:relative; height:11px; vertical-align:-1px; border-radius:4px;
+  background:var(--rule); overflow:hidden}
+.cbar i{position:absolute; left:0; top:0; bottom:0; background:currentColor;
+  border-radius:4px; opacity:.9}
+.s-hot{color:#1a9e1a; font-weight:700}
+.s-ok{color:#3d8c3d}
+.s-warn{color:#b0810a}
+.s-crit{color:#c0392b}
+.s-dim{color:var(--faint)}
+.s-accent{color:#2f6fb5}
+.s-norm{color:var(--fg)}
+.s-hdr{color:var(--fg); font-weight:700}
+.livenote{font-size:11px; color:var(--faint); line-height:1.55; max-width:840px;
+  margin-top:9px}
+code,.mono,.jid,.num{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+header{border-bottom:1px solid var(--line); padding-bottom:16px; margin-bottom:22px}
+h1{font-size:19px; margin:0 0 4px; font-weight:640; letter-spacing:-.01em}
+.sub{color:var(--dim); font-size:12.5px}
+.sub b{color:var(--fg); font-weight:600}
+#age{font-weight:600}
+#age.fresh{color:var(--good)} #age.warm{color:#c9861a} #age.stale{color:var(--bad)}
+
+.kpis{display:flex; flex-wrap:wrap; align-items:center; gap:26px; margin:16px 0 2px}
+.kpi .v{font-size:25px; font-weight:640; letter-spacing:-.02em; line-height:1.1}
+.kpi .k{font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.07em}
+.kpi.idle .v{color:var(--bad)} .kpi.busy .v{color:var(--good)}
+/* Same width as the stats boxes and pushed to the same right edge, so the
+   header block and every row below share one vertical rule. */
+.kpi .of{font-size:15px; color:var(--dim); font-weight:400}
+/* grant burn-down: solid is spent, hatched is what today's rate will add */
+.qbar{position:relative; height:14px; border-radius:5px; background:var(--rule);
+  overflow:hidden; margin:12px 0 8px; max-width:1040px}
+.qbar i{position:absolute; left:0; top:0; bottom:0; background:var(--accent);
+  opacity:.75}
+.qbar u{position:absolute; top:0; bottom:0; text-decoration:none;
+  background:repeating-linear-gradient(135deg, transparent 0 4px,
+    rgba(47,111,181,.30) 4px 8px)}
+.qnote{font-size:11.5px; color:var(--dim); line-height:1.6; max-width:1040px}
+.qnote b{color:var(--fg); font-weight:640}
+.qnote .dim{color:var(--faint)}
+.kpi.clock{margin-left:auto; flex:0 0 var(--tailw); text-align:center;
+  padding:9px 10px; border:1px solid var(--line); border-radius:7px}
+.kpi.clock .v{font-size:23px; font-variant-numeric:tabular-nums;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.kpi.clock .k{margin-top:2px; text-transform:none; letter-spacing:.02em; font-size:10.5px}
+
+h2{display:flex; align-items:center; flex-wrap:wrap;
+   font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--dim);
+   font-weight:640; margin:34px 0 4px}
+h2 .fbtn{margin-left:auto}    /* buttons pin to the right of their heading */
+/* estimator cards: white for the one in use, grey for the alternatives */
+.estrow{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 12px}
+.estbox{flex:0 0 auto; min-width:126px; padding:7px 11px 8px;
+  border:1px solid var(--line); border-radius:6px; background:var(--rule)}
+.estbox.on{background:var(--panel); border-color:var(--accent)}
+.estk{font-size:10px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--dim); font-weight:640}
+.estk span{text-transform:none; letter-spacing:0; font-weight:400; color:var(--faint)}
+.estv{font-size:17px; font-weight:640; letter-spacing:-.01em; margin:1px 0 1px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.estbox.on .estv{color:var(--accent)}
+.estn{font-size:10px; color:var(--faint)}
+h2 .hint{text-transform:none; letter-spacing:0; font-weight:400; color:var(--faint)}
+section{margin-bottom:6px}
+
+/* one chart row = fixed label column + proportional time track */
+.row{display:flex; align-items:stretch; margin:2px 0}
+.lbl{flex:0 0 var(--lw); padding-right:12px; overflow:hidden; white-space:nowrap;
+     display:flex; align-items:center; gap:7px; font-size:12px}
+/* Monospace across every label column, matching the live section, so the
+   whole page reads as one instrument rather than two. */
+.lbl,.hid,.lname{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.lbl .jid{font-weight:640; font-size:12.5px}
+.lbl .meta{color:var(--faint); font-size:11px; flex:0 0 auto}
+.lbl .nm{color:var(--dim); overflow:hidden; text-overflow:ellipsis}
+.lbl a{color:inherit; text-decoration:none}
+.track{position:relative; flex:1 1 auto; height:26px; min-width:0;
+       border-radius:5px; background:var(--rule); overflow:hidden}
+.lane .track{height:18px}
+/* Forecast toggle.  .tinner holds everything measured and spans the look-back
+   window; opening the forecast shrinks it to 2/3 so the same pixels now cover
+   1.5x the time, and .fclayer -- always sized against the full window --
+   becomes visible. Nothing is recomputed, one class flips one width. */
+.tinner{position:absolute; left:0; top:0; bottom:0; width:100%;
+  transition:width .22s ease}
+.fclayer{position:absolute; left:0; top:0; bottom:0; width:100%;
+  opacity:0; pointer-events:none; transition:opacity .22s ease}
+body.fc .tinner{width:66.667%}
+body.fc .fclayer{opacity:1; pointer-events:auto}
+.fcseg{position:absolute; top:3px; bottom:3px; border-radius:4px;
+  border:1px dashed var(--accent); background:repeating-linear-gradient(135deg,
+    transparent 0 5px, rgba(47,111,181,.13) 5px 10px);
+  display:flex; align-items:center; overflow:hidden}
+.fcseg span{padding:0 6px; font-size:10px; color:var(--accent); white-space:nowrap}
+.fcend{position:absolute; top:-1px; bottom:-1px; width:2px; background:var(--accent)}
+.ruler .tk.fut{color:var(--accent)}
+.fbtn{margin-left:12px; padding:3px 10px; font:inherit; font-size:10.5px;
+  text-transform:none; letter-spacing:0; cursor:pointer; color:var(--accent);
+  background:none; border:1px solid var(--accent); border-radius:11px}
+.fbtn:hover{background:var(--barfill)}
+body.fc .fbtn{background:var(--accent); color:#fff; border-color:var(--accent)}
+.seg{position:absolute; top:0; bottom:0; border-radius:4px; overflow:hidden;
+     border:1px solid; display:flex; align-items:center; cursor:default; min-width:1px}
+.seg span{padding:0 6px; font-size:10.5px; color:#2b3138; white-space:nowrap;
+          overflow:hidden; text-overflow:ellipsis}
+.seg.pending{border-style:dashed}
+.seg.bad{box-shadow:inset -3px 0 0 var(--bad)}
+/* queue forecast: hatched because it is an estimate, not a measurement */
+.seg.pred{border:1px dashed #b8860b; border-radius:4px;
+  background:repeating-linear-gradient(135deg, transparent 0 4px,
+    rgba(184,134,11,.16) 4px 8px)}
+.seg.pred.open{border-right:none; border-top-right-radius:0;
+  border-bottom-right-radius:0}
+/* a job submitted before the window opened has no visible start */
+.seg.pend.clip{border-left:2px solid var(--dim); border-top-left-radius:0;
+  border-bottom-left-radius:0}
+h2 .alt{color:var(--faint); font-weight:400}
+.qkey{display:inline-block; width:16px; height:9px; border-radius:3px;
+  border:1px solid; margin-right:5px; vertical-align:0}
+.qk-chain{background:#a6d3a6; border-color:#79b479}
+.qk-wait{background:#f2d98a; border-color:#d9b74e}
+/* node reservation badge.  Four states, three of them actionable. */
+.lockb{margin-left:8px; padding:1px 7px; border-radius:9px; border:1px solid;
+  font-size:9.5px; font-weight:640; letter-spacing:.03em; white-space:nowrap;
+  font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+.lockb.ok{background:#a6d3a6; border-color:#79b479; color:#1c3b1c}
+.lockb.clash{background:#e58f8f; border-color:#c97a7a; color:#4a1414}
+.lockb.empty{background:#f2d98a; border-color:#d9b74e; color:#4a3a0c}
+.lockb.free{background:transparent; border-color:var(--line); color:var(--faint);
+  font-weight:400}
+.lockb.stale{background:#dcc0dd; border-color:#b894ba; color:#3d1f3f}
+/* The key to every mark this section prints, in a boxed grey block so it
+   reads as documentation rather than as more data. */
+.legendbox{margin-top:15px; padding:12px 15px 13px; border:1px solid var(--line);
+  border-radius:7px; background:var(--rule); font-size:11px; color:var(--dim);
+  max-width:1040px}
+.lgtitle{font-size:10px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--faint); font-weight:640; margin-bottom:9px}
+.lgrow{display:flex; align-items:flex-start; gap:11px; margin:6px 0; line-height:1.5}
+.lgrow>:first-child{flex:0 0 186px; text-align:center; margin-left:0}
+.lgrow b{color:var(--fg); font-weight:640}
+.lgrow code{display:inline-block; width:100%; padding:2px 0; border-radius:4px;
+  border:1px solid var(--line); background:var(--panel); color:var(--fg);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:10.5px}
+.lgrow code.warn{color:#b0810a} .lgrow code.crit{color:var(--bad)}
+.lgrow i{font-style:normal}
+.lgrow i.swatch{display:inline-block; width:34px; height:11px; border-radius:4px;
+  border:1px solid; margin:3px auto 0}
+.lgrow i.swatch.hatched{border-style:dashed;
+  background:repeating-linear-gradient(135deg,transparent 0 4px,var(--c) 4px 8px)}
+.lgrow i.swatch+i.swatch{margin-left:5px}
+.lgsep{height:1px; background:var(--line); margin:11px 0 9px}
+.gl{position:absolute; top:0; bottom:0; width:1px; background:var(--line); pointer-events:none}
+.gl.day{background:var(--dim); opacity:.45}
+.now{position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--accent);
+     pointer-events:none; opacity:.8}
+.mark{position:absolute; top:50%; transform:translate(4px,-50%); font-size:10px;
+      color:var(--dim); white-space:nowrap; pointer-events:none}
+/* near the right edge the label would spill onto the stats column, so flip it
+   back inside the track instead of letting it overlap */
+.mark.flip{transform:translate(calc(-100% - 4px),-50%)}
+.mark.bad{color:var(--bad)}
+
+.ruler{margin-top:5px; height:16px; border-radius:0; background:none}
+.ruler .tk{position:absolute; top:0; font-size:10.5px; color:var(--dim); white-space:nowrap;
+           transform:translateX(-50%)}
+.ruler .tk.day{color:var(--fg); font-weight:600}
+.axis{position:absolute; left:0; right:0; top:-5px; height:1px; background:var(--line)}
+
+/* Fixed width, not auto: with auto the row's track width depended on how many
+   digits that row's numbers happened to have, so "0% of 0 GPU-h" rows had a
+   wider track and their bars did not line up with anyone else's. */
+.tail{flex:0 0 var(--tailw); margin-left:11px; padding:0 9px; overflow:hidden;
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      border:1px solid var(--line); border-radius:5px;
+      font-size:11px; color:var(--dim); white-space:nowrap}
+.lane .tail{font-size:10.5px}
+.tail.spacer{border-color:transparent}
+.tail .b{color:var(--bad); font-weight:600}
+.tail .g{color:var(--fg); font-weight:640}
+
+/* restart history: a strip chart that keeps a table's column discipline.
+   .hid matches .lbl and .hstats matches .tail, so this section shares the
+   same two vertical rules as the two gantt sections above it. */
+.hhead,.hrow{display:flex; align-items:center}
+.hhead{margin:12px 0 5px; padding-bottom:6px; border-bottom:1px solid var(--line);
+  font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--dim)}
+.hhead .hint{text-transform:none; letter-spacing:0; color:var(--faint)}
+.hrow{margin:3px 0; border-radius:5px}
+.hrow:hover{background:var(--rule)}
+.hid{flex:0 0 var(--lw); padding-right:10px; font-size:12px; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis}
+.hnum .g{color:var(--fg); font-weight:640}
+.hnum .b{color:var(--bad); font-weight:600; margin-left:3px}
+.livedot{display:inline-block; width:6px; height:6px; border-radius:50%;
+  background:var(--good); margin-right:5px; vertical-align:1px}
+.hseq-h{flex:1 1 auto; min-width:0}
+/* The grey track IS the scale: full width = the busiest identity's time.
+   Colour only covers what this row actually ran, so a 90-second identity is
+   visibly a sliver next to an 11-hour one. */
+.hseq{flex:1 1 auto; position:relative; height:17px; min-width:0; border-radius:4px;
+  overflow:hidden;
+  background:
+    repeating-linear-gradient(to right, transparent 0,
+      transparent calc(var(--gw) - 1px),
+      var(--line) calc(var(--gw) - 1px), var(--line) var(--gw)),
+    var(--rule)}
+.hrun{position:relative; display:flex; gap:1px; height:100%; min-width:2px; overflow:hidden}
+/* clipped at the window edge: a torn right edge says the bar continues */
+.hrun.over{border-right:2px dotted var(--bad)}
+.hrun .rc{min-width:1px; border-radius:2px; background:#7fb3e8; border:1px solid #5c93c9}
+.hrun .rc.bad{background:#e58f8f; border-color:#c97a7a}
+.hrow.other .hid{color:var(--faint); font-style:italic}
+.hrow.other .hrun .rc{background:#c6ccd3; border-color:#aab1b9}
+.hrow.other .hrun .rc.bad{background:#dcb4b4; border-color:#c39d9d}
+.hsplit{margin:12px 0 5px; padding-top:9px; border-top:1px dashed var(--line);
+  font-size:10.5px; color:var(--faint); line-height:1.5}
+.hseq-axis{flex:1 1 auto; position:relative; height:15px; min-width:0;
+  border-top:1px solid var(--line)}
+.hseq-axis span{position:absolute; top:3px; font-size:10px; color:var(--dim);
+  transform:translateX(-50%); white-space:nowrap}
+.hseq-axis span:first-child{transform:none}
+.hseq-axis span:last-child{transform:translateX(-100%)}
+.hstats{flex:0 0 var(--tailw); margin-left:11px; display:flex; gap:5px}
+.hnum-h{flex:1 1 0; text-align:right}
+.hnum{flex:1 1 0; min-width:0; position:relative; height:17px; border-radius:4px;
+  overflow:hidden; background:var(--rule); display:flex; align-items:center;
+  justify-content:flex-end; padding:0 5px; font-size:10.5px; white-space:nowrap}
+.hnum i{position:absolute; left:0; top:0; bottom:0; background:var(--barfill)}
+.hnum b{position:relative; font-size:10.5px; font-weight:640; color:var(--fg)}
+/* busy carries no bar: its bar is the strip on the left.  Drawing it twice
+   would say the same thing in two places and crowd out GPU-h, which is the
+   one number the strip cannot show. */
+.hnum.plain{background:none; padding-right:0}
+
+table{border-collapse:collapse; width:100%; font-size:12.5px; margin-top:8px}
+th{text-align:left; font-weight:600; color:var(--dim); font-size:11px;
+   text-transform:uppercase; letter-spacing:.05em; padding:5px 9px 5px 0;
+   border-bottom:1px solid var(--line); white-space:nowrap}
+td{padding:5px 9px 5px 0; border-bottom:1px solid var(--rule); vertical-align:top}
+td.n,th.n{text-align:right; font-family:ui-monospace,Menlo,monospace}
+tr:hover td{background:var(--rule)}
+.warnv{color:var(--bad); font-weight:600}
+details summary{cursor:pointer; color:var(--dim); font-size:12px; padding:4px 0}
+details summary:hover{color:var(--fg)}
+details pre{font-size:11px; color:var(--dim); background:var(--rule); padding:9px 11px;
+            border-radius:5px; overflow-x:auto; margin:4px 0 12px; white-space:pre}
+
+.legend{display:flex; flex-wrap:wrap; gap:16px; margin-top:16px; padding-top:14px;
+        border-top:1px solid var(--line); font-size:11.5px; color:var(--dim)}
+.legend i{display:inline-block; width:22px; height:11px; border-radius:3px;
+          border:1px solid; margin-right:6px; vertical-align:-1px}
+footer{margin-top:34px; padding-top:14px; border-top:1px solid var(--line);
+       font-size:11.5px; color:var(--faint)}
+footer code{background:var(--rule); padding:1px 5px; border-radius:3px; color:var(--dim)}
+
+#tip{position:fixed; z-index:99; display:none; max-width:640px; pointer-events:none;
+     background:var(--tipbg); color:var(--tipfg); padding:9px 11px; border-radius:6px;
+     font:11.5px/1.5 ui-monospace,Menlo,Consolas,monospace; white-space:pre-wrap;
+     box-shadow:0 6px 22px rgba(0,0,0,.28); word-break:break-all}
+@media (max-width:820px){
+  .lbl{flex-basis:130px; font-size:11px}
+  .seg span{display:none}
+  .tail{display:none}
+}
+
+/* --- search ------------------------------------------------------------
+   Sits in the header because a feature with no entry point is not a feature.
+   It filters rows in every section at once.  The ruler rows are excluded in
+   JS, not here: ruler_html() emits class="row" exactly like the data rows do
+   and it IS the shared time axis -- hiding one would leave every chart below
+   without an x-axis and nothing on the page would say why. */
+.srch{display:flex;align-items:center;gap:8px;margin:10px 0 2px;max-width:660px}
+.srch input{flex:1 1 auto;min-width:0;padding:7px 11px;font:13px/1.3 var(--mono);
+  color:var(--fg);background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.18);border-radius:6px}
+.srch input:focus{outline:none;border-color:var(--accent);
+  background:rgba(255,255,255,.10)}
+.srch input::placeholder{color:rgba(255,255,255,.40)}
+.srch .n{font:11.5px/1 var(--mono);color:rgba(255,255,255,.55);white-space:nowrap}
+.srch kbd{font:10.5px/1 var(--mono);color:rgba(255,255,255,.55);padding:2px 5px;
+  border:1px solid rgba(255,255,255,.20);border-radius:4px}
+.qhide{display:none !important}
+h2 .qn{font:11px/1 var(--mono);color:var(--accent);margin-left:8px;font-weight:400}
+h2 .qn.zero{color:rgba(255,255,255,.35)}
+"""
+
+JS = """
+
+// Search over everything the page already knows.  The haystack is each row's
+// visible text PLUS every data-tip inside it, because the tips are where the
+// job ids, node names, exact times and full command lines live -- searching
+// only what is painted would miss most of what people come here to find.
+//
+// The ruler rows are filtered out by hand.  ruler_html() emits class="row"
+// exactly like the data rows, and it IS the shared time axis: hide it and
+// every chart below loses its x-axis with nothing to say why.
+function initSearch(){
+  var box=document.getElementById('q'), out=document.getElementById('qn');
+  if(!box) return;
+  var rows=[].slice.call(document.querySelectorAll('.row,.hrow,.lrow,details'))
+    .filter(function(r){ return !r.querySelector('.track.ruler'); });
+  rows.forEach(function(r){
+    var t=r.textContent||'';
+    if(r.getAttribute('data-tip')) t+=' '+r.getAttribute('data-tip');
+    [].slice.call(r.querySelectorAll('[data-tip]')).forEach(function(e){
+      t+=' '+e.getAttribute('data-tip');
+    });
+    r.setAttribute('data-hay',t.toLowerCase().replace(/\\s+/g,' '));
+  });
+  var secs=[].slice.call(document.querySelectorAll('section'));
+  function apply(){
+    var q=box.value.toLowerCase().trim();
+    var terms=q?q.split(/\\s+/):[];
+    var pos=terms.filter(function(t){return t.charAt(0)!=='-'&&t.length;});
+    var neg=terms.filter(function(t){return t.charAt(0)==='-'&&t.length>1;})
+                 .map(function(t){return t.slice(1);});
+    var shown=0;
+    rows.forEach(function(r){
+      var h=r.getAttribute('data-hay')||'';
+      var ok=pos.every(function(t){return h.indexOf(t)>=0;})
+          && !neg.some(function(t){return h.indexOf(t)>=0;});
+      r.classList.toggle('qhide',!ok);
+      if(ok) shown++;
+    });
+    // Per-section counts: an empty chart with no explanation reads as a bug.
+    secs.forEach(function(sec){
+      var h2=sec.querySelector('h2'); if(!h2) return;
+      var tag=h2.querySelector('.qn');
+      if(!q){ if(tag) tag.remove(); return; }
+      var n=0;
+      rows.forEach(function(r){ if(sec.contains(r)&&!r.classList.contains('qhide')) n++; });
+      if(!tag){ tag=document.createElement('span'); tag.className='qn';
+                h2.appendChild(tag); }
+      tag.textContent=n+' match'+(n===1?'':'es');
+      tag.className='qn'+(n?'':' zero');
+    });
+    out.textContent = q ? (shown+' row'+(shown===1?'':'s')) : '';
+  }
+  box.addEventListener('input',apply);
+  box.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){ box.value=''; apply(); box.blur(); }
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='/'&&document.activeElement!==box){ e.preventDefault(); box.focus(); }
+  });
+}
+(function(){
+  var tip=document.getElementById('tip');
+  document.addEventListener('mouseover',function(e){
+    var t=e.target.closest('[data-tip]'); if(!t) return;
+    tip.textContent=t.getAttribute('data-tip'); tip.style.display='block';
+  });
+  document.addEventListener('mousemove',function(e){
+    if(tip.style.display!=='block') return;
+    var w=tip.offsetWidth,h=tip.offsetHeight;
+    var x=e.clientX+14, y=e.clientY+16;
+    if(x+w>innerWidth-8) x=e.clientX-w-14;
+    if(y+h>innerHeight-8) y=e.clientY-h-16;
+    tip.style.left=Math.max(8,x)+'px'; tip.style.top=Math.max(8,y)+'px';
+  });
+  document.addEventListener('mouseout',function(e){
+    if(e.target.closest('[data-tip]')) tip.style.display='none';
+  });
+
+  // The page is a snapshot, not a feed.  Show its age so nobody reads stale
+  // numbers as live ones.
+  initSearch();
+  var born=SNAPSHOT_EPOCH, el=document.getElementById('age');
+  function fmt(s){
+    if(s<60) return Math.max(0,Math.round(s))+'s ago';
+    if(s<3600) return Math.round(s/60)+' min ago';
+    if(s<86400) return (s/3600).toFixed(1)+' h ago';
+    return (s/86400).toFixed(1)+' d ago';
+  }
+  function tick(){
+    var s=Date.now()/1000-born;
+    el.textContent=fmt(s);
+    el.className = s<900?'fresh' : s<7200?'warm' : 'stale';
+    el.title = s<900?'fresh' : 'run sgpur again to refresh';
+  }
+  tick(); setInterval(tick,1000);
+})();
+"""
+
+
+def esc(text) -> str:
+    return html.escape(str(text), quote=True)
+
+
+def att(text) -> str:
+    """Escape for an attribute value, newlines included.
+
+    html.escape leaves \\n alone.  HTML5 does preserve literal newlines inside
+    attribute values, so it renders correctly today, but any minifier or CDN
+    rewrite is free to collapse them and the multi-line tooltips would silently
+    become one long line.  &#10; says what is meant.
+    """
+    return html.escape(str(text), quote=True).replace("\n", "&#10;")
+
+
+def pct(t: datetime, t0: datetime, t1: datetime) -> float:
+    span = (t1 - t0).total_seconds() or 1.0
+    return max(0.0, min(100.0, (t - t0).total_seconds() / span * 100.0))
+
+
+def gh(seconds: float, gpus: float) -> float:
+    return seconds * gpus / 3600.0
+
+
+def tick_step(span_s: float) -> float:
+    """Pick a grid interval that leaves labels ~90px apart on a wide screen."""
+    for cand in (300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400,
+                 172800, 604800):
+        if span_s / cand <= 16:
+            return cand
+    return 604800
+
+
+def grid_html(t0: datetime, t1: datetime, step: float, now: datetime) -> str:
+    """Vertical rules, reused verbatim inside every track so rows line up.
+
+    Ticks are anchored to wall-clock boundaries rather than to the window
+    start: a line at 18:00 is readable, a line at 17:43 is noise.
+    """
+    out = []
+    for t in tick_times(t0, t1, step):
+        lt = L(t)
+        cls = "gl day" if lt.hour == 0 and lt.minute == 0 else "gl"
+        out.append(f'<i class="{cls}" style="left:{pct(t, t0, t1):.4f}%"></i>')
+    if t0 <= now <= t1:
+        out.append(f'<i class="now" style="left:{pct(now, t0, t1):.4f}%"></i>')
+    return "".join(out)
+
+
+def tick_times(t0: datetime, t1: datetime, step: float) -> list[datetime]:
+    """Grid lines land on wall-clock boundaries IN THE READER'S ZONE.
+
+    Anchoring on the unix epoch only lines up for zones offset by a whole
+    number of hours; anchoring on local midnight is correct for any zone.
+    Returned values stay server-naive so they compare against t0/t1.
+    """
+    midnight_local = L(t0).replace(hour=0, minute=0, second=0, microsecond=0)
+    base = midnight_local.astimezone().replace(tzinfo=None)
+    out, k = [], int((t0 - base).total_seconds() // step)
+    while True:
+        t = base + timedelta(seconds=k * step)
+        k += 1
+        if t > t1:
+            break
+        if t >= t0:
+            out.append(t)
+    return out
+
+
+def ruler_html(t0, t1, fc_t1, step: float, lw: int) -> str:
+    def label(t):
+        lt = L(t)
+        midnight = lt.hour == 0 and lt.minute == 0
+        return ("tk day" if midnight else "tk",
+                lt.strftime("%m-%d") if midnight else lt.strftime("%H:%M"))
+
+    past = "".join(f'<span class="{c}" style="left:{pct(t, t0, t1):.4f}%">{s}</span>'
+                   for t, (c, s) in ((t, label(t)) for t in tick_times(t0, t1, step)))
+    # Ticks beyond now live in the forecast layer, measured against the full
+    # window, so they appear only when the toggle expands the axis.
+    fut = "".join(f'<span class="{c} fut" style="left:{pct(t, t0, fc_t1):.4f}%">{s}</span>'
+                  for t, (c, s) in ((t, label(t)) for t in tick_times(t1, fc_t1, step)))
+    # An invisible tail spacer keeps this track exactly as wide as the data
+    # rows above it.  Without it the ruler is wider and every tick sits to the
+    # right of the bar it is supposed to mark.
+    return (f'<div class="row"><div class="lbl" style="--lw:{lw}px"></div>'
+            f'<div class="track ruler"><div class="axis"></div>'
+            f'<div class="tinner">{past}</div>'
+            f'<div class="fclayer">{fut}</div></div>'
+            f'<div class="tail spacer"></div></div>')
+
+
+def seg_tip(seg, job) -> str:
+    """Everything the terminal has to truncate goes in the hover text."""
+    lines = []
+    if seg.kind == "busy":
+        head = seg.ident or "(unidentified)"
+        if seg.run_seq:
+            head += f"   run #{seg.run_seq}"
+        lines.append(head)
+        lines.append(f"{seg.gpus:g} of {seg.alloc_gpus:g} GPU  ·  {S.fmt_dur(seg.secs)}"
+                     f"  ·  {gh(seg.secs, seg.gpus):.1f} GPU-h computed")
+    elif seg.kind == "pending":
+        lines.append("queued, holds no GPU")
+        lines.append(S.fmt_dur(seg.secs))
+    else:
+        lines.append("allocation held, no qualifying step")
+        lines.append(f"{seg.alloc_gpus:g} GPU idle  ·  {S.fmt_dur(seg.secs)}"
+                     f"  ·  {gh(seg.secs, seg.alloc_gpus):.1f} GPU-h burned")
+    lines.append(f"{L(seg.start):%m-%d %H:%M:%S} → {L(seg.end):%m-%d %H:%M:%S} "
+                 f"{L(seg.end):%Z}")
+    if seg.end_state:
+        lines.append("ends " + STATE_LABEL.get(seg.end_state[:9], seg.end_state))
+    lines.append(f"job {job.jid}  {job.nodes}N {job.gpus:g}G  {job.name}")
+    if job.nodelist:
+        lines.append(job.nodelist)
+    cmds, seen = [], set()
+    for st in seg.steps:
+        c = (st.cmd or "").strip()
+        if c and c not in seen:
+            seen.add(c)
+            cmds.append(f"  {st.sid}  {c}")
+    if cmds:
+        lines.append("")
+        lines.append(f"{len(seg.steps)} step(s):")
+        lines += cmds[:6]
+        if len(cmds) > 6:
+            lines.append(f"  ... {len(cmds) - 6} more")
+    return "\n".join(lines)
+
+
+def seg_div(seg, job, t0, t1) -> str:
+    left = pct(seg.start, t0, t1)
+    right = pct(seg.end, t0, t1)
+    width = max(right - left, 0.12)
+    if seg.kind == "busy":
+        key = S.util_key(seg.gpus / seg.alloc_gpus if seg.alloc_gpus else 0.0)
+        text = seg.ident or "(unidentified)"
+    elif seg.kind == "pending":
+        key, text = "pending", "queued"
+    else:
+        key, text = "held", ""
+    bg, bd = FILL[key]
+    bad = " bad" if seg.end_state in S.BAD_STATES else ""
+    cls = f"seg {key}{bad}" + (" pending" if key == "pending" else "")
+    label = f"<span>{esc(text)}</span>" if text and width > 3 else ""
+    return (f'<div class="{cls}" style="left:{left:.4f}%;width:{width:.4f}%;'
+            f'background:{bg};border-color:{bd}" data-tip="{att(seg_tip(seg, job))}">'
+            f'{label}</div>')
+
+
+def forecast_layer(job, t0, t1, fc_t1, limit_s, now) -> str:
+    """The scheduled remainder, positioned against the FULL forecast window.
+
+    Lives in its own layer rather than inside .tinner: .tinner is the past,
+    and gets squeezed to 2/3 when the forecast opens, whereas this layer is
+    always sized against t0 -> fc_t1.  Hidden until the toggle is on, so the
+    default view stays purely measured.
+    """
+    if not limit_s or not job.start:
+        return ""
+    end = job.start + timedelta(seconds=limit_s)
+    if end <= now:
+        return ""
+    left = pct(now, t0, fc_t1)
+    right = pct(end, t0, fc_t1)
+    remain = (end - now).total_seconds()
+    tip = (f"{job.jid}  scheduled to end {L(end):%m-%d %H:%M} {L(end):%Z}\n"
+           f"{S.fmt_dur(remain)} of wall clock left of a "
+           f"{S.fmt_dur(limit_s)} limit\n"
+           f"upper bound: the job can still finish or fail earlier")
+    return (f'<div class="fcseg" style="left:{left:.4f}%;'
+            f'width:{max(right - left, 0.1):.4f}%" data-tip="{att(tip)}">'
+            f'<span>{S.fmt_dur(remain)} left</span></div>'
+            f'<i class="fcend" style="left:{right:.4f}%"></i>')
+
+
+def overview_section(snap, t0, t1, fc_t1, step, lw, deadlines) -> str:
+    grid = grid_html(t0, t1, step, snap.now)
+    rows = []
+    for j in snap.live:
+        segs = "".join(seg_div(s, j, t0, t1) for s in j.segments)
+        end = j.end or (snap.now if j.base_state == "RUNNING" else None)
+        mark = ""
+        if end is not None:
+            lab = STATE_LABEL.get(j.base_state[:9], j.base_state.lower())
+            if j.base_state == "RUNNING":
+                lab = "→ running"
+            cls = "mark bad" if j.base_state in S.BAD_STATES else "mark"
+            x = pct(end, t0, t1)
+            if x > 82:
+                cls += " flip"
+            mark = (f'<span class="{cls}" style="left:{x:.4f}%">{esc(lab)}</span>')
+        alloc = sum(gh(s.secs, s.alloc_gpus) for s in j.segments if s.kind != "pending")
+        busy = sum(gh(s.secs, s.gpus) for s in j.segments if s.kind == "busy")
+        ratio = busy / alloc * 100 if alloc else 0.0
+        tail = (f'<div class="tail"><span class="g">{ratio:.0f}%</span>'
+                f'<span>of {alloc:,.0f} GPU-h</span></div>')
+        rows.append(
+            f'<div class="row"><div class="lbl" style="--lw:{lw}px">'
+            f'<span class="jid">{esc(j.jid)}</span>'
+            f'<span class="meta">{j.nodes}N&nbsp;{j.gpus:g}G</span>'
+            f'<span class="nm">{esc(j.name)}</span></div>'
+            f'<div class="track"><div class="tinner">{grid}{segs}{mark}</div>'
+            f'<div class="fclayer">'
+            f'{forecast_layer(j, t0, t1, fc_t1, deadlines.get(j.jid), snap.now)}'
+            f'</div></div>{tail}</div>')
+    return "".join(rows)
+
+
+def lanes_section(snap, t0, t1, step, lw) -> str:
+    """One row per experiment identity, across jobs.  The holes are the breaks."""
+    grid = grid_html(t0, t1, step, snap.now)
+    rows = []
+    for h in snap.hist:
+        bars = []
+        for r in h.runs:
+            left = pct(r.start, t0, t1)
+            width = max(pct(r.end, t0, t1) - left, 0.12)
+            bad = r.end_state in S.BAD_STATES
+            tip = (f"{h.ident}   run #{r.seq} of {len(h.runs)}\n"
+                   f"{r.gpus:g} GPU  ·  {S.fmt_dur(r.secs)}  ·  "
+                   f"{gh(r.secs, r.gpus):.1f} GPU-h\n"
+                   f"{L(r.start):%m-%d %H:%M:%S} → {L(r.end):%m-%d %H:%M:%S} "
+                   f"{L(r.end):%Z}\n"
+                   f"ends {STATE_LABEL.get(r.end_state[:9], r.end_state or '?')}")
+            bars.append(
+                f'<div class="seg{" bad" if bad else ""}" '
+                f'style="left:{left:.4f}%;width:{width:.4f}%;'
+                f'background:{RUN_COLOR if not bad else BAD_COLOR};'
+                f'border-color:{"#5c93c9" if not bad else "#c97a7a"}" '
+                f'data-tip="{att(tip)}"></div>')
+        bits = [f'<span class="g">{len(h.runs)}</span> runs']
+        if h.breaks:
+            bits.append(f'brk <span class="g">{h.breaks}</span>')
+        if h.bad:
+            bits.append(f'<span class="b">✗{h.bad}</span>')
+        jids = " ".join(sorted(h.jobs))
+        ltip = (f"{h.ident}\n{len(h.runs)} runs · {h.breaks} breaks · {h.bad} bad exits\n"
+                f"{S.fmt_dur(h.secs)} busy · {h.gpu_hours:.1f} GPU-h\n"
+                f"jobs: {jids}")
+        rows.append(
+            f'<div class="row lane"><div class="lbl" style="--lw:{lw}px">'
+            f'<span class="nm" data-tip="{att(ltip)}">{live_dot(h, snap.now)}'
+            f'{esc(h.ident)}</span></div>'
+            f'<div class="track"><div class="tinner">{grid}{"".join(bars)}</div></div>'
+            f'<div class="tail"><span>{" · ".join(bits)}</span>'
+            f'<span>{h.gpu_hours:,.0f} GPU-h</span></div></div>')
+    return "".join(rows)
+
+
+def fmt_span(seconds: float) -> str:
+    """Duration for an axis tick: 0 / 2h / 6h30 -- shorter than fmt_dur."""
+    total = int(round(seconds / 60))
+    h, m = divmod(total, 60)
+    if not h:
+        return f"{m}m" if m else "0"
+    return f"{h}h" if not m else f"{h}h{m:02d}"
+
+
+def history_chart(snap, t0, t1, step, opts_window) -> str:
+    """Restart history as a strip chart rather than a wall of numbers.
+
+    Three visual channels, each carrying exactly one variable so nothing is
+    encoded twice:
+
+      run strip    : SAME SCALE AS THE GANTT SECTIONS ABOVE.  The grey track
+                     spans the whole look-back window, so one pixel here is
+                     the same number of seconds as one pixel up there, and a
+                     two-hour block in this section is exactly as wide as a
+                     two-hour segment in the allocations chart.  Colour is
+                     time actually running, grey is the rest of the window.
+                     The axis measures CUMULATIVE running time rather than
+                     wall clock, which is what keeps this from being a redraw
+                     of the lanes section: that one answers "when", this one
+                     answers "how much of the window, in how many pieces".
+      GPU-h bar    : absolute card time.  Not implied by the strip -- an
+                     identity on 16 GPUs burns four times what the same hours
+                     on 4 GPUs do.
+
+    The old `breaks` column is gone: it is always runs-1, so it repeated the
+    run count in different words.  `jobs` and `first → last` moved into the
+    row's hover text, which is where facts you look up rather than scan belong.
+    """
+    if not snap.hist:
+        return ""
+    window_s = (t1 - t0).total_seconds() or 1.0
+    max_gh = max((h.gpu_hours for h in snap.hist), default=1.0) or 1.0
+    # Same grid pitch as the gantt sections, anchored at 0 instead of at a
+    # wall-clock boundary: the lines will not coincide with the ones above
+    # (they cannot, one axis is a duration and the other an instant) but the
+    # cells are the same size, so lengths read across sections.
+    gw = step / window_s * 100
+
+    # `runs` lives on the right, not between the label and the strip: a column
+    # there pushed every strip 52px past the tracks in the sections above, so
+    # the shared time scale did not actually line up on screen.
+    out = [f'<div class="hhead"><div class="hid">identity</div>'
+           f'<div class="hseq-h">time running &nbsp;<span class="hint">'
+           f'same scale as the charts above: full width = the {esc(opts_window)} '
+           f'window &nbsp;·&nbsp; grey = not running &nbsp;·&nbsp; '
+           f'red = ended badly</span></div>'
+           f'<div class="hstats"><div class="hnum-h">runs</div>'
+           f'<div class="hnum-h">busy</div>'
+           f'<div class="hnum-h">GPU-h</div></div></div>']
+
+    split_done = False
+    for h in snap.hist:
+        # sgpu already sorts the two non-experiment buckets to the bottom.  Mark
+        # the boundary: they share the bars' scale with real experiments and are
+        # usually the largest rows on it, which is worth seeing but needs saying.
+        other = h.ident in S.NON_EXPERIMENT
+        if other and not split_done:
+            split_done = True
+            out.append('<div class="hsplit">not experiments &mdash; a shell '
+                       'someone attached, or a command line Slurm did not '
+                       'record. They set the scale for the bars above.</div>')
+        runs = h.runs
+        # An identity attached to two allocations at once can accumulate more
+        # running time than the window is long.  Clip and say so rather than
+        # let one row silently break the shared scale.
+        over = h.secs > window_s
+        cells = []
+        for r in runs:
+            bad = r.end_state in S.BAD_STATES
+            tip = (f"{h.ident}   run #{r.seq} of {len(runs)}\n"
+                   f"{S.fmt_dur(r.secs)}  ·  {r.gpus:g} GPU  ·  "
+                   f"{gh(r.secs, r.gpus):.1f} GPU-h\n"
+                   f"{L(r.start):%m-%d %H:%M:%S} → {L(r.end):%m-%d %H:%M:%S} "
+                   f"{L(r.end):%Z}\n"
+                   f"ends {STATE_LABEL.get(r.end_state[:9], r.end_state or '?')}")
+            cells.append(f'<i class="{"rc bad" if bad else "rc"}" '
+                         f'style="flex:{max(r.secs, 1):.0f} 1 0" '
+                         f'data-tip="{att(tip)}"></i>')
+
+        cnt = f'<span class="g">{len(runs)}</span>'
+        if h.bad:
+            cnt += f'<span class="b">✗{h.bad}</span>'
+        span = (f"{L(runs[0].start):%m-%d %H:%M} → {L(runs[-1].end):%m-%d %H:%M} "
+                f"{L(runs[-1].end):%Z}" if runs else "")
+        idtip = (f"{h.ident}\n{len(runs)} runs across {len(h.jobs)} allocation(s): "
+                 f"{' '.join(sorted(h.jobs))}\n{span}\n"
+                 f"{S.fmt_dur(h.secs)} busy  ·  {h.gpu_hours:.1f} GPU-h"
+                 + (f"\n{h.bad} ended abnormally" if h.bad else "")
+                 + ("\nruns overlapped across allocations: total exceeds the "
+                    "window, strip clipped at 100%" if over else ""))
+        out.append(
+            f'<div class="hrow{" other" if other else ""}">'
+            f'<div class="hid" data-tip="{att(idtip)}">{live_dot(h, snap.now)}'
+            f'{esc(h.ident)}</div>'
+            f'<div class="hseq" style="--gw:{gw:.4f}%">'
+            f'<div class="hrun{" over" if over else ""}" '
+            f'style="width:{min(h.secs / window_s * 100, 100):.3f}%" '
+            f'data-tip="{att(idtip)}">{"".join(cells)}</div></div>'
+            f'<div class="hstats">'
+            f'<div class="hnum plain">{cnt}</div>'
+            f'<div class="hnum plain"><b>{S.fmt_dur(h.secs)}</b></div>'
+            f'<div class="hnum"><i style="width:{h.gpu_hours / max_gh * 100:.1f}%"></i>'
+            f'<b>{h.gpu_hours:,.0f}</b></div></div></div>')
+
+    # Axis: ticks every `step` seconds, the same pitch the gantt ruler uses.
+    k, marks = 0, []
+    while k * step <= window_s + 1:
+        marks.append(f'<span style="left:{k * step / window_s * 100:.4f}%">'
+                     f'{fmt_span(k * step)}</span>')
+        k += 1
+    ticks = "".join(marks)
+    out.append(f'<div class="hrow"><div class="hid"></div>'
+               f'<div class="hseq-axis">{ticks}</div>'
+               f'<div class="hstats"></div></div>')
+    return "".join(out)
+
+
+def segments_detail(snap) -> str:
+    """Exact times and full command lines -- the part a terminal must truncate."""
+    out = []
+    for j in snap.live:
+        lines = []
+        for sg in j.segments:
+            tag = (sg.ident or "(unidentified)") if sg.kind == "busy" else sg.kind
+            state = f"  ends {STATE_LABEL.get(sg.end_state[:9], sg.end_state)}" if sg.end_state else ""
+            lines.append(f"{L(sg.start):%m-%d %H:%M:%S} → {L(sg.end):%m-%d %H:%M:%S}  "
+                         f"{S.fmt_dur(sg.secs):>8}  {sg.gpus:>4.0f}/{sg.alloc_gpus:<4.0f}GPU  "
+                         f"{tag}{state}")
+            seen = set()
+            for st in sg.steps:
+                c = (st.cmd or "").strip()
+                if c and c not in seen:
+                    seen.add(c)
+                    lines.append(f"      {st.sid}  {c}")
+        out.append(f"<details><summary>{esc(j.jid)} &nbsp; {esc(j.name)} &nbsp; "
+                   f"{j.nodes}N {j.gpus:g}G &nbsp; {len(j.segments)} segments</summary>"
+                   f"<pre>{esc(chr(10).join(lines))}</pre></details>")
+    return "".join(out)
+
+
+# Two colours, no ramp.  The bar's length already states how long the wait is,
+# to the minute; shading it as well spent a whole colour channel restating one
+# number and introduced greys and blues that meant nothing else on the page.
+QUEUE_COLOR, QUEUE_EDGE = "#f2d98a", "#d9b74e"
+
+
+def hex_rgba(hexcol: str, alpha: float) -> str:
+    h = hexcol.lstrip("#")
+    return (f"rgba({int(h[0:2], 16)},{int(h[2:4], 16)},{int(h[4:6], 16)},"
+            f"{alpha})")
+
+EWMA_ALPHA = 0.3
+
+# A padlock says "reserved" in one character where the word took seven, and
+# seven characters was the difference between the badge fitting in the label
+# column and being clipped mid-word.  The state suffix is one character too;
+# the legend below the section spells all of them out.
+LOCK, UNLOCK = "\U0001F512", "\U0001F513"
+
+# Allocation-renewal jobs queue in order to hold nodes, not to compute.  They
+# are a different kind of thing from an experiment waiting for its turn, and
+# mixing them into the same amber ramp makes the queue look more contended
+# than it is, so they get the page's "computing" green instead.
+CHAIN_RE = re.compile(r"(?:^|[-_])chain(?:[-_]|\d|$)", re.I)
+
+
+def is_chain_job(name: str) -> bool:
+    return bool(CHAIN_RE.search(name or ""))
+
+
+def queue_history(user: str, days: int = 7) -> list:
+    """Past queue waits: Start - Submit for jobs that actually started.
+
+    -X keeps this to job records; step records have no queue time and would
+    multiply the output by fifty.
+    """
+    since = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M")
+    try:
+        p = subprocess.run(["sacct", "-X", "-P", "-n", "-u", user, "-S", since,
+                            "--format=JobID,Submit,Start,AllocNodes"],
+                           capture_output=True, text=True, timeout=90)
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    out = []
+    for ln in p.stdout.splitlines():
+        f = ln.split("|")
+        if len(f) < 4:
+            continue
+        sub, st = S.parse_time(f[1]), S.parse_time(f[2])
+        if not sub or not st:
+            continue
+        w = (st - sub).total_seconds()
+        if 0 <= w < 7 * 86400:
+            try:
+                nodes = int(f[3] or 0)
+            except ValueError:
+                nodes = 0
+            out.append((st, w, nodes))
+    out.sort(key=lambda x: x[0])          # oldest first, EWMA needs the order
+    return out
+
+
+def wait_estimators(hist: list) -> dict:
+    """Four ways of saying "how long will the next one wait", side by side.
+
+    They disagree, often by a lot, and which one is right depends on whether
+    the queue is in a regime change or not.  Showing all four and naming the
+    one that drives the shading is more honest than picking one silently:
+    a reader can see at a glance whether the estimate is robust (they cluster)
+    or a guess (they do not).
+    """
+    ws = [w for _t, w, _n in hist]
+    if not ws:
+        return {}
+    n = len(ws)
+    k = min(10, n)
+    e = ws[0]
+    for w in ws[1:]:
+        e = EWMA_ALPHA * w + (1 - EWMA_ALPHA) * e
+    return {"ewma": e, "mean": sum(ws) / n, "ma": sum(ws[-k:]) / k,
+            "last": ws[-1], "n": n, "k": k}
+
+
+def pending_block(snap, t0, t1, fc_t1, step, lw, user, fc_label) -> str:
+    """Queued jobs as bars on the same wall-clock axis as everything above.
+
+    A column of "8h57m" strings does not show that half the queue has been
+    sitting there since before the window opened, or that four of them were
+    submitted in the same minute.  On the shared axis both are one glance.
+    """
+    if not snap.pending:
+        return ""
+    grid = grid_html(t0, t1, step, snap.now)
+    est = wait_estimators(queue_history(user))
+    pred = est.get("ewma")
+    rows = []
+    for j in sorted(snap.pending, key=lambda x: x.submit or snap.now):
+        if not j.submit:
+            continue
+        wait = (snap.now - j.submit).total_seconds()
+        chain = is_chain_job(j.name)
+        bg, bd = ((COMPUTE_COLOR, COMPUTE_EDGE) if chain
+                  else (QUEUE_COLOR, QUEUE_EDGE))
+        clipped = j.submit < t0
+        left = pct(max(j.submit, t0), t0, t1)
+        right = pct(snap.now, t0, t1)
+        tip = (f"{j.jid}  {j.name}\n{j.nodes} node(s) requested\n"
+               f"submitted {L(j.submit):%m-%d %H:%M:%S} {L(j.submit):%Z}\n"
+               f"waiting {S.fmt_dur(wait)}, holding no GPU"
+               + ("\nallocation renewal: queues to hold nodes, not to compute"
+                  if chain else "")
+               + ("\nsubmitted before this window opened" if clipped else ""))
+
+        # The shaded remainder has to live in the forecast layer, not beside
+        # the solid bar: `now` is the right edge of the window, so anything
+        # drawn past it in .tinner clips to zero width.  That is also the
+        # honest place for it, since it is the same button that opens every
+        # other piece of "what happens next" on this page.
+        shade = ""
+        if pred:
+            eta = j.submit + timedelta(seconds=pred)
+            if eta > snap.now:
+                l2 = pct(snap.now, t0, fc_t1)
+                r2 = pct(eta, t0, fc_t1)
+                over = eta > fc_t1
+                # The hatch takes the bar's own hue: a green renewal must not
+                # sprout an amber forecast, or the two colours stop meaning
+                # "what kind of wait this is".
+                hatch = (f'repeating-linear-gradient(135deg, transparent 0 4px,'
+                         f'{hex_rgba(bg, 0.6)} 4px 8px)')
+                shade = (f'<div class="seg pred{" open" if over else ""}" '
+                         f'style="left:{l2:.4f}%;width:{max(r2 - l2, 0.15):.4f}%;'
+                         f'background:{hatch};border-color:{bd}" '
+                         f'data-tip="{att(tip)}&#10;&#10;EWMA estimate: starts around '
+                         f'{L(eta):%m-%d %H:%M} {L(eta):%Z}'
+                         f'&#10;{S.fmt_dur(pred - wait)} still to go'
+                         + ("&#10;beyond the forecast window" if over else "")
+                         + f'"><span>{esc(S.fmt_dur(pred - wait))}</span></div>')
+            else:
+                tip += (f"\n\npast the EWMA estimate by "
+                        f"{S.fmt_dur(wait - pred)} -- the queue is slower than "
+                        f"the last {est['n']} jobs suggested")
+
+        rows.append(
+            f'<div class="row"><div class="lbl" style="--lw:{lw}px">'
+            f'<span class="jid">{esc(j.jid)}</span>'
+            f'<span class="meta">{j.nodes}N</span>'
+            f'<span class="nm">{esc(j.name)}</span></div>'
+            f'<div class="track"><div class="tinner">{grid}'
+            f'<div class="seg pend{" clip" if clipped else ""}" '
+            f'style="left:{left:.4f}%;width:{max(right - left, 0.15):.4f}%;'
+            f'background:{bg};border-color:{bd}" data-tip="{att(tip)}"></div>'
+            f'</div><div class="fclayer">{shade}</div></div>'
+            f'<div class="tail"><span>waiting</span>'
+            f'<span class="g">{S.fmt_dur(wait)}</span></div></div>')
+
+    # Second row: the four ways of answering "how long will the next one wait".
+    # Boxed and side by side rather than run together in the caption, because
+    # the point is the comparison -- tight cluster means the queue is in a
+    # steady state and the shading can be trusted, spread means it is not.
+    if est:
+        cards = [("EWMA", f"&alpha;={EWMA_ALPHA}", est["ewma"],
+                  "drives the shading", True),
+                 ("mean", f"all {est['n']}", est["mean"], "whole history", False),
+                 (f"MA({est['k']})", f"last {est['k']}", est["ma"],
+                  "recent window", False),
+                 ("copy-last", "n = 1", est["last"], "most recent wait", False)]
+        est_row = '<div class="estrow">' + "".join(
+            f'<div class="estbox{" on" if on else ""}">'
+            f'<div class="estk">{k} <span>{sub}</span></div>'
+            f'<div class="estv">{esc(S.fmt_dur(v))}</div>'
+            f'<div class="estn">{note}</div></div>'
+            for k, sub, v, note, on in cards) + "</div>"
+    else:
+        est_row = ('<div class="estrow"><div class="estbox">'
+                   '<div class="estn">no completed jobs in the last 7 days '
+                   'to estimate from</div></div></div>')
+    btn = (f'<button class="fbtn" data-label="{esc(fc_label)}">{esc(fc_label)}</button>'
+           if est else "")
+    return (f'<h2>queued <span class="hint">&nbsp;not holding GPUs yet · '
+            f'bar spans submission to now &nbsp;·&nbsp; '
+            f'<span class="qkey qk-chain"></span>allocation renewal &nbsp;'
+            f'<span class="qkey qk-wait"></span>waiting to compute'
+            f'</span>{btn}</h2>{est_row}'
+            + "".join(rows) + ruler_html(t0, t1, fc_t1, step, lw))
+
+
+
+def legend() -> str:
+    items = [
+        (FILL["full"], "computing, ≥ 80% of allocation"),
+        (FILL["mid"], "35 – 80%"),
+        (FILL["low"], "< 35%"),
+        (FILL["held"], "allocation held, nothing running"),
+        (FILL["pending"], "queued, holds no GPU"),
+        ((RUN_COLOR, "#5c93c9"), "one continuous run (lanes)"),
+        ((BAD_COLOR, "#c97a7a"), "ended abnormally"),
+    ]
+    return ('<div class="legend">' + "".join(
+        f'<span><i style="background:{bg};border-color:{bd}"></i>{esc(t)}</span>'
+        for (bg, bd), t in items) + "</div>")
+
+
+# Node reservations live in tasks/node_status/, shared with gtop.  Importing
+# rather than reimplementing: a reservation that two tools disagree about is
+# worse than none, and that module already handles what this one would have
+# gotten wrong -- per-GPU locks, and locks that expire when their job does.
+NODELOCK_PATH = os.environ.get(
+    "NODELOCK_PATH", "/projects/public/u6gb/tasks/node_status/nodelock.py")
+_NL = None
+
+
+def load_nodelock():
+    """The shared module, or None.  It is under active development in another
+    session, so every use is guarded: a missing or renamed function costs the
+    lock badges, never the page."""
+    global _NL
+    if _NL is not None:
+        return _NL or None
+    if not os.path.exists(NODELOCK_PATH):
+        _NL = False
+        return None
+    try:
+        loader = importlib.machinery.SourceFileLoader("nodelock", NODELOCK_PATH)
+        spec = importlib.util.spec_from_loader("nodelock", loader)
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["nodelock"] = mod
+        loader.exec_module(mod)
+        _NL = mod
+        return mod
+    except Exception:
+        _NL = False
+        return None
+
+
+QUOTA_PATH = os.path.join(
+    os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+    "sgpur", "quota.json")
+
+
+def read_quota() -> dict:
+    """Grant size and burn rate.
+
+    The allowance and its end date come from the BriCS portal and have to be
+    typed in once; consumption comes from `sreport --tres=node`, so the number
+    that changes hourly is the one nobody has to maintain.  Everything derived
+    below is arithmetic on those two.
+
+    The interesting quantity is not "how much is left" but "how many nodes
+    would spend exactly the remainder by the deadline".  An allocation grant
+    is use-it-or-lose-it, so running under that figure is a loss that no alarm
+    will ever tell you about -- unlike overspending, which errors immediately.
+    """
+    try:
+        with open(QUOTA_PATH) as f:
+            q = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    total = float(q.get("total_node_hours") or 0)
+    if not total:
+        return {}
+    used = None
+    try:
+        p = subprocess.run(
+            ["sreport", "-n", "-P", "cluster", "AccountUtilizationByUser",
+             f"Account={q.get('account', '')}",
+             f"start={q.get('since', '2026-01-01')}", "end=now",
+             "--tres=node", "-t", "hours"],
+            capture_output=True, text=True, timeout=60)
+        for ln in p.stdout.splitlines():
+            f = ln.split("|")
+            if len(f) >= 6 and f[4] == "node":
+                used = max(used or 0.0, float(f[5]))
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        used = None
+    if used is None:
+        used = float(q.get("used_node_hours") or 0)
+
+    end = S.parse_time(q.get("ends", "") + "T23:59:59") if q.get("ends") else None
+    days = max(0.0, (end - datetime.now()).total_seconds() / 86400) if end else 0.0
+    left = max(0.0, total - used)
+    q.update(total=total, used=used, left=left, days=days,
+             sustainable=(left / (days * 24) if days > 0 else 0.0))
+    return q
+
+
+AUDIT_PATH = os.environ.get(
+    "NODELOCK_AUDIT",
+    "/projects/public/u6gb/tasks/node_status/audit.jsonl")
+
+# Who caused a reservation to change.  Kept separate from `who` (which session
+# the node is for) because they answer different questions: "whose node is it"
+# versus "who decided that, and were they asked to".  A lock nobody remembers
+# setting is the reason stale reservations survive for days.
+SOURCES = {
+    "manual": "a person typed the command themselves",
+    "requested": "a person asked an agent to do it",
+    "auto": "a tool decided on its own (expiry, cleanup)",
+}
+
+
+def audit(action: str, nodes, session=None, source="manual", note="") -> None:
+    """Append-only log of every reservation change.  Never raises: an audit
+    that can break the operation it records would get switched off."""
+    try:
+        rec = {"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+               "action": action,
+               "nodes": sorted(nodes) if nodes else [],
+               "session": session,
+               "source": source if source in SOURCES else "manual",
+               "by": os.environ.get("USER", "?"),
+               "via": "sgpur",
+               "note": note}
+        os.makedirs(os.path.dirname(AUDIT_PATH), exist_ok=True)
+        with open(AUDIT_PATH, "a") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+def audit_tail(n=10) -> list:
+    try:
+        with open(AUDIT_PATH) as f:
+            lines = f.readlines()[-n:]
+    except OSError:
+        return []
+    out = []
+    for ln in lines:
+        try:
+            out.append(json.loads(ln))
+        except ValueError:
+            continue
+    return out
+
+
+def load_locks() -> dict:
+    nl = load_nodelock()
+    if nl is None or not hasattr(nl, "load"):
+        return {}
+    try:
+        return nl.load() or {}
+    except Exception:
+        return {}
+
+
+def live_job_ids():
+    nl = load_nodelock()
+    if nl is None or not hasattr(nl, "running_ids"):
+        return None
+    try:
+        return nl.running_ids()
+    except Exception:
+        return None
+
+
+def lock_state(host: str, locks: dict, idents: set, live_ids=None,
+               busy=None) -> tuple:
+    """Declared owner vs what is actually on the node.
+
+    Five outcomes, four of them actionable.  `stale` matters most: a lock
+    pinned to a job that has ended would otherwise hide a genuinely free card
+    forever, which is worse than having no lock at all.
+
+    Matching is loose on purpose (substring, both directions): a session name
+    and an identity read off a command line rarely agree exactly, and a badge
+    that cries wolf gets ignored within a day.
+    """
+    e = locks.get(host)
+    if not e:
+        return ("free", UNLOCK)
+    who = e.get("who", "?") if isinstance(e, dict) else str(e)
+    nl = load_nodelock()
+    if nl is not None and isinstance(e, dict) and hasattr(nl, "is_live"):
+        try:
+            if not nl.is_live(e, live_ids):
+                return ("stale", f"{LOCK} {who} \u23f1")
+        except Exception:
+            pass
+    # "Nothing running" must be decided by the cards, not by whether an
+    # identity could be parsed.  Deciding it from `idents` made a node at 99%
+    # utilisation report as idle the moment its command line grew too long to
+    # read -- the most dangerous way to be wrong, because it invites someone
+    # to take a card that is busy.
+    if busy is False:
+        return ("empty", f"{LOCK} {who} \u25cb")
+    real = {i for i in (idents or set()) if i and i != "\u2014"}
+    low = who.lower()
+    if not real or any(low in i.lower() or i.lower() in low for i in real):
+        # Running, and either it matches or we cannot read the identity.
+        # Absence of proof that it is the wrong experiment is not proof.
+        return ("ok", f"{LOCK} {who}")
+    return ("clash", f"{LOCK} {who} \u2717")
+
+
+def cmd_lock(session: str, spec: str, source="manual", note="") -> int:
+    nl = load_nodelock()
+    if nl is None or not hasattr(nl, "do_lock"):
+        print(f"sgpur: shared nodelock module unavailable at {NODELOCK_PATH}",
+              file=sys.stderr)
+        return 1
+    before = set(load_locks())
+    n = nl.do_lock([spec], session)
+    touched = sorted(set(load_locks()) - before) or [spec]
+    audit("lock", touched, session, source, note)
+    print(f"reserved {n} node(s) for '{session}'  [{source}]")
+    return 0 if n else 1
+
+
+def cmd_unlock(spec: str, source="manual", note="") -> int:
+    nl = load_nodelock()
+    if nl is None or not hasattr(nl, "do_unlock"):
+        print(f"sgpur: shared nodelock module unavailable at {NODELOCK_PATH}",
+              file=sys.stderr)
+        return 1
+    before = dict(load_locks())
+    if spec.lower() in ("all", "*"):
+        spec = ",".join(sorted(before)) or "none"
+    n = nl.do_unlock([spec])
+    gone = sorted(set(before) - set(load_locks()))
+    for host in gone:
+        e = before.get(host) or {}
+        audit("unlock", [host], e.get("who"), source, note)
+    if not gone:
+        audit("unlock", [], None, source, note + " (nothing matched)")
+    print(f"released {len(gone) or n} node(s)  [{source}]"
+          + (f": {' '.join(gone)}" if gone else ""))
+    return 0
+
+
+def cmd_locks() -> int:
+    locks = load_locks()
+    if not locks:
+        print("no reservations")
+        return 0
+    ids = live_job_ids()
+    for host, e in sorted(locks.items()):
+        st, label = lock_state(host, locks, set(), ids)
+        extra = f"  job {e.get('jobid')}" if isinstance(e, dict) and e.get("jobid") else ""
+        note = f"  {e.get('note')}" if isinstance(e, dict) and e.get("note") else ""
+        print(f"{host:<12} {label:<28} [{st}]{extra}{note}")
+    return 0
+
+
+GTOP_PATH = os.environ.get("GTOP_PATH", "/projects/public/u6gb/.local/bin/gtop")
+_GTOP = None
+
+
+def load_gtop():
+    """gtop's collector, imported the same way sgpu's is."""
+    global _GTOP
+    if _GTOP is not None:
+        return _GTOP
+    if not os.path.exists(GTOP_PATH):
+        return None
+    loader = importlib.machinery.SourceFileLoader("gtopmod", GTOP_PATH)
+    spec = importlib.util.spec_from_loader("gtopmod", loader)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["gtopmod"] = mod
+    loader.exec_module(mod)
+    _GTOP = mod
+    return mod
+
+
+def collect_live(opts):
+    """Physical GPU state right now, via gtop's srun probe.
+
+    This is the only part of the page that touches a compute node, and it is
+    here because sacct fundamentally cannot answer the question it answers:
+    accounting proves a step existed, not that the card was computing.  A
+    four-GPU step with three cards sitting at 0% util still bills for four.
+
+    Same mechanism gtop uses, so the same safety properties: --overlap
+    --exact with one CPU (never competes with the training step for cores),
+    probe delivered over stdin (no Lustre read on the node), process exits
+    immediately (no resident agent).
+    """
+    g = load_gtop()
+    if g is None:
+        return None, f"gtop not found at {GTOP_PATH}"
+    try:
+        running, _pending, err = g.discover_jobs(opts.user, None)
+    except Exception as exc:
+        return None, f"squeue failed: {exc}"
+    if err:
+        return None, str(err)
+    if not running:
+        return None, "no running allocation to sample"
+    try:
+        probe = open(g.PROBE).read()
+    except OSError as exc:
+        return None, f"probe unreadable: {exc}"
+    # gtop truncates each command line at 120 characters, which is fine for a
+    # terminal row but loses the experiment name: the identity sits at the end
+    # of an absolute path and a conda interpreter path alone can be 74 chars,
+    # so rows came back as "python/108865".  Widened in memory only -- the
+    # shared probe.sh is not modified, and if that line ever changes this
+    # replace simply does nothing and we fall back to the old width.
+    probe = probe.replace("cut -c1-120", "cut -c1-400")
+
+    col = g.Collector(probe, timeout=45)
+    out = [None] * len(running)
+
+    def one(i, job):
+        try:
+            out[i] = (job, col.sample_job(job), None)
+        except Exception as exc:
+            out[i] = (job, {}, str(exc))
+
+    # Cap concurrent srun the way gtop does: holding ten allocations should
+    # not mean ten simultaneous step-creation requests at slurmctld.
+    with concurrent.futures.ThreadPoolExecutor(
+            max_workers=min(len(running), g.MAX_CONCURRENT_SRUN)) as pool:
+        list(pool.map(lambda a: one(*a), enumerate(running)))
+    return [o for o in out if o], None
+
+
+def mono(text, width=None, style="norm", tip=None) -> str:
+    """One fixed-width cell.  Widths are in ch, matching gtop's format strings,
+    so the columns land where they do in the terminal."""
+    w = f"width:{width}ch;" if width else ""
+    t = f' data-tip="{att(tip)}"' if tip else ""
+    # class "m" and not a bare span: the inline-block rule these need must not
+    # also hit .lmid / .lgrow, which are spans too and have to stay flex.
+    return f'<span class="m s-{style}" style="{w}"{t}>{esc(text)}</span>'
+
+
+def cbar(frac: float, width=None, style: str = "norm") -> str:
+    """The terminal draws these out of block glyphs, so the fill quantises to
+    one tenth.  Here it is a div, so it is exact.  width=None lets the parent
+    flex slot size it, which is how the bars reach the same right edge as the
+    gantt tracks."""
+    f = min(max(frac, 0.0), 1.0) * 100
+    w = f"width:{width}ch" if width else ""
+    return (f'<span class="cbar s-{style}" style="{w}">'
+            f'<i style="width:{f:.1f}%"></i></span>')
+
+
+def live_section(live, err) -> str:
+    """gtop's wide layout, column for column.
+
+    Not a redesign: the terminal view is what the user reads every day, and
+    every field on it earns its place.  Temperature and wattage are how you
+    tell a card that is merely idle from one that is idle and still pulling
+    140 W; the process tag is how you tell whose it is.  The only things that
+    change here are that the bars are real divs rather than block glyphs, so
+    the fill is exact instead of quantised to a tenth, and that hovering any
+    row gives the full command line the terminal has to cut off.
+    """
+    g = _GTOP
+    if not live or g is None:
+        return (f'<div class="livenote">no live GPU sample: '
+                f'{esc(err or "unavailable")}</div>')
+
+    locks = load_locks()
+    live_ids = live_job_ids() if locks else None
+    cnt = {"run": 0, "held": 0, "idle": 0}
+    lock_cnt = {"ok": 0, "clash": 0, "empty": 0, "stale": 0, "free": 0}
+    tot_gpu = tot_nodes = 0
+    wasted_w = 0.0
+    for _job, hosts, _e in live:
+        tot_nodes += len(hosts)
+        for _h, d in hosts.items():
+            ids = set()
+            for pr in d.get("procs", []):
+                i = S.extract_identity(pr.get("cmd", ""), "")
+                if i not in (S.UNKNOWN, S.INTERACTIVE):
+                    ids.add(i)
+            busy = any(g.gpu_state(x) != "idle" for x in d.get("gpus", []))
+            lock_cnt[lock_state(_h, locks, ids, live_ids, busy)[0]] += 1
+            for gp in d.get("gpus", []):
+                tot_gpu += 1
+                st = g.gpu_state(gp)
+                cnt[st] += 1
+                if st != "run":
+                    wasted_w += max(0.0, gp.get("pw") or 0.0)
+
+    pct = 100.0 * cnt["run"] / tot_gpu if tot_gpu else 0.0
+    head = [mono("gtop  ", None, "hdr"),
+            mono(f"{len(live)} alloc · {tot_nodes} nodes · {tot_gpu} GPU",
+                 None, "norm"),
+            mono("   run ", None, "dim"),
+            mono(f"{cnt['run']}/{tot_gpu} ({pct:.0f}%)", None,
+                 "hot" if pct >= 50 else ("warn" if pct else "crit"))]
+    if cnt["held"]:
+        head += [mono("  held ", None, "dim"), mono(str(cnt["held"]), None, "warn")]
+    if cnt["idle"]:
+        head += [mono("  idle ", None, "dim"), mono(str(cnt["idle"]), None, "crit")]
+    if wasted_w > 0:
+        head += [mono("   ·  idle draw ", None, "dim"),
+                 mono(f"{wasted_w / 1000:.2f} kW", None, "crit")]
+    if any(lock_cnt[k] for k in ("ok", "clash", "empty", "stale")):
+        head += [mono("   ·  locked ", None, "dim"),
+                 mono(f"{lock_cnt['ok']} in use", None, "hot")]
+        if lock_cnt["clash"]:
+            head += [mono(" / ", None, "dim"),
+                     mono(f"{lock_cnt['clash']} wrong session", None, "crit")]
+        if lock_cnt["empty"]:
+            head += [mono(" / ", None, "dim"),
+                     mono(f"{lock_cnt['empty']} unused", None, "warn")]
+        if lock_cnt["stale"]:
+            head += [mono(" / ", None, "dim"),
+                     mono(f"{lock_cnt['stale']} stale", None, "crit")]
+    if lock_cnt["free"]:
+        head += [mono(f"   ·  {lock_cnt['free']} unlocked", None, "dim")]
+    out = [f'<div class="lhead-row">{"".join(head)}</div><div class="lrule"></div>',
+           '<div class="lcols"><div class="lbl"></div>'
+           '<div class="cap">compute &mdash; cores busy / GPU utilisation</div>'
+           '<div class="cap">memory &mdash; host RAM / card memory</div>'
+           '<div class="tail spacer"></div></div>']
+
+    for job, hosts, jerr in live:
+        ngpu = sum(len(d.get("gpus", [])) for d in hosts.values())
+        left_s = max(0, getattr(job, "left_s", 0))
+        jh = [mono(" ▸ job ", None, "dim"), mono(job.jobid, None, "hdr"),
+              mono(f"  {job.name}", None, "accent"),
+              mono(f"  {job.nnodes}N", None, "norm"),
+              mono(f" {ngpu}GPU", None, "norm"),
+              mono(f"  used {g.fmt_dur(getattr(job, 'used_s', 0))}", None, "dim"),
+              mono("  left ", None, "dim"),
+              mono(g.fmt_dur(left_s), None, "crit" if left_s < 3600 else "warn")]
+        out.append(f'<div class="lrow full">{"".join(jh)}</div>')
+
+        if jerr:
+            out.append(f'<div class="lrow full">{mono("     sample failed: ", None, "crit")}'
+                       f'{mono(jerr[:120], None, "dim")}</div>')
+        real = [x for x in getattr(job, "steps", []) if not x.get("batch")]
+        if real:
+            s = "  ".join(f"{x['id']} {x['name']}({x['time']})" for x in real[:4])
+            out.append(f'<div class="lrow full">{mono("     steps: ", None, "dim")}'
+                       f'{mono(s, None, "accent")}</div>')
+        else:
+            out.append(f'<div class="lrow full">{mono("     steps: ", None, "dim")}'
+                       f'{mono(".batch only · nothing computing", None, "crit")}</div>')
+
+        for host in (getattr(job, "nodes", None) or sorted(hosts)):
+            d = hosts.get(host)
+            if d is None:
+                out.append(f'<div class="lrow full">{mono("   " + host, 14, "norm")}'
+                           f'{mono("no data", None, "crit")}</div>')
+                continue
+            by_uuid = {}
+            for p in d.get("procs", []):
+                by_uuid.setdefault(p["uuid"], []).append(p)
+            # What is actually on this node, so the lock badge can be compared
+            # against the reservation rather than just restating it.
+            idents = set()
+            for p in d.get("procs", []):
+                i = S.extract_identity(p.get("cmd", ""), "")
+                if i not in (S.UNKNOWN, S.INTERACTIVE):
+                    idents.add(i)
+            busy = any(g.gpu_state(x) != "idle" for x in d.get("gpus", []))
+            out.append(node_row(host, d, g, locks, idents, live_ids, busy))
+            for gp in d.get("gpus", []):
+                out.append(gpu_row(host, gp, by_uuid.get(gp["uuid"], []), job, g))
+        out.append('<div class="lgap"></div>')
+    # Every mark this section can print, spelled out.  A colour and a bare
+    # session name told the reader nothing about whether it was good news, and
+    # the symbols that carried the verdict were the least legible part.
+    out.append(
+        '<div class="legendbox"><div class="lgtitle">reading this section</div>'
+        f'<div class="lgrow"><i class="lockb ok">{LOCK} name</i>'
+        '<span>reserved for that session, and that is what is running on it</span></div>'
+        f'<div class="lgrow"><i class="lockb clash">{LOCK} name \u2717</i>'
+        '<span><b>\u2717</b> = reserved for that session but something else '
+        'took it. Hover the row to see what</span></div>'
+        f'<div class="lgrow"><i class="lockb empty">{LOCK} name \u25cb</i>'
+        '<span><b>\u25cb</b> = reserved, and every card on it is empty: nobody '
+        'else will take it, and its owner is not using it</span></div>'
+        f'<div class="lgrow"><i class="lockb stale">{LOCK} name \u23f1</i>'
+        '<span><b>\u23f1</b> = pinned to a job that has finished, so the '
+        'reservation means nothing and is now hiding a free node</span></div>'
+        f'<div class="lgrow"><i class="lockb free">{UNLOCK}</i>'
+        '<span>open padlock: nobody has claimed this node, whoever needs it '
+        'may take it</span></div>'
+        '<div class="lgsep"></div>'
+        f'<div class="lgrow"><i class="swatch" style="background:{NODE_CPU_COLOR};'
+        f'border-color:{NODE_CPU_EDGE}"></i>'
+        '<span>on a <b>machine</b> row: cores busy / RAM used. Warm pair, so a '
+        'machine\'s line never reads as one of its cards\'</span></div>'
+        f'<div class="lgrow"><i class="swatch" style="background:{COMPUTE_COLOR};'
+        f'border-color:{COMPUTE_EDGE}"></i>'
+        '<span>on a <b>card</b> row: GPU utilisation / card memory \u2014 '
+        'always this pair, never another colour</span></div>'
+        f'<div class="lgrow"><i class="swatch hatched" '
+        f'style="--c:{MEM_COLOR};border-color:{MEM_EDGE}"></i>'
+        '<span>hatched memory: the card holds it but computes nothing '
+        '(<b>held</b>). Same hatch as the queue forecast, and it means the '
+        'same thing there \u2014 this length is real, but it is not doing '
+        'what a solid bar would be doing</span></div>'
+        '<div class="lgsep"></div>'
+        '<div class="lgrow"><code>\u2014</code>'
+        '<span>in a card\'s name column: no process is on that card at all</span></div>'
+        '<div class="lgrow"><code class="warn">held</code>'
+        '<span>the card holds memory but computes nothing. Slurm bills it '
+        'exactly like a busy card, and the charts above count it as computing, '
+        'because accounting cannot tell the two apart</span></div>'
+        '<div class="lgrow"><code class="crit">idle</code>'
+        '<span>no memory held and nothing computing: genuinely free</span></div>'
+        '<div class="lgrow"><code>4/288c</code>'
+        '<span>cores busy out of the node\'s total; the bar left of it is the '
+        'same number as a fraction</span></div>'
+        '</div>')
+    return f'<div class="lwrap">{"".join(out)}</div>'
+
+
+def node_row(host, d, g, locks=None, idents=None, live_ids=None,
+             busy=None) -> str:
+    """Built out of the gantt's own row/label/track/tail parts.
+
+    The bar means the same thing it means everywhere else on this page: the
+    grey track is the whole of something, the coloured part is the used part.
+    Here that is host RAM.  Core count, load average and uptime are gone --
+    they are not what anyone opens this page to find out, and every field that
+    stays costs attention that the two numbers worth reading have to share.
+    """
+    mt, ma = d.get("memtot", 0), d.get("memavl", 0)
+    used, tot = (mt - ma) / 1048576.0, mt / 1048576.0
+    frac = (mt - ma) / mt if mt else 0.0
+    cpu = d.get("cpu", 0.0) or 0.0
+    # Cores in use rather than a bare percentage: 3.5% of 288 cores is ten
+    # cores, and "ten of 288" is the number you can act on.
+    ncpu = d.get("ncpu", 0) or 0
+    busy_cores = ncpu * cpu / 100.0
+    tip = (f"{host}\ncpu {cpu:.1f}% = {busy_cores:.0f} of {ncpu} cores\n"
+           f"RAM {used:.0f} / {tot:.0f} GiB ({frac * 100:.0f}%)\n"
+           f"load {d.get('load1', 0):.2f}   up {g.fmt_dur(d.get('up', 0))}")
+    cls, label = lock_state(host, locks or {}, idents or set(), live_ids, busy)
+    badge = f'<span class="lockb {cls}">{esc(label)}</span>'
+    tip += {
+        "ok": "\n\nreserved for this session and running it",
+        "clash": "\n\nRESERVED FOR ANOTHER SESSION -- something else is on it",
+        "empty": "\n\nreserved but nothing is running on it",
+        "stale": "\n\nreserved against a job that has ended -- this lock "
+                 "now hides a free card",
+        "free": "\n\nnot reserved (sgpur --lock <session> " + host + ")",
+    }[cls]
+    return (f'<div class="row node-top" data-tip="{att(tip)}">'
+            f'<div class="lbl"><span class="jid">{esc(host)}</span>'
+            f'{badge}</div>'
+            f'{twin_track(cpu / 100.0, NODE_CPU_COLOR, NODE_CPU_EDGE)}'
+            f'{twin_track(frac, NODE_MEM_COLOR, NODE_MEM_EDGE)}'
+            f'<div class="tail"><span class="g">{busy_cores:.0f}/{ncpu}c</span>'
+            f'<span>{used:.0f}/{tot:.0f}G</span></div></div>')
+
+
+def twin_track(frac: float, fill: str, edge: str, hatch: bool = False) -> str:
+    """One of the two side-by-side tracks on a live row.
+
+    Two quantities, two tracks.  Utilisation and memory are independent -- a
+    card can hold 90 GiB and compute nothing, which is the whole point of the
+    held state -- so folding them into one bar's length and colour, as an
+    earlier version did, destroyed the very distinction this section exists
+    to show.
+    """
+    w = min(max(frac, 0.0), 1.0) * 100
+    # Hatching, not a different hue: the page already uses a hatch to mean
+    # "this length is real but it is not doing what a solid bar would be
+    # doing" -- the queue forecast.  Held memory is the same idea, so it gets
+    # the same treatment and blue keeps meaning memory everywhere.
+    style = (f"background:repeating-linear-gradient(135deg,"
+             f"{hex_rgba(fill, .22)} 0 4px,{hex_rgba(fill, .85)} 4px 8px);"
+             f"border-color:{edge};border-style:dashed" if hatch
+             else f"background:{fill};border-color:{edge}")
+    return (f'<div class="track twin"><div class="seg" style="left:0;'
+            f'width:{w:.2f}%;{style}"></div></div>')
+
+
+def gpu_row(host, gp, procs, job, g) -> str:
+    u, mu, mt = gp["util"], gp["mused"], gp["mtot"]
+    mfrac = mu / mt if mt else 0.0
+    st = g.gpu_state(gp)
+    us, ms = g.util_style(u), g.mem_style(mfrac)
+    pw = gp.get("pw") or 0.0
+    # Watts on a card that is not computing is the waste made visible: a held
+    # GH200 still pulls 130-150 W doing nothing.
+    ps = "crit" if (st != "run" and pw > 60) else "dim"
+
+    tip = (f"{host}  GPU {gp['i']}   {st.upper()}\n"
+           f"{gp.get('name', '')}\n"
+           f"util {u}%   mem util {gp.get('mutil', 0)}%   {gp['temp']}°C   "
+           f"{pw:.0f} W of {gp.get('pl', 0):.0f} W   sm {gp.get('sm', 0)} MHz\n"
+           f"mem {mu / 1024:.1f} / {mt / 1024:.1f} GiB ({mfrac * 100:.0f}%)\n"
+           f"job {job.jobid}  {job.name}")
+    for p in procs:
+        tip += (f"\n\n{p.get('user', '?')}  pid {p.get('pid', '?')}  "
+                f"rss {p.get('rss', 0) / 1048576.0:.1f} GiB  "
+                f"gpu mem {p.get('gmem', 0) / 1024:.1f} GiB\n{p.get('cmd', '')}")
+
+    # Name the experiment, not the interpreter.  "python/75289" is true of
+    # almost every row; the command line carries the worktree or tasks
+    # directory this card is actually working for, and sgpu already knows how
+    # to read an identity out of one -- the same rule the charts below use, so
+    # a card here and a lane down there carry the same name.
+    tag = "—"
+    if procs:
+        who = procs[0]
+        ident = S.extract_identity(who.get("cmd", ""), "")
+        tag = (ident if ident not in (S.UNKNOWN, S.INTERACTIVE)
+               else f"{who['comm']}/{who['pid']}")
+        if len(procs) > 1:
+            tag += f" +{len(procs) - 1}"
+
+    # Length is memory occupied out of the card's own total; colour is whether
+    # that memory is doing anything.  Two facts, one bar, no second scale to
+    # learn -- and it is the same blue and the same red as the lanes chart.
+    # A card's two bars are always green and blue.  held is already stated by
+    # the red word on the right, and by the utilisation bar being empty next
+    # to a full memory bar -- that shape is the tell.  Recolouring the memory
+    # bar as well said it a third time, at the cost of breaking the one rule
+    # that makes the section scannable: blue always means memory.
+    mfill, medge = MEM_COLOR, MEM_EDGE
+    mhatch = st != "run"          # held or idle: occupied, producing nothing
+    return (f'<div class="row gpu" data-tip="{att(tip)}">'
+            f'<div class="lbl idx"><span class="gi">[{gp["i"]}]</span>'
+            f'<span class="nm">{esc(tag)}</span></div>'
+            f'{twin_track(u / 100.0, COMPUTE_COLOR, COMPUTE_EDGE)}'
+            f'{twin_track(mfrac, mfill, medge, mhatch)}'
+            f'<div class="tail"><span class="g">{u}%</span>'
+            f'<span>{g.fmt_gib(mu)}/{g.fmt_gib(mt)}G</span>'
+            + (f'<span class="b">held</span>' if st == "held" else "")
+            + (f'<span class="b">idle</span>' if st == "idle" else "")
+            + '</div></div>')
+
+
+FORECAST_FRAC = 0.5     # look-ahead as a fraction of the look-back window
+
+
+def parse_slurm_dur(text: str):
+    """'1-00:00:00' / '24:00:00' / '30:00' -> seconds.  None if unbounded."""
+    s = (text or "").strip()
+    if not s or s in ("UNLIMITED", "Partition_Limit", "INVALID", "NOT_SET"):
+        return None
+    days = 0
+    if "-" in s:
+        d, s = s.split("-", 1)
+        days = int(d) * 86400
+    try:
+        parts = [int(x) for x in s.split(":")]
+    except ValueError:
+        return None
+    while len(parts) < 3:
+        parts.insert(0, 0)
+    return days + parts[0] * 3600 + parts[1] * 60 + parts[2]
+
+
+def job_deadlines(jobs) -> dict:
+    """When the scheduler will take each allocation away.
+
+    This is the one thing on the page that is not measurement: it is
+    start + wall-clock limit, so it is an upper bound.  A job that finishes
+    early just stops before its marker.  Worth showing anyway, because the
+    question it answers -- "how much of my allocation is left" -- has no
+    other source.
+    """
+    jids = [j.jid for j in jobs if j.base_state == "RUNNING" and j.start]
+    if not jids:
+        return {}
+    try:
+        p = subprocess.run(["sacct", "-P", "-n", "-j", ",".join(sorted(jids)),
+                            "--format=JobID,Timelimit"],
+                           capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    out = {}
+    for ln in p.stdout.splitlines():
+        f = ln.split("|")
+        if len(f) < 2 or "." in f[0]:
+            continue
+        lim = parse_slurm_dur(f[1])
+        if lim:
+            out[f[0]] = lim
+    return out
+
+
+LIVE_TOL = 300.0        # a run whose last step ended this recently is "now"
+
+
+def last_active(h):
+    return max((r.end for r in h.runs), default=None)
+
+
+def sort_hist(hist, now):
+    """Most recently active first.
+
+    sgpu sorts by total busy time, which is right for a ledger you read after
+    the fact.  On a page you refresh to see what is happening, it buries an
+    experiment that started ten minutes ago under one that stopped hours ago:
+    measured on real data, two RUNNING experiments sat at rows 14 and 16 while
+    row 1 had been dead for twenty minutes.  Nothing is lost by reordering,
+    because "who burned the most" is still legible from the GPU-h bars.
+    """
+    def key(h):
+        t = last_active(h)
+        return (h.ident in S.NON_EXPERIMENT, -(t.timestamp() if t else 0.0))
+    return sorted(hist, key=key)
+
+
+def live_dot(h, now) -> str:
+    t = last_active(h)
+    if t is not None and (now - t).total_seconds() <= LIVE_TOL:
+        return '<span class="livedot" data-tip="running right now"></span>'
+    return ""
+
+
+def quota_section(q: dict, running: int, pending: int) -> str:
+    """The grant, and whether today's footprint will actually spend it."""
+    if not q:
+        return ""
+    pct = q["used"] / q["total"] * 100 if q["total"] else 0
+    sust = q["sustainable"]
+    proj = running * 24 * q["days"]          # node-hours today's rate will use
+    unused = max(0.0, q["left"] - proj)
+    short = max(0, round(sust) - running)
+    gap = (f'at today\'s <b>{running}</b> node(s) you finish with '
+           f'<b>{unused:,.0f}</b> node-h unused '
+           f'(<b>{unused / q["total"] * 100:.0f}%</b> of the grant) &nbsp;·&nbsp; '
+           f'to spend it all you would need <b>{short}</b> more'
+           ) if short > 0 else (
+           f'today\'s <b>{running}</b> node(s) are at or above the sustainable '
+           f'rate; at this pace the grant runs out '
+           f'<b>{q["left"] / max(running * 24, 1):.0f}</b> days before it expires')
+    return (
+        f'<section><h2>grant <span class="hint">&nbsp;'
+        f'{esc(q.get("offering", ""))} · {esc(q.get("account", ""))} · '
+        f'ends {esc(q.get("ends", "?"))}</span></h2>'
+        f'<div class="kpis">'
+        f'<div class="kpi"><div class="v">{q["used"]:,.0f}</div>'
+        f'<div class="k">node-h used ({pct:.0f}%)</div></div>'
+        f'<div class="kpi"><div class="v">{q["left"]:,.0f}</div>'
+        f'<div class="k">node-h left</div></div>'
+        f'<div class="kpi"><div class="v">{q["days"]:.0f}</div>'
+        f'<div class="k">days remaining</div></div>'
+        f'<div class="kpi busy"><div class="v">{sust:.0f}</div>'
+        f'<div class="k">nodes sustainable 24/7</div></div>'
+        f'<div class="kpi{" idle" if short > 0 else ""}">'
+        f'<div class="v">{running}<span class="of">/{sust:.0f}</span></div>'
+        f'<div class="k">nodes running now</div></div>'
+        f'</div>'
+        f'<div class="qbar"><i style="width:{min(pct, 100):.1f}%"></i>'
+        f'<u style="left:{min(pct, 100):.1f}%;'
+        f'width:{min(proj / q["total"] * 100, 100 - min(pct, 100)):.1f}%"></u></div>'
+        f'<div class="qnote">{gap}'
+        f'{f" &nbsp;·&nbsp; {pending} node(s) queued" if pending else ""}'
+        f'<br><span class="dim">solid = already spent · hatched = what today\'s '
+        f'footprint will add by {esc(q.get("ends", "?"))} · '
+        f'usage read live from <code>sreport --tres=node</code>, '
+        f'allowance from the portal</span></div></section>')
+
+
+def page_title(opts) -> str:
+    return f"GPU time ledger — {opts.user}"
+
+
+def render_body(snap, opts, live=None, live_err=None) -> str:
+    """The sensitive half: everything naming a job, a node, a path, a person.
+
+    Kept separate from the page shell so it can be encrypted as a unit.  The
+    shell (CSS, tooltip layer, unlock UI) must stay free of anything that
+    identifies the cluster or the user, because the shell is what an
+    unauthenticated visitor downloads.
+    """
+    t0, t1 = snap.t0, snap.t1
+    span_s = (t1 - t0).total_seconds()
+    step = tick_step(span_s)
+    snap.hist = sort_hist(snap.hist, snap.now)
+    fc_t1 = t1 + timedelta(seconds=span_s * FORECAST_FRAC)
+    deadlines = job_deadlines(snap.live)
+    fc_label = f"+{fmt_span(span_s * FORECAST_FRAC)} forecast"
+    quota = read_quota()
+    run_nodes = sum(j.nodes for j in snap.live if j.base_state == "RUNNING")
+    pend_nodes = sum(j.nodes for j in snap.pending)
+
+    alloc = busy = 0.0
+    for j in snap.live:
+        for sg in j.segments:
+            if sg.kind == "pending":
+                continue
+            alloc += gh(sg.secs, sg.alloc_gpus)
+            if sg.kind == "busy":
+                busy += gh(sg.secs, sg.gpus)
+    idle = alloc - busy
+    ratio = busy / alloc * 100 if alloc else 0.0
+
+    lane_lw = 250
+    job_lw = 250
+    tzabbr = L(snap.now).strftime("%Z")          # BST or GMT, whichever applies
+    title = page_title(opts)
+    scope = f"jobs {', '.join(opts.job)}" if opts.job else "all jobs"
+
+    body = f"""<div class="band b-live"><div class="wrap">
+<header>
+  <h1>{esc(title)}</h1>
+  <div class="sub">
+    {L(t0):%Y-%m-%d %H:%M} → {L(t1):%Y-%m-%d %H:%M} {esc(tzabbr)}
+    &nbsp;·&nbsp; window <b>{esc(opts.window)}</b>
+    &nbsp;·&nbsp; {esc(scope)}
+    &nbsp;·&nbsp; snapshot <span id="age">just now</span>
+  </div>
+  <div class="srch">
+    <input id="q" type="search" spellcheck="false" autocomplete="off"
+      placeholder="search jobs, experiments, nodes, command lines&hellip;   space = AND,  -word = exclude">
+    <span class="n" id="qn"></span><kbd>/</kbd>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="v">{alloc:,.0f}</div><div class="k">GPU-h allocated</div></div>
+    <div class="kpi busy"><div class="v">{busy:,.0f}</div><div class="k">computed ({ratio:.1f}%)</div></div>
+    <div class="kpi idle"><div class="v">{idle:,.0f}</div><div class="k">GPU-h idle</div></div>
+    <div class="kpi"><div class="v">{len(snap.live)}</div><div class="k">allocations</div></div>
+    <div class="kpi"><div class="v">{len(snap.hist)}</div><div class="k">experiments</div></div>
+    <div class="kpi clock"><div class="v" id="clock">--:--:--</div>
+      <div class="k">{esc(str(DISPLAY_TZ))} · {esc(tzabbr)}</div></div>
+  </div>
+</header>
+
+{quota_section(quota, run_nodes, pend_nodes)}
+</div></div>
+
+<div class="band b-charts"><div class="wrap">
+<section>
+  <h2>allocations <span class="hint">&nbsp;one row per job · fill = share of its GPUs actually computing</span>
+    <button class="fbtn" data-label="{esc(fc_label)}">{esc(fc_label)}</button></h2>
+  {overview_section(snap, t0, t1, fc_t1, step, job_lw, deadlines)}
+  {ruler_html(t0, t1, fc_t1, step, job_lw)}
+</section>
+
+<section>
+  <h2>experiments <span class="hint">&nbsp;one row per identity, across jobs · the holes are the breaks</span></h2>
+  {lanes_section(snap, t0, t1, step, lane_lw)}
+  {ruler_html(t0, t1, fc_t1, step, lane_lw)}
+  {legend()}
+</section>
+
+<section>
+  <h2>restart history <span class="hint">&nbsp;one row per identity · each block is one run · hover for exact times</span></h2>
+  {history_chart(snap, t0, t1, step, opts.window)}
+</section>
+
+</div></div>
+
+<div class="band b-detail"><div class="wrap">
+{pending_block(snap, t0, t1, fc_t1, step, job_lw, opts.user, fc_label)}
+<section>
+  <h2>live GPUs <span class="hint">&nbsp;physical utilisation right now, read off the cards themselves · the only measurement here that does not come from accounting</span></h2>
+  {live_section(live, live_err)}
+</section>
+
+
+<section>
+  <h2>segments <span class="hint">&nbsp;exact times and full command lines</span></h2>
+  {segments_detail(snap)}
+</section>
+
+<footer>
+  Ground truth: Slurm accounting only (<code>sacct</code>), no node was touched.
+  <b>allocated</b> counts wall time × GPUs the scheduler handed over;
+  <b>computed</b> counts only intervals where a step longer than
+  {opts.min_step:.0f}s actually held those GPUs. The difference is waste.
+  <code>.batch</code>/<code>.extern</code> excluded, {snap.dropped} probe steps
+  under {opts.min_step:.0f}s filtered, concurrent steps clipped to the allocation
+  rather than summed. A step counts as one continuous run until a gap of
+  {opts.gap:.0f}s.
+  Every time on this page is <b>{esc(str(DISPLAY_TZ))}</b> ({esc(tzabbr)}), converted
+  from the {esc(time.strftime('%Z'))} that the scheduler records, including the
+  axis ticks, which sit on {esc(tzabbr)} wall-clock boundaries rather than on
+  {esc(time.strftime('%Z'))} ones.
+  This page is a snapshot, not a live feed: re-run
+  <code>sgpur</code> to refresh it.
+</footer>
+</div></div>"""
+    return body
+
+
+# --- page assembly, locked or plain ---------------------------------------
+
+GATE_CSS = """
+#gate{max-width:400px; margin:15vh auto 0; padding:0 22px; text-align:center}
+#gate .lock{font-size:26px; opacity:.5; margin-bottom:10px}
+#gate h1{font-size:17px; font-weight:640; margin:0 0 6px}
+#gate .why{font-size:12.5px; color:var(--dim); line-height:1.5}
+#gate form{display:flex; gap:8px; margin-top:20px}
+#gate input[type=password]{flex:1 1 auto; min-width:0; padding:9px 12px; font-size:14px;
+  border:1px solid var(--line); border-radius:6px; background:var(--panel); color:var(--fg)}
+#gate input[type=password]:focus{outline:none; border-color:var(--accent)}
+#gate button{flex:0 0 auto; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer;
+  border:0; border-radius:6px; background:var(--accent); color:#fff}
+#gate button[disabled]{opacity:.55; cursor:progress}
+#gate .rem{margin-top:13px; font-size:12px; color:var(--dim);
+  display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer}
+#gate .msg{margin-top:14px; font-size:12.5px; min-height:19px; color:var(--bad)}
+#gate .msg.work{color:var(--dim)}
+"""
+
+GATE_HTML = """<div id="gate">
+  <div class="lock">&#128274;</div>
+  <h1>GPU time ledger</h1>
+  <div class="why">This page is encrypted in your browser.<br>Enter the passphrase to read it.</div>
+  <form id="gform" autocomplete="on">
+    <input id="pw" type="password" name="password" autocomplete="current-password"
+           placeholder="passphrase" autofocus spellcheck="false">
+    <button id="btn" type="submit">Unlock</button>
+  </form>
+  <label class="rem"><input id="rem" type="checkbox" checked> remember on this device</label>
+  <div class="msg" id="msg"></div>
+</div>
+<div id="app" hidden></div>"""
+
+# Tooltip delegation binds at load (it is content-agnostic); the age clock has
+# to wait until the decrypted markup is in the DOM, so it lives in initPage().
+SHELL_JS = """
+function initPage(){
+  // Wall clock in the reader's zone, not the viewer's browser zone: every
+  // timestamp on this page is already converted, so the clock must match them
+  // even when opened from another country.
+  var ck=document.getElementById('clock');
+  if(ck){
+    var o={timeZone:TZ_NAME,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false};
+    (function ct(){
+      ck.textContent=new Date().toLocaleTimeString('en-GB',o);
+      setTimeout(ct,1000);
+    })();
+  }
+  // Every section that has something to forecast carries its own button, and
+  // they all drive the one class, so whichever one you reach first flips the
+  // whole page and the others follow.
+  var fbs=[].slice.call(document.querySelectorAll('.fbtn'));
+  fbs.forEach(function(fb){
+    fb.addEventListener('click',function(){
+      var on=document.body.classList.toggle('fc');
+      fbs.forEach(function(x){
+        x.textContent = on ? '\\u2190 back to now' : x.dataset.label;
+      });
+    });
+  });
+  initSearch();
+  var born=SNAPSHOT_EPOCH, el=document.getElementById('age');
+  if(!el) return;
+  function fmt(s){
+    if(s<60) return Math.max(0,Math.round(s))+'s ago';
+    if(s<3600) return Math.round(s/60)+' min ago';
+    if(s<86400) return (s/3600).toFixed(1)+' h ago';
+    return (s/86400).toFixed(1)+' d ago';
+  }
+  function tick(){
+    var s=Date.now()/1000-born;
+    el.textContent=fmt(s);
+    el.className = s<900?'fresh' : s<7200?'warm' : 'stale';
+    el.title = s<900?'fresh' : 'run sgpur again to refresh';
+  }
+  tick(); setInterval(tick,1000);
+}
+// Search over everything the page already knows.  The haystack is each row's
+// visible text PLUS every data-tip inside it, because the tips are where the
+// job ids, node names, exact times and full command lines live -- searching
+// only what is painted would miss most of what people come here to find.
+//
+// The ruler rows are filtered out by hand.  ruler_html() emits class="row"
+// exactly like the data rows, and it IS the shared time axis: hide it and
+// every chart below loses its x-axis with nothing to say why.
+function initSearch(){
+  var box=document.getElementById('q'), out=document.getElementById('qn');
+  if(!box) return;
+  var rows=[].slice.call(document.querySelectorAll('.row,.hrow,.lrow,details'))
+    .filter(function(r){ return !r.querySelector('.track.ruler'); });
+  rows.forEach(function(r){
+    var t=r.textContent||'';
+    if(r.getAttribute('data-tip')) t+=' '+r.getAttribute('data-tip');
+    [].slice.call(r.querySelectorAll('[data-tip]')).forEach(function(e){
+      t+=' '+e.getAttribute('data-tip');
+    });
+    r.setAttribute('data-hay',t.toLowerCase().replace(/\\s+/g,' '));
+  });
+  var secs=[].slice.call(document.querySelectorAll('section'));
+  function apply(){
+    var q=box.value.toLowerCase().trim();
+    var terms=q?q.split(/\\s+/):[];
+    var pos=terms.filter(function(t){return t.charAt(0)!=='-'&&t.length;});
+    var neg=terms.filter(function(t){return t.charAt(0)==='-'&&t.length>1;})
+                 .map(function(t){return t.slice(1);});
+    var shown=0;
+    rows.forEach(function(r){
+      var h=r.getAttribute('data-hay')||'';
+      var ok=pos.every(function(t){return h.indexOf(t)>=0;})
+          && !neg.some(function(t){return h.indexOf(t)>=0;});
+      r.classList.toggle('qhide',!ok);
+      if(ok) shown++;
+    });
+    // Per-section counts: an empty chart with no explanation reads as a bug.
+    secs.forEach(function(sec){
+      var h2=sec.querySelector('h2'); if(!h2) return;
+      var tag=h2.querySelector('.qn');
+      if(!q){ if(tag) tag.remove(); return; }
+      var n=0;
+      rows.forEach(function(r){ if(sec.contains(r)&&!r.classList.contains('qhide')) n++; });
+      if(!tag){ tag=document.createElement('span'); tag.className='qn';
+                h2.appendChild(tag); }
+      tag.textContent=n+' match'+(n===1?'':'es');
+      tag.className='qn'+(n?'':' zero');
+    });
+    out.textContent = q ? (shown+' row'+(shown===1?'':'s')) : '';
+  }
+  box.addEventListener('input',apply);
+  box.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){ box.value=''; apply(); box.blur(); }
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='/'&&document.activeElement!==box){ e.preventDefault(); box.focus(); }
+  });
+}
+(function(){
+  var tip=document.getElementById('tip');
+  document.addEventListener('mouseover',function(e){
+    var t=e.target.closest('[data-tip]'); if(!t) return;
+    tip.textContent=t.getAttribute('data-tip'); tip.style.display='block';
+  });
+  document.addEventListener('mousemove',function(e){
+    if(tip.style.display!=='block') return;
+    var w=tip.offsetWidth,h=tip.offsetHeight,x=e.clientX+14,y=e.clientY+16;
+    if(x+w>innerWidth-8) x=e.clientX-w-14;
+    if(y+h>innerHeight-8) y=e.clientY-h-16;
+    tip.style.left=Math.max(8,x)+'px'; tip.style.top=Math.max(8,y)+'px';
+  });
+  document.addEventListener('mouseout',function(e){
+    if(e.target.closest('[data-tip]')) tip.style.display='none';
+  });
+})();
+"""
+
+# A wrong passphrase does not "fail a check" -- AES-GCM's authentication tag
+# makes decrypt() throw.  There is no branch that could be patched out client
+# side, and no plaintext anywhere in the file to recover.
+GATE_JS = """
+(function(){
+  var P=PAYLOAD, LSK='sgpur.k.'+P.k;
+  var gate=document.getElementById('gate'), app=document.getElementById('app'),
+      form=document.getElementById('gform'), pw=document.getElementById('pw'),
+      rem=document.getElementById('rem'), msg=document.getElementById('msg'),
+      btn=document.getElementById('btn');
+
+  function u8(b64s){var s=atob(b64s),u=new Uint8Array(s.length);
+    for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u}
+  function b64(buf){var s='',u=new Uint8Array(buf);
+    for(var i=0;i<u.length;i++)s+=String.fromCharCode(u[i]);return btoa(s)}
+
+  async function derive(pass){
+    var km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),
+      'PBKDF2',false,['deriveBits']);
+    return crypto.subtle.deriveBits(
+      {name:'PBKDF2',salt:u8(P.s),iterations:P.n,hash:'SHA-256'},km,256);
+  }
+  async function open_(bits){
+    var key=await crypto.subtle.importKey('raw',bits,'AES-GCM',false,['decrypt']);
+    var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:u8(P.i)},key,u8(P.c));
+    var st=new Blob([pt]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return new Response(st).text();
+  }
+  function reveal(html){
+    gate.style.display='none'; app.innerHTML=html; app.hidden=false; initPage();
+  }
+  function busy(on,text){
+    btn.disabled=on; msg.className=on?'msg work':'msg'; msg.textContent=text||'';
+  }
+
+  // A stored key skips both the prompt and the 600k-iteration derivation.
+  (async function(){
+    var saved=null; try{saved=localStorage.getItem(LSK)}catch(e){}
+    if(!saved) return;
+    try{ reveal(await open_(u8(saved).buffer)); }
+    catch(e){ try{localStorage.removeItem(LSK)}catch(_){} }
+  })();
+
+  form.addEventListener('submit',async function(e){
+    e.preventDefault();
+    if(!pw.value) return;
+    busy(true,'deriving key\\u2026');
+    try{
+      var bits=await derive(pw.value);
+      var html=await open_(bits);
+      if(rem.checked){ try{localStorage.setItem(LSK,b64(bits))}catch(_){} }
+      busy(false,''); reveal(html);
+    }catch(err){
+      // Distinguish the three failures.  Reporting a missing browser API as
+      // "wrong passphrase" makes people retype a correct passphrase forever.
+      busy(false,'');
+      if(!(window.crypto&&crypto.subtle))
+        msg.textContent='This browser blocks WebCrypto (page must be HTTPS).';
+      else if(typeof DecompressionStream==='undefined')
+        msg.textContent='Browser too old: needs DecompressionStream (Chrome 80+, Safari 16.4+).';
+      else
+        msg.textContent='Wrong passphrase.';
+      pw.select();
+    }
+  });
+})();
+"""
+
+
+def _page(head_title: str, inner: str, script: str) -> str:
+    return (f"<!doctype html>\n<html lang=en><head><meta charset=utf-8>"
+            f'<meta name="viewport" content="width=device-width,initial-scale=1">'
+            f'<meta name="robots" content="noindex,nofollow">'
+            f"<title>{esc(head_title)}</title>"
+            f"<style>{CSS}{GATE_CSS}</style></head><body>"
+            f'{inner}<div id="tip"></div>'
+            f"<script>{script}</script></body></html>\n")
+
+
+def shell_js(epoch: float) -> str:
+    return (SHELL_JS.replace("SNAPSHOT_EPOCH", f"{epoch:.0f}")
+                    .replace("TZ_NAME", json.dumps(str(DISPLAY_TZ))))
+
+
+def page_plain(body: str, title: str, epoch: float) -> str:
+    return _page(title, body, shell_js(epoch))
+
+
+def page_locked(payload: dict, epoch: float) -> str:
+    """The shell carries no job id, no node name, no path, no user name.
+
+    Title is deliberately generic: a bystander glancing at the browser tab
+    learns nothing, and the unlocked h1 with the real name lives inside the
+    ciphertext.
+    """
+    js = (shell_js(epoch)
+          + GATE_JS.replace("PAYLOAD", json.dumps(payload, separators=(",", ":"))))
+    return _page("GPU time ledger", GATE_HTML, js)
+
+
+def encrypt_body(body: str, password: str, salt: bytes) -> dict:
+    """gzip then AES-256-GCM.  Compressing first matters: base64 of raw
+    ciphertext is incompressible, so without it the CDN ships ~4x the bytes."""
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    key = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, PBKDF2_ITERS, 32)
+    iv = os.urandom(12)
+    ct = AESGCM(key).encrypt(iv, gzip.compress(body.encode(), 9), None)
+    return {"s": base64.b64encode(salt).decode(),
+            "i": base64.b64encode(iv).decode(),
+            "c": base64.b64encode(ct).decode(),
+            "n": PBKDF2_ITERS,
+            "k": hashlib.sha256(salt).hexdigest()[:12]}
+
+
+def load_secret() -> tuple[str, bytes] | None:
+    """Password plus a STABLE salt.
+
+    The salt is stored, not regenerated per deploy, on purpose: the browser
+    caches the derived key under a salt-derived id, so a rotating salt would
+    invalidate every reader's saved key on every refresh.  A fixed salt still
+    defeats precomputation, which is all a salt is for here.
+    """
+    env_pw = os.environ.get("SGPUR_PASSWORD")
+    if os.path.exists(SECRET_PATH):
+        with open(SECRET_PATH) as f:
+            d = json.load(f)
+        return env_pw or d["password"], base64.b64decode(d["salt"])
+    if env_pw:
+        return env_pw, hashlib.sha256(b"sgpur-static-salt|" + env_pw.encode()).digest()[:16]
+    return None
+
+
+def set_password() -> int:
+    import getpass
+    old = None
+    if os.path.exists(SECRET_PATH):
+        with open(SECRET_PATH) as f:
+            old = json.load(f)
+    pw = getpass.getpass("new passphrase: ")
+    if len(pw) < 8:
+        print("sgpur: use at least 8 characters -- the ciphertext is public, "
+              "so a short passphrase can be attacked offline", file=sys.stderr)
+        return 1
+    if pw != getpass.getpass("again: "):
+        print("sgpur: they do not match", file=sys.stderr)
+        return 1
+    # Reuse the existing salt so already-unlocked browsers stay unlocked.
+    salt = base64.b64decode(old["salt"]) if old else os.urandom(16)
+    os.makedirs(os.path.dirname(SECRET_PATH), exist_ok=True)
+    with open(SECRET_PATH, "w") as f:
+        json.dump({"password": pw, "salt": base64.b64encode(salt).decode()}, f)
+    os.chmod(SECRET_PATH, 0o600)
+    print(f"sgpur: passphrase saved to {SECRET_PATH} (mode 600)")
+    print("  every `sgpur` from now on publishes an encrypted page")
+    if old and old["password"] != pw:
+        print("  NOTE: readers who ticked 'remember' must enter the new one once")
+    return 0
+
+
+SKILL_MD = "/projects/public/u6gb/.claude/skills/surge/SKILL.md"
+
+
+def find_token() -> tuple[str, str] | None:
+    """Locate surge credentials without ever hardcoding them here."""
+    login = os.environ.get("SURGE_LOGIN")
+    token = os.environ.get("SURGE_TOKEN")
+    if login and token:
+        return login, token
+    try:
+        import re
+        txt = open(SKILL_MD).read()
+        m1 = re.search(r'SURGE_LOGIN="([^"]+)"', txt)
+        m2 = re.search(r'SURGE_TOKEN="([0-9a-fA-F]{16,})"', txt)
+        if m1 and m2:
+            return m1.group(1), m2.group(1)
+    except OSError:
+        pass
+    return None
+
+
+def setup_credentials() -> int:
+    """Repair ~/.netrc so plain `sgpur` deploys with no environment variables.
+
+    The existing surge entries carry a `login` line but no `password` line, so
+    the CLI finds the machine, fails to find a token, and falls back to an
+    interactive prompt that cannot be answered from a script.  Appending a
+    fresh block would not help: netrc readers take the first matching machine,
+    which is the broken one.  The password line has to be inserted into the
+    entry that is already there.
+    """
+    creds = find_token()
+    if not creds:
+        print("sgpur --setup: no token found.\n"
+              "  export SURGE_LOGIN=<email> SURGE_TOKEN=<token> and re-run,\n"
+              "  or get a token with `surge token`.", file=sys.stderr)
+        return 1
+    login, token = creds
+
+    path = os.path.expanduser("~/.netrc")
+    lines = open(path).read().splitlines() if os.path.exists(path) else []
+    backup = path + ".bak." + time.strftime("%Y%m%dT%H%M%S")
+    if lines:
+        shutil.copy2(path, backup)
+
+    out, machine, patched = [], None, []
+    for i, ln in enumerate(lines):
+        out.append(ln)
+        f = ln.split()
+        if f and f[0] == "machine":
+            machine = f[1]
+        if f and f[0] == "login" and machine in ("surge.sh", "surge.surge.sh"):
+            nxt = lines[i + 1].split() if i + 1 < len(lines) else []
+            if not (nxt and nxt[0] == "password"):
+                indent = ln[:len(ln) - len(ln.lstrip())]
+                out.append(f"{indent}password {token}")
+                patched.append(machine)
+    if not patched and not any(l.split()[1:2] == ["surge.sh"]
+                               for l in lines if l.split()[:1] == ["machine"]):
+        out += ["machine surge.sh", f"  login {login}", f"  password {token}",
+                "machine surge.surge.sh", f"  login {login}", f"  password {token}"]
+        patched = ["surge.sh", "surge.surge.sh (created)"]
+
+    if not patched:
+        print("sgpur --setup: ~/.netrc already has a surge password, nothing to do")
+        return 0
+    with open(path, "w") as f:
+        f.write("\n".join(out) + "\n")
+    os.chmod(path, 0o600)
+    print(f"sgpur --setup: added password to {', '.join(patched)} in {path}")
+    print(f"  backup: {backup}   mode 600")
+    print("  now just run: sgpur")
+    return 0
+
+
+def deploy(site_dir: str, domain: str) -> int:
+    exe = shutil.which("surge") or "/projects/public/u6gb/.bun/bin/surge"
+    if not os.path.exists(exe):
+        print("sgpur: surge CLI not found", file=sys.stderr)
+        return 1
+    env = dict(os.environ)
+    # Credential order: explicit env > ~/.netrc (surge reads it itself) >
+    # the token recorded in the surge skill.  The last one is the fallback
+    # that makes a bare `sgpur` work on a machine whose netrc is incomplete.
+    if not (env.get("SURGE_LOGIN") and env.get("SURGE_TOKEN")):
+        creds = find_token()
+        if creds:
+            env["SURGE_LOGIN"], env["SURGE_TOKEN"] = creds
+    try:
+        p = subprocess.run([exe, ".", domain], cwd=site_dir, env=env,
+                           capture_output=True, text=True, timeout=300)
+    except subprocess.TimeoutExpired:
+        print("sgpur: surge timed out after 300s", file=sys.stderr)
+        return 1
+    out = (p.stdout or "") + (p.stderr or "")
+    if p.returncode != 0 or "Success" not in out:
+        sys.stderr.write(out)
+        if "Unauthorized" in out or "email" in out.lower():
+            sys.stderr.write("\nsgpur: surge is not logged in. Either run "
+                             "`surge login`, or export SURGE_LOGIN / "
+                             "SURGE_TOKEN before calling sgpur.\n")
+        return p.returncode or 1
+    return 0
+
+
+def surge_env() -> dict:
+    env = dict(os.environ)
+    if not (env.get("SURGE_LOGIN") and env.get("SURGE_TOKEN")):
+        creds = find_token()
+        if creds:
+            env["SURGE_LOGIN"], env["SURGE_TOKEN"] = creds
+    return env
+
+
+def teardown(domain: str) -> int:
+    exe = shutil.which("surge") or "/projects/public/u6gb/.bun/bin/surge"
+    p = subprocess.run([exe, "teardown", domain], env=surge_env(),
+                       capture_output=True, text=True, timeout=120)
+    out = (p.stdout or "") + (p.stderr or "")
+    if p.returncode != 0 or "Success" not in out:
+        sys.stderr.write(out)
+        return p.returncode or 1
+    print(f"sgpur: {domain} torn down; the url now serves nothing")
+    return 0
+
+
+def publish_once(opts) -> int:
+    """One full cycle: resample sacct, render, encrypt, upload.
+
+    Return 0 on success, 1 on a transient failure (worth pressing r again),
+    2 on misconfiguration (pressing r again will not help).
+    """
+    snap = S.collect(opts)
+    if snap.err:
+        print(f"sgpur: sacct failed: {snap.err}", file=sys.stderr)
+        return 1
+    if not snap.live and not snap.pending:
+        print(f"sgpur: no jobs for {opts.user} in the last {opts.window}",
+              file=sys.stderr)
+        return 1
+
+    live, live_err = (None, "skipped (--no-live)")
+    if not opts.no_live:
+        if opts.watch:
+            print("  sampling GPUs…", end="", flush=True)
+        live, live_err = collect_live(opts)
+        if opts.watch:
+            print("\r" + " " * 20 + "\r", end="")
+
+    body = render_body(snap, opts, live, live_err)
+    epoch = time.time()
+    secret = None if opts.no_encrypt else load_secret()
+    if secret:
+        pw, salt = secret
+        payload = encrypt_body(body, pw, salt)
+        page = page_locked(payload, epoch)
+        lock = (f"locked  ({len(body) / 1024:.0f} KB plaintext -> "
+                f"{len(payload['c']) * 3 / 4 / 1024:.0f} KB ciphertext)")
+    elif opts.no_encrypt:
+        page = page_plain(body, page_title(opts), epoch)
+        lock = "PUBLIC -- anyone with the url reads job ids, nodes and paths"
+    else:
+        # Refusing beats a silent plaintext publish: the page carries job ids,
+        # node names and Lustre paths, and surge urls are guessable enough.
+        print("sgpur: no passphrase set, refusing to publish in the clear.\n"
+              "  set one:            sgpur --set-password\n"
+              "  or publish openly:  sgpur --no-encrypt", file=sys.stderr)
+        return 2
+
+    os.makedirs(SITE_DIR, exist_ok=True)
+    index = os.path.join(SITE_DIR, "index.html")
+    with open(index, "w") as f:
+        f.write(page)
+    if opts.out:
+        with open(opts.out, "w") as f:
+            f.write(page)
+
+    if opts.no_deploy:
+        print(index)
+        print(f"  {lock}")
+        return 0
+
+    if opts.watch:
+        print("  uploading…", end="", flush=True)
+    rc = deploy(SITE_DIR, opts.domain)
+    if opts.watch:
+        print("\r" + " " * 16 + "\r", end="")
+    if rc != 0:
+        print(f"sgpur: deploy failed; page is at {index}", file=sys.stderr)
+        return 1
+
+    url = f"https://{opts.domain}"
+    if opts.quiet:
+        print(url)
+        return 0
+
+    alloc = busy = 0.0
+    for j in snap.live:
+        for sg in j.segments:
+            if sg.kind == "pending":
+                continue
+            alloc += gh(sg.secs, sg.alloc_gpus)
+            if sg.kind == "busy":
+                busy += gh(sg.secs, sg.gpus)
+    print(f"{url}")
+    print(f"  {L(snap.now):%H:%M:%S %Z} · {opts.window} · "
+          f"{len(snap.live)} allocations · {len(snap.hist)} experiments · "
+          f"{busy:.0f}/{alloc:.0f} GPU-h computed "
+          f"({busy / alloc * 100 if alloc else 0:.1f}%)")
+    print(f"  {lock}")
+    return 0
+
+
+def read_key() -> str:
+    """One keypress, no Enter needed.
+
+    Returns 'q' when stdin is not a tty, so --watch can never wedge a
+    non-interactive run (cron, pipe, nohup) in an unanswerable prompt.
+    """
+    if not sys.stdin.isatty():
+        return "q"
+    import termios
+    import tty
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        return sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
+def self_mtime() -> float:
+    try:
+        return os.path.getmtime(os.path.abspath(__file__))
+    except OSError:
+        return 0.0
+
+
+def watch_loop(opts) -> int:
+    """Stay in the foreground and republish on demand.
+
+    Deliberately keypress-driven rather than on a timer: BriCS forbids
+    unattended pollers on login nodes, and one refresh per keypress, in a
+    process the user is looking at, is a person doing it by hand.
+    """
+    rc = 0
+    born = self_mtime()
+    while True:
+        rc = publish_once(opts)
+        if rc == 2:
+            return rc
+        # A long-lived -w session keeps republishing from the code it started
+        # with, so pressing r after an edit silently reverts the live page to
+        # the older layout.  Say so rather than let the page flip back and
+        # forth between two versions.
+        if born and self_mtime() > born:
+            print("\n  \033[33msgpur was edited since this session started; "
+                  "press q and rerun to publish the new version\033[0m")
+        print("\n  \033[2m[r] refresh    [q] quit\033[0m", flush=True)
+        try:
+            k = read_key()
+        except KeyboardInterrupt:
+            k = "q"
+        if k in ("q", "Q", "\x03", "\x04", ""):
+            print("  bye")
+            return rc
+        print()
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(
+        prog="sgpur",
+        description="Publish the sgpu GPU-time ledger to a surge.sh page.",
+        epilog="The page is a snapshot taken now, not a live feed; re-run to refresh.")
+    ap.add_argument("window", nargs="?", default="24h",
+                    help="look-back window, default 24h (30m / 6h / 3d)")
+    ap.add_argument("-j", "--job", action="append", default=[],
+                    help="only these jobs (repeatable); window widens to cover them")
+    ap.add_argument("-u", "--user", default=os.environ.get("USER", ""),
+                    help="whose jobs to show, default yourself")
+    ap.add_argument("-d", "--domain", default=DEFAULT_DOMAIN,
+                    help=f"surge subdomain, default {DEFAULT_DOMAIN}")
+    ap.add_argument("--min-step", type=float, default=60.0,
+                    help="steps shorter than this are probes and get filtered, default 60")
+    ap.add_argument("--gap", type=float, default=60.0,
+                    help="gap above this counts as a break for the same identity, default 60")
+    ap.add_argument("-o", "--out", default=None,
+                    help="write the html here as well as to the site dir")
+    ap.add_argument("-n", "--no-deploy", action="store_true",
+                    help="build the page but do not publish it")
+    ap.add_argument("--no-live", action="store_true",
+                    help="skip the live GPU sample (no srun onto compute nodes)")
+    ap.add_argument("-w", "--watch", action="store_true",
+                    help="stay open after publishing; press r to republish, q to quit")
+    ap.add_argument("-q", "--quiet", action="store_true", help="print the url only")
+    ap.add_argument("--setup", action="store_true",
+                    help="one-time: write the surge token into ~/.netrc, then exit")
+    ap.add_argument("--set-password", action="store_true",
+                    help="set the passphrase that encrypts the page, then exit")
+    ap.add_argument("--no-encrypt", action="store_true",
+                    help="publish in the clear even though a passphrase is set")
+    ap.add_argument("--teardown", metavar="DOMAIN",
+                    help="delete a published site, then exit")
+    ap.add_argument("--lock", nargs=2, metavar=("SESSION", "NODES"),
+                    help="reserve nodes for a session (nid001,nid002 or a job id)")
+    ap.add_argument("--unlock", metavar="NODES",
+                    help="drop the reservation on these nodes (or a job id)")
+    ap.add_argument("--locks", action="store_true",
+                    help="list current node reservations, then exit")
+    ap.add_argument("--source", default="manual", choices=sorted(SOURCES),
+                    help="who caused this lock change: manual (you typed it), "
+                         "requested (you asked an agent), auto (a tool decided)")
+    ap.add_argument("--note", default="", help="why, recorded in the audit log")
+    ap.add_argument("--audit", nargs="?", type=int, const=15, metavar="N",
+                    help="show the last N reservation changes, then exit")
+    opts = ap.parse_args()
+    if opts.setup:
+        sys.exit(setup_credentials())
+    if opts.set_password:
+        sys.exit(set_password())
+    if opts.teardown:
+        sys.exit(teardown(opts.teardown))
+    if opts.lock:
+        sys.exit(cmd_lock(opts.lock[0], opts.lock[1], opts.source, opts.note))
+    if opts.unlock:
+        sys.exit(cmd_unlock(opts.unlock, opts.source, opts.note))
+    if opts.audit:
+        for r in audit_tail(opts.audit):
+            print(f"{r['at']}  {r['action']:<7} {r.get('source',''):<10} "
+                  f"{','.join(r.get('nodes') or []) or '-':<48} "
+                  f"{r.get('session') or '-':<14} {r.get('note','')}")
+        sys.exit(0)
+    if opts.locks:
+        sys.exit(cmd_locks())
+    opts.span = S.parse_duration(opts.window)
+
+    if opts.watch:
+        sys.exit(watch_loop(opts))
+    sys.exit(publish_once(opts))
+
+
+if __name__ == "__main__":
+    main()
