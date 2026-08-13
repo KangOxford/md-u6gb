@@ -307,3 +307,7 @@ log-w 截断 + ESS 必报；权重按 **rollout 整条**给，不逐 token。
 | 250 | +1.3pp | +1.00 | +1.8 | +0.40 |
 
 方向增益的 horizon 轮廓与分布修复峰值（h=25-100）重合——终点密度比训练把中程的条件分布修好之后，其集合均值的方向信息同步变准。h<25 两臂 DA 皆低于 50%（tick 量子化：符号被一档跳动主导而均值排序仍正确，IC 为正）。教训入库：**单点 horizon 的「无效应」不许外推，先扫轮廓再下结论**。图 `figs/fig_v5m_direction.pdf`；七图全部编入 `midtrain_figs.tex`（Overleaf 7501b74）。
+
+### 方法卡片（用户四问定稿，15:0xZ）：On-policy 终点密度比蒸馏
+
+**定义**：老师 = 自样本 × w(r)=p̂_real/p̂_θ（「终点被扭成真实分布的自己」），学生 = 同模型全参数；on-policy = 材料为当前策略自采 rollout；safe = real-CE 锚 + I-projection 最小改动本性 + 事后非劣效闸门。**无 return 预测头无 critic**：被训练的是 action（消息 token）分布，r 从终点 state（账本 mid）算出、只进权重。**马尔可夫链只在前向经历**：likelihood-ratio 梯度不反传穿引擎（不可微无碍）；全轨迹共享同一 w（目标是终点边缘分布，不做逐步信用分配）。**Sparse terminal reward**（每轨迹一标量，(w−1) 中心化 + log 截断 ±2.5 控方差），但效果 dense（序列级权重重塑逐步条件分布 → 全 horizon 改善 + 方向中程 +4pp）。三恒等式：REINFORCE 等价（绕过引擎）、I-projection（安全面的理论根源）、可计算天花板（每轮对上界报账）。Notion 方法卡片页 3bb12c45-68fd-81b5-86e0-ecb0acd5de72。
