@@ -1328,7 +1328,13 @@ def inbox_get(cfg: dict):
     try:
         import urllib.request
         req = urllib.request.Request(
-            cfg["url"], headers={"x-token": cfg.get("token", "")})
+            cfg["url"], headers={
+                "x-token": cfg.get("token", ""),
+                # Cloudflare error 1010 rejects urllib's default signature.
+                # Name this tiny client explicitly; no browser impersonation
+                # or cookie state is needed for a Worker endpoint.
+                "User-Agent": "sgpur/1.0 (+Cloudflare-Worker-mailbox)",
+            })
         with urllib.request.urlopen(req, timeout=8) as r:
             value = r.read().decode().strip()
         return value if value.isdecimal() else None
