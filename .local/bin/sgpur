@@ -311,6 +311,13 @@ body.fc .fclayer{opacity:1; pointer-events:auto}
   background:none; border:1px solid var(--accent); border-radius:11px}
 .fbtn:hover{background:var(--barfill)}
 body.fc .fbtn{background:var(--accent); color:#fff; border-color:var(--accent)}
+.rbtn{margin-left:14px; padding:2px 9px; font:inherit; font-size:11px;
+  cursor:pointer; color:var(--dim); background:none; border:1px solid var(--line);
+  border-radius:11px; vertical-align:1px}
+.rbtn:hover{border-color:var(--accent); color:var(--accent)}
+.rbtn[data-s="wait"]{color:var(--accent); border-color:var(--accent);
+  border-style:dashed; cursor:default}
+.rbtn[data-s="fail"]{color:var(--bad); border-color:var(--bad)}
 .seg{position:absolute; top:0; bottom:0; border-radius:4px; overflow:hidden;
      border:1px solid; display:flex; align-items:center; cursor:default; min-width:1px}
 .seg span{padding:0 6px; font-size:10.5px; color:#2b3138; white-space:nowrap;
@@ -507,6 +514,51 @@ JS = """
 // The ruler rows are filtered out by hand.  ruler_html() emits class="row"
 // exactly like the data rows, and it IS the shared time axis: hide it and
 // every chart below loses its x-axis with nothing to say why.
+// Nothing can reach login42 -- it has no public entrance.  So the button does
+// not command the terminal, it leaves a note in a Cloudflare mailbox that the
+// terminal walks out to collect every few seconds.  Both halves poll; neither
+// listens.
+function initRefresh(){
+  var b=document.getElementById('rbtn');
+  if(!b) return;
+  var url=b.dataset.url, tok=b.dataset.token, base=BUILD_STAMP, t0=0;
+  function set(s,txt){ if(s) b.dataset.s=s; else b.removeAttribute('data-s');
+                       b.textContent=txt; }
+  // Watch this page's own build stamp: same origin, so no CORS, and it is the
+  // one signal that survives the CDN.  A newer stamp means the terminal
+  // answered and surge has already served the new bytes.
+  function poll(){
+    var wait=Math.round((Date.now()-t0)/1000);
+    if(wait>300){ set('fail','\u21bb no answer \u2014 is sgpur -w running?'); return; }
+    set('wait','waiting for the terminal\u2026 '+wait+'s');
+    fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'})
+      .then(function(r){ return r.text() })
+      .then(function(t){
+        var m=t.match(/name="build" content="(\\d+)"/);
+        if(m && (+m[1])>base){
+          set('wait','new snapshot \u2014 reloading\u2026');
+          setTimeout(function(){ location.reload() },400);
+        } else setTimeout(poll,4000);
+      })
+      .catch(function(){ setTimeout(poll,6000) });
+  }
+  b.addEventListener('click',function(){
+    if(b.dataset.s==='wait') return;
+    t0=Date.now(); set('wait','requesting\u2026');
+    // The Worker authenticates the same way for browsers and login42: a
+    // private x-token header.  Its OPTIONS route explicitly allows this
+    // preflight, so the token never appears in a URL, browser history or
+    // intermediary request log.
+    fetch(url,{method:'POST',mode:'cors',headers:{'x-token':tok}})
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.text();
+      })
+      .then(function(){ poll() })
+      .catch(function(){ set('fail','\u21bb mailbox unreachable') });
+  });
+}
+
 function initSearch(){
   var box=document.getElementById('q'), out=document.getElementById('qn');
   if(!box) return;
@@ -578,6 +630,7 @@ function initSearch(){
   // The page is a snapshot, not a feed.  Show its age so nobody reads stale
   // numbers as live ones.
   initSearch();
+  initRefresh();
   var born=SNAPSHOT_EPOCH, el=document.getElementById('age');
   function fmt(s){
     if(s<60) return Math.max(0,Math.round(s))+'s ago';
@@ -1225,6 +1278,112 @@ def load_nodelock():
     except Exception:
         _NL = False
         return None
+
+
+INBOX_PATH = os.path.join(
+    os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+    "sgpur", "inbox.json")
+# How often -w walks out to the mailbox.  10 s costs 0.036% of one login-node
+# core and no filesystem call at all; the felt latency is dominated by the
+# republish itself (~40 s) and by Cloudflare KV edge staleness (up to 60 s), so
+# polling faster buys nothing visible.
+INBOX_POLL = float(os.environ.get("SGPUR_INBOX_POLL", "10"))
+# A stuck tab or a double click must not machine-gun sacct and srun.  Keypress
+# refreshes are exempt: those are a person, watching, doing it on purpose.
+INBOX_MIN_GAP = 20.0
+
+
+def read_inbox() -> dict:
+    """Where the web page leaves 'please refresh' notes.
+
+    Cloudflare cannot reach login42 -- nothing can, it has no public entrance.
+    So the direction is inverted: the page POSTs a timestamp to a Worker, and
+    -w walks out to GET it.  The Worker is a mailbox that never knocks.
+
+    The token lives here and in the encrypted half of the page, never in the
+    shell, so the set of people who can trigger a refresh is exactly the set
+    who can decrypt the page -- no second permission system to keep in sync.
+    """
+    try:
+        with open(INBOX_PATH) as f:
+            d = json.load(f)
+        if not isinstance(d, dict):
+            return {}
+        url = d.get("url")
+        token = d.get("token")
+        if not isinstance(url, str) or not url.startswith("https://"):
+            return {}
+        if not isinstance(token, str) or not token:
+            return {}
+        return {"url": url.rstrip("/"), "token": token}
+    except (OSError, ValueError):
+        return {}
+
+
+def inbox_get(cfg: dict):
+    """Current counter, or None if unset/unreachable.  Never raises: losing
+    the mailbox must not take the watch loop down with it."""
+    if not cfg.get("url"):
+        return None
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            cfg["url"], headers={"x-token": cfg.get("token", "")})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            value = r.read().decode().strip()
+        return value if value.isdecimal() else None
+    except Exception:
+        return None
+
+
+def cmd_set_inbox(url: str) -> int:
+    url = url.strip().rstrip("/")
+    if not url.startswith("https://"):
+        print("sgpur --set-inbox: expected an https:// worker url",
+              file=sys.stderr)
+        return 1
+    cfg = read_inbox()
+    token = cfg.get("token")
+    if not token:
+        import getpass
+        token = getpass.getpass("Cloudflare Worker TOKEN: ").strip()
+    if not token:
+        print("sgpur --set-inbox: TOKEN cannot be empty", file=sys.stderr)
+        return 1
+
+    # Write atomically with the private mode in force before any secret bytes
+    # hit disk.  chmod-after-write leaves a small world-readable window on
+    # permissive umasks; NamedTemporaryFile(mode=0600) avoids that window.
+    import tempfile
+    directory = os.path.dirname(INBOX_PATH)
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                "w", dir=directory, prefix=".inbox.", delete=False) as f:
+            tmp = f.name
+            os.chmod(tmp, 0o600)
+            json.dump({"url": url, "token": token}, f, indent=1)
+            f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, INBOX_PATH)
+        tmp = None
+        os.chmod(INBOX_PATH, 0o600)
+    finally:
+        if tmp:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+    probe = inbox_get({"url": url, "token": token})
+    print(f"inbox set: {url}")
+    print(f"  token: stored privately in {INBOX_PATH} (mode 600)")
+    print(f"  reachable: {'yes' if probe is not None else 'NO'}")
+    if probe is None:
+        print("  check the Worker TOKEN matches this private config and that "
+              "the KV binding is named KV")
+    return 0 if probe is not None else 1
 
 
 QUOTA_PATH = os.path.join(
@@ -1975,6 +2134,17 @@ def render_body(snap, opts, live=None, live_err=None) -> str:
     idle = alloc - busy
     ratio = busy / alloc * 100 if alloc else 0.0
 
+    # The url and token ride inside the encrypted half, so the set of people who
+    # can ask for a refresh is exactly the set who can read the page.
+    ib = read_inbox()
+    rbtn = ("" if not ib.get("url") else
+            f'<button class="rbtn" id="rbtn" data-url="{att(ib["url"])}"'
+            f' data-token="{att(ib.get("token", ""))}"'
+            f' data-label="\u21bb refresh"'
+            f' title="ask the terminal running `sgpur -w` to resample and'
+            f' republish; the page reloads itself when it lands">'
+            f'\u21bb refresh</button>')
+
     lane_lw = 250
     job_lw = 250
     tzabbr = L(snap.now).strftime("%Z")          # BST or GMT, whichever applies
@@ -1988,7 +2158,7 @@ def render_body(snap, opts, live=None, live_err=None) -> str:
     {L(t0):%Y-%m-%d %H:%M} → {L(t1):%Y-%m-%d %H:%M} {esc(tzabbr)}
     &nbsp;·&nbsp; window <b>{esc(opts.window)}</b>
     &nbsp;·&nbsp; {esc(scope)}
-    &nbsp;·&nbsp; snapshot <span id="age">just now</span>
+    &nbsp;·&nbsp; snapshot <span id="age">just now</span>{rbtn}
   </div>
   <div class="srch">
     <input id="q" type="search" spellcheck="false" autocomplete="off"
@@ -2126,6 +2296,7 @@ function initPage(){
     });
   });
   initSearch();
+  initRefresh();
   var born=SNAPSHOT_EPOCH, el=document.getElementById('age');
   if(!el) return;
   function fmt(s){
@@ -2150,6 +2321,51 @@ function initPage(){
 // The ruler rows are filtered out by hand.  ruler_html() emits class="row"
 // exactly like the data rows, and it IS the shared time axis: hide it and
 // every chart below loses its x-axis with nothing to say why.
+// Nothing can reach login42 -- it has no public entrance.  So the button does
+// not command the terminal, it leaves a note in a Cloudflare mailbox that the
+// terminal walks out to collect every few seconds.  Both halves poll; neither
+// listens.
+function initRefresh(){
+  var b=document.getElementById('rbtn');
+  if(!b) return;
+  var url=b.dataset.url, tok=b.dataset.token, base=BUILD_STAMP, t0=0;
+  function set(s,txt){ if(s) b.dataset.s=s; else b.removeAttribute('data-s');
+                       b.textContent=txt; }
+  // Watch this page's own build stamp: same origin, so no CORS, and it is the
+  // one signal that survives the CDN.  A newer stamp means the terminal
+  // answered and surge has already served the new bytes.
+  function poll(){
+    var wait=Math.round((Date.now()-t0)/1000);
+    if(wait>300){ set('fail','\u21bb no answer \u2014 is sgpur -w running?'); return; }
+    set('wait','waiting for the terminal\u2026 '+wait+'s');
+    fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'})
+      .then(function(r){ return r.text() })
+      .then(function(t){
+        var m=t.match(/name="build" content="(\\d+)"/);
+        if(m && (+m[1])>base){
+          set('wait','new snapshot \u2014 reloading\u2026');
+          setTimeout(function(){ location.reload() },400);
+        } else setTimeout(poll,4000);
+      })
+      .catch(function(){ setTimeout(poll,6000) });
+  }
+  b.addEventListener('click',function(){
+    if(b.dataset.s==='wait') return;
+    t0=Date.now(); set('wait','requesting\u2026');
+    // The Worker authenticates the same way for browsers and login42: a
+    // private x-token header.  Its OPTIONS route explicitly allows this
+    // preflight, so the token never appears in a URL, browser history or
+    // intermediary request log.
+    fetch(url,{method:'POST',mode:'cors',headers:{'x-token':tok}})
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.text();
+      })
+      .then(function(){ poll() })
+      .catch(function(){ set('fail','\u21bb mailbox unreachable') });
+  });
+}
+
 function initSearch(){
   var box=document.getElementById('q'), out=document.getElementById('qn');
   if(!box) return;
@@ -2288,10 +2504,15 @@ GATE_JS = """
 """
 
 
-def _page(head_title: str, inner: str, script: str) -> str:
+def _page(head_title: str, inner: str, script: str, epoch: float = 0) -> str:
+    # The build stamp is the only way the browser can tell that the terminal
+    # answered its refresh request: it re-fetches this page (same origin, no
+    # CORS) and compares.  Plaintext on purpose -- it is a unix timestamp, and
+    # the unlocked page already shows the snapshot age to anyone who asks.
     return (f"<!doctype html>\n<html lang=en><head><meta charset=utf-8>"
             f'<meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<meta name="robots" content="noindex,nofollow">'
+            f'<meta name="build" content="{epoch:.0f}">'
             f"<title>{esc(head_title)}</title>"
             f"<style>{CSS}{GATE_CSS}</style></head><body>"
             f'{inner}<div id="tip"></div>'
@@ -2300,11 +2521,12 @@ def _page(head_title: str, inner: str, script: str) -> str:
 
 def shell_js(epoch: float) -> str:
     return (SHELL_JS.replace("SNAPSHOT_EPOCH", f"{epoch:.0f}")
+                    .replace("BUILD_STAMP", f"{epoch:.0f}")
                     .replace("TZ_NAME", json.dumps(str(DISPLAY_TZ))))
 
 
 def page_plain(body: str, title: str, epoch: float) -> str:
-    return _page(title, body, shell_js(epoch))
+    return _page(title, body, shell_js(epoch), epoch)
 
 
 def page_locked(payload: dict, epoch: float) -> str:
@@ -2316,7 +2538,7 @@ def page_locked(payload: dict, epoch: float) -> str:
     """
     js = (shell_js(epoch)
           + GATE_JS.replace("PAYLOAD", json.dumps(payload, separators=(",", ":"))))
-    return _page("GPU time ledger", GATE_HTML, js)
+    return _page("GPU time ledger", GATE_HTML, js, epoch)
 
 
 def encrypt_body(body: str, password: str, salt: bytes) -> dict:
@@ -2591,20 +2813,25 @@ def publish_once(opts) -> int:
     return 0
 
 
-def read_key() -> str:
-    """One keypress, no Enter needed.
+def read_key(timeout=None) -> str:
+    """One keypress, no Enter needed.  Empty string if `timeout` elapses.
 
     Returns 'q' when stdin is not a tty, so --watch can never wedge a
     non-interactive run (cron, pipe, nohup) in an unanswerable prompt.
     """
     if not sys.stdin.isatty():
         return "q"
+    import select
     import termios
     import tty
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
     try:
         tty.setraw(fd)
+        if timeout is not None:
+            r, _, _ = select.select([sys.stdin], [], [], timeout)
+            if not r:
+                return ""
         return sys.stdin.read(1)
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
@@ -2626,8 +2853,10 @@ def watch_loop(opts) -> int:
     """
     rc = 0
     born = self_mtime()
+    last_pub = 0.0
     while True:
         rc = publish_once(opts)
+        last_pub = time.time()
         if rc == 2:
             return rc
         # A long-lived -w session keeps republishing from the code it started
@@ -2637,9 +2866,43 @@ def watch_loop(opts) -> int:
         if born and self_mtime() > born:
             print("\n  \033[33msgpur was edited since this session started; "
                   "press q and rerun to publish the new version\033[0m")
-        print("\n  \033[2m[r] refresh    [q] quit\033[0m", flush=True)
+        # Re-read every cycle so `sgpur --set-inbox` in another shell takes
+        # effect without restarting this one.
+        inbox = read_inbox()
+        seen = inbox_get(inbox) if inbox else None
+        hint = ("    \033[2m(or press refresh on the web page)\033[0m"
+                if inbox else "")
+        print(f"\n  \033[2m[r] refresh    [q] quit\033[0m{hint}", flush=True)
         try:
-            k = read_key()
+            if not inbox:
+                k = read_key()
+            else:
+                # Wake every INBOX_POLL to check the mailbox, but a keypress
+                # still returns instantly: select wakes on whichever is first.
+                # The check itself touches no filesystem, no Slurm and no
+                # subprocess -- it is one outbound GET, ~4 ms of CPU.
+                k = ""
+                while not k:
+                    k = read_key(INBOX_POLL)
+                    if k:
+                        break
+                    cur = inbox_get(inbox)
+                    if cur is None:          # mailbox unreachable: keep waiting
+                        continue
+                    if seen is None or cur == seen:
+                        seen = cur
+                        continue
+                    seen = cur
+                    # A stuck tab or a double click must not machine-gun sacct
+                    # and srun.  Publishing already takes ~40 s so this almost
+                    # never bites; it exists for the case where it would.
+                    gap = INBOX_MIN_GAP - (time.time() - last_pub)
+                    if gap > 0:
+                        print(f"  \033[2mheld {gap:.0f}s (min gap between "
+                              f"web-triggered refreshes)\033[0m", flush=True)
+                        time.sleep(gap)
+                    print("  \033[36mrefresh requested from the web page\033[0m")
+                    k = "r"
         except KeyboardInterrupt:
             k = "q"
         if k in ("q", "Q", "\x03", "\x04", ""):
@@ -2692,6 +2955,9 @@ def main() -> None:
                     help="who caused this lock change: manual (you typed it), "
                          "requested (you asked an agent), auto (a tool decided)")
     ap.add_argument("--note", default="", help="why, recorded in the audit log")
+    ap.add_argument("--set-inbox", metavar="URL",
+                    help="point -w at a Cloudflare Worker so the web page's "
+                         "refresh button can trigger a republish")
     ap.add_argument("--audit", nargs="?", type=int, const=15, metavar="N",
                     help="show the last N reservation changes, then exit")
     opts = ap.parse_args()
@@ -2713,6 +2979,8 @@ def main() -> None:
         sys.exit(0)
     if opts.locks:
         sys.exit(cmd_locks())
+    if opts.set_inbox:
+        sys.exit(cmd_set_inbox(opts.set_inbox))
     opts.span = S.parse_duration(opts.window)
 
     if opts.watch:
