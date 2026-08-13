@@ -103,6 +103,22 @@ Any batch script or training code must satisfy:
 - Smoke test → fix → resubmit can be done autonomously, but must still be staggered and monitored for startup load.
 - **Reuse active allocations for evaluation:** Before submitting a new inference, evaluation, or LOB-Bench `sbatch`, inspect the user's RUNNING allocations. When one has compatible hardware and enough remaining walltime, prefer an attached job step such as `srun --jobid=<allocation> --overlap --exact ... --cpu-bind=none`; record the parent allocation, actual step ID, node, and timestamps. Do not create another queued allocation solely for the evaluation when a compatible active allocation is available.
 - **Physical GPU gate before overlap:** Slurm `--overlap` does not make occupied GPU memory safe. Check active steps, compute PIDs, and per-GPU memory first. If the allocation is busy, an attached one-shot may wait for a predeclared zero-PID/near-baseline-memory gate, but it must never kill, retry, or overwrite the existing experiment without explicit authorization.
+- **🚨 声明在前，占用在后（R1，2026-08-13 定）：** attach 进任何分配之前先
+  `nodelock lock`，再起进程。**物理闸门是一个瞬时快照，而启动窗口有 5–10 分钟**
+  （挂 squashfs 分片 + JAX 分布式 init）；邻居在窗口里起来，快照怎么查都看不见。
+  能覆盖窗口的只有声明。闸门必须**双查**：锁表无他人 live 锁 ∧ `nvidia-smi` 无
+  他人 compute PID——锁表是**意图**、nvidia-smi 是**事实**，两者都会单独骗人。
+  机械实现见 `tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/code/claim_gate.sh`，
+  完整规则（三档优先级、抢占只向下、TTL）见 `tasks/node_status/PRIORITY.md`。
+  血泪教训：2026-08-13 10:19，2k baseline 臂在 6000412 上被邻居的 vLLM（92 GB）
+  挤死，`GetKeyValue() timed out with key: cuda:local_topology/cuda/2`——邻居在
+  锁表上**都声明过**，是我的闸门没读。
+- **🚨 srun step 必须起真名字（`--job-name=<实验名>`）：** `node_budget_monitor.py`
+  按正则 `^(bash|sh|zsh|...)$` 判 step 是否 idle，有真名字的 step 让整个作业记成
+  `computing` 而**不计入 20 节点上限**。本仓库普遍用 `srun bash -lc '...'`，step 名
+  就叫 `bash`，于是**正在训练的作业被判成 IDLE-HELD，随时可能被预算闸门 scancel**。
+  2026-08-13 的 dry-run 里，已训 5h45m 的 hybrid 就显示 `IDLE-HELD only bash,bash,...`。
+  起名字不是绕过闸门，是把度量修对。
 - **Queued-chain → attached-allocation handoff:** Hold the queued chain's root while establishing the replacement. Once the attached runner is confirmed live, cancel the entire superseded chain and verify every old job with both `squeue` and `sacct`. Never allow the queued and attached copies of the same experiment to run concurrently.
 
 ### 4.1 SquashFS SP500 Sweep Submission Constraints (2026-05-09)

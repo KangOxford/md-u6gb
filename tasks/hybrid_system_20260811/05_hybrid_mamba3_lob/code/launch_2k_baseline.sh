@@ -43,11 +43,24 @@ TAG=$([ "$SMOKE" = "1" ] && echo smoke || echo prod)
 # 已经把它读进 srun 了，症状是两条臂用同一份配置且没有任何报错。
 GEN_BATCH="$TASKDIR/code/train_full_autoreg.attach.base.${TAG}.batch"
 
+# step 名字不是装饰，它决定这个作业会不会被预算闸门砍掉。
+#
+# node_budget_monitor.py 用正则 ^(bash|sh|zsh|...)$ 判 step 是不是 idle，有非
+# idle 名字的 step 就把整个作业记成 computing，而 **computing 不计入 20 节点上限**。
+# 本仓库普遍用 `srun bash -lc '...'` 包装训练，于是 step 名就叫 bash：
+#
+#   2026-08-13 10:40 的 dry-run 里，正在训练的 hybrid（5998835，已跑 5h45m）
+#   赫然显示 `IDLE-HELD  only bash,bash,bash,...`，随时可能被闸门当空转砍掉；
+#   而邻居的 6000412 显示 `computing ldm-synth,dfm-rs-lg488b_g3`，安全。
+#
+# 起个真名字不是绕过闸门，是**把度量修对**——这个作业确实在算。
+STEP_NAME=${STEP_NAME:-base-m3-ctx2k}
+
 # ── 1. 生成 attach 版训练脚本 ────────────────────────────────────────────────
 # 只改 srun 那一行：加 --jobid / --overlap，让 step 落进已有 allocation。
 # 训练的 srun 也必须带 -w。--nodes=2 落在 4 节点的 allocation 上时，srun 自己
 # 挑哪两个，两条臂并行就可能选中同几个节点，撞成显存不足或 NCCL 卡死。
-sed "s|^srun --nodes=\$NNODES|srun --jobid=${ATTACH_JOBID} --overlap --nodes=\$NNODES -w \"\$SLURM_JOB_NODELIST\"|" \
+sed "s|^srun --nodes=\$NNODES|srun --jobid=${ATTACH_JOBID} --overlap --job-name=${STEP_NAME} --nodes=\$NNODES -w \"\$SLURM_JOB_NODELIST\"|" \
     "$SRC_BATCH" > "$GEN_BATCH"
 if ! grep -q -- "--jobid=${ATTACH_JOBID} --overlap" "$GEN_BATCH"; then
     echo "FATAL: srun 行改写失败，上游脚本格式可能变了。中止。" >&2
@@ -113,25 +126,19 @@ if [ "$DEDICATED_ALLOC" = "1" ]; then
         ' 2>&1 | grep "^\[clear\]"
 fi
 
-MAX_RESIDUAL_MIB=${MAX_RESIDUAL_MIB:-4096}
-echo "[gpu-gate] 检查 ${NNODES_ATTACH} 个节点的物理占用（阈值 ${MAX_RESIDUAL_MIB} MiB / 零 compute PID）"
-GATE_OUT=$(timeout 200 env $_CLEAN_ENV srun --jobid="${ATTACH_JOBID}" --overlap \
-    --nodes=${NNODES_ATTACH} --ntasks=${NNODES_ATTACH} --ntasks-per-node=1 -w "${NODELIST}" --cpu-bind=none \
-    bash -c '
-      pids=$(nvidia-smi --query-compute-apps=pid --format=csv,noheader | tr "\n" " ")
-      worst=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | sort -n | tail -1)
-      echo "GATE $(hostname) worst_used_mib=${worst:-0} pids=[${pids}]"
-    ' 2>&1 | grep "^GATE")
-echo "$GATE_OUT"
-if echo "$GATE_OUT" | grep -q "pids=\[[0-9]"; then
-    echo "FATAL: 有节点存在 compute PID，别人的实验正在用这批卡。中止，不动它。" >&2
+# 闸门换成 claim_gate.sh：先查锁表、再上锁、最后体检。
+#
+# 换掉的原因是老闸门只有体检这一层，而 2026-08-13 10:19 baseline 就死在这个
+# 缺口上：邻居（claude-dfm / crps-wm_ft）在锁表上**都声明过**，我却没读，
+# 体检那一刻卡是空的，8 分钟启动窗口里 vLLM 起来把 rank2 挤死。
+# 详细推理见 claim_gate.sh 的头注释。
+if ! ALLOC="$ATTACH_JOBID" NODELIST="$NODELIST" OWNER="${LOCK_OWNER:-claude-ctx2k}" \
+     TIER=T0 NOTE="2k baseline arm (${TAG}), critical comparison" \
+     MAX_RESIDUAL_MIB="${MAX_RESIDUAL_MIB:-4096}" \
+     bash "$TASKDIR/code/claim_gate.sh"; then
+    echo "FATAL: claim_gate 未通过，不起飞。" >&2
     exit 3
 fi
-if [ -n "$GATE_OUT" ] && [ "$(echo "$GATE_OUT" | sed -E 's/.*worst_used_mib=([0-9]+).*/\1/' | sort -n | tail -1)" -gt "$MAX_RESIDUAL_MIB" ]; then
-    echo "FATAL: 有节点残留显存超过 ${MAX_RESIDUAL_MIB} MiB。中止。" >&2
-    exit 3
-fi
-echo "[gpu-gate] 通过"
 
 # ── 2. 清掉继承的 SLURM_*，再伪造 allocation 级变量 ──────────────────────────
 for v in $(env | grep -oE '^SLURM[A-Z_]*'); do unset "$v"; done
