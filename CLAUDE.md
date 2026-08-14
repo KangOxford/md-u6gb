@@ -61,6 +61,24 @@ behind everyone else.
 
 **Trigger Reflex Check**: Whenever I feel like using `find` / recursive `ls` / `du -sh` / `tree` / large directory glob to "understand project structure" or "find files," **STOP**. Use the safe alternatives below, or ask the user directly.
 
+### 1.2 删除一律改成改名 —— `rm` / `rm -rf` 禁用（2026-08-13，用户第二次强调）
+
+**任何要删掉东西的地方，改成 `mv` 加 `_deprecated` 后缀。** 不停下来等确认，
+直接改名就继续干活——改名可逆、删除不可逆，而两者的代价几乎相同。
+
+```bash
+rm -rf runs/foo/checkpoints                       # FORBIDDEN
+mv runs/foo/checkpoints runs/foo/checkpoints_deprecated_20260813T2230Z   # 这样做
+```
+
+适用范围是**一切**：checkpoint 目录、日志、中间产物、"反正是空的" 的目录、
+"反正是我自己刚才写坏的" 文件。理由不是怕删错重要数据，而是
+**"这个能删" 这个判断本身就是我最容易出错的地方**：崩溃的 run 到底写没写
+checkpoint、那个目录是不是别的会话在共用、上一次是不是真的失败了——这些在
+删除的瞬间都变成不可验证的。改名把判断错误的代价从 "永久丢失" 降到 "多一个目录"。
+
+时间戳要带上，否则重跑第二次时 `_deprecated` 会撞名。清理由用户决定，不由我决定。
+
 ## 2. Safe Alternatives
 
 ```bash
@@ -95,6 +113,40 @@ Any batch script or training code must satisfy:
 6. **Tighten Checkpoint intervals**: Save every N steps instead of every step. Choose N such that "recovering once wastes < 10% of job time."
 
 ## 4. Job Submission Pacing
+
+### 🚨🚨 4.0 硬标准：**每一次 `sbatch` 之前必须先跑 `sgpu`，有空卡就 attach，绝不排队**（2026-08-14 用户定）
+
+**这是命令，不是建议。没有例外。**
+
+```bash
+sgpu                 # 先看：自己名下的分配里，此刻哪些卡是空的
+                     # 空卡存在 → 用 srun --overlap 上去跑，不许 sbatch
+                     # 真的一张空卡都没有 → 才允许 sbatch
+```
+
+而且**要不断地查**，不是查一次就完事：排队等待期间要持续 `squeue` / `sgpu` 轮询，
+一旦自己名下出现空节点，立刻把工作挪上去，不要继续干等。
+
+**判据（从 `sgpu` / `gtop` 直接读，这是唯一不来自记账的测量）**：
+
+| 信号 | 含义 |
+|---|---|
+| `steps: .batch only · nothing computing` | **整个分配的 GPU 全空**，最该抢的目标 |
+| GPU `0%` 且显存 `0.0/95.6G` | `idle`，真空 |
+| GPU `0%` 但显存 > 64 MiB | `held`，有人预留了显存，**不是空的** |
+| `🔓` 无锁 | 可用（无锁节点即便在跑任务也可以用） |
+| `🔒 <别人>` | 别人声明过，不碰 |
+| `DEAD(闲置 N min)` | 锁还在但长期空转，问过用户再动 |
+
+**血泪教训（2026-08-14）**：H3 复刻的两个作业在队列里干等了一整天，其间用户账户
+名下有 **40 张 GPU 空转**（`6006783` 8 张、`6006424` 16 张、`6000409` 16 张，全部
+`nothing computing`，各自还剩 5–10 小时）。我一次都没查过 `sgpu`，直接 sbatch 然后
+等。用户原话：**「你看着空的 GPU 不用，你去排队是吧？」**
+
+这条规则本来就以「Reuse active allocations」的形式写在下面，我没执行。现在提到 4.0
+并升级为硬标准：**`sgpu` 是 `sbatch` 的前置条件，跳过它就是违规。**
+
+attach 的具体机制、双查闸门、以及声明顺序见下面 4.1 起的各条。
 
 - **There is no fixed upper limit on the number of submitted tasks**: It is not 5, nor 20. Whether to continue submitting is determined by explicit user instructions, current Slurm/QOS limits, startup/mount load, and current HPC status.
 - Batch submissions must still be done one by one and staggered, with `sleep 30+` between batches. Observe `squeue` / startup logs to ensure no abnormal startup load.
@@ -411,8 +463,14 @@ Multi-node (≥2 nodes) automatically enables hierarchical 2D mesh AllReduce.
 
 ## Pre-Submit Checklist (MANDATORY)
 
+**Step 0 comes before everything else: run `sgpu`.** If any GPU in an allocation this
+account already holds is idle, **attach to it and do not submit at all**. See §4.0 —
+`sbatch` is only permitted once `sgpu` shows there is genuinely nothing free. Keep
+polling while anything is queued; the moment a node frees up, move the work onto it.
+
 **Every `sbatch` submission MUST be preceded by a `squeue` dedup check.** This is non-negotiable.
 
+0. Run `sgpu`. Idle GPUs anywhere in this account → attach via `srun --overlap`, do not `sbatch`.
 1. Run `squeue -u kangli.s5e -o "%.10i %.20j %.8T %.12M %.6D"` to list all running/pending jobs
 2. For each running job, compare: **model config** (architecture, d_model, n_layers, params), **data** (tickers, date range), **encoding** (P1a/P1b/P1c), **seq_len**
 3. If any existing job has the **same model + same data + same encoding**, do NOT submit — it's a duplicate
