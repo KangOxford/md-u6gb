@@ -2874,12 +2874,21 @@ def watch_loop(opts) -> int:
             # is a person doing this by hand, and that is only true if the gate
             # tests for the key the banner promises instead of for arrival.
             k = ""
+            # When the mailbox is next due.  A deadline and not "whenever
+            # read_key happens to time out": an ignored byte also ends the
+            # wait, so using the timeout as the cue lets a keep-alive that
+            # arrives faster than INBOX_POLL starve the mailbox completely --
+            # every read returns a NUL before the timeout, and the web button
+            # is never collected.  The deadline still throttles the outbound
+            # GET to one per INBOX_POLL no matter how many bytes arrive.
+            next_poll = time.time() + INBOX_POLL
             while True:
                 # Wake every INBOX_POLL to check the mailbox, but a keypress
                 # still returns instantly: select wakes on whichever is first.
                 # The check itself touches no filesystem, no Slurm and no
                 # subprocess -- it is one outbound GET, ~4 ms of CPU.
-                k = read_key(INBOX_POLL if inbox else None)
+                k = read_key(max(0.0, next_poll - time.time()) if inbox
+                             else None)
                 if k in ("q", "Q", "\x03", "\x04"):
                     break
                 if k in ("r", "R"):
@@ -2889,9 +2898,7 @@ def watch_loop(opts) -> int:
                     # Say so and keep waiting.  Swallowing input silently would
                     # make "why is r not working" the next mystery, but a line
                     # per byte would bury the screen under a keep-alive, so it
-                    # is said once and then only occasionally.  Note this path
-                    # never reaches inbox_get: a burst of bytes must not turn
-                    # into a burst of outbound requests.
+                    # is said once and then only occasionally.
                     ignored += 1
                     if ignored == 1 or ignored % 50 == 0:
                         why = ("  (a terminal anti-idle keep-alive sends this)"
@@ -2899,9 +2906,15 @@ def watch_loop(opts) -> int:
                         n = "" if ignored == 1 else f" x{ignored}"
                         print(f"  \033[2mignored {k!r}{n} -- only r "
                               f"refreshes{why}\033[0m", flush=True)
+                # Reached on both an ignored byte and an elapsed timeout: the
+                # mailbox is due on a clock, not on whichever of the two ended
+                # the wait.  The clock is also what throttles the outbound GET,
+                # so a burst of bytes still cannot become a burst of requests.
+                # Without an inbox there is nothing to collect and read_key
+                # blocks, so k here is always a real byte.
+                if not inbox or time.time() < next_poll:
                     continue
-                # k == "": the poll interval elapsed, so go read the mailbox.
-                # Not reachable without an inbox, where read_key blocks instead.
+                next_poll = time.time() + INBOX_POLL
                 cur = inbox_get(inbox)
                 if cur is None:              # mailbox unreachable: keep waiting
                     continue
