@@ -399,6 +399,17 @@ def encode_media(ckpt: Path, tarballs: list[Path], label_of: dict[str, str], lab
             shard_label.append(label_index[label_of[ytid]])
             shard_ids.append(ytid)
             kept += 1
+            # Progress is logged on its own cadence, not on the shard cadence. Tying
+            # the two together means the only way to see progress sooner is to write
+            # smaller shards, i.e. paying Lustre metadata for observability -- the
+            # same mistake as tying wandb logging to the checkpoint interval. With
+            # per_shard=2000 this run was silent for the first half hour, and a
+            # deadlock would have looked identical.
+            if kept % 200 == 0:
+                rate = kept / max(time.time() - t0, 1e-9)
+                remaining = (limit - kept) / rate / 60 if limit else 0
+                print(f"[media] {kept} kept / {seen} seen  {rate:.2f} clip/s"
+                      + (f"  eta {remaining:.0f} min" if limit else ""), flush=True)
             if len(shard_video) >= per_shard:
                 flush()
             if limit is not None and kept >= limit:
