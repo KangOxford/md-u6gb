@@ -114,20 +114,27 @@ Any batch script or training code must satisfy:
 
 ## 4. Job Submission Pacing
 
-### 🚨🚨 4.0 硬标准：**每一次 `sbatch` 之前必须先跑 `sgpu`，有空卡就 attach，绝不排队**（2026-08-14 用户定）
+### 🚨🚨 4.0 硬标准：**每一次 `sbatch` 之前必须先跑 `gtop`，有空卡就 attach，绝不排队**（2026-08-14 用户定）
 
 **这是命令，不是建议。没有例外。**
 
 ```bash
-sgpu                 # 先看：自己名下的分配里，此刻哪些卡是空的
+gtop                 # 先看：自己名下的分配里，此刻哪些卡是空的
                      # 空卡存在 → 用 srun --overlap 上去跑，不许 sbatch
                      # 真的一张空卡都没有 → 才允许 sbatch
 ```
 
-而且**要不断地查**，不是查一次就完事：排队等待期间要持续 `squeue` / `sgpu` 轮询，
+**是 `gtop` 不是 `sgpu`，两者分工不同，别用错**：
+
+| 工具 | 回答的问题 | 用在这里对不对 |
+|---|---|---|
+| **`gtop`** | **此刻**每张卡的物理占用（util / 显存 / 锁 / step） | ✅ 就是它。唯一不来自 Slurm 记账、直接读卡的测量 |
+| `sgpu` | 过去 N 小时谁跑过、断了几次（甘特图账本） | ❌ 历史账面，回答不了「现在有没有空卡」 |
+
+而且**要不断地查**，不是查一次就完事：排队等待期间要持续 `squeue` / `gtop` 轮询，
 一旦自己名下出现空节点，立刻把工作挪上去，不要继续干等。
 
-**判据（从 `sgpu` / `gtop` 直接读，这是唯一不来自记账的测量）**：
+**判据（从 `gtop` 直接读，这是唯一不来自记账的测量）**：
 
 | 信号 | 含义 |
 |---|---|
@@ -463,14 +470,16 @@ Multi-node (≥2 nodes) automatically enables hierarchical 2D mesh AllReduce.
 
 ## Pre-Submit Checklist (MANDATORY)
 
-**Step 0 comes before everything else: run `sgpu`.** If any GPU in an allocation this
-account already holds is idle, **attach to it and do not submit at all**. See §4.0 —
-`sbatch` is only permitted once `sgpu` shows there is genuinely nothing free. Keep
-polling while anything is queued; the moment a node frees up, move the work onto it.
+**Step 0 comes before everything else: run `gtop`** (physical occupancy right now --
+*not* `sgpu`, which is the historical gantt ledger and cannot answer "is anything free
+now"). If any GPU in an allocation this account already holds is idle, **attach to it
+and do not submit at all**. See §4.0 — `sbatch` is only permitted once `gtop` shows
+there is genuinely nothing free. Keep polling while anything is queued; the moment a
+node frees up, move the work onto it.
 
 **Every `sbatch` submission MUST be preceded by a `squeue` dedup check.** This is non-negotiable.
 
-0. Run `sgpu`. Idle GPUs anywhere in this account → attach via `srun --overlap`, do not `sbatch`.
+0. Run `gtop`. Idle GPUs anywhere in this account → attach via `srun --overlap`, do not `sbatch`.
 1. Run `squeue -u kangli.s5e -o "%.10i %.20j %.8T %.12M %.6D"` to list all running/pending jobs
 2. For each running job, compare: **model config** (architecture, d_model, n_layers, params), **data** (tickers, date range), **encoding** (P1a/P1b/P1c), **seq_len**
 3. If any existing job has the **same model + same data + same encoding**, do NOT submit — it's a duplicate
