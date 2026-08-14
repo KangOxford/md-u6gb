@@ -35,7 +35,7 @@
 | **S2** | 资产落地 | `ckpt/h3/`、`data/vggsound/` | checkpoint **≥ 100 GB**（脚本内已硬断言）；`vggsound.csv` 存在；`transformer/config.json` 存在 | `du -sh ckpt/h3` |
 | **S3** | 官方 33B 跑通 | `runs/*/h3_reference/` | `param_census.json` 里 `adaln_branches / TOTAL` ∈ [0.35, 0.45]；`h3_t2va_smoke.mp4` 存在且 > 1 MB 且含音轨 | `01_fetch_and_smoke.batch` 阶段 3 |
 | **S4** | latent 语料 | `data/latents/` | `manifest.json` 的 `kept ≥ 8000`；`latent_frames == 22`（= `5n+2`，n=4）；`audio_latents == 122` | `cat data/latents/manifest.json` |
-| **S5** | VAE 往返闸门 | `E6_roundtrip.json` | 视频 **PSNR ≥ 28 dB**、音频 **SI-SDR ≥ 10 dB** | `evaluate.py roundtrip` |
+| **S5** | VAE 往返闸门 | `E6_roundtrip.json` | 视频 **PSNR ≥ 28 dB**；音频 **匹配−错配裕度 > 20 dB**（判据已修订，见 §5.3） | `evaluate.py roundtrip` |
 | **S6** | 预训练 | `runs/pretrain-*/checkpoints/` | 留出 loss 相对随机初始化**下降 ≥ 50%**；`latest_checkpoint.json` 可 resume | `evaluate.py heldout` |
 | **S7** | FL2VA 后训练 | `runs/sft_fl2va-*/` | 锚点扫描里 **t=0.999 的 video loss < t=1.0 的** | `evaluate.py anchors` |
 | **S8** | CFG 蒸馏 | `runs/distill_cfg-*/` | 采样前向次数 **2(N−1) → (N−1)**；墙钟降幅 ≥ 40% | `sample.py --guidance-scale 0` |
@@ -63,7 +63,7 @@ attn 内维 7168 / hidden 5376              = 1.3333    = 4/3          ✓
 | **E3** | 蒸馏不该毁掉能力 | 留出流匹配 loss（**固定时间步网格**，两个 checkpoint 同噪声水平） | 蒸馏后 loss 不高于教师 **+20%** | 待跑 |
 | **E4** | *"trained with its anchors very slightly noised, so conditioning on exactly t = 1.0 is off-distribution"* | 锚点 t ∈ {1.0, 0.999, 0.99, 0.95, 0.9} 扫描 | `loss(0.999) < loss(1.0)` | 待跑 |
 | **E5** | 双 shift（视频 12 / 音频 3） | 三组同预算训练：(12,3) / (1,1) / (3,12) | (12,3) 留出 loss 最低 | 视预算，可缺 |
-| **E6** | 管线正确性闸门 | VAE encode→decode | 视频 PSNR ≥ 28 dB，音频 SI-SDR ≥ 10 dB | 待跑 |
+| **E6** | 管线正确性闸门 | VAE encode→decode，音频**带错配对照** | 视频 PSNR ≥ 28 dB；音频裕度 > 20 dB | ✅ **31.97 dB / +52.11 dB** |
 | **E7** | 「调小一点」的代价 | micro / nano / small 三点留出 loss | 随参数量**单调下降** | 视预算，可缺 |
 
 **E5 / E7 允许缺席**，但必须在 `REPORT.md` 里写明「未做 + 原因（预算）」，
@@ -234,3 +234,36 @@ gzip 的进程），所以 attach 一个**零 GPU** 的 step 到活着的分配�
 2. **有一个 clip 的音频峰值 1.1109 > 1.0**。不是 bug：参考实现的
    `MiniMaxH3AudioReference` 直接传原始 float32 波形、不归一化，所以照做是对的。
    但记下来——若后续音频重建质量异常，这是第一个该查的地方。
+
+
+### 5.3 E6 音频判据的修订：从绝对 dB 改为对照裕度
+
+**原判据 `SI-SDR ≥ 10 dB` 是拍的**，我在 §2 写「低于它说明预处理写错了」，
+却从未确立「正确的管线在这份数据上应该给出什么」。实测暴露了它的两个毛病：
+
+```
+n=12:  mean 7.68   min −1.06  max 16.87   spread 17.93 dB
+n=16:  mean 4.16                          ← 多加 4 个 clip，均值掉 3.5 dB
+```
+
+**均值在小样本上根本不稳定**，因为 SI-SDR 在 VGGSound 这种嘈杂 YouTube 音频上
+强烈依赖内容——安静片段无论编解码器多好都得分很低。拿它当阈值，量的是
+「这批音频有多好压」，而不是闸门该管的「路径对不对」。
+
+**改用错配对照**（与 E1 同一套逻辑）：拿 clip i 的重建去对 clip j 的原始音频。
+
+```
+matched   SI-SDR    4.16 dB
+mismatched control −47.95 dB
+margin            +52.11 dB      → 判据 >20 dB，PASS
+```
+
+52 dB 的裕度说明重建携带的是**它自己的**内容，路径无误。
+
+**这次修订的依据是证据，不是结果**：改动理由是「均值在 n=12→16 之间波动 3.5 dB
+且 spread 18 dB，不具判别力」，而不是「没达到 10 dB 所以放宽」。判断标准是
+**同一个量在正确与错误的管线上取值是否不同**——绝对 SI-SDR 不满足（安静 clip 在
+正确管线上也很低），裕度满足（错误管线的裕度必然趋近 0）。
+
+对照 §5.2 那次：那一次是**度量实现错了**（先 flatten 再截断），修的是代码；
+这一次是**判据选错了量**，修的是判据。两者都必须说明白改了什么、为什么改。

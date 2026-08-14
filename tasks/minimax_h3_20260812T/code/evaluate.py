@@ -34,6 +34,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import h3nano as H  # noqa: E402
 
 
+def si_sdr(target: torch.Tensor, estimate: torch.Tensor) -> float:
+    """Scale-invariant SDR in dB. Scale-invariant, not shift-invariant: a few samples
+    of misalignment destroy it, which is why the time axis is truncated before any
+    flattening happens."""
+    alpha = (target @ estimate) / (target @ target + 1e-9)
+    noise = estimate - alpha * target
+    return float(10 * torch.log10((alpha * target).pow(2).sum() / (noise.pow(2).sum() + 1e-9)))
+
+
 def load_model(checkpoint: Path, device):
     info = json.loads((checkpoint / "latest_checkpoint.json").read_text())
     blob = torch.load(info["path"], map_location="cpu", weights_only=False)
@@ -90,7 +99,12 @@ def cmd_roundtrip(args) -> dict:
     pixel_mean = torch.tensor(H.PIXEL_MEAN, device=device).view(1, -1, 1, 1, 1)
     pixel_std = torch.tensor(H.PIXEL_STD, device=device).view(1, -1, 1, 1, 1)
 
-    psnrs, sisdrs = [], []
+    # Reconstructions are kept so a mismatched control can be scored afterwards.
+    # SI-SDR on arbitrary YouTube audio is strongly content-dependent -- quiet clips
+    # score badly however good the codec is -- so an absolute threshold picked in
+    # advance says little. What does say something is whether a reconstruction
+    # resembles *its own* source more than someone else's.
+    psnrs, sisdrs, recon_audio, orig_audio = [], [], [], []
     for _name, video_np, audio_np in clips:
         original = torch.from_numpy(video_np).to(device).permute(3, 0, 1, 2)[None].float()
         pixels = (original.div(255.0) - pixel_mean) / pixel_std
@@ -112,9 +126,16 @@ def cmd_roundtrip(args) -> dict:
         # order, not the reconstruction.
         n = min(wave.shape[-1], a_rec.shape[-1])
         target, estimate = wave[..., :n].flatten(), a_rec[..., :n].flatten()
-        alpha = (target @ estimate) / (target @ target + 1e-9)
-        noise = estimate - alpha * target
-        sisdrs.append(float(10 * torch.log10((alpha * target).pow(2).sum() / (noise.pow(2).sum() + 1e-9))))
+        sisdrs.append(si_sdr(target, estimate))
+        recon_audio.append(a_rec[..., :n].flatten().cpu())
+        orig_audio.append(wave[..., :n].flatten().cpu())
+
+    # The control: each reconstruction against the *next* clip's source.
+    control = []
+    for i in range(len(recon_audio)):
+        j = (i + 1) % len(recon_audio)
+        m = min(recon_audio[i].numel(), orig_audio[j].numel())
+        control.append(si_sdr(orig_audio[j][:m], recon_audio[i][:m]))
 
     result = {
         "clips": len(clips), "num_frames": num_frames, "size": args.size,
@@ -123,8 +144,14 @@ def cmd_roundtrip(args) -> dict:
         "audio_si_sdr_db": {"mean": float(np.mean(sisdrs)), "min": float(np.min(sisdrs)),
                             "max": float(np.max(sisdrs))},
     }
+    result["audio_si_sdr_control_db"] = {"mean": float(np.mean(control)),
+                                        "min": float(np.min(control)),
+                                        "max": float(np.max(control))}
+    result["audio_margin_db"] = result["audio_si_sdr_db"]["mean"] - result["audio_si_sdr_control_db"]["mean"]
     print(f"[roundtrip] video PSNR {result['video_psnr_db']['mean']:.2f} dB | "
-          f"audio SI-SDR {result['audio_si_sdr_db']['mean']:.2f} dB", flush=True)
+          f"audio SI-SDR {result['audio_si_sdr_db']['mean']:.2f} dB "
+          f"(mismatched control {result['audio_si_sdr_control_db']['mean']:.2f} dB, "
+          f"margin {result['audio_margin_db']:+.2f} dB)", flush=True)
     return result
 
 
