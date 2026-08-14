@@ -563,7 +563,60 @@ function initRefresh(){
       .then(function(){ poll() })
       .catch(function(){ set('fail','↻ mailbox unreachable') });
   });
-}(function(){
+}
+
+function initSearch(){
+  var box=document.getElementById('q'), out=document.getElementById('qn');
+  if(!box) return;
+  var rows=[].slice.call(document.querySelectorAll('.row,.hrow,.lrow,details'))
+    .filter(function(r){ return !r.querySelector('.track.ruler'); });
+  rows.forEach(function(r){
+    var t=r.textContent||'';
+    if(r.getAttribute('data-tip')) t+=' '+r.getAttribute('data-tip');
+    [].slice.call(r.querySelectorAll('[data-tip]')).forEach(function(e){
+      t+=' '+e.getAttribute('data-tip');
+    });
+    r.setAttribute('data-hay',t.toLowerCase().replace(/\\s+/g,' '));
+  });
+  var secs=[].slice.call(document.querySelectorAll('section'));
+  function apply(){
+    var q=box.value.toLowerCase().trim();
+    var terms=q?q.split(/\\s+/):[];
+    var pos=terms.filter(function(t){return t.charAt(0)!=='-'&&t.length;});
+    var neg=terms.filter(function(t){return t.charAt(0)==='-'&&t.length>1;})
+                 .map(function(t){return t.slice(1);});
+    var shown=0;
+    rows.forEach(function(r){
+      var h=r.getAttribute('data-hay')||'';
+      var ok=pos.every(function(t){return h.indexOf(t)>=0;})
+          && !neg.some(function(t){return h.indexOf(t)>=0;});
+      r.classList.toggle('qhide',!ok);
+      if(ok) shown++;
+    });
+    // Per-section counts: an empty chart with no explanation reads as a bug.
+    secs.forEach(function(sec){
+      var h2=sec.querySelector('h2'); if(!h2) return;
+      var tag=h2.querySelector('.qn');
+      if(!q){ if(tag) tag.remove(); return; }
+      var n=0;
+      rows.forEach(function(r){ if(sec.contains(r)&&!r.classList.contains('qhide')) n++; });
+      if(!tag){ tag=document.createElement('span'); tag.className='qn';
+                h2.appendChild(tag); }
+      tag.textContent=n+' match'+(n===1?'':'es');
+      tag.className='qn'+(n?'':' zero');
+    });
+    out.textContent = q ? (shown+' row'+(shown===1?'':'s')) : '';
+  }
+  box.addEventListener('input',apply);
+  box.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){ box.value=''; apply(); box.blur(); }
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='/'&&document.activeElement!==box){ e.preventDefault(); box.focus(); }
+  });
+}
+
+(function(){
   var tip=document.getElementById('tip');
   document.addEventListener('mouseover',function(e){
     var t=e.target.closest('[data-tip]'); if(!t) return;
@@ -2120,7 +2173,60 @@ function initRefresh(){
       .then(function(){ poll() })
       .catch(function(){ set('fail','↻ mailbox unreachable') });
   });
-}(function(){
+}
+
+function initSearch(){
+  var box=document.getElementById('q'), out=document.getElementById('qn');
+  if(!box) return;
+  var rows=[].slice.call(document.querySelectorAll('.row,.hrow,.lrow,details'))
+    .filter(function(r){ return !r.querySelector('.track.ruler'); });
+  rows.forEach(function(r){
+    var t=r.textContent||'';
+    if(r.getAttribute('data-tip')) t+=' '+r.getAttribute('data-tip');
+    [].slice.call(r.querySelectorAll('[data-tip]')).forEach(function(e){
+      t+=' '+e.getAttribute('data-tip');
+    });
+    r.setAttribute('data-hay',t.toLowerCase().replace(/\\s+/g,' '));
+  });
+  var secs=[].slice.call(document.querySelectorAll('section'));
+  function apply(){
+    var q=box.value.toLowerCase().trim();
+    var terms=q?q.split(/\\s+/):[];
+    var pos=terms.filter(function(t){return t.charAt(0)!=='-'&&t.length;});
+    var neg=terms.filter(function(t){return t.charAt(0)==='-'&&t.length>1;})
+                 .map(function(t){return t.slice(1);});
+    var shown=0;
+    rows.forEach(function(r){
+      var h=r.getAttribute('data-hay')||'';
+      var ok=pos.every(function(t){return h.indexOf(t)>=0;})
+          && !neg.some(function(t){return h.indexOf(t)>=0;});
+      r.classList.toggle('qhide',!ok);
+      if(ok) shown++;
+    });
+    // Per-section counts: an empty chart with no explanation reads as a bug.
+    secs.forEach(function(sec){
+      var h2=sec.querySelector('h2'); if(!h2) return;
+      var tag=h2.querySelector('.qn');
+      if(!q){ if(tag) tag.remove(); return; }
+      var n=0;
+      rows.forEach(function(r){ if(sec.contains(r)&&!r.classList.contains('qhide')) n++; });
+      if(!tag){ tag=document.createElement('span'); tag.className='qn';
+                h2.appendChild(tag); }
+      tag.textContent=n+' match'+(n===1?'':'es');
+      tag.className='qn'+(n?'':' zero');
+    });
+    out.textContent = q ? (shown+' row'+(shown===1?'':'s')) : '';
+  }
+  box.addEventListener('input',apply);
+  box.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){ box.value=''; apply(); box.blur(); }
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='/'&&document.activeElement!==box){ e.preventDefault(); box.focus(); }
+  });
+}
+
+(function(){
   var tip=document.getElementById('tip');
   document.addEventListener('mouseover',function(e){
     var t=e.target.closest('[data-tip]'); if(!t) return;
@@ -2209,6 +2315,22 @@ GATE_JS = """
 
 
 def _page(head_title: str, inner: str, script: str, epoch: float = 0) -> str:
+    # A page whose script throws on load still looks entirely correct: the
+    # markup renders, and only the parts that needed a handler are quietly
+    # dead.  On 2026-08-14 initPage() called an initSearch() that had been
+    # deleted alongside a neighbouring edit, and the ReferenceError killed
+    # every line after it -- the refresh button never bound its click, the age
+    # clock never started, the search box stayed inert -- while the page still
+    # showed the right numbers and the publishing terminal reported success.
+    # There was nothing to notice.  So check here, on the one path every page
+    # leaves by, that the script defines what it calls.
+    defined = set(re.findall(r"^function (\w+)", script, re.M))
+    missing = sorted(set(re.findall(r"^\s*(init\w+)\(\)", script, re.M)) - defined)
+    if missing:
+        raise RuntimeError(
+            f"page script calls {', '.join(missing)} but does not define "
+            f"{'them' if len(missing) > 1 else 'it'}: the page would render "
+            f"correctly and then do nothing at all")
     # The build stamp is the only way the browser can tell that the terminal
     # answered its refresh request: it re-fetches this page (same origin, no
     # CORS) and compares.  Plaintext on purpose -- it is a unix timestamp, and
