@@ -136,10 +136,33 @@ gtop:  唯一分配 6007121（4N/16GPU）全部 held，每张只剩约 11 GB →
 
 ## 5. 当前进度对照
 
-| 阶段 | 状态 |
-|---|---|
-| S0 架构反推 | ✅ 完成，算术验证通过 |
-| S1 代码正确性 | ✅ 13/13 |
-| S2 资产落地 | ⏳ 下载中（8.5 → 143 GB），attach 在 `6007121.85` |
-| S3–S8 | ⏸ 等 GPU |
-| S9 报告 | ⏸ |
+| 阶段 | 状态 | 实测值 |
+|---|---|---|
+| S0 架构反推 | ✅ | AdaLN 13.01 B / 总量 32.27 B，与官方「~13B / 33B」吻合 |
+| S1 代码正确性 | ✅ | 13/13；完美速度走 64 步落回 x₀ 误差 **8.34e-07** |
+| S2 资产落地 | ✅ | **144.1 GB，完整自洽**（见下）+ CSV 199,467 行 + tarball 16.9 GB |
+| S3 官方 33B | ⏸ 等 GPU | 排队中 `6011373` |
+| S4 latent 语料 | ⏸ 等 GPU | 解码路径正在用真实 mp4 验证（CPU） |
+| S5–S8 | ⏸ 等 GPU | |
+| S9 报告 | ⏸ | |
+
+### S2 验收证据（`runs/S2_checkpoint_verify.json`）
+
+```
+transformer       14 shards    66.28 GB (index says 66.28)   ✓ 逐位吻合
+text_encoder      14 shards    66.71 GB (index says 66.71)   ✓
+vae                3 shards    10.42 GB (index says 10.42)   ✓
+audio_vae          2 files      0.61 GB
+total 144.1 GB  →  checkpoint complete and self-consistent
+```
+
+三道闸门各抓各的，缺一不可：
+
+| 闸门 | 抓的失败 | 本次是否抓到 |
+|---|---|---|
+| 目录体积 ≥100 GB | 「只下了 1 个文件」 | 抓到过（job 5998320，0.0 GB） |
+| 分片 vs 索引 `total_size` | 「文件都在但某片截断」 | 本次全部吻合 |
+| 入口文件存在 | 「144 GB 权重但没有 `model_index.json`」 | **本次抓到** |
+
+第三道最反直觉：144.1 GB 的体积断言完全通过，缺的只是 3 KB 的管线入口——
+而 `ModularPipeline.from_pretrained` 第一件事就是读它。
