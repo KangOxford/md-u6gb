@@ -83,7 +83,10 @@ banner "[5/5] pretraining H3-nano from scratch on $NGPU GPU(s)"
 # killed with its parent, so they also sync every save via the run directory the
 # trainer resumes from. `--ckpt-every 1000` is tighter than the 15-minute rule of
 # thumb for exactly that reason.
-torchrun --nproc_per_node="$NGPU" --master_port=29531 "$TASKDIR/code/train.py" \
+# `torchrun` off PATH resolved to the system python 3.13 build, whose torch cannot
+# see these GPUs ("NVIDIA driver ... too old"). Going through the venv
+# interpreter pins the launcher to the same torch everything else uses.
+"$PY" -m torch.distributed.run --nproc_per_node="$NGPU" --master_port=29531 "$TASKDIR/code/train.py" \
     --root "$TASKDIR" --stage pretrain --model "$MODEL" --run-name "$PRE_RUN" \
     --steps "$PRETRAIN_STEPS" --batch-size "$BATCH" --grad-accum "$ACCUM" \
     --lr 3e-4 --warmup 800 --cfg-dropout 0.1 --ckpt-every 1000 --log-every 50

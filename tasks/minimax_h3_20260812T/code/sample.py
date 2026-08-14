@@ -91,7 +91,13 @@ def decode(video_latents, audio_latents, ckpt: Path, device):
     """Denormalize and decode with the frozen H3 VAEs, returning pixels and waveform."""
     from diffusers import AutoencoderKLMiniMaxH3, AutoencoderKLMiniMaxH3Audio
 
-    vae = AutoencoderKLMiniMaxH3.from_pretrained(ckpt / "vae", dtype=torch.bfloat16).to(device).eval()
+    # float32, not bfloat16. The reference's `encode_vae_condition` feeds
+    # `pixels.to(torch.float32)` and this VAE keeps some biases in fp32 (the same
+    # mixed-precision design as the transformer's `_keep_in_fp32_modules`), so a
+    # bf16 input meets an fp32 bias:
+    #   RuntimeError: Input type (c10::BFloat16) and bias type (float) should be the same
+    # At 20.8 GB in fp32 against 94 GB free, there is nothing to buy by narrowing it.
+    vae = AutoencoderKLMiniMaxH3.from_pretrained(ckpt / "vae", dtype=torch.float32).to(device).eval()
     audio_vae = AutoencoderKLMiniMaxH3Audio.from_pretrained(ckpt / "audio_vae",
                                                             dtype=torch.float32).to(device).eval()
 
@@ -101,7 +107,7 @@ def decode(video_latents, audio_latents, ckpt: Path, device):
     a_std = torch.tensor(audio_vae.config.latents_std, device=device).view(1, 1, -1)
 
     latents = video_latents.to(device) * lat_std + lat_mean
-    pixels = vae.decode(latents.to(torch.bfloat16), return_dict=False)[0].float()
+    pixels = vae.decode(latents, return_dict=False)[0].float()
     # Undo the ImageNet normalization the encoder applied over a [0, 1] base.
     mean = torch.tensor(H.PIXEL_MEAN, device=device).view(1, -1, 1, 1, 1)
     std = torch.tensor(H.PIXEL_STD, device=device).view(1, -1, 1, 1, 1)

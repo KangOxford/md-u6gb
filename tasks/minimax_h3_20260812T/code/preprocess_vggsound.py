@@ -290,7 +290,13 @@ def encode_media(ckpt: Path, tarballs: list[Path], label_of: dict[str, str], lab
     from diffusers import AutoencoderKLMiniMaxH3, AutoencoderKLMiniMaxH3Audio
 
     print(f"[media] loading VAEs from {ckpt}", flush=True)
-    vae = AutoencoderKLMiniMaxH3.from_pretrained(ckpt / "vae", dtype=torch.bfloat16).to(device).eval()
+    # float32, not bfloat16. The reference's `encode_vae_condition` feeds
+    # `pixels.to(torch.float32)` and this VAE keeps some biases in fp32 (the same
+    # mixed-precision design as the transformer's `_keep_in_fp32_modules`), so a
+    # bf16 input meets an fp32 bias:
+    #   RuntimeError: Input type (c10::BFloat16) and bias type (float) should be the same
+    # At 20.8 GB in fp32 against 94 GB free, there is nothing to buy by narrowing it.
+    vae = AutoencoderKLMiniMaxH3.from_pretrained(ckpt / "vae", dtype=torch.float32).to(device).eval()
     audio_vae = AutoencoderKLMiniMaxH3Audio.from_pretrained(ckpt / "audio_vae", dtype=torch.float32).to(device).eval()
 
     pixel_mean = torch.tensor(H.PIXEL_MEAN, device=device).view(1, -1, 1, 1, 1)
@@ -359,7 +365,7 @@ def encode_media(ckpt: Path, tarballs: list[Path], label_of: dict[str, str], lab
 
             pixels = torch.from_numpy(video_np).to(device).permute(3, 0, 1, 2)[None]
             pixels = (pixels.to(torch.float32).div(255.0) - pixel_mean) / pixel_std
-            posterior = vae.encode(pixels.to(torch.bfloat16), return_dict=False)[0]
+            posterior = vae.encode(pixels, return_dict=False)[0]
             # The released recipe samples the video posterior and rounds it through
             # float16; the seed is fixed at 42 for conditioning, and a per-clip seed
             # here keeps the corpus deterministic without giving every clip the same
@@ -428,6 +434,13 @@ def encode_media(ckpt: Path, tarballs: list[Path], label_of: dict[str, str], lab
     finally:
         pool.shutdown(wait=True)
         flush()
+        # Only claim a corpus that exists. This runs in a `finally`, so a crashed run
+        # used to leave a manifest with kept=0 behind -- and the next run's
+        # "corpus already present" guard believed it and skipped straight past an
+        # empty dataset to training.
+        if kept == 0:
+            print("[media] kept 0 clips; not writing a manifest", flush=True)
+            return
         manifest = out_dir / "manifest.json"
         manifest.write_text(json.dumps({
             "shards": shard_index, "kept": kept, "seen": seen, "skipped": skipped,

@@ -57,7 +57,13 @@ def cmd_roundtrip(args) -> dict:
     root = Path(args.root)
     device = torch.device(args.device)
     ckpt = root / "ckpt" / "h3"
-    vae = AutoencoderKLMiniMaxH3.from_pretrained(ckpt / "vae", dtype=torch.bfloat16).to(device).eval()
+    # float32, not bfloat16. The reference's `encode_vae_condition` feeds
+    # `pixels.to(torch.float32)` and this VAE keeps some biases in fp32 (the same
+    # mixed-precision design as the transformer's `_keep_in_fp32_modules`), so a
+    # bf16 input meets an fp32 bias:
+    #   RuntimeError: Input type (c10::BFloat16) and bias type (float) should be the same
+    # At 20.8 GB in fp32 against 94 GB free, there is nothing to buy by narrowing it.
+    vae = AutoencoderKLMiniMaxH3.from_pretrained(ckpt / "vae", dtype=torch.float32).to(device).eval()
     audio_vae = AutoencoderKLMiniMaxH3Audio.from_pretrained(ckpt / "audio_vae",
                                                             dtype=torch.float32).to(device).eval()
 
@@ -88,9 +94,9 @@ def cmd_roundtrip(args) -> dict:
     for _name, video_np, audio_np in clips:
         original = torch.from_numpy(video_np).to(device).permute(3, 0, 1, 2)[None].float()
         pixels = (original.div(255.0) - pixel_mean) / pixel_std
-        latents = vae.encode(pixels.to(torch.bfloat16), return_dict=False)[0].sample(
+        latents = vae.encode(pixels, return_dict=False)[0].sample(
             generator=torch.Generator(device=device).manual_seed(42))
-        recon = vae.decode(latents.to(torch.bfloat16), return_dict=False)[0].float()
+        recon = vae.decode(latents, return_dict=False)[0].float()
         recon = ((recon * pixel_std + pixel_mean).clamp(0, 1) * 255)
         mse = (recon - original).pow(2).mean()
         psnrs.append(float(10 * torch.log10(255.0 ** 2 / mse)))
@@ -98,7 +104,14 @@ def cmd_roundtrip(args) -> dict:
         wave = torch.from_numpy(audio_np).to(device)[:, None]
         a_lat = audio_vae.encode(wave, return_dict=False)[0].mode()
         a_rec = audio_vae.decode(a_lat, return_dict=False)[0]
-        target, estimate = wave.flatten(), a_rec.flatten()[: wave.numel()]
+        # Truncate on the *time* axis before flattening. The VAE returns whole latent
+        # frames -- 122 x 800 = 97,600 samples for a 97,333-sample input -- so
+        # `a_rec.flatten()[:wave.numel()]` keeps channel 0 aligned and shifts channel 1
+        # by the 267-sample difference. SI-SDR is extremely sensitive to alignment, and
+        # that shift alone drove it to -6.88 dB: the number was measuring the flatten
+        # order, not the reconstruction.
+        n = min(wave.shape[-1], a_rec.shape[-1])
+        target, estimate = wave[..., :n].flatten(), a_rec[..., :n].flatten()
         alpha = (target @ estimate) / (target @ target + 1e-9)
         noise = estimate - alpha * target
         sisdrs.append(float(10 * torch.log10((alpha * target).pow(2).sum() / (noise.pow(2).sum() + 1e-9))))
