@@ -153,7 +153,12 @@ gtop                 # 先看：自己名下的分配里，此刻哪些卡是空
 这条规则本来就以「Reuse active allocations」的形式写在下面，我没执行。现在提到 4.0
 并升级为硬标准：**`sgpu` 是 `sbatch` 的前置条件，跳过它就是违规。**
 
-attach 的具体机制、双查闸门、以及声明顺序见下面 4.1 起的各条。
+**attach 起来之后必须真的在算。** 一个 attach 的 srun step **随启动它的会话一起死**，
+所以要用 `setsid nohup srun ... &` 让它脱离会话进程组，否则会话一重启，卡就白占着
+空转。起完 40 秒内用 `squeue -s -j <alloc>` 确认 step 在，并且 `gtop` 里 util 起来了；
+没起来就是没在算，要么修要么让开。
+
+attach 的具体机制见下面 4.1 起的各条。**注意其中的 `nodelock` 部分已于 2026-08-14 废止**。
 
 - **There is no fixed upper limit on the number of submitted tasks**: It is not 5, nor 20. Whether to continue submitting is determined by explicit user instructions, current Slurm/QOS limits, startup/mount load, and current HPC status.
 - Batch submissions must still be done one by one and staggered, with `sleep 30+` between batches. Observe `squeue` / startup logs to ensure no abnormal startup load.
@@ -162,7 +167,16 @@ attach 的具体机制、双查闸门、以及声明顺序见下面 4.1 起的�
 - Smoke test → fix → resubmit can be done autonomously, but must still be staggered and monitored for startup load.
 - **Reuse active allocations for evaluation:** Before submitting a new inference, evaluation, or LOB-Bench `sbatch`, inspect the user's RUNNING allocations. When one has compatible hardware and enough remaining walltime, prefer an attached job step such as `srun --jobid=<allocation> --overlap --exact ... --cpu-bind=none`; record the parent allocation, actual step ID, node, and timestamps. Do not create another queued allocation solely for the evaluation when a compatible active allocation is available.
 - **Physical GPU gate before overlap:** Slurm `--overlap` does not make occupied GPU memory safe. Check active steps, compute PIDs, and per-GPU memory first. If the allocation is busy, an attached one-shot may wait for a predeclared zero-PID/near-baseline-memory gate, but it must never kill, retry, or overwrite the existing experiment without explicit authorization.
-- **🚨 声明在前，占用在后（R1，2026-08-13 定）：** attach 进任何分配之前先
+- **🚨🚨 废止：不许再 lock GPU（2026-08-14 用户令，覆盖下面 R1）**
+  用户原话：**「不许不许 lock 人家 GPU，以后不许带这种功能」**。
+  `nodelock lock` 一律不再执行，`tasks/node_status/` 已改名 `_deprecated_20260814`。
+  起因：我给 nid010499 上了 `claude-h3` 锁，然后 attach 的 step 死了，结果是
+  **四张卡挂着我的锁在那儿 0% 空转**——锁的唯一效果是让别人不敢用。
+  占用一张卡的资格只剩两条：**用户明示**，以及 `nvidia-smi` 显示它此刻是空的。
+  下面 R1 的双查闸门只保留 `nvidia-smi` 那一半（物理事实），锁表那一半作废。
+
+- ~~**🚨 声明在前，占用在后（R1，2026-08-13 定）**~~（**已被上一条废止**，保留原文供追溯）：
+  attach 进任何分配之前先
   `nodelock lock`，再起进程。**物理闸门是一个瞬时快照，而启动窗口有 5–10 分钟**
   （挂 squashfs 分片 + JAX 分布式 init）；邻居在窗口里起来，快照怎么查都看不见。
   能覆盖窗口的只有声明。闸门必须**双查**：锁表无他人 live 锁 ∧ `nvidia-smi` 无
@@ -312,6 +326,74 @@ export LOG_GRAD_NORMS=1     # 分组梯度范数 + clip_ratio
 - [ ] `LOG_GRAD_NORMS=1`
 - [ ] 显式档下 `LOG_EVERY` ≤ 250
 - [ ] wandb 上能看到 `lr` 与 `step_loss` 在同一批 step 上有点
+
+---
+
+## 🚨 梯度累积 K 不许有「默认值」：声明有效批量，推导 K（2026-08-14 用户定）
+
+### 硬规则
+
+**`GRAD_ACCUM_STEPS` 永远不写成 `${GRAD_ACCUM_STEPS:-<某个数>}`。**
+脚本里要声明的是**有效批量**，K 由它和节点数推导出来，并对调用方传进来的值硬校验。
+
+```
+有效批量 = micro_bsz × GPU/节点 × 节点数 × K
+```
+
+以本仓库 2k 上下文那三条臂为例（`micro_bsz=1`，`GPU/节点=4`，有效批量 80）：
+
+| 节点数 | 2 | 4 | 5 | 10 | 20 |
+|---|---:|---:|---:|---:|---:|
+| **正确的 K** | **10** | **5** | 4 | 2 | 1 |
+
+**换节点数而不改 K，改的就是实验本身。** 有效批量是实验定义的一部分，
+和模型、数据、seed 同级；K 只是为了在给定硬件上凑出它的手段。
+
+### 反面教训（2026-08-13/14）
+
+`launch_2k_*.sh` 原本写的是 `export GRAD_ACCUM_STEPS=${GRAD_ACCUM_STEPS:-10}`
+（按 **2 节点**写死），靠调用方 `chain_manager.sh:291` 传 `5` 来覆盖。这个形状必出事：
+
+- 4 节点上忘了覆盖 → 有效批量 **160**，是设计值的 2 倍
+- **不会报任何错**。训练照跑、loss 照降、wandb 照记，只是训出一个与对照臂
+  **不可比**的模型
+- 而「不可比」要到几小时后做配对比较时才发现，那时机器已经烧掉了
+
+同一族缺陷见 `feedback_config_only_reaches_one_path`：**一个必须随环境变的量，
+被写成固定默认值 + 藏在别处的覆盖。**
+
+### 正确写法（已落地在 `launch_2k_{baseline,hybrid,hybrid_pmatch}.sh`）
+
+```bash
+export EFFECTIVE_BSZ=${EFFECTIVE_BSZ:-80}          # ← 这个才该有默认值
+_bsz_denom=$(( PER_GPU_BSZ * GPUS_PER_NODE * NNODES_ATTACH ))
+if [ "$_bsz_denom" -le 0 ] || [ $(( EFFECTIVE_BSZ % _bsz_denom )) -ne 0 ]; then
+    echo "FATAL: 有效批量 $EFFECTIVE_BSZ 不能被 $_bsz_denom 整除" >&2; exit 5
+fi
+_k_derived=$(( EFFECTIVE_BSZ / _bsz_denom ))
+if [ -n "${GRAD_ACCUM_STEPS:-}" ] && [ "${GRAD_ACCUM_STEPS}" != "${_k_derived}" ]; then
+    echo "FATAL: 传了 K=$GRAD_ACCUM_STEPS，但 $NNODES_ATTACH 节点要求 K=$_k_derived" >&2
+    echo "       要改有效批量就显式传 EFFECTIVE_BSZ=，别靠改 K 间接改它" >&2; exit 5
+fi
+export GRAD_ACCUM_STEPS=$_k_derived
+echo "[bsz] 有效批量 $EFFECTIVE_BSZ = ${PER_GPU_BSZ} × ${GPUS_PER_NODE}GPU × ${NNODES_ATTACH}节点 × K${GRAD_ACCUM_STEPS}"
+```
+
+**必须打印那行 `[bsz]`**，它让「这次到底跑的是多大批量」在日志里可检索，
+而不是要靠读三个脚本反推。
+
+### 配套：参数量也用同样的方式钉死
+
+同理，凡是「参数量必须等于某个对照臂」的实验，设
+`EXPECTED_PARAMS=<实测值>`（`src/lob/train.py:349-364` 会在不等时 raise）。
+理由一样：配置没到达模型时**不会报错**，只会在几小时后给出一个假结论。
+
+### 起跑前自查
+
+- [ ] 脚本里没有 `GRAD_ACCUM_STEPS=${GRAD_ACCUM_STEPS:-<数字>}` 这种写法
+- [ ] 日志里有 `[bsz] 有效批量 ... = ... × ...节点 × K...`，且数值等于设计值
+- [ ] 换过节点数的话，K 跟着变了（不是沿用上一次的）
+- [ ] 参数量对照实验设了 `EXPECTED_PARAMS`
 
 ---
 
