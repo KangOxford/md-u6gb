@@ -311,6 +311,13 @@ body.fc .fclayer{opacity:1; pointer-events:auto}
   background:none; border:1px solid var(--accent); border-radius:11px}
 .fbtn:hover{background:var(--barfill)}
 body.fc .fbtn{background:var(--accent); color:#fff; border-color:var(--accent)}
+.rbtn{margin-left:14px; padding:2px 9px; font:inherit; font-size:11px;
+  cursor:pointer; color:var(--dim); background:none; border:1px solid var(--line);
+  border-radius:11px; vertical-align:1px}
+.rbtn:hover{border-color:var(--accent); color:var(--accent)}
+.rbtn[data-s="wait"]{color:var(--accent); border-color:var(--accent);
+  border-style:dashed; cursor:default}
+.rbtn[data-s="fail"]{color:var(--bad); border-color:var(--bad)}
 .sub .note{color:var(--accent)}
 .seg{position:absolute; top:0; bottom:0; border-radius:4px; overflow:hidden;
      border:1px solid; display:flex; align-items:center; cursor:default; min-width:1px}
@@ -498,56 +505,34 @@ JS = """
 // The ruler rows are filtered out by hand.  ruler_html() emits class="row"
 // exactly like the data rows, and it IS the shared time axis: hide it and
 // every chart below loses its x-axis with nothing to say why.
-// Nothing can reach login42 -- it has no public entrance.  So the button does
-// not command the terminal, it leaves a note in a Cloudflare mailbox that the
-// terminal walks out to collect every few seconds.  Both halves poll; neither
-// listens.
-// Cmd+R is the refresh gesture; there is no button and there are no timers.
-// A reload asks the terminal for a new snapshot and then stops talking: no
-// polling loop, nothing running while you are not looking.  You press Cmd+R
-// again when you want to see the answer.
+// Nothing can reach the login node -- it has no public entrance.  So the
+// button does not command the terminal, it leaves a note in a Cloudflare
+// mailbox that the terminal walks out to collect every few seconds.  Both
+// halves poll; neither listens.
+//
+// The button is the only thing on this page that asks the cluster for
+// anything.  Cmd+R deliberately is not: reloading means "show me this page
+// again", it is how you re-read what is already here, and it also fires for a
+// bookmark, a restored tab and the back button.  Hanging one sacct and one
+// srun off that gesture makes re-reading cost a cluster sample, which is the
+// opposite of what the gesture means.  Reading stays free; only a click spends.
 //
 // Why it cannot be instant: the snapshot does not exist yet when you press.
-// Producing it costs one sacct and one srun, so it happens once per gesture and
+// Producing it costs one sacct and one srun, so it happens once per click and
 // never on a timer.
 function initRefresh(){
-  var d=document.getElementById('inbox');
-  if(!d) return;
-  var url=d.dataset.url, tok=d.dataset.token, base=BUILD_STAMP, t0=0;
-  var age=document.getElementById('age');
-  var RK=/Mac|iPhone|iPad/.test(navigator.userAgent)?'⌘R':'Ctrl+R';
-  function say(txt){ if(age){ age.dataset.note=txt||'';
-                              if(window.sgpurAgeTick) window.sgpurAgeTick(); } }
-
-  // Opening a bookmark, restoring a tab and hitting back are page loads too,
-  // and none of them mean "resample the cluster".  Only an actual reload does.
-  // When the browser will not say which happened, do nothing: silence costs
-  // nothing, a spurious srun costs a node.
-  function isReload(){
-    try{ var e=performance.getEntriesByType('navigation')[0];
-         if(e && e.type) return e.type==='reload'; }catch(err){}
-    try{ return performance.navigation && performance.navigation.type===1;
-       }catch(err){}
-    return false;
-  }
-  if(!isReload()) return;
-
-  // Remember which build we last asked from, so pressing Cmd+R to *read* the
-  // answer does not order another one.  Exact, unlike a time threshold: the
-  // stamp moving past what we asked from is proof the request was served.
-  var KEY='sgpur.req';
-  function get(){ try{ return +(sessionStorage.getItem(KEY)||0) }catch(e){ return 0 } }
-  function set(v){ try{ v ? sessionStorage.setItem(KEY,String(v))
-                          : sessionStorage.removeItem(KEY) }catch(e){} }
-
-  // Bounded watch, not a background poller: it starts only after a reload asked
-  // for something, stops the moment the answer lands, and gives up after five
-  // minutes.  It costs the reader ~9 KB of their own bandwidth and the cluster
-  // nothing -- the terminal is not involved, this is browser to CDN.
+  var b=document.getElementById('rbtn');
+  if(!b) return;
+  var url=b.dataset.url, tok=b.dataset.token, base=BUILD_STAMP, t0=0;
+  function set(s,txt){ if(s) b.dataset.s=s; else b.removeAttribute('data-s');
+                       b.textContent=txt; }
+  // Watch this page's own build stamp: same origin, so no CORS, and it is the
+  // one signal that survives the CDN.  A newer stamp means the terminal
+  // answered and surge has already served the new bytes.
   function poll(){
-    var w=Math.round((Date.now()-t0)/1000);
-    if(w>300){ say('no answer — is sgpur -w running?'); return; }
-    say('refreshing… '+w+'s');
+    var wait=Math.round((Date.now()-t0)/1000);
+    if(wait>300){ set('fail','↻ no answer — is sgpur -w running?'); return; }
+    set('wait','waiting for the terminal… '+wait+'s');
     // The build stamp sits in the first 400 bytes, so read 400 bytes rather
     // than the whole 100 KB page -- 258x less over a 90 s wait.  If anything in
     // the path ignores Range the full page comes back and the match still works.
@@ -556,28 +541,28 @@ function initRefresh(){
       .then(function(r){ return r.text() })
       .then(function(t){
         var m=t.match(/name="build" content="(\\d+)"/);
-        if(m && (+m[1])>base) say('new snapshot ready — '+RK);
-        else setTimeout(poll,4000);
+        if(m && (+m[1])>base){
+          set('wait','new snapshot — reloading…');
+          setTimeout(function(){ location.reload() },400);
+        } else setTimeout(poll,4000);
       })
       .catch(function(){ setTimeout(poll,6000) });
   }
-
-  var asked=get();
-  if(asked){
-    if(base>asked){ set(0); say('updated'); }        // the answer arrived
-    else say('still refreshing — '+RK+' again shortly');
-    return;
-  }
-  // Backstop for browsers where sessionStorage throws (private mode): a load
-  // right after a snapshot is you reading it, not ordering another.
-  if(Date.now()/1000-base < 60){ say('already current'); return; }
-
-  t0=Date.now(); say('refresh requested…');
-  // Private header, not a query parameter: the Worker's OPTIONS route allows
-  // this preflight, so the token never lands in a URL or a history entry.
-  fetch(url,{method:'POST',mode:'cors',headers:{'x-token':tok}})
-    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); set(base); poll(); })
-    .catch(function(){ say('mailbox unreachable') });
+  b.addEventListener('click',function(){
+    if(b.dataset.s==='wait') return;
+    t0=Date.now(); set('wait','requesting…');
+    // The Worker authenticates the same way for browsers and the login node: a
+    // private x-token header.  Its OPTIONS route explicitly allows this
+    // preflight, so the token never appears in a URL, browser history or
+    // intermediary request log.
+    fetch(url,{method:'POST',mode:'cors',headers:{'x-token':tok}})
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.text();
+      })
+      .then(function(){ poll() })
+      .catch(function(){ set('fail','↻ mailbox unreachable') });
+  });
 }(function(){
   var tip=document.getElementById('tip');
   document.addEventListener('mouseover',function(e){
@@ -1879,12 +1864,22 @@ def render_body(snap, opts, live=None, live_err=None) -> str:
     ratio = busy / alloc * 100 if alloc else 0.0
 
     # The url and token ride inside the encrypted half, so the set of people who
-    # can ask for a refresh is exactly the set who can read the page.  No button:
-    # the browser already has a refresh gesture, and a page load is the request.
+    # can ask for a refresh is exactly the set who can read the page.
+    #
+    # A button, and deliberately not the browser's own reload gesture.  Cmd+R
+    # means "show me this page again"; it is how you re-read what is already
+    # here, and it also fires for a bookmark, a restored tab and the back
+    # button.  Hanging one sacct and one srun off it makes re-reading cost a
+    # cluster sample, which is the opposite of what the gesture means.  A click
+    # on a button that says refresh has exactly one reading.
     ib = read_inbox()
     rbtn = ("" if not ib.get("url") else
-            f'<span id="inbox" hidden data-url="{att(ib["url"])}"'
-            f' data-token="{att(ib.get("token", ""))}"></span>')
+            f'<button class="rbtn" id="rbtn" data-url="{att(ib["url"])}"'
+            f' data-token="{att(ib.get("token", ""))}"'
+            f' data-label="↻ refresh"'
+            f' title="ask the terminal running `sgpur -w` to resample and'
+            f' republish; the page reloads itself when it lands">'
+            f'↻ refresh</button>')
 
     lane_lw = 250
     job_lw = 250
@@ -2067,56 +2062,34 @@ function initPage(){
 // The ruler rows are filtered out by hand.  ruler_html() emits class="row"
 // exactly like the data rows, and it IS the shared time axis: hide it and
 // every chart below loses its x-axis with nothing to say why.
-// Nothing can reach login42 -- it has no public entrance.  So the button does
-// not command the terminal, it leaves a note in a Cloudflare mailbox that the
-// terminal walks out to collect every few seconds.  Both halves poll; neither
-// listens.
-// Cmd+R is the refresh gesture; there is no button and there are no timers.
-// A reload asks the terminal for a new snapshot and then stops talking: no
-// polling loop, nothing running while you are not looking.  You press Cmd+R
-// again when you want to see the answer.
+// Nothing can reach the login node -- it has no public entrance.  So the
+// button does not command the terminal, it leaves a note in a Cloudflare
+// mailbox that the terminal walks out to collect every few seconds.  Both
+// halves poll; neither listens.
+//
+// The button is the only thing on this page that asks the cluster for
+// anything.  Cmd+R deliberately is not: reloading means "show me this page
+// again", it is how you re-read what is already here, and it also fires for a
+// bookmark, a restored tab and the back button.  Hanging one sacct and one
+// srun off that gesture makes re-reading cost a cluster sample, which is the
+// opposite of what the gesture means.  Reading stays free; only a click spends.
 //
 // Why it cannot be instant: the snapshot does not exist yet when you press.
-// Producing it costs one sacct and one srun, so it happens once per gesture and
+// Producing it costs one sacct and one srun, so it happens once per click and
 // never on a timer.
 function initRefresh(){
-  var d=document.getElementById('inbox');
-  if(!d) return;
-  var url=d.dataset.url, tok=d.dataset.token, base=BUILD_STAMP, t0=0;
-  var age=document.getElementById('age');
-  var RK=/Mac|iPhone|iPad/.test(navigator.userAgent)?'⌘R':'Ctrl+R';
-  function say(txt){ if(age){ age.dataset.note=txt||'';
-                              if(window.sgpurAgeTick) window.sgpurAgeTick(); } }
-
-  // Opening a bookmark, restoring a tab and hitting back are page loads too,
-  // and none of them mean "resample the cluster".  Only an actual reload does.
-  // When the browser will not say which happened, do nothing: silence costs
-  // nothing, a spurious srun costs a node.
-  function isReload(){
-    try{ var e=performance.getEntriesByType('navigation')[0];
-         if(e && e.type) return e.type==='reload'; }catch(err){}
-    try{ return performance.navigation && performance.navigation.type===1;
-       }catch(err){}
-    return false;
-  }
-  if(!isReload()) return;
-
-  // Remember which build we last asked from, so pressing Cmd+R to *read* the
-  // answer does not order another one.  Exact, unlike a time threshold: the
-  // stamp moving past what we asked from is proof the request was served.
-  var KEY='sgpur.req';
-  function get(){ try{ return +(sessionStorage.getItem(KEY)||0) }catch(e){ return 0 } }
-  function set(v){ try{ v ? sessionStorage.setItem(KEY,String(v))
-                          : sessionStorage.removeItem(KEY) }catch(e){} }
-
-  // Bounded watch, not a background poller: it starts only after a reload asked
-  // for something, stops the moment the answer lands, and gives up after five
-  // minutes.  It costs the reader ~9 KB of their own bandwidth and the cluster
-  // nothing -- the terminal is not involved, this is browser to CDN.
+  var b=document.getElementById('rbtn');
+  if(!b) return;
+  var url=b.dataset.url, tok=b.dataset.token, base=BUILD_STAMP, t0=0;
+  function set(s,txt){ if(s) b.dataset.s=s; else b.removeAttribute('data-s');
+                       b.textContent=txt; }
+  // Watch this page's own build stamp: same origin, so no CORS, and it is the
+  // one signal that survives the CDN.  A newer stamp means the terminal
+  // answered and surge has already served the new bytes.
   function poll(){
-    var w=Math.round((Date.now()-t0)/1000);
-    if(w>300){ say('no answer — is sgpur -w running?'); return; }
-    say('refreshing… '+w+'s');
+    var wait=Math.round((Date.now()-t0)/1000);
+    if(wait>300){ set('fail','↻ no answer — is sgpur -w running?'); return; }
+    set('wait','waiting for the terminal… '+wait+'s');
     // The build stamp sits in the first 400 bytes, so read 400 bytes rather
     // than the whole 100 KB page -- 258x less over a 90 s wait.  If anything in
     // the path ignores Range the full page comes back and the match still works.
@@ -2125,28 +2098,28 @@ function initRefresh(){
       .then(function(r){ return r.text() })
       .then(function(t){
         var m=t.match(/name="build" content="(\\d+)"/);
-        if(m && (+m[1])>base) say('new snapshot ready — '+RK);
-        else setTimeout(poll,4000);
+        if(m && (+m[1])>base){
+          set('wait','new snapshot — reloading…');
+          setTimeout(function(){ location.reload() },400);
+        } else setTimeout(poll,4000);
       })
       .catch(function(){ setTimeout(poll,6000) });
   }
-
-  var asked=get();
-  if(asked){
-    if(base>asked){ set(0); say('updated'); }        // the answer arrived
-    else say('still refreshing — '+RK+' again shortly');
-    return;
-  }
-  // Backstop for browsers where sessionStorage throws (private mode): a load
-  // right after a snapshot is you reading it, not ordering another.
-  if(Date.now()/1000-base < 60){ say('already current'); return; }
-
-  t0=Date.now(); say('refresh requested…');
-  // Private header, not a query parameter: the Worker's OPTIONS route allows
-  // this preflight, so the token never lands in a URL or a history entry.
-  fetch(url,{method:'POST',mode:'cors',headers:{'x-token':tok}})
-    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); set(base); poll(); })
-    .catch(function(){ say('mailbox unreachable') });
+  b.addEventListener('click',function(){
+    if(b.dataset.s==='wait') return;
+    t0=Date.now(); set('wait','requesting…');
+    // The Worker authenticates the same way for browsers and the login node: a
+    // private x-token header.  Its OPTIONS route explicitly allows this
+    // preflight, so the token never appears in a URL, browser history or
+    // intermediary request log.
+    fetch(url,{method:'POST',mode:'cors',headers:{'x-token':tok}})
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.text();
+      })
+      .then(function(){ poll() })
+      .catch(function(){ set('fail','↻ mailbox unreachable') });
+  });
 }(function(){
   var tip=document.getElementById('tip');
   document.addEventListener('mouseover',function(e){
