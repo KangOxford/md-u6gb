@@ -156,21 +156,35 @@ def main() -> int:
         pipe.load_components(workflow="t2va", dtype=torch.bfloat16)
         conditioner, rest = None, pipe
     else:
-        # Two cards: the conditioner half and the generation half each get their own,
-        # so nothing is evicted back to host memory once resident.
-        print("[smoke] split pipeline (conditioner on cuda:1, denoiser on cuda:0)", flush=True)
+        # Two cards, following the diffusers two-card recipe exactly: each half gets a
+        # ComponentsManager with auto CPU offload rather than a manual `.to(device)`.
+        #
+        # The manager is not decoration. Moving the halves by hand leaves the state
+        # that passes between them -- `prompt_embeds` -- on the conditioner's card,
+        # and the transformer's `context_embedder` then gets a cuda:1 tensor while its
+        # own weights are on cuda:0:
+        #
+        #   RuntimeError: Expected all tensors to be on the same device, but got mat1
+        #   is on cuda:1, different from other tensors on cuda:0
+        #
+        # With the managers the components live in host RAM and are moved on as each
+        # block reaches them, so the hand-off is coherent by construction.
+        from diffusers import ComponentsManager
+
+        print("[smoke] split pipeline (conditioner on cuda:1, generation on cuda:0)", flush=True)
         workflow = ModularPipeline.from_pretrained(args.ckpt).blocks.get_workflow("t2va")
 
-        conditioner = workflow.sub_blocks.pop("text_encoder").init_pipeline(args.ckpt)
+        text_manager = ComponentsManager()
+        text_manager.enable_auto_cpu_offload(device="cuda:1")
+        conditioner = workflow.sub_blocks.pop("text_encoder").init_pipeline(
+            args.ckpt, components_manager=text_manager
+        )
         conditioner.load_components(dtype=torch.bfloat16)
-        conditioner.text_encoder.to("cuda:1")
 
-        rest = workflow.init_pipeline(args.ckpt)
+        manager = ComponentsManager()
+        manager.enable_auto_cpu_offload(device="cuda:0")
+        rest = workflow.init_pipeline(args.ckpt, components_manager=manager)
         rest.load_components(dtype=torch.bfloat16)
-        for name in ("transformer", "vae", "audio_vae"):
-            component = getattr(rest, name, None)
-            if component is not None:
-                component.to("cuda:0")
     print(f"[smoke] components loaded in {time.time()-t0:.0f}s", flush=True)
 
     # Hopper: FlashAttention-3 kernels are fetched from the Hub and are ~3x faster.

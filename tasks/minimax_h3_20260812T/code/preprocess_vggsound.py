@@ -401,7 +401,7 @@ class _decode_partial:
 
 
 # ----------------------------------------------------------------------------
-def verify_environment() -> None:
+def verify_environment(require_cuda: bool = True) -> None:
     """Fail in the first seconds of a job rather than three hours into it.
 
     This lives in Python, not in the batch script, on purpose: `sbatch` snapshots
@@ -455,7 +455,11 @@ def verify_environment() -> None:
         print(f"[env] PyAV {av.__version__} OK", flush=True)
     except Exception as exc:
         problems.append(f"PyAV: {type(exc).__name__}: {exc}")
-    if not torch.cuda.is_available():
+    # CUDA is required only when the caller asked for it. Running the whole media
+    # path on CPU is slow but valid, and it is the only way to exercise the real VAE
+    # weights -- including the 17n+5 -> 5n+2 geometry assertion -- when every card in
+    # reach is held by someone else.
+    if require_cuda and not torch.cuda.is_available():
         problems.append("no CUDA device visible")
     if problems:
         raise SystemExit("[env] FATAL:\n  " + "\n  ".join(problems))
@@ -490,7 +494,7 @@ def main() -> int:
     parser.add_argument("--device", default="cuda:0")
     args = parser.parse_args()
 
-    verify_environment()
+    verify_environment(require_cuda=args.device.startswith('cuda'))
 
     root = Path(args.root)
     ckpt = root / "ckpt" / "h3"
