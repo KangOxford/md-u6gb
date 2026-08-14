@@ -72,6 +72,42 @@ def context_ir_prompt(label: str) -> str:
     return CONTEXT_IR_TEMPLATE.format(label=label.strip())
 
 
+def pick_device(need_gb: float, requested: str = "cuda:0") -> str:
+    """Choose a CUDA device with room, at the moment of use rather than at launch.
+
+    Nothing here can reserve a card. GPU declarations were removed on 2026-08-14
+    because a declaration outlives the process that made it, so a card that reads
+    idle can be filled by a neighbour during the five to ten minutes it takes to
+    load weights -- which is exactly what happened on nid010463, where a neighbour
+    took 90.17 GiB between the gtop check and the first `.to(device)`.
+
+    Since a card cannot be held, the answer is to look late and to have somewhere to
+    go: pick the emptiest card that clears `need_gb` right before allocating. A
+    caller that still OOMs can call this again and get a different one.
+    """
+    if not requested.startswith("cuda") or not torch.cuda.is_available():
+        return requested
+    best, best_free = None, 0.0
+    for index in range(torch.cuda.device_count()):
+        free, _total = torch.cuda.mem_get_info(index)
+        free_gb = free / 2**30
+        if free_gb > best_free:
+            best, best_free = index, free_gb
+    if best is None or best_free < need_gb:
+        raise SystemExit(
+            f"[env] FATAL: no CUDA device has {need_gb:.1f} GiB free (best is "
+            f"{best_free:.1f} GiB on cuda:{best}). Every card in this allocation is "
+            f"occupied; wait or use another node."
+        )
+    chosen = f"cuda:{best}"
+    if chosen != requested:
+        print(f"[env] {requested} lacks room; using {chosen} with {best_free:.1f} GiB free",
+              flush=True)
+    else:
+        print(f"[env] {chosen} has {best_free:.1f} GiB free", flush=True)
+    return chosen
+
+
 def stable_seed(key: str) -> int:
     """A per-clip seed that is the same in every process and every run.
 
@@ -288,7 +324,21 @@ def encode_media(ckpt: Path, tarballs: list[Path], label_of: dict[str, str], lab
         shard_index += 1
         shard_video, shard_audio, shard_label, shard_ids = [], [], [], []
 
-    pool = ProcessPoolExecutor(max_workers=decode_workers)
+    # `spawn`, not the Linux default `fork`. The VAEs are already on CUDA by this
+    # point, so the parent holds an initialised CUDA context, and CUDA is not
+    # fork-safe: the children inherit a context they cannot use and hang the first
+    # time anything touches the runtime -- which `decode_clip` does, via
+    # `torch.nn.functional.interpolate`. The symptom is silent. The step sat at 0.3 %
+    # CPU with the VAEs resident and the log frozen for thirteen minutes, which looks
+    # exactly like a slow tarball rather than a deadlock.
+    #
+    # Spawned workers pay a one-off torch import each; against 12k clips that is
+    # noise, and the single-process decode smoke test passing 6/6 while the pooled
+    # version hung is the reason to be explicit about the start method here.
+    import multiprocessing
+
+    pool = ProcessPoolExecutor(max_workers=decode_workers,
+                               mp_context=multiprocessing.get_context("spawn"))
 
     def drain(batch: list[tuple[str, bytes]]) -> bool:
         """Decode one batch in the worker pool and encode it on the GPU.
@@ -515,7 +565,8 @@ def main() -> int:
     print(f"[main] {len(label_of)} clips over {len(labels)} classes", flush=True)
 
     if args.phase in ("text", "both"):
-        build_text_bank(ckpt, labels, out / "text_bank.pt", args.max_text_tokens, args.device)
+        build_text_bank(ckpt, labels, out / "text_bank.pt", args.max_text_tokens,
+                        pick_device(64.0, args.device))
         # The conditioner is 62 GB and is never needed again; release it before the VAEs load.
         torch.cuda.empty_cache()
 
@@ -525,7 +576,8 @@ def main() -> int:
         if not tarballs:
             raise SystemExit(f"[main] no shard tarballs found under {data}")
         encode_media(ckpt, tarballs, label_of, labels, out, num_frames, args.size,
-                     args.per_shard, args.decode_workers, args.device, args.limit)
+                     args.per_shard, args.decode_workers, pick_device(16.0, args.device),
+                     args.limit)
     return 0
 
 

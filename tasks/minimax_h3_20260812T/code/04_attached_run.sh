@@ -57,8 +57,15 @@ if [ -f "$TASKDIR/data/latents/manifest.json" ]; then
     banner "[2-3/5] latent corpus already present"
 else
     banner "[2-3/5] env gate, convention checks, then the latent corpus"
-    "$PY" "$TASKDIR/code/preprocess_vggsound.py" --root "$TASKDIR" --phase both \
-        --shards "$SHARDS" --num-frames 73 --size 256 --max-text-tokens 96 \
+    # `media` alone when the text bank is already built. `both` would rebuild it, and
+    # a rebuild at the wrong --max-text-tokens silently truncates every Context-IR
+    # prompt: the template runs 101-111 tokens, so a 96 cap loses the
+    # `non_diegetic_music` section entirely. 128 is the correct cap.
+    PHASE=both
+    [ -f "$TASKDIR/data/latents/text_bank.pt" ] && PHASE=media
+    echo "[stage] phase=$PHASE (text bank $( [ "$PHASE" = media ] && echo present || echo absent ))"
+    "$PY" "$TASKDIR/code/preprocess_vggsound.py" --root "$TASKDIR" --phase "$PHASE" \
+        --shards "$SHARDS" --num-frames 73 --size 256 --max-text-tokens 128 \
         --per-shard 2000 --decode-workers 16 --limit "$CLIP_LIMIT" --device cuda:0
     RC=$?; [ $RC -ne 0 ] && { echo "FATAL: preprocessing failed rc=$RC"; exit $RC; }
 fi
