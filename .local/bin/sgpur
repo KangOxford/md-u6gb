@@ -311,13 +311,7 @@ body.fc .fclayer{opacity:1; pointer-events:auto}
   background:none; border:1px solid var(--accent); border-radius:11px}
 .fbtn:hover{background:var(--barfill)}
 body.fc .fbtn{background:var(--accent); color:#fff; border-color:var(--accent)}
-.rbtn{margin-left:14px; padding:2px 9px; font:inherit; font-size:11px;
-  cursor:pointer; color:var(--dim); background:none; border:1px solid var(--line);
-  border-radius:11px; vertical-align:1px}
-.rbtn:hover{border-color:var(--accent); color:var(--accent)}
-.rbtn[data-s="wait"]{color:var(--accent); border-color:var(--accent);
-  border-style:dashed; cursor:default}
-.rbtn[data-s="fail"]{color:var(--bad); border-color:var(--bad)}
+.sub .note{color:var(--accent)}
 .seg{position:absolute; top:0; bottom:0; border-radius:4px; overflow:hidden;
      border:1px solid; display:flex; align-items:center; cursor:default; min-width:1px}
 .seg span{padding:0 6px; font-size:10.5px; color:#2b3138; white-space:nowrap;
@@ -338,16 +332,6 @@ h2 .alt{color:var(--faint); font-weight:400}
   border:1px solid; margin-right:5px; vertical-align:0}
 .qk-chain{background:#a6d3a6; border-color:#79b479}
 .qk-wait{background:#f2d98a; border-color:#d9b74e}
-/* node reservation badge.  Four states, three of them actionable. */
-.lockb{margin-left:8px; padding:1px 7px; border-radius:9px; border:1px solid;
-  font-size:9.5px; font-weight:640; letter-spacing:.03em; white-space:nowrap;
-  font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
-.lockb.ok{background:#a6d3a6; border-color:#79b479; color:#1c3b1c}
-.lockb.clash{background:#e58f8f; border-color:#c97a7a; color:#4a1414}
-.lockb.empty{background:#f2d98a; border-color:#d9b74e; color:#4a3a0c}
-.lockb.free{background:transparent; border-color:var(--line); color:var(--faint);
-  font-weight:400}
-.lockb.stale{background:#dcc0dd; border-color:#b894ba; color:#3d1f3f}
 /* The key to every mark this section prints, in a boxed grey block so it
    reads as documentation rather than as more data. */
 .legendbox{margin-top:15px; padding:12px 15px 13px; border:1px solid var(--line);
@@ -518,98 +502,83 @@ JS = """
 // not command the terminal, it leaves a note in a Cloudflare mailbox that the
 // terminal walks out to collect every few seconds.  Both halves poll; neither
 // listens.
+// Cmd+R is the refresh gesture; there is no button and there are no timers.
+// A reload asks the terminal for a new snapshot and then stops talking: no
+// polling loop, nothing running while you are not looking.  You press Cmd+R
+// again when you want to see the answer.
+//
+// Why it cannot be instant: the snapshot does not exist yet when you press.
+// Producing it costs one sacct and one srun, so it happens once per gesture and
+// never on a timer.
 function initRefresh(){
-  var b=document.getElementById('rbtn');
-  if(!b) return;
-  var url=b.dataset.url, tok=b.dataset.token, base=BUILD_STAMP, t0=0;
-  function set(s,txt){ if(s) b.dataset.s=s; else b.removeAttribute('data-s');
-                       b.textContent=txt; }
-  // Watch this page's own build stamp: same origin, so no CORS, and it is the
-  // one signal that survives the CDN.  A newer stamp means the terminal
-  // answered and surge has already served the new bytes.
+  var d=document.getElementById('inbox');
+  if(!d) return;
+  var url=d.dataset.url, tok=d.dataset.token, base=BUILD_STAMP, t0=0;
+  var age=document.getElementById('age');
+  var RK=/Mac|iPhone|iPad/.test(navigator.userAgent)?'⌘R':'Ctrl+R';
+  function say(txt){ if(age){ age.dataset.note=txt||'';
+                              if(window.sgpurAgeTick) window.sgpurAgeTick(); } }
+
+  // Opening a bookmark, restoring a tab and hitting back are page loads too,
+  // and none of them mean "resample the cluster".  Only an actual reload does.
+  // When the browser will not say which happened, do nothing: silence costs
+  // nothing, a spurious srun costs a node.
+  function isReload(){
+    try{ var e=performance.getEntriesByType('navigation')[0];
+         if(e && e.type) return e.type==='reload'; }catch(err){}
+    try{ return performance.navigation && performance.navigation.type===1;
+       }catch(err){}
+    return false;
+  }
+  if(!isReload()) return;
+
+  // Remember which build we last asked from, so pressing Cmd+R to *read* the
+  // answer does not order another one.  Exact, unlike a time threshold: the
+  // stamp moving past what we asked from is proof the request was served.
+  var KEY='sgpur.req';
+  function get(){ try{ return +(sessionStorage.getItem(KEY)||0) }catch(e){ return 0 } }
+  function set(v){ try{ v ? sessionStorage.setItem(KEY,String(v))
+                          : sessionStorage.removeItem(KEY) }catch(e){} }
+
+  // Bounded watch, not a background poller: it starts only after a reload asked
+  // for something, stops the moment the answer lands, and gives up after five
+  // minutes.  It costs the reader ~9 KB of their own bandwidth and the cluster
+  // nothing -- the terminal is not involved, this is browser to CDN.
   function poll(){
-    var wait=Math.round((Date.now()-t0)/1000);
-    if(wait>300){ set('fail','\u21bb no answer \u2014 is sgpur -w running?'); return; }
-    set('wait','waiting for the terminal\u2026 '+wait+'s');
-    fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'})
+    var w=Math.round((Date.now()-t0)/1000);
+    if(w>300){ say('no answer — is sgpur -w running?'); return; }
+    say('refreshing… '+w+'s');
+    // The build stamp sits in the first 400 bytes, so read 400 bytes rather
+    // than the whole 100 KB page -- 258x less over a 90 s wait.  If anything in
+    // the path ignores Range the full page comes back and the match still works.
+    fetch(location.pathname+'?_='+Date.now(),
+          {cache:'no-store',headers:{'Range':'bytes=0-399'}})
       .then(function(r){ return r.text() })
       .then(function(t){
         var m=t.match(/name="build" content="(\\d+)"/);
-        if(m && (+m[1])>base){
-          set('wait','new snapshot \u2014 reloading\u2026');
-          setTimeout(function(){ location.reload() },400);
-        } else setTimeout(poll,4000);
+        if(m && (+m[1])>base) say('new snapshot ready — '+RK);
+        else setTimeout(poll,4000);
       })
       .catch(function(){ setTimeout(poll,6000) });
   }
-  b.addEventListener('click',function(){
-    if(b.dataset.s==='wait') return;
-    t0=Date.now(); set('wait','requesting\u2026');
-    // The Worker authenticates the same way for browsers and login42: a
-    // private x-token header.  Its OPTIONS route explicitly allows this
-    // preflight, so the token never appears in a URL, browser history or
-    // intermediary request log.
-    fetch(url,{method:'POST',mode:'cors',headers:{'x-token':tok}})
-      .then(function(r){
-        if(!r.ok) throw new Error('HTTP '+r.status);
-        return r.text();
-      })
-      .then(function(){ poll() })
-      .catch(function(){ set('fail','\u21bb mailbox unreachable') });
-  });
-}
 
-function initSearch(){
-  var box=document.getElementById('q'), out=document.getElementById('qn');
-  if(!box) return;
-  var rows=[].slice.call(document.querySelectorAll('.row,.hrow,.lrow,details'))
-    .filter(function(r){ return !r.querySelector('.track.ruler'); });
-  rows.forEach(function(r){
-    var t=r.textContent||'';
-    if(r.getAttribute('data-tip')) t+=' '+r.getAttribute('data-tip');
-    [].slice.call(r.querySelectorAll('[data-tip]')).forEach(function(e){
-      t+=' '+e.getAttribute('data-tip');
-    });
-    r.setAttribute('data-hay',t.toLowerCase().replace(/\\s+/g,' '));
-  });
-  var secs=[].slice.call(document.querySelectorAll('section'));
-  function apply(){
-    var q=box.value.toLowerCase().trim();
-    var terms=q?q.split(/\\s+/):[];
-    var pos=terms.filter(function(t){return t.charAt(0)!=='-'&&t.length;});
-    var neg=terms.filter(function(t){return t.charAt(0)==='-'&&t.length>1;})
-                 .map(function(t){return t.slice(1);});
-    var shown=0;
-    rows.forEach(function(r){
-      var h=r.getAttribute('data-hay')||'';
-      var ok=pos.every(function(t){return h.indexOf(t)>=0;})
-          && !neg.some(function(t){return h.indexOf(t)>=0;});
-      r.classList.toggle('qhide',!ok);
-      if(ok) shown++;
-    });
-    // Per-section counts: an empty chart with no explanation reads as a bug.
-    secs.forEach(function(sec){
-      var h2=sec.querySelector('h2'); if(!h2) return;
-      var tag=h2.querySelector('.qn');
-      if(!q){ if(tag) tag.remove(); return; }
-      var n=0;
-      rows.forEach(function(r){ if(sec.contains(r)&&!r.classList.contains('qhide')) n++; });
-      if(!tag){ tag=document.createElement('span'); tag.className='qn';
-                h2.appendChild(tag); }
-      tag.textContent=n+' match'+(n===1?'':'es');
-      tag.className='qn'+(n?'':' zero');
-    });
-    out.textContent = q ? (shown+' row'+(shown===1?'':'s')) : '';
+  var asked=get();
+  if(asked){
+    if(base>asked){ set(0); say('updated'); }        // the answer arrived
+    else say('still refreshing — '+RK+' again shortly');
+    return;
   }
-  box.addEventListener('input',apply);
-  box.addEventListener('keydown',function(e){
-    if(e.key==='Escape'){ box.value=''; apply(); box.blur(); }
-  });
-  document.addEventListener('keydown',function(e){
-    if(e.key==='/'&&document.activeElement!==box){ e.preventDefault(); box.focus(); }
-  });
-}
-(function(){
+  // Backstop for browsers where sessionStorage throws (private mode): a load
+  // right after a snapshot is you reading it, not ordering another.
+  if(Date.now()/1000-base < 60){ say('already current'); return; }
+
+  t0=Date.now(); say('refresh requested…');
+  // Private header, not a query parameter: the Worker's OPTIONS route allows
+  // this preflight, so the token never lands in a URL or a history entry.
+  fetch(url,{method:'POST',mode:'cors',headers:{'x-token':tok}})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); set(base); poll(); })
+    .catch(function(){ say('mailbox unreachable') });
+}(function(){
   var tip=document.getElementById('tip');
   document.addEventListener('mouseover',function(e){
     var t=e.target.closest('[data-tip]'); if(!t) return;
@@ -641,10 +610,15 @@ function initSearch(){
   function tick(){
     var s=Date.now()/1000-born;
     el.textContent=fmt(s);
+    // "how old is this" and "am I fetching a newer one" are the same question
+    // asked twice, so they share one element instead of growing a widget.
+    var n=el.dataset.note;
+    if(n){ var sp=document.createElement('span');
+           sp.className='note'; sp.textContent=' \u00b7 '+n; el.appendChild(sp); }
     el.className = s<900?'fresh' : s<7200?'warm' : 'stale';
     el.title = s<900?'fresh' : 'run sgpur again to refresh';
   }
-  tick(); setInterval(tick,1000);
+  tick(); setInterval(tick,1000); window.sgpurAgeTick=tick;
 })();
 """
 
@@ -1058,12 +1032,6 @@ def hex_rgba(hexcol: str, alpha: float) -> str:
 
 EWMA_ALPHA = 0.3
 
-# A padlock says "reserved" in one character where the word took seven, and
-# seven characters was the difference between the badge fitting in the label
-# column and being clipped mid-word.  The state suffix is one character too;
-# the legend below the section spells all of them out.
-LOCK, UNLOCK = "\U0001F512", "\U0001F513"
-
 # Allocation-renewal jobs queue in order to hold nodes, not to compute.  They
 # are a different kind of thing from an experiment waiting for its turn, and
 # mixing them into the same amber ramp makes the queue look more contended
@@ -1248,38 +1216,6 @@ def legend() -> str:
         for (bg, bd), t in items) + "</div>")
 
 
-# Node reservations live in tasks/node_status/, shared with gtop.  Importing
-# rather than reimplementing: a reservation that two tools disagree about is
-# worse than none, and that module already handles what this one would have
-# gotten wrong -- per-GPU locks, and locks that expire when their job does.
-NODELOCK_PATH = os.environ.get(
-    "NODELOCK_PATH", "/projects/public/u6gb/tasks/node_status/nodelock.py")
-_NL = None
-
-
-def load_nodelock():
-    """The shared module, or None.  It is under active development in another
-    session, so every use is guarded: a missing or renamed function costs the
-    lock badges, never the page."""
-    global _NL
-    if _NL is not None:
-        return _NL or None
-    if not os.path.exists(NODELOCK_PATH):
-        _NL = False
-        return None
-    try:
-        loader = importlib.machinery.SourceFileLoader("nodelock", NODELOCK_PATH)
-        spec = importlib.util.spec_from_loader("nodelock", loader)
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules["nodelock"] = mod
-        loader.exec_module(mod)
-        _NL = mod
-        return mod
-    except Exception:
-        _NL = False
-        return None
-
-
 INBOX_PATH = os.path.join(
     os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
     "sgpur", "inbox.json")
@@ -1291,6 +1227,16 @@ INBOX_POLL = float(os.environ.get("SGPUR_INBOX_POLL", "10"))
 # A stuck tab or a double click must not machine-gun sacct and srun.  Keypress
 # refreshes are exempt: those are a person, watching, doing it on purpose.
 INBOX_MIN_GAP = 20.0
+# Backoff after a refused publish.  Answering a refusal with an immediate retry
+# is how a transient rate limit turns into a sustained one: on 2026-08-14 this
+# loop republished every 30 s for over an hour against a service that was
+# saying no, which is the one response guaranteed not to help.  Doubles from
+# 30 s, capped at 5 min; a server-named Retry-After always wins over this.
+FAIL_BACKOFF_BASE = 30.0
+FAIL_BACKOFF_CAP = 300.0
+# Stop after this many consecutive failures instead of retrying forever.  At
+# the schedule above that is roughly half an hour of trying.
+FAIL_STREAK_LIMIT = 8
 
 
 def read_inbox() -> dict:
@@ -1451,163 +1397,6 @@ def read_quota() -> dict:
     return q
 
 
-AUDIT_PATH = os.environ.get(
-    "NODELOCK_AUDIT",
-    "/projects/public/u6gb/tasks/node_status/audit.jsonl")
-
-# Who caused a reservation to change.  Kept separate from `who` (which session
-# the node is for) because they answer different questions: "whose node is it"
-# versus "who decided that, and were they asked to".  A lock nobody remembers
-# setting is the reason stale reservations survive for days.
-SOURCES = {
-    "manual": "a person typed the command themselves",
-    "requested": "a person asked an agent to do it",
-    "auto": "a tool decided on its own (expiry, cleanup)",
-}
-
-
-def audit(action: str, nodes, session=None, source="manual", note="") -> None:
-    """Append-only log of every reservation change.  Never raises: an audit
-    that can break the operation it records would get switched off."""
-    try:
-        rec = {"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-               "action": action,
-               "nodes": sorted(nodes) if nodes else [],
-               "session": session,
-               "source": source if source in SOURCES else "manual",
-               "by": os.environ.get("USER", "?"),
-               "via": "sgpur",
-               "note": note}
-        os.makedirs(os.path.dirname(AUDIT_PATH), exist_ok=True)
-        with open(AUDIT_PATH, "a") as f:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
-    except Exception:
-        pass
-
-
-def audit_tail(n=10) -> list:
-    try:
-        with open(AUDIT_PATH) as f:
-            lines = f.readlines()[-n:]
-    except OSError:
-        return []
-    out = []
-    for ln in lines:
-        try:
-            out.append(json.loads(ln))
-        except ValueError:
-            continue
-    return out
-
-
-def load_locks() -> dict:
-    nl = load_nodelock()
-    if nl is None or not hasattr(nl, "load"):
-        return {}
-    try:
-        return nl.load() or {}
-    except Exception:
-        return {}
-
-
-def live_job_ids():
-    nl = load_nodelock()
-    if nl is None or not hasattr(nl, "running_ids"):
-        return None
-    try:
-        return nl.running_ids()
-    except Exception:
-        return None
-
-
-def lock_state(host: str, locks: dict, idents: set, live_ids=None,
-               busy=None) -> tuple:
-    """Declared owner vs what is actually on the node.
-
-    Five outcomes, four of them actionable.  `stale` matters most: a lock
-    pinned to a job that has ended would otherwise hide a genuinely free card
-    forever, which is worse than having no lock at all.
-
-    Matching is loose on purpose (substring, both directions): a session name
-    and an identity read off a command line rarely agree exactly, and a badge
-    that cries wolf gets ignored within a day.
-    """
-    e = locks.get(host)
-    if not e:
-        return ("free", UNLOCK)
-    who = e.get("who", "?") if isinstance(e, dict) else str(e)
-    nl = load_nodelock()
-    if nl is not None and isinstance(e, dict) and hasattr(nl, "is_live"):
-        try:
-            if not nl.is_live(e, live_ids):
-                return ("stale", f"{LOCK} {who} \u23f1")
-        except Exception:
-            pass
-    # "Nothing running" must be decided by the cards, not by whether an
-    # identity could be parsed.  Deciding it from `idents` made a node at 99%
-    # utilisation report as idle the moment its command line grew too long to
-    # read -- the most dangerous way to be wrong, because it invites someone
-    # to take a card that is busy.
-    if busy is False:
-        return ("empty", f"{LOCK} {who} \u25cb")
-    real = {i for i in (idents or set()) if i and i != "\u2014"}
-    low = who.lower()
-    if not real or any(low in i.lower() or i.lower() in low for i in real):
-        # Running, and either it matches or we cannot read the identity.
-        # Absence of proof that it is the wrong experiment is not proof.
-        return ("ok", f"{LOCK} {who}")
-    return ("clash", f"{LOCK} {who} \u2717")
-
-
-def cmd_lock(session: str, spec: str, source="manual", note="") -> int:
-    nl = load_nodelock()
-    if nl is None or not hasattr(nl, "do_lock"):
-        print(f"sgpur: shared nodelock module unavailable at {NODELOCK_PATH}",
-              file=sys.stderr)
-        return 1
-    before = set(load_locks())
-    n = nl.do_lock([spec], session)
-    touched = sorted(set(load_locks()) - before) or [spec]
-    audit("lock", touched, session, source, note)
-    print(f"reserved {n} node(s) for '{session}'  [{source}]")
-    return 0 if n else 1
-
-
-def cmd_unlock(spec: str, source="manual", note="") -> int:
-    nl = load_nodelock()
-    if nl is None or not hasattr(nl, "do_unlock"):
-        print(f"sgpur: shared nodelock module unavailable at {NODELOCK_PATH}",
-              file=sys.stderr)
-        return 1
-    before = dict(load_locks())
-    if spec.lower() in ("all", "*"):
-        spec = ",".join(sorted(before)) or "none"
-    n = nl.do_unlock([spec])
-    gone = sorted(set(before) - set(load_locks()))
-    for host in gone:
-        e = before.get(host) or {}
-        audit("unlock", [host], e.get("who"), source, note)
-    if not gone:
-        audit("unlock", [], None, source, note + " (nothing matched)")
-    print(f"released {len(gone) or n} node(s)  [{source}]"
-          + (f": {' '.join(gone)}" if gone else ""))
-    return 0
-
-
-def cmd_locks() -> int:
-    locks = load_locks()
-    if not locks:
-        print("no reservations")
-        return 0
-    ids = live_job_ids()
-    for host, e in sorted(locks.items()):
-        st, label = lock_state(host, locks, set(), ids)
-        extra = f"  job {e.get('jobid')}" if isinstance(e, dict) and e.get("jobid") else ""
-        note = f"  {e.get('note')}" if isinstance(e, dict) and e.get("note") else ""
-        print(f"{host:<12} {label:<28} [{st}]{extra}{note}")
-    return 0
-
-
 GTOP_PATH = os.environ.get("GTOP_PATH", "/projects/public/u6gb/.local/bin/gtop")
 _GTOP = None
 
@@ -1718,22 +1507,12 @@ def live_section(live, err) -> str:
         return (f'<div class="livenote">no live GPU sample: '
                 f'{esc(err or "unavailable")}</div>')
 
-    locks = load_locks()
-    live_ids = live_job_ids() if locks else None
     cnt = {"run": 0, "held": 0, "idle": 0}
-    lock_cnt = {"ok": 0, "clash": 0, "empty": 0, "stale": 0, "free": 0}
     tot_gpu = tot_nodes = 0
     wasted_w = 0.0
     for _job, hosts, _e in live:
         tot_nodes += len(hosts)
         for _h, d in hosts.items():
-            ids = set()
-            for pr in d.get("procs", []):
-                i = S.extract_identity(pr.get("cmd", ""), "")
-                if i not in (S.UNKNOWN, S.INTERACTIVE):
-                    ids.add(i)
-            busy = any(g.gpu_state(x) != "idle" for x in d.get("gpus", []))
-            lock_cnt[lock_state(_h, locks, ids, live_ids, busy)[0]] += 1
             for gp in d.get("gpus", []):
                 tot_gpu += 1
                 st = g.gpu_state(gp)
@@ -1755,20 +1534,6 @@ def live_section(live, err) -> str:
     if wasted_w > 0:
         head += [mono("   ·  idle draw ", None, "dim"),
                  mono(f"{wasted_w / 1000:.2f} kW", None, "crit")]
-    if any(lock_cnt[k] for k in ("ok", "clash", "empty", "stale")):
-        head += [mono("   ·  locked ", None, "dim"),
-                 mono(f"{lock_cnt['ok']} in use", None, "hot")]
-        if lock_cnt["clash"]:
-            head += [mono(" / ", None, "dim"),
-                     mono(f"{lock_cnt['clash']} wrong session", None, "crit")]
-        if lock_cnt["empty"]:
-            head += [mono(" / ", None, "dim"),
-                     mono(f"{lock_cnt['empty']} unused", None, "warn")]
-        if lock_cnt["stale"]:
-            head += [mono(" / ", None, "dim"),
-                     mono(f"{lock_cnt['stale']} stale", None, "crit")]
-    if lock_cnt["free"]:
-        head += [mono(f"   ·  {lock_cnt['free']} unlocked", None, "dim")]
     out = [f'<div class="lhead-row">{"".join(head)}</div><div class="lrule"></div>',
            '<div class="lcols"><div class="lbl"></div>'
            '<div class="cap">compute &mdash; cores busy / GPU utilisation</div>'
@@ -1808,15 +1573,7 @@ def live_section(live, err) -> str:
             by_uuid = {}
             for p in d.get("procs", []):
                 by_uuid.setdefault(p["uuid"], []).append(p)
-            # What is actually on this node, so the lock badge can be compared
-            # against the reservation rather than just restating it.
-            idents = set()
-            for p in d.get("procs", []):
-                i = S.extract_identity(p.get("cmd", ""), "")
-                if i not in (S.UNKNOWN, S.INTERACTIVE):
-                    idents.add(i)
-            busy = any(g.gpu_state(x) != "idle" for x in d.get("gpus", []))
-            out.append(node_row(host, d, g, locks, idents, live_ids, busy))
+            out.append(node_row(host, d, g))
             for gp in d.get("gpus", []):
                 out.append(gpu_row(host, gp, by_uuid.get(gp["uuid"], []), job, g))
         out.append('<div class="lgap"></div>')
@@ -1825,21 +1582,6 @@ def live_section(live, err) -> str:
     # the symbols that carried the verdict were the least legible part.
     out.append(
         '<div class="legendbox"><div class="lgtitle">reading this section</div>'
-        f'<div class="lgrow"><i class="lockb ok">{LOCK} name</i>'
-        '<span>reserved for that session, and that is what is running on it</span></div>'
-        f'<div class="lgrow"><i class="lockb clash">{LOCK} name \u2717</i>'
-        '<span><b>\u2717</b> = reserved for that session but something else '
-        'took it. Hover the row to see what</span></div>'
-        f'<div class="lgrow"><i class="lockb empty">{LOCK} name \u25cb</i>'
-        '<span><b>\u25cb</b> = reserved, and every card on it is empty: nobody '
-        'else will take it, and its owner is not using it</span></div>'
-        f'<div class="lgrow"><i class="lockb stale">{LOCK} name \u23f1</i>'
-        '<span><b>\u23f1</b> = pinned to a job that has finished, so the '
-        'reservation means nothing and is now hiding a free node</span></div>'
-        f'<div class="lgrow"><i class="lockb free">{UNLOCK}</i>'
-        '<span>open padlock: nobody has claimed this node, whoever needs it '
-        'may take it</span></div>'
-        '<div class="lgsep"></div>'
         f'<div class="lgrow"><i class="swatch" style="background:{NODE_CPU_COLOR};'
         f'border-color:{NODE_CPU_EDGE}"></i>'
         '<span>on a <b>machine</b> row: cores busy / RAM used. Warm pair, so a '
@@ -1870,8 +1612,7 @@ def live_section(live, err) -> str:
     return f'<div class="lwrap">{"".join(out)}</div>'
 
 
-def node_row(host, d, g, locks=None, idents=None, live_ids=None,
-             busy=None) -> str:
+def node_row(host, d, g) -> str:
     """Built out of the gantt's own row/label/track/tail parts.
 
     The bar means the same thing it means everywhere else on this page: the
@@ -1891,19 +1632,8 @@ def node_row(host, d, g, locks=None, idents=None, live_ids=None,
     tip = (f"{host}\ncpu {cpu:.1f}% = {busy_cores:.0f} of {ncpu} cores\n"
            f"RAM {used:.0f} / {tot:.0f} GiB ({frac * 100:.0f}%)\n"
            f"load {d.get('load1', 0):.2f}   up {g.fmt_dur(d.get('up', 0))}")
-    cls, label = lock_state(host, locks or {}, idents or set(), live_ids, busy)
-    badge = f'<span class="lockb {cls}">{esc(label)}</span>'
-    tip += {
-        "ok": "\n\nreserved for this session and running it",
-        "clash": "\n\nRESERVED FOR ANOTHER SESSION -- something else is on it",
-        "empty": "\n\nreserved but nothing is running on it",
-        "stale": "\n\nreserved against a job that has ended -- this lock "
-                 "now hides a free card",
-        "free": "\n\nnot reserved (sgpur --lock <session> " + host + ")",
-    }[cls]
     return (f'<div class="row node-top" data-tip="{att(tip)}">'
-            f'<div class="lbl"><span class="jid">{esc(host)}</span>'
-            f'{badge}</div>'
+            f'<div class="lbl"><span class="jid">{esc(host)}</span></div>'
             f'{twin_track(cpu / 100.0, NODE_CPU_COLOR, NODE_CPU_EDGE)}'
             f'{twin_track(frac, NODE_MEM_COLOR, NODE_MEM_EDGE)}'
             f'<div class="tail"><span class="g">{busy_cores:.0f}/{ncpu}c</span>'
@@ -2149,15 +1879,12 @@ def render_body(snap, opts, live=None, live_err=None) -> str:
     ratio = busy / alloc * 100 if alloc else 0.0
 
     # The url and token ride inside the encrypted half, so the set of people who
-    # can ask for a refresh is exactly the set who can read the page.
+    # can ask for a refresh is exactly the set who can read the page.  No button:
+    # the browser already has a refresh gesture, and a page load is the request.
     ib = read_inbox()
     rbtn = ("" if not ib.get("url") else
-            f'<button class="rbtn" id="rbtn" data-url="{att(ib["url"])}"'
-            f' data-token="{att(ib.get("token", ""))}"'
-            f' data-label="\u21bb refresh"'
-            f' title="ask the terminal running `sgpur -w` to resample and'
-            f' republish; the page reloads itself when it lands">'
-            f'\u21bb refresh</button>')
+            f'<span id="inbox" hidden data-url="{att(ib["url"])}"'
+            f' data-token="{att(ib.get("token", ""))}"></span>')
 
     lane_lw = 250
     job_lw = 250
@@ -2322,10 +2049,15 @@ function initPage(){
   function tick(){
     var s=Date.now()/1000-born;
     el.textContent=fmt(s);
+    // "how old is this" and "am I fetching a newer one" are the same question
+    // asked twice, so they share one element instead of growing a widget.
+    var n=el.dataset.note;
+    if(n){ var sp=document.createElement('span');
+           sp.className='note'; sp.textContent=' \u00b7 '+n; el.appendChild(sp); }
     el.className = s<900?'fresh' : s<7200?'warm' : 'stale';
     el.title = s<900?'fresh' : 'run sgpur again to refresh';
   }
-  tick(); setInterval(tick,1000);
+  tick(); setInterval(tick,1000); window.sgpurAgeTick=tick;
 }
 // Search over everything the page already knows.  The haystack is each row's
 // visible text PLUS every data-tip inside it, because the tips are where the
@@ -2339,98 +2071,83 @@ function initPage(){
 // not command the terminal, it leaves a note in a Cloudflare mailbox that the
 // terminal walks out to collect every few seconds.  Both halves poll; neither
 // listens.
+// Cmd+R is the refresh gesture; there is no button and there are no timers.
+// A reload asks the terminal for a new snapshot and then stops talking: no
+// polling loop, nothing running while you are not looking.  You press Cmd+R
+// again when you want to see the answer.
+//
+// Why it cannot be instant: the snapshot does not exist yet when you press.
+// Producing it costs one sacct and one srun, so it happens once per gesture and
+// never on a timer.
 function initRefresh(){
-  var b=document.getElementById('rbtn');
-  if(!b) return;
-  var url=b.dataset.url, tok=b.dataset.token, base=BUILD_STAMP, t0=0;
-  function set(s,txt){ if(s) b.dataset.s=s; else b.removeAttribute('data-s');
-                       b.textContent=txt; }
-  // Watch this page's own build stamp: same origin, so no CORS, and it is the
-  // one signal that survives the CDN.  A newer stamp means the terminal
-  // answered and surge has already served the new bytes.
+  var d=document.getElementById('inbox');
+  if(!d) return;
+  var url=d.dataset.url, tok=d.dataset.token, base=BUILD_STAMP, t0=0;
+  var age=document.getElementById('age');
+  var RK=/Mac|iPhone|iPad/.test(navigator.userAgent)?'⌘R':'Ctrl+R';
+  function say(txt){ if(age){ age.dataset.note=txt||'';
+                              if(window.sgpurAgeTick) window.sgpurAgeTick(); } }
+
+  // Opening a bookmark, restoring a tab and hitting back are page loads too,
+  // and none of them mean "resample the cluster".  Only an actual reload does.
+  // When the browser will not say which happened, do nothing: silence costs
+  // nothing, a spurious srun costs a node.
+  function isReload(){
+    try{ var e=performance.getEntriesByType('navigation')[0];
+         if(e && e.type) return e.type==='reload'; }catch(err){}
+    try{ return performance.navigation && performance.navigation.type===1;
+       }catch(err){}
+    return false;
+  }
+  if(!isReload()) return;
+
+  // Remember which build we last asked from, so pressing Cmd+R to *read* the
+  // answer does not order another one.  Exact, unlike a time threshold: the
+  // stamp moving past what we asked from is proof the request was served.
+  var KEY='sgpur.req';
+  function get(){ try{ return +(sessionStorage.getItem(KEY)||0) }catch(e){ return 0 } }
+  function set(v){ try{ v ? sessionStorage.setItem(KEY,String(v))
+                          : sessionStorage.removeItem(KEY) }catch(e){} }
+
+  // Bounded watch, not a background poller: it starts only after a reload asked
+  // for something, stops the moment the answer lands, and gives up after five
+  // minutes.  It costs the reader ~9 KB of their own bandwidth and the cluster
+  // nothing -- the terminal is not involved, this is browser to CDN.
   function poll(){
-    var wait=Math.round((Date.now()-t0)/1000);
-    if(wait>300){ set('fail','\u21bb no answer \u2014 is sgpur -w running?'); return; }
-    set('wait','waiting for the terminal\u2026 '+wait+'s');
-    fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'})
+    var w=Math.round((Date.now()-t0)/1000);
+    if(w>300){ say('no answer — is sgpur -w running?'); return; }
+    say('refreshing… '+w+'s');
+    // The build stamp sits in the first 400 bytes, so read 400 bytes rather
+    // than the whole 100 KB page -- 258x less over a 90 s wait.  If anything in
+    // the path ignores Range the full page comes back and the match still works.
+    fetch(location.pathname+'?_='+Date.now(),
+          {cache:'no-store',headers:{'Range':'bytes=0-399'}})
       .then(function(r){ return r.text() })
       .then(function(t){
         var m=t.match(/name="build" content="(\\d+)"/);
-        if(m && (+m[1])>base){
-          set('wait','new snapshot \u2014 reloading\u2026');
-          setTimeout(function(){ location.reload() },400);
-        } else setTimeout(poll,4000);
+        if(m && (+m[1])>base) say('new snapshot ready — '+RK);
+        else setTimeout(poll,4000);
       })
       .catch(function(){ setTimeout(poll,6000) });
   }
-  b.addEventListener('click',function(){
-    if(b.dataset.s==='wait') return;
-    t0=Date.now(); set('wait','requesting\u2026');
-    // The Worker authenticates the same way for browsers and login42: a
-    // private x-token header.  Its OPTIONS route explicitly allows this
-    // preflight, so the token never appears in a URL, browser history or
-    // intermediary request log.
-    fetch(url,{method:'POST',mode:'cors',headers:{'x-token':tok}})
-      .then(function(r){
-        if(!r.ok) throw new Error('HTTP '+r.status);
-        return r.text();
-      })
-      .then(function(){ poll() })
-      .catch(function(){ set('fail','\u21bb mailbox unreachable') });
-  });
-}
 
-function initSearch(){
-  var box=document.getElementById('q'), out=document.getElementById('qn');
-  if(!box) return;
-  var rows=[].slice.call(document.querySelectorAll('.row,.hrow,.lrow,details'))
-    .filter(function(r){ return !r.querySelector('.track.ruler'); });
-  rows.forEach(function(r){
-    var t=r.textContent||'';
-    if(r.getAttribute('data-tip')) t+=' '+r.getAttribute('data-tip');
-    [].slice.call(r.querySelectorAll('[data-tip]')).forEach(function(e){
-      t+=' '+e.getAttribute('data-tip');
-    });
-    r.setAttribute('data-hay',t.toLowerCase().replace(/\\s+/g,' '));
-  });
-  var secs=[].slice.call(document.querySelectorAll('section'));
-  function apply(){
-    var q=box.value.toLowerCase().trim();
-    var terms=q?q.split(/\\s+/):[];
-    var pos=terms.filter(function(t){return t.charAt(0)!=='-'&&t.length;});
-    var neg=terms.filter(function(t){return t.charAt(0)==='-'&&t.length>1;})
-                 .map(function(t){return t.slice(1);});
-    var shown=0;
-    rows.forEach(function(r){
-      var h=r.getAttribute('data-hay')||'';
-      var ok=pos.every(function(t){return h.indexOf(t)>=0;})
-          && !neg.some(function(t){return h.indexOf(t)>=0;});
-      r.classList.toggle('qhide',!ok);
-      if(ok) shown++;
-    });
-    // Per-section counts: an empty chart with no explanation reads as a bug.
-    secs.forEach(function(sec){
-      var h2=sec.querySelector('h2'); if(!h2) return;
-      var tag=h2.querySelector('.qn');
-      if(!q){ if(tag) tag.remove(); return; }
-      var n=0;
-      rows.forEach(function(r){ if(sec.contains(r)&&!r.classList.contains('qhide')) n++; });
-      if(!tag){ tag=document.createElement('span'); tag.className='qn';
-                h2.appendChild(tag); }
-      tag.textContent=n+' match'+(n===1?'':'es');
-      tag.className='qn'+(n?'':' zero');
-    });
-    out.textContent = q ? (shown+' row'+(shown===1?'':'s')) : '';
+  var asked=get();
+  if(asked){
+    if(base>asked){ set(0); say('updated'); }        // the answer arrived
+    else say('still refreshing — '+RK+' again shortly');
+    return;
   }
-  box.addEventListener('input',apply);
-  box.addEventListener('keydown',function(e){
-    if(e.key==='Escape'){ box.value=''; apply(); box.blur(); }
-  });
-  document.addEventListener('keydown',function(e){
-    if(e.key==='/'&&document.activeElement!==box){ e.preventDefault(); box.focus(); }
-  });
-}
-(function(){
+  // Backstop for browsers where sessionStorage throws (private mode): a load
+  // right after a snapshot is you reading it, not ordering another.
+  if(Date.now()/1000-base < 60){ say('already current'); return; }
+
+  t0=Date.now(); say('refresh requested…');
+  // Private header, not a query parameter: the Worker's OPTIONS route allows
+  // this preflight, so the token never lands in a URL or a history entry.
+  fetch(url,{method:'POST',mode:'cors',headers:{'x-token':tok}})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); set(base); poll(); })
+    .catch(function(){ say('mailbox unreachable') });
+}(function(){
   var tip=document.getElementById('tip');
   document.addEventListener('mouseover',function(e){
     var t=e.target.closest('[data-tip]'); if(!t) return;
@@ -2689,7 +2406,227 @@ def setup_credentials() -> int:
     return 0
 
 
+# surge's publish endpoint, spoken directly rather than through surge(1).
+SURGE_ENDPOINT = os.environ.get("SGPUR_SURGE_ENDPOINT", "https://surge.surge.sh")
+# Sent as the `version` header; the server reads it.  This is the CLI release
+# the wire format below was read out of, so it is what the server expects.
+SURGE_PROTO_VERSION = "0.27.4"
+# How long the server asked us to wait, set by deploy_native() and read by
+# watch_loop().  A module global rather than a wider return type because
+# `publish_once() -> int` is load-bearing in three call sites and only one
+# deploy is ever in flight, so there is nothing here to race.
+LAST_RETRY_AFTER: float | None = None
+# Why the last deploy failed, for the same reason and with the same caveats.
+# Held rather than printed at the point of failure so publish_once() can erase
+# its "uploading…" line first; writing it from inside deploy() lands it on top
+# of that line and the erase then chews the error message instead.
+LAST_DEPLOY_DETAIL = ""
+
+
+def netrc_token() -> tuple[str, str] | None:
+    """The surge entry in ~/.netrc, the credential store surge(1) reads.
+
+    find_token() covers the environment and the skill file.  This is the third
+    place a token can live, and without it the native path would fail on a
+    machine where only `surge login` was ever run -- a regression against the
+    CLI, which reads netrc itself.
+    """
+    path = os.path.expanduser("~/.netrc")
+    try:
+        with open(path) as f:
+            fields = f.read().split()
+    except OSError:
+        return None
+    machine, login, password = None, None, None
+    for i, tok in enumerate(fields):
+        nxt = fields[i + 1] if i + 1 < len(fields) else None
+        if tok == "machine":
+            if machine in ("surge.sh", "surge.surge.sh") and login and password:
+                return login, password
+            machine, login, password = nxt, None, None
+        elif tok == "login":
+            login = nxt
+        elif tok == "password":
+            password = nxt
+    if machine in ("surge.sh", "surge.surge.sh") and login and password:
+        return login, password
+    return None
+
+
+def surge_tar(site_dir: str) -> tuple[bytes, int, int]:
+    """The gzip tar surge expects, byte-faithful to what its own CLI sends.
+
+    Entries are named "<basename(site_dir)>/<file>" because the server strips
+    one leading path component, and carry mtime 0 under USTAR headers, which is
+    what node-tar's `portable: true` produces (surge-stream/lib/stream.js:113).
+    Deviating here gets rejected with exactly the blank error the native path
+    exists to avoid, so it is worth matching precisely.
+
+    Returns (gzipped tar, file count, uncompressed bytes); the latter two go
+    out as headers the server cross-checks against the body.
+    """
+    import io
+    import tarfile
+    site_dir = os.path.abspath(site_dir.rstrip("/"))
+    prefix = os.path.basename(site_dir)
+    raw, count, size = io.BytesIO(), 0, 0
+    with tarfile.open(fileobj=raw, mode="w", format=tarfile.USTAR_FORMAT) as tf:
+        for name in sorted(os.listdir(site_dir)):
+            path = os.path.join(site_dir, name)
+            if not os.path.isfile(path):
+                continue
+            with open(path, "rb") as f:
+                data = f.read()
+            ti = tarfile.TarInfo(f"{prefix}/{name}")
+            ti.size, ti.mtime, ti.mode = len(data), 0, 0o644
+            ti.uid = ti.gid = 0
+            ti.uname = ti.gname = ""
+            tf.addfile(ti, io.BytesIO(data))
+            count, size = count + 1, size + len(data)
+    out = io.BytesIO()
+    with gzip.GzipFile(fileobj=out, mode="wb", mtime=0) as g:
+        g.write(raw.getvalue())
+    return out.getvalue(), count, size
+
+
+def deploy_native(site_dir: str, domain: str) -> tuple[int, str]:
+    """Publish straight at surge's endpoint, keeping the HTTP status code.
+
+    surge(1) cannot report why a publish failed.  On the publish path
+    surge-stream names only 401/403/422 (lib/stream.js:139-143) and folds every
+    other status into a bare `emit("fail")` carrying no payload (:189-204); the
+    CLI's own fail handler then discards even that argument
+    (surge/lib/middleware/deploy.js:246).  So a 429 -- a status surge itself
+    enumerates 120 lines earlier, in lib/stream.js config.defaults -- reaches
+    the user as "Deployment did not succeed.": a sentence with no number in it
+    and no Retry-After.  On 2026-08-14 that left this tool failing for two
+    hours with nothing to act on, and by the time anything could be probed the
+    window had closed and it no longer reproduced.
+
+    Forty lines of HTTP buys the status code back.  Returns (rc, detail) with
+    rc 0 ok / 1 transient / 2 misconfigured, and sets LAST_RETRY_AFTER when the
+    server named a wait.
+    """
+    global LAST_RETRY_AFTER
+    import urllib.error
+    import urllib.request
+
+    LAST_RETRY_AFTER = None
+    creds = find_token() or netrc_token()
+    if not creds:
+        return 2, ("no surge credentials found; export SURGE_LOGIN and "
+                   "SURGE_TOKEN, or run `sgpur --setup`")
+    login, token = creds
+
+    try:
+        body, count, size = surge_tar(site_dir)
+    except OSError as e:
+        return 2, f"cannot read {site_dir}: {e}"
+    if not count:
+        return 2, f"nothing to publish: {site_dir} holds no files"
+
+    auth = base64.b64encode(f"token:{token}".encode()).decode()
+    req = urllib.request.Request(
+        f"{SURGE_ENDPOINT.rstrip('/')}/{domain}", data=body, method="PUT",
+        headers={
+            "Authorization": "Basic " + auth,
+            "content-type": "application/gzip",
+            "accept": "application/x-ndjson",
+            "version": SURGE_PROTO_VERSION,
+            "file-count": str(count),
+            "project-size": str(size),
+            "cmd": "surge",
+            "timestamp": datetime.now(ZoneInfo("UTC"))
+                                 .isoformat().replace("+00:00", "Z"),
+            "Content-Length": str(len(body)),
+            "User-Agent": f"surge/{SURGE_PROTO_VERSION}",
+        })
+
+    # The server answers with an NDJSON event stream.  Receiving a line of
+    # type "info" is what surge itself treats as "the publish was accepted"
+    # (stream.js:127 sets its success flag there and nowhere else), so use the
+    # same bar rather than inventing a stricter one that could reject a
+    # publish the service considers done.
+    accepted, server_said = False, ""
+    try:
+        with urllib.request.urlopen(req, timeout=300) as r:
+            for line in r:
+                line = line.decode(errors="replace").strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except ValueError:
+                    continue
+                kind = obj.get("type")
+                if kind == "info":
+                    accepted = True
+                elif kind in ("error", "fail"):
+                    server_said = str(obj)[:200]
+            status = r.status
+    except urllib.error.HTTPError as e:
+        detail = ""
+        try:
+            detail = e.read().decode(errors="replace").strip()[:200]
+        except Exception:
+            pass
+        retry = e.headers.get("Retry-After") if e.headers else None
+        if retry:
+            try:
+                LAST_RETRY_AFTER = float(retry)
+            except ValueError:
+                LAST_RETRY_AFTER = None
+        hint = {
+            401: "  the token is not valid; run `surge login` or `sgpur --setup`",
+            403: f"  this account cannot publish to {domain}",
+            429: "  surge is rate-limiting publishes to this account",
+            417: "  surge wants a paid plan for this",
+            426: "  surge wants a newer client",
+        }.get(e.code, "")
+        rc = 2 if e.code in (401, 403, 417, 426) else 1
+        msg = f"surge refused the publish: HTTP {e.code} {e.reason}"
+        if retry:
+            msg += f", Retry-After {retry}s"
+        if hint:
+            msg += "\n" + hint
+        if detail:
+            msg += f"\n  server said: {detail}"
+        return rc, msg
+    except urllib.error.URLError as e:
+        return 1, f"could not reach {SURGE_ENDPOINT}: {e.reason!r}"
+    except TimeoutError:
+        return 1, "surge did not answer within 300s"
+
+    if not accepted:
+        # A 2xx whose stream never carried an "info" line.  This is the exact
+        # shape the CLI renders as "Deployment did not succeed."; say what it
+        # actually was instead.
+        msg = (f"surge accepted the connection (HTTP {status}) but never "
+               f"confirmed the publish")
+        if server_said:
+            msg += f"\n  server said: {server_said}"
+        return 1, msg
+    return 0, f"published {count} file(s), {size} B, as {login}"
+
+
 def deploy(site_dir: str, domain: str) -> int:
+    """Publish.  Native by default; SGPUR_DEPLOY=cli shells out to surge(1).
+
+    The fallback is kept because the native path reimplements a wire format
+    read out of a third-party package.  If surge ever changes it, the CLI is
+    the escape hatch that still works -- at the cost of the blank errors.
+    """
+    global LAST_DEPLOY_DETAIL
+    LAST_DEPLOY_DETAIL = ""
+    if os.environ.get("SGPUR_DEPLOY", "native").lower() == "cli":
+        return deploy_cli(site_dir, domain)
+    rc, detail = deploy_native(site_dir, domain)
+    if rc != 0:
+        LAST_DEPLOY_DETAIL = detail
+    return rc
+
+
+def deploy_cli(site_dir: str, domain: str) -> int:
     exe = shutil.which("surge") or "/projects/public/u6gb/.bun/bin/surge"
     if not os.path.exists(exe):
         print("sgpur: surge CLI not found", file=sys.stderr)
@@ -2800,10 +2737,12 @@ def publish_once(opts) -> int:
         print("  uploading…", end="", flush=True)
     rc = deploy(SITE_DIR, opts.domain)
     if opts.watch:
-        print("\r" + " " * 16 + "\r", end="")
+        print("\r" + " " * 16 + "\r", end="", flush=True)
     if rc != 0:
+        if LAST_DEPLOY_DETAIL:
+            print(f"sgpur: {LAST_DEPLOY_DETAIL}", file=sys.stderr)
         print(f"sgpur: deploy failed; page is at {index}", file=sys.stderr)
-        return 1
+        return rc if rc == 2 else 1
 
     url = f"https://{opts.domain}"
     if opts.quiet:
@@ -2832,6 +2771,14 @@ def read_key(timeout=None) -> str:
 
     Returns 'q' when stdin is not a tty, so --watch can never wedge a
     non-interactive run (cron, pipe, nohup) in an unanswerable prompt.
+
+    Returns "\\x04" at end of input, which is distinct from the "" that means
+    the timeout ran out.  They used to be the same value and they must not be:
+    a closed pty (ssh dropped, terminal killed) stays *readable* forever, so
+    select returns immediately and read() keeps handing back nothing.  The
+    mailbox branch of watch_loop spins on `while not k`, which would turn that
+    into a busy loop walking out to the Worker on every pass.  \\x04 already
+    means end-of-transmission and is already in the caller's quit set.
     """
     if not sys.stdin.isatty():
         return "q"
@@ -2846,7 +2793,7 @@ def read_key(timeout=None) -> str:
             r, _, _ = select.select([sys.stdin], [], [], timeout)
             if not r:
                 return ""
-        return sys.stdin.read(1)
+        return sys.stdin.read(1) or "\x04"
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
@@ -2868,11 +2815,45 @@ def watch_loop(opts) -> int:
     rc = 0
     born = self_mtime()
     last_pub = 0.0
+    fail_streak = 0
+    backoff_until = 0.0
+    trigger = "startup"
     while True:
+        # Name what asked for this republish.  On 2026-08-14 a -w session
+        # republished every 30 s for hours with nobody at the keyboard, and the
+        # transcript could not tell a keypress from the mailbox from a closed
+        # pty handing back nothing -- three causes with three different fixes,
+        # and no way to choose between them after the fact.  One line makes the
+        # next occurrence self-diagnosing.
+        if trigger != "startup":
+            print(f"  \033[2mrefresh: {trigger}\033[0m", flush=True)
+        hold = backoff_until - time.time()
+        if hold > 0:
+            print(f"  \033[33mholding {hold:.0f}s before retrying "
+                  f"(any key to go now, q to quit)\033[0m", flush=True)
+            if read_key(hold) in ("q", "Q", "\x03", "\x04"):
+                print("  bye")
+                return rc
         rc = publish_once(opts)
         last_pub = time.time()
         if rc == 2:
             return rc
+        if rc == 0:
+            fail_streak, backoff_until = 0, 0.0
+        else:
+            fail_streak += 1
+            if fail_streak >= FAIL_STREAK_LIMIT:
+                print(f"\n  \033[31m{fail_streak} publishes failed in a row; "
+                      f"stopping rather than retrying forever\033[0m",
+                      file=sys.stderr)
+                return rc
+            wait = LAST_RETRY_AFTER or min(
+                FAIL_BACKOFF_BASE * 2 ** (fail_streak - 1), FAIL_BACKOFF_CAP)
+            backoff_until = time.time() + wait
+            why = ("the server named the wait" if LAST_RETRY_AFTER
+                   else f"failure #{fail_streak}")
+            print(f"  \033[33mnext attempt held {wait:.0f}s ({why})\033[0m",
+                  flush=True)
         # A long-lived -w session keeps republishing from the code it started
         # with, so pressing r after an edit silently reverts the live page to
         # the older layout.  Say so rather than let the page flip back and
@@ -2890,6 +2871,7 @@ def watch_loop(opts) -> int:
         try:
             if not inbox:
                 k = read_key()
+                trigger = f"keypress {k!r}"
             else:
                 # Wake every INBOX_POLL to check the mailbox, but a keypress
                 # still returns instantly: select wakes on whichever is first.
@@ -2899,6 +2881,7 @@ def watch_loop(opts) -> int:
                 while not k:
                     k = read_key(INBOX_POLL)
                     if k:
+                        trigger = f"keypress {k!r}"
                         break
                     cur = inbox_get(inbox)
                     if cur is None:          # mailbox unreachable: keep waiting
@@ -2916,6 +2899,7 @@ def watch_loop(opts) -> int:
                               f"web-triggered refreshes)\033[0m", flush=True)
                         time.sleep(gap)
                     print("  \033[36mrefresh requested from the web page\033[0m")
+                    trigger = f"web page (mailbox {cur})"
                     k = "r"
         except KeyboardInterrupt:
             k = "q"
@@ -2959,21 +2943,9 @@ def main() -> None:
                     help="publish in the clear even though a passphrase is set")
     ap.add_argument("--teardown", metavar="DOMAIN",
                     help="delete a published site, then exit")
-    ap.add_argument("--lock", nargs=2, metavar=("SESSION", "NODES"),
-                    help="reserve nodes for a session (nid001,nid002 or a job id)")
-    ap.add_argument("--unlock", metavar="NODES",
-                    help="drop the reservation on these nodes (or a job id)")
-    ap.add_argument("--locks", action="store_true",
-                    help="list current node reservations, then exit")
-    ap.add_argument("--source", default="manual", choices=sorted(SOURCES),
-                    help="who caused this lock change: manual (you typed it), "
-                         "requested (you asked an agent), auto (a tool decided)")
-    ap.add_argument("--note", default="", help="why, recorded in the audit log")
     ap.add_argument("--set-inbox", metavar="URL",
                     help="point -w at a Cloudflare Worker so the web page's "
                          "refresh button can trigger a republish")
-    ap.add_argument("--audit", nargs="?", type=int, const=15, metavar="N",
-                    help="show the last N reservation changes, then exit")
     opts = ap.parse_args()
     if opts.setup:
         sys.exit(setup_credentials())
@@ -2981,18 +2953,6 @@ def main() -> None:
         sys.exit(set_password())
     if opts.teardown:
         sys.exit(teardown(opts.teardown))
-    if opts.lock:
-        sys.exit(cmd_lock(opts.lock[0], opts.lock[1], opts.source, opts.note))
-    if opts.unlock:
-        sys.exit(cmd_unlock(opts.unlock, opts.source, opts.note))
-    if opts.audit:
-        for r in audit_tail(opts.audit):
-            print(f"{r['at']}  {r['action']:<7} {r.get('source',''):<10} "
-                  f"{','.join(r.get('nodes') or []) or '-':<48} "
-                  f"{r.get('session') or '-':<14} {r.get('note','')}")
-        sys.exit(0)
-    if opts.locks:
-        sys.exit(cmd_locks())
     if opts.set_inbox:
         sys.exit(cmd_set_inbox(opts.set_inbox))
     opts.span = S.parse_duration(opts.window)
