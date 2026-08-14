@@ -2763,10 +2763,18 @@ def read_key(timeout=None) -> str:
     try:
         tty.setraw(fd)
         if timeout is not None:
-            r, _, _ = select.select([sys.stdin], [], [], timeout)
+            r, _, _ = select.select([fd], [], [], timeout)
             if not r:
                 return ""
-        return sys.stdin.read(1) or "\x04"
+        # os.read, not sys.stdin.read: select reports on the kernel's buffer,
+        # but sys.stdin is a buffered TextIOWrapper whose read(1) pulls a whole
+        # chunk into userspace and returns one character of it.  The remainder
+        # then sits where select cannot see it, so every later call times out
+        # while bytes are already waiting.  Reading the fd keeps the readiness
+        # test and the read looking at the same buffer.  latin-1 because any
+        # byte must decode to exactly one character; this is a key, not text.
+        b = os.read(fd, 1)
+        return b.decode("latin-1") if b else "\x04"
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
@@ -2791,6 +2799,7 @@ def watch_loop(opts) -> int:
     fail_streak = 0
     backoff_until = 0.0
     trigger = "startup"
+    ignored = 0
     while True:
         # Name what asked for this republish.  On 2026-08-14 a -w session
         # republished every 30 s for hours with nobody at the keyboard, and the
@@ -2803,10 +2812,21 @@ def watch_loop(opts) -> int:
         hold = backoff_until - time.time()
         if hold > 0:
             print(f"  \033[33mholding {hold:.0f}s before retrying "
-                  f"(any key to go now, q to quit)\033[0m", flush=True)
-            if read_key(hold) in ("q", "Q", "\x03", "\x04"):
-                print("  bye")
-                return rc
+                  f"([r] retry now, [q] quit)\033[0m", flush=True)
+            deadline = time.time() + hold
+            while True:
+                left = deadline - time.time()
+                if left <= 0:
+                    break
+                held_k = read_key(left)
+                if held_k in ("q", "Q", "\x03", "\x04"):
+                    print("  bye")
+                    return rc
+                if held_k in ("r", "R"):
+                    break
+                # Every other byte waits the hold out.  Cutting a backoff short
+                # is the one thing it exists to prevent, so a byte nobody typed
+                # does not get to make that call.
         rc = publish_once(opts)
         last_pub = time.time()
         if rc == 2:
@@ -2842,38 +2862,65 @@ def watch_loop(opts) -> int:
                 if inbox else "")
         print(f"\n  \033[2m[r] refresh    [q] quit\033[0m{hint}", flush=True)
         try:
-            if not inbox:
-                k = read_key()
-                trigger = f"keypress {k!r}"
-            else:
+            # Exactly two things ask for a republish: pressing r, and the
+            # button on the web page.  Every other byte that arrives on stdin
+            # is ignored.
+            #
+            # The test used to be "any byte that is not a quit key", which is
+            # not the same thing and costs one sacct plus one srun per running
+            # allocation each time it fires.  On 2026-08-14 that ran unattended
+            # for hours: a terminal's anti-idle keep-alive sends a NUL every so
+            # often, and a NUL is a byte.  The docstring above says a keypress
+            # is a person doing this by hand, and that is only true if the gate
+            # tests for the key the banner promises instead of for arrival.
+            k = ""
+            while True:
                 # Wake every INBOX_POLL to check the mailbox, but a keypress
                 # still returns instantly: select wakes on whichever is first.
                 # The check itself touches no filesystem, no Slurm and no
                 # subprocess -- it is one outbound GET, ~4 ms of CPU.
-                k = ""
-                while not k:
-                    k = read_key(INBOX_POLL)
-                    if k:
-                        trigger = f"keypress {k!r}"
-                        break
-                    cur = inbox_get(inbox)
-                    if cur is None:          # mailbox unreachable: keep waiting
-                        continue
-                    if seen is None or cur == seen:
-                        seen = cur
-                        continue
+                k = read_key(INBOX_POLL if inbox else None)
+                if k in ("q", "Q", "\x03", "\x04"):
+                    break
+                if k in ("r", "R"):
+                    trigger = f"keypress {k!r}"
+                    break
+                if k:
+                    # Say so and keep waiting.  Swallowing input silently would
+                    # make "why is r not working" the next mystery, but a line
+                    # per byte would bury the screen under a keep-alive, so it
+                    # is said once and then only occasionally.  Note this path
+                    # never reaches inbox_get: a burst of bytes must not turn
+                    # into a burst of outbound requests.
+                    ignored += 1
+                    if ignored == 1 or ignored % 50 == 0:
+                        why = ("  (a terminal anti-idle keep-alive sends this)"
+                               if k == "\x00" else "")
+                        n = "" if ignored == 1 else f" x{ignored}"
+                        print(f"  \033[2mignored {k!r}{n} -- only r "
+                              f"refreshes{why}\033[0m", flush=True)
+                    continue
+                # k == "": the poll interval elapsed, so go read the mailbox.
+                # Not reachable without an inbox, where read_key blocks instead.
+                cur = inbox_get(inbox)
+                if cur is None:              # mailbox unreachable: keep waiting
+                    continue
+                if seen is None or cur == seen:
                     seen = cur
-                    # A stuck tab or a double click must not machine-gun sacct
-                    # and srun.  Publishing already takes ~40 s so this almost
-                    # never bites; it exists for the case where it would.
-                    gap = INBOX_MIN_GAP - (time.time() - last_pub)
-                    if gap > 0:
-                        print(f"  \033[2mheld {gap:.0f}s (min gap between "
-                              f"web-triggered refreshes)\033[0m", flush=True)
-                        time.sleep(gap)
-                    print("  \033[36mrefresh requested from the web page\033[0m")
-                    trigger = f"web page (mailbox {cur})"
-                    k = "r"
+                    continue
+                seen = cur
+                # A stuck tab or a double click must not machine-gun sacct
+                # and srun.  Publishing already takes ~40 s so this almost
+                # never bites; it exists for the case where it would.
+                gap = INBOX_MIN_GAP - (time.time() - last_pub)
+                if gap > 0:
+                    print(f"  \033[2mheld {gap:.0f}s (min gap between "
+                          f"web-triggered refreshes)\033[0m", flush=True)
+                    time.sleep(gap)
+                print("  \033[36mrefresh requested from the web page\033[0m")
+                trigger = f"web page (mailbox {cur})"
+                k = "r"
+                break
         except KeyboardInterrupt:
             k = "q"
         if k in ("q", "Q", "\x03", "\x04", ""):
