@@ -82,6 +82,22 @@ def fetch_h3(dest: Path, workers: int) -> None:
     cmd = ["hf", "download", "MiniMaxAI/MiniMax-H3", "--local-dir", str(dest),
            "--max-workers", str(workers), "--include", *H3_PATTERNS]
     run(cmd, what="MiniMax-H3 checkpoint (diffusers layout, ~143 GB)")
+
+    # The root JSONs are fetched one at a time rather than trusted to the pattern
+    # list. `model_index.json` was the *first* pattern above and still did not
+    # arrive -- 144.1 GB of weights and no pipeline entry point, which a size check
+    # cannot see and which only surfaces when `from_pretrained` opens it. Small
+    # files, exact names, checked individually.
+    from huggingface_hub import hf_hub_download
+
+    for filename in ("model_index.json", "modular_model_index.json"):
+        target = dest / filename
+        if target.exists():
+            continue
+        cached = hf_hub_download("MiniMaxAI/MiniMax-H3", filename)
+        target.write_bytes(Path(cached).read_bytes())
+        print(f"[fetch]   {filename}: {target.stat().st_size} bytes", flush=True)
+
     size = shallow_bytes(dest) / 1e9
     print(f"[fetch] checkpoint size: {size:.1f} GB", flush=True)
     # `hf download` exits 0 having downloaded nothing at all, so the size is the only
@@ -95,16 +111,27 @@ def fetch_h3(dest: Path, workers: int) -> None:
 
 def fetch_vggsound(dest: Path, shards: list[int], workers: int) -> None:
     dest.mkdir(parents=True, exist_ok=True)
-    # One `--include`, many patterns -- see the note in `fetch_h3`.
-    patterns = ["vggsound.csv"] + [f"vggsound_{shard:02d}.tar.gz" for shard in shards]
-    cmd = [
-        "hf", "download", VGGSOUND_REPO, "--repo-type", "dataset",
-        "--local-dir", str(dest), "--max-workers", str(workers),
-        "--include", *patterns,
-    ]
-    run(cmd, what=f"VGGSound shards {shards} + label CSV")
-    if not (dest / "vggsound.csv").exists():
-        raise SystemExit("[fetch] FATAL: vggsound.csv missing; the label map is not optional")
+    # One file per invocation, asserted after each.
+    #
+    # `hf download` has now mis-parsed its own flags three separate times in this
+    # task: `--exclude` swallowed every config file, repeated `--include` kept only
+    # the last pattern, and `--include a b` let the positional FILENAMES argument
+    # take one of them so the CSV was never requested -- each time exiting 0. The
+    # form below has no ambiguity left to exploit: name one file, then check that
+    # file is on disk. A few extra HTTP round trips is a fair price for that.
+    wanted = ["vggsound.csv"] + [f"vggsound_{shard:02d}.tar.gz" for shard in shards]
+    for filename in wanted:
+        target = dest / filename
+        if target.exists() and target.stat().st_size > 0:
+            print(f"[fetch]   {filename}: already present "
+                  f"({target.stat().st_size / 1e9:.1f} GB), skipping", flush=True)
+            continue
+        run(["hf", "download", VGGSOUND_REPO, filename, "--repo-type", "dataset",
+             "--local-dir", str(dest), "--max-workers", str(workers)],
+            what=f"VGGSound {filename}")
+        if not target.exists() or target.stat().st_size == 0:
+            raise SystemExit(f"[fetch] FATAL: {filename} still absent after a download that "
+                             f"reported success")
     # The tarballs are deliberately *not* unpacked. Each holds ~10k mp4s; exploding
     # them onto Lustre would turn every preprocessing epoch into ~10k MDT opens per
     # shard. The encoder streams the tarball sequentially instead, so the data stays
