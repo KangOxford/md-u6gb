@@ -142,7 +142,7 @@ gtop:  唯一分配 6007121（4N/16GPU）全部 held，每张只剩约 11 GB →
 | S1 代码正确性 | ✅ | 13/13；完美速度走 64 步落回 x₀ 误差 **8.34e-07** |
 | S2 资产落地 | ✅ | **144.1 GB，完整自洽**（见下）+ CSV 199,467 行 + tarball 16.9 GB |
 | S3 官方 33B | ⏸ 等 GPU | 排队中 `6011373` |
-| S4 latent 语料 | ⏸ 等 GPU | 解码路径正在用真实 mp4 验证（CPU） |
+| S4 latent 语料 | ⏸ 等 GPU | **解码路径已用真实 mp4 验证：6/6 通过**（见下） |
 | S5–S8 | ⏸ 等 GPU | |
 | S9 报告 | ⏸ | |
 
@@ -166,3 +166,25 @@ total 144.1 GB  →  checkpoint complete and self-consistent
 
 第三道最反直觉：144.1 GB 的体积断言完全通过，缺的只是 3 KB 的管线入口——
 而 `ModularPipeline.from_pretrained` 第一件事就是读它。
+
+### S4 前置：解码路径已用真实 mp4 验证（`code/_decode_smoke.py`，零 GPU）
+
+```
+decoded 6 clips in 2.5s        →  0.42 s/clip
+  v(73, 256, 256, 3) uint8        std 37.8–68.3   非空白
+  a(2, 97333) stereo @32kHz       peak 0.22–1.11  非静音
+6/6 clips decoded correctly
+```
+
+`decode_clip` 此前只在合成张量上被间接测过，**从没解码过一个真的 mp4**——
+它涉及 PyAV 容器解析、可变帧率最近邻重采样、音频重采样器 flush、中心窗口对齐，
+每一处都可能在真实文件上翻车。登录节点跑不了（4 GiB cgroup 会杀掉流式解压 16.9 GB
+gzip 的进程），所以 attach 一个**零 GPU** 的 step 到活着的分配上跑。
+
+**两个对后续有用的读数**：
+
+1. **0.42 s/clip → 解码不是瓶颈**。16 worker 并行下 12,000 clip 约 5 分钟，
+   S4 的时间几乎全花在 GPU 上的 VAE 编码。预算要按 GPU 分，不是按 CPU。
+2. **有一个 clip 的音频峰值 1.1109 > 1.0**。不是 bug：参考实现的
+   `MiniMaxH3AudioReference` 直接传原始 float32 波形、不归一化，所以照做是对的。
+   但记下来——若后续音频重建质量异常，这是第一个该查的地方。
