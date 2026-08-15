@@ -1622,13 +1622,12 @@ def live_section(live, err) -> str:
 
         # Machine rows carried no GPU information, so they no longer get rows:
         # each node folds into a chip here on the job line, numbered 1-based
-        # within its job, with the node count stated once at the end.  The
-        # chip keeps every fact the row had -- cores busy and RAM as mini bars
-        # with the exact numbers beside them, load and uptime on hover.
+        # within its job.  The chip keeps every fact the row had -- cores busy
+        # and RAM as mini bars with the exact numbers beside them, load and
+        # uptime on hover.
         hostlist = list(getattr(job, "nodes", None) or sorted(hosts))
         for ni, host in enumerate(hostlist, 1):
             jh.append(node_chip(host, hosts.get(host), g, ni))
-        jh.append(mono(f"   · {len(hostlist)} nodes", None, "dim"))
         out.append(f'<div class="lrow full jobhead">{"".join(jh)}</div>')
 
         if jerr:
