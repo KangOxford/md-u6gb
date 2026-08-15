@@ -192,6 +192,18 @@ body{
 .row.node-top{border-top:1px solid var(--line); margin-top:5px; padding-top:4px}
 .row.gpu .lbl.idx{padding-left:28px; gap:8px}
 .row.gpu .lbl .gi{color:var(--accent); font-weight:640}
+/* A node folded onto its job's header line: index, name, then cores busy and
+   RAM as mini bars against the machine's total.  The machine row carried no
+   GPU information, yet weighed as much on the page as a card row -- as a chip
+   its facts survive and its row does not. */
+.nchip{display:inline-flex; align-items:center; gap:5px; margin-left:22px;
+  vertical-align:baseline; cursor:default}
+.nchip .nidx{color:var(--faint); font-size:11px}
+.nchip .njid{font-weight:640; font-size:12px}
+.nchip .nnum{font-size:10.5px; color:var(--dim)}
+.mini{display:inline-block; width:46px; height:9px; border-radius:3px;
+  background:var(--rule); border:1px solid; overflow:hidden; flex:0 0 46px}
+.mini i{display:block; height:100%}
 .track.twin{flex:1 1 0; height:20px}
 .track.twin+.track.twin{margin-left:9px}
 .row.gpu .tail,.row.node-top .tail{gap:6px}
@@ -350,15 +362,20 @@ h2 .alt{color:var(--faint); font-weight:400}
 .lgtitle{font-size:10px; text-transform:uppercase; letter-spacing:.06em;
   color:var(--faint); font-weight:640; margin-bottom:9px}
 .lgrow{display:flex; align-items:flex-start; gap:11px; margin:6px 0; line-height:1.5}
-.lgrow>:first-child{flex:0 0 186px; text-align:center; margin-left:0}
+/* Left-aligned, not centered: swatches must share one vertical edge.  And no
+   auto side margins anywhere in here -- on a flex item they swallow the
+   line's free space, which pushed each swatch right by an amount that
+   depended on its caption's length. */
+.lgrow>:first-child{flex:0 0 186px; text-align:left; margin-left:0}
 .lgrow b{color:var(--fg); font-weight:640}
 .lgrow code{display:inline-block; width:100%; padding:2px 0; border-radius:4px;
   border:1px solid var(--line); background:var(--panel); color:var(--fg);
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:10.5px}
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:10.5px;
+  text-align:center}
 .lgrow code.warn{color:#b0810a} .lgrow code.crit{color:var(--bad)}
 .lgrow i{font-style:normal}
 .lgrow i.swatch{display:inline-block; width:34px; height:11px; border-radius:4px;
-  border:1px solid; margin:3px auto 0}
+  border:1px solid; margin:3px 0 0}
 .lgrow i.swatch.hatched{border-style:dashed;
   background:repeating-linear-gradient(135deg,transparent 0 4px,var(--c) 4px 8px)}
 .lgrow i.swatch+i.swatch{margin-left:5px}
@@ -1599,42 +1616,53 @@ def live_section(live, err) -> str:
         else:
             jh += [mono("   steps: ", None, "dim"),
                    mono(".batch only · nothing computing", None, "crit")]
+
+        # Machine rows carried no GPU information, so they no longer get rows:
+        # each node folds into a chip here on the job line, numbered 1-based
+        # within its job.  The chip keeps every fact the row had -- cores busy
+        # and RAM as mini bars with the exact numbers beside them, load and
+        # uptime on hover.
+        hostlist = list(getattr(job, "nodes", None) or sorted(hosts))
+        for ni, host in enumerate(hostlist, 1):
+            jh.append(node_chip(host, hosts.get(host), g, ni))
         out.append(f'<div class="lrow full">{"".join(jh)}</div>')
 
         if jerr:
             out.append(f'<div class="lrow full">{mono("     sample failed: ", None, "crit")}'
                        f'{mono(jerr[:120], None, "dim")}</div>')
 
-        # Nodes numbered within their job, 1-based: "node 3 of 4" is how one
-        # talks about an allocation, and the nid barcodes carry no order.
-        for ni, host in enumerate(getattr(job, "nodes", None) or sorted(hosts), 1):
+        for ni, host in enumerate(hostlist, 1):
             d = hosts.get(host)
             if d is None:
-                out.append(f'<div class="lrow full">{mono(f" {ni:>2} {host}", 14, "norm")}'
-                           f'{mono("no data", None, "crit")}</div>')
                 continue
             by_uuid = {}
             for p in d.get("procs", []):
                 by_uuid.setdefault(p["uuid"], []).append(p)
-            out.append(node_row(host, d, g, ni))
-            for gp in d.get("gpus", []):
-                out.append(gpu_row(host, gp, by_uuid.get(gp["uuid"], []), job, g))
+            for k, gp in enumerate(d.get("gpus", [])):
+                out.append(gpu_row(host, gp, by_uuid.get(gp["uuid"], []), job, g,
+                                   ni, first=(k == 0)))
         out.append('<div class="lgap"></div>')
     # Every mark this section can print, spelled out.  A colour and a bare
     # session name told the reader nothing about whether it was good news, and
     # the symbols that carried the verdict were the least legible part.
     out.append(
         '<div class="legendbox"><div class="lgtitle">reading this section</div>'
-        f'<div class="lgrow"><i class="swatch" style="background:{NODE_CPU_COLOR};'
+        f'<div class="lgrow"><span class="swpair">'
+        f'<i class="swatch" style="background:{NODE_CPU_COLOR};'
         f'border-color:{NODE_CPU_EDGE}"></i>'
-        '<span>on a <b>machine</b> row: cores busy / RAM used. Warm pair, so a '
-        'machine\'s line never reads as one of its cards\'</span></div>'
-        f'<div class="lgrow"><i class="swatch" style="background:{COMPUTE_COLOR};'
-        f'border-color:{COMPUTE_EDGE}"></i>'
+        f'<i class="swatch" style="background:{NODE_MEM_COLOR};'
+        f'border-color:{NODE_MEM_EDGE}"></i></span>'
+        '<span>in a node chip on a <b>job</b> line: the machine\'s cores busy '
+        'and RAM used, as mini bars \u2014 hover for load and uptime. Warm '
+        'pair, so a machine\'s bars never read as one of its cards\'</span></div>'
+        f'<div class="lgrow"><span class="swpair">'
+        f'<i class="swatch" style="background:{COMPUTE_COLOR};'
+        f'border-color:{COMPUTE_EDGE}"></i></span>'
         '<span>on a <b>card</b> row: GPU utilisation / card memory \u2014 '
         'always this pair, never another colour</span></div>'
-        f'<div class="lgrow"><i class="swatch hatched" '
-        f'style="--c:{MEM_COLOR};border-color:{MEM_EDGE}"></i>'
+        f'<div class="lgrow"><span class="swpair">'
+        f'<i class="swatch hatched" '
+        f'style="--c:{MEM_COLOR};border-color:{MEM_EDGE}"></i></span>'
         '<span>hatched memory: the card holds it but computes nothing '
         '(<b>held</b>). Same hatch as the queue forecast, and it means the '
         'same thing there \u2014 this length is real, but it is not doing '
@@ -1649,39 +1677,53 @@ def live_section(live, err) -> str:
         '<div class="lgrow"><code class="crit">idle</code>'
         '<span>no memory held and nothing computing: genuinely free</span></div>'
         '<div class="lgrow"><code>4/288c</code>'
-        '<span>cores busy out of the node\'s total; the bar left of it is the '
-        'same number as a fraction</span></div>'
+        '<span>in a node chip: cores busy out of the machine\'s total; the '
+        'mini bar left of it is the same number as a fraction</span></div>'
+        '<div class="lgrow"><code>2[0]</code>'
+        '<span>card 0 of node 2 — nodes are numbered 1-based within their '
+        'job, matching the chips on the job line, and the rule above a card '
+        'row marks where a new node starts</span></div>'
         '</div>')
     return f'<div class="lwrap">{"".join(out)}</div>'
 
 
-def node_row(host, d, g, idx=None) -> str:
-    """Built out of the gantt's own row/label/track/tail parts.
+def mini(frac: float, fill: str, edge: str) -> str:
+    """A very short percentage bar, chip-sized.  Same grammar as every other
+    bar on the page -- grey slot is the whole of something, colour is the used
+    part -- just 46px of it."""
+    w = min(max(frac, 0.0), 1.0) * 100
+    return (f'<span class="mini" style="border-color:{edge}">'
+            f'<i style="width:{w:.1f}%;background:{fill}"></i></span>')
 
-    The bar means the same thing it means everywhere else on this page: the
-    grey track is the whole of something, the coloured part is the used part.
-    Here that is host RAM.  Core count, load average and uptime are gone --
-    they are not what anyone opens this page to find out, and every field that
-    stays costs attention that the two numbers worth reading have to share.
+
+def node_chip(host, d, g, idx) -> str:
+    """One node, folded onto its job's header line.
+
+    A machine row carried no GPU information, yet weighed as much on the page
+    as a card row.  Every fact it held survives here: 1-based index and name,
+    cores busy and RAM as mini bars against the machine's total with the exact
+    numbers beside them ("ten of 288" is the number you can act on, not
+    3.5%), and load/uptime in the hover, as before.
     """
+    if d is None:
+        return (f'<span class="nchip"><span class="nidx">{idx}</span>'
+                f'<span class="njid">{esc(host)}</span>'
+                f'<span class="m s-crit">no data</span></span>')
     mt, ma = d.get("memtot", 0), d.get("memavl", 0)
     used, tot = (mt - ma) / 1048576.0, mt / 1048576.0
     frac = (mt - ma) / mt if mt else 0.0
     cpu = d.get("cpu", 0.0) or 0.0
-    # Cores in use rather than a bare percentage: 3.5% of 288 cores is ten
-    # cores, and "ten of 288" is the number you can act on.
     ncpu = d.get("ncpu", 0) or 0
     busy_cores = ncpu * cpu / 100.0
     tip = (f"{host}\ncpu {cpu:.1f}% = {busy_cores:.0f} of {ncpu} cores\n"
            f"RAM {used:.0f} / {tot:.0f} GiB ({frac * 100:.0f}%)\n"
            f"load {d.get('load1', 0):.2f}   up {g.fmt_dur(d.get('up', 0))}")
-    nix = f'<span class="nidx">{idx}</span>' if idx is not None else ""
-    return (f'<div class="row node-top" data-tip="{att(tip)}">'
-            f'<div class="lbl">{nix}<span class="jid">{esc(host)}</span></div>'
-            f'{twin_track(cpu / 100.0, NODE_CPU_COLOR, NODE_CPU_EDGE)}'
-            f'{twin_track(frac, NODE_MEM_COLOR, NODE_MEM_EDGE)}'
-            f'<div class="tail"><span class="g">{busy_cores:.0f}/{ncpu}c</span>'
-            f'<span>{used:.0f}/{tot:.0f}G</span></div></div>')
+    return (f'<span class="nchip" data-tip="{att(tip)}">'
+            f'<span class="nidx">{idx}</span><span class="njid">{esc(host)}</span>'
+            f'{mini(cpu / 100.0, NODE_CPU_COLOR, NODE_CPU_EDGE)}'
+            f'<span class="nnum">{busy_cores:.0f}/{ncpu}c</span>'
+            f'{mini(frac, NODE_MEM_COLOR, NODE_MEM_EDGE)}'
+            f'<span class="nnum">{used:.0f}/{tot:.0f}G</span></span>')
 
 
 def twin_track(frac: float, fill: str, edge: str, hatch: bool = False) -> str:
@@ -1706,7 +1748,7 @@ def twin_track(frac: float, fill: str, edge: str, hatch: bool = False) -> str:
             f'width:{w:.2f}%;{style}"></div></div>')
 
 
-def gpu_row(host, gp, procs, job, g) -> str:
+def gpu_row(host, gp, procs, job, g, ni=None, first=False) -> str:
     u, mu, mt = gp["util"], gp["mused"], gp["mtot"]
     mfrac = mu / mt if mt else 0.0
     st = g.gpu_state(gp)
@@ -1751,8 +1793,13 @@ def gpu_row(host, gp, procs, job, g) -> str:
     # that makes the section scannable: blue always means memory.
     mfill, medge = MEM_COLOR, MEM_EDGE
     mhatch = st != "run"          # held or idle: occupied, producing nothing
-    return (f'<div class="row gpu" data-tip="{att(tip)}">'
-            f'<div class="lbl idx"><span class="gi">[{gp["i"]}]</span>'
+    # With the machine rows folded into chips, the node boundary line moves to
+    # each node's first card, and the node's 1-based index prefixes every card
+    # ("2[0]" = node 2, card 0) so a row can still be placed without counting.
+    nix = f'<span class="nidx">{ni}</span>' if ni is not None else ""
+    cls = "row gpu node-top" if first else "row gpu"
+    return (f'<div class="{cls}" data-tip="{att(tip)}">'
+            f'<div class="lbl idx">{nix}<span class="gi">[{gp["i"]}]</span>'
             f'<span class="nm">{esc(tag)}</span></div>'
             f'{twin_track(u / 100.0, COMPUTE_COLOR, COMPUTE_EDGE)}'
             f'{twin_track(mfrac, mfill, medge, mhatch)}'
