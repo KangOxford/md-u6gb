@@ -499,6 +499,15 @@ details summary:hover{color:var(--fg)}
   color:var(--faint); transition:transform .15s}
 .secfold[open]>summary h2 .arr{transform:rotate(90deg)}
 .secfold>summary:hover h2{color:var(--fg)}
+/* Lanes rows quiet past the fold window collapse behind one line; the count
+   moves with the data because the criterion is time, not a row budget. */
+.lanesfold>summary{list-style:none; cursor:pointer; color:var(--faint);
+  font-size:11px; padding:5px 0 3px}
+.lanesfold>summary::-webkit-details-marker{display:none}
+.lanesfold>summary .arr{display:inline-block; margin-right:6px;
+  transition:transform .15s}
+.lanesfold[open]>summary .arr{transform:rotate(90deg)}
+.lanesfold>summary:hover{color:var(--fg)}
 details pre{font-size:11px; color:var(--dim); background:var(--rule); padding:9px 11px;
             border-radius:5px; overflow-x:auto; margin:4px 0 12px; white-space:pre}
 
@@ -946,21 +955,58 @@ def session_map(idents) -> dict:
     except Exception:
         cfg = {}
     ids = cfg.setdefault("idents", {})       # ident -> session id ("" = no hit)
+    pref = cfg.setdefault("prefixes", {})    # fallback key -> sid ("" = miss)
     titles = cfg.setdefault("titles", {})    # session id -> full title
     over = cfg.setdefault("overrides", {})   # session id -> hand-given name
-    todo = {i for i in idents if i not in ids}
+    # Sessions that must never be credited: the sgpur development sessions.
+    # Their logs quote experiment names out of screenshots and grep output,
+    # and a quotation can predate the driver's own log inside the scan
+    # window.  Cached verdicts pointing at them are purged so those idents
+    # resolve afresh; stale too-short keys are purged the same way.
+    ign = set(cfg.get("ignore") or [])
+    for k in [k for k, v in ids.items() if v in ign]:
+        del ids[k]
+    for k in [k for k, v in pref.items()
+              if v in ign or len(k.rstrip("-")) < 6]:
+        del pref[k]
+
+    def resolve(ident):
+        """Exact hit first, then the longest resolved fallback prefix."""
+        sid = ids.get(ident) or ""
+        via = ""
+        if not sid:
+            for c in _sess_cands(ident):
+                if pref.get(c):
+                    sid, via = pref[c], c
+                    break
+        return sid, via
+
+    # Rescan only what neither layer can answer and only where an untried
+    # fallback key remains -- a full miss with every key cached stays a miss
+    # until the cache is deleted, instead of costing a sweep per refresh.
+    todo = set()
+    for i in idents:
+        if resolve(i)[0]:
+            continue
+        if i not in ids or any(c not in pref for c in _sess_cands(i)):
+            todo.add(i)
     if todo and os.path.isdir(SESSION_DIR):
         now = time.time()
         try:
             files = [(e.path, e.stat().st_size) for e in os.scandir(SESSION_DIR)
                      if e.name.endswith(".jsonl") and e.is_file()
+                     and e.name[:-6] not in ign
                      and now - e.stat().st_mtime < 14 * 86400]
         except OSError:
             files = []
         ts_re = re.compile(rb'"timestamp":"([^"]+)"')
-        best = {}                            # ident -> (ts, -size, sid, title)
+        # Search for every fallback key of every unresolved identity at once:
+        # a fleet name like dfm-rung54000-3 never appears verbatim anywhere,
+        # but the template it was formatted from carries "dfm-rung" literally.
+        keys = {c for i in todo for c in _sess_cands(i)} | set(todo)
+        best = {}                            # key -> (ts, -size, sid, title)
         for path, size in files:
-            want = {t.encode() for t in todo}
+            want = {k.encode() for k in keys}
             try:
                 with open(path, "rb") as f:
                     sid, title = os.path.basename(path)[:-6], ""
@@ -984,13 +1030,15 @@ def session_map(idents) -> dict:
                                 want.discard(t)
             except OSError:
                 continue
-        for tt in todo:
-            if tt in best:
-                _ts, _ns, sid, title = best[tt]
-                ids[tt] = sid
+        for k in keys:
+            if k in best:
+                _ts, _ns, sid, title = best[k]
+                pref[k] = sid
                 titles.setdefault(sid, title)
             else:
-                ids[tt] = ""       # cached miss: do not rescan every refresh
+                pref.setdefault(k, "")   # cached miss: no sweep per refresh
+        for tt in todo:
+            ids[tt] = best[tt][2] if tt in best else ids.get(tt, "")
         try:
             os.makedirs(os.path.dirname(SESS_CFG), exist_ok=True)
             tmp = SESS_CFG + ".tmp"
@@ -1001,31 +1049,64 @@ def session_map(idents) -> dict:
             pass
     out = {}
     for i in idents:
-        sid = ids.get(i) or ""
+        sid, via = resolve(i)
         if not sid:
             continue
         title = titles.get(sid, "")
         name = over.get(sid) or (title.split("⑂")[0].strip() if title
                                  else sid[:8])
         tip = (f"driving session: {title or '(untitled)'}\n{sid}\n"
-               f"claude --resume {sid}")
+               f"claude --resume {sid}"
+               + (f'\nmatched by prefix "{via}"' if via else ""))
         out[i] = (name[:16], tip)
     return out
+
+
+def _sess_cands(ident: str) -> list:
+    """Fallback keys for an identity, most specific first: dash-prefixes with
+    trailing digit runs peeled, so dfm-rung54000-3 yields dfm-rung54000,
+    dfm-rung and dfm, and e2d-ns-v3-s1 yields e2d-ns-v3, e2d-ns-v, e2d-ns
+    and e2d.  Keys shorter than 3 characters match too much and are dropped."""
+    out, seen = [], set()
+    parts = ident.split("-")
+    for k in range(len(parts), 0, -1):
+        p = "-".join(parts[:k])
+        # Variant tails are digits or trailing capitals: dfm-rung54000 and
+        # dfm-tritonOFF both peel back to the template the driver wrote.
+        for q in (p, p.rstrip("0123456789"),
+                  p.rstrip("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")):
+            # Under 6 characters a key stops discriminating: "dfm" or "v5m"
+            # appears in any session that ever discussed the work at all.
+            if len(q.rstrip("-")) >= 6 and q not in seen:
+                seen.add(q)
+                out.append(q)
+    return out[1:]     # [0] is the full name itself, handled by the exact layer
 
 
 def lanes_section(snap, t0, t1, step, lw, sess=None) -> str:
     """One row per experiment identity, across jobs.  The holes are the breaks."""
     grid = grid_html(t0, t1, step, snap.now)
-    rows = []
-    split_done = False
+    # Rows that ran within the fold window stay in sight; the rest collapse
+    # behind one line.  The criterion is time, not a row count, so how many
+    # fold moves with the data.  The sort is already most-recent-first, so
+    # each bucket keeps its order.
+    QUIET_S = 12 * 3600
+    act, quiet = [], []
+    n_quiet = 0
+    split_seen = {False: False, True: False}
     for h in snap.hist:
         # Same device as the restart-history section below: the non-experiment
         # buckets already sort last, so mark the boundary and desaturate them.
         # Only the caption differs, because the axes differ -- this chart is
         # wall clock, that one is cumulative running time.
         other = h.ident in S.NON_EXPERIMENT
-        if other and not split_done:
-            split_done = True
+        la = last_active(h)
+        is_quiet = la is None or (snap.now - la).total_seconds() > QUIET_S
+        rows = quiet if is_quiet else act
+        if is_quiet:
+            n_quiet += 1
+        if other and not split_seen[is_quiet]:
+            split_seen[is_quiet] = True
             rows.append('<div class="hsplit">not experiments &mdash; a shell '
                         'someone attached, or a command line Slurm did not '
                         'record. Same clock as the rows above, because they '
@@ -1071,7 +1152,12 @@ def lanes_section(snap, t0, t1, step, lw, sess=None) -> str:
             f'<div class="track"><div class="tinner">{grid}{"".join(bars)}</div></div>'
             f'<div class="tail"><span>{" · ".join(bits)}</span>'
             f'<span>{h.gpu_hours:,.0f} GPU-h</span></div></div>')
-    return "".join(rows)
+    if quiet:
+        act.append(
+            f'<details class="lanesfold"><summary><span class="arr">▸</span>'
+            f'{n_quiet} quiet identities &mdash; nothing ran in the last 12h, '
+            f'click to open</summary>{"".join(quiet)}</details>')
+    return "".join(act)
 
 
 def fmt_span(seconds: float) -> str:
