@@ -32,27 +32,34 @@ FLD_STATE=$T/artifacts_dv/ladder/dv25_lr1e4_s0u_s14000_state.msgpack
 # runner 拿不到会 fail-closed 而不是猜（错的时间表训练与推理都不报错）。
 VAL_FLAGS="--a-target 12 --schedule apow --sched-p 2"
 JOB=${JOB:-6014308}; NODE=${NODE:-nid010723}; MO=${MO:-2026-01}; NTK=${NTK:-60}
+GPU0=${GPU0:-0}
+# NCHUNK=1 时两条臂各占一张卡、各跑全表（跨月复现时只剩两张卡）
+NCHUNK=${NCHUNK:-2}
 mkdir -p $T/rollouts_metric $T/logs
-head -n $NTK $A/logs/tk_feb.txt > $T/logs/metric_tk.txt
-split -n l/2 -d -a 1 $T/logs/metric_tk.txt $T/logs/metric_chunk_
+# chunk 文件按月分名：直接覆盖 `metric_chunk_0` 会动到**正在跑**的另一月
+# 的臂所引用的同名文件（runner 启动时读一次，但不该赌这一点）。
+head -n $NTK $A/logs/tk_feb.txt > $T/logs/metric_tk_${MO}.txt
+split -n l/$NCHUNK -d -a 1 $T/logs/metric_tk_${MO}.txt $T/logs/metric_chunk_${MO}_
 
 i=0
-for SPEC in "value 0" "value 1" "field 0" "field 1"; do
+SPECS=${SPECS:-"value 0|value 1|field 0|field 1"}
+IFS="|" read -ra _SP <<< "$SPECS"
+for SPEC in "${_SP[@]}"; do
   set -- $SPEC; MET=$1; CH=$2
   if [ "$MET" = value ]; then STATE=$VAL_STATE; XF="$VAL_FLAGS"; else STATE=$FLD_STATE; XF=""; fi
   TAG=${MET}
   env -u SLURM_NNODES -u SLURM_NTASKS -u SLURM_JOB_ID -u SLURMD_NODENAME \
   setsid nohup srun --jobid=$JOB --overlap --exact --cpus-per-task=8 -w $NODE -N1 -n1 \
-    --cpu-bind=none --job-name=dfm-met-${TAG}${CH} \
-    --export=ALL,DFM_GPU=$i,DFM_SCRIPT=dfm_correct_runner.py,\
+    --cpu-bind=none --job-name=dfm-met-${TAG}${CH}-${MO#2026-} \
+    --export=ALL,DFM_GPU=$((GPU0 + i)),DFM_SCRIPT=dfm_correct_runner.py,\
 XLA_PYTHON_CLIENT_MEM_FRACTION=${MEMFRAC:-0.30},XLA_FLAGS=--xla_gpu_enable_triton_gemm=false \
     bash $W --month $MO --n-cond 500 --n-gen 500 \
-      --stocks $T/logs/metric_chunk_$CH --index-dir $A/idx --group-size 8 \
+      --stocks $T/logs/metric_chunk_${MO}_$CH --index-dir $A/idx --group-size 8 \
       --validate-first 8 --gate-batches 2 --state "$STATE" $XF \
       --t-start 0.80 --n-steps 8 --n-seq 8 --batch-size 2 --corr-batch 2 \
       --skip-existing \
       --out-template "$T/rollouts_metric/met_${TAG}_{stock}_{month}_learned.npz" \
-    > $T/logs/met_${TAG}$CH.log 2>&1 < /dev/null &
-  echo "  $MET chunk$CH -> $NODE gpu$i"; i=$((i+1)); sleep 3
+    > $T/logs/met_${TAG}${CH}_${MO}.log 2>&1 < /dev/null &
+  echo "  $MET chunk$CH $MO -> $NODE gpu$((GPU0 + i))"; i=$((i+1)); sleep 3
 done
 echo "=== 度量 A/B launched $(date -u +%H:%M:%SZ) ==="
