@@ -116,6 +116,48 @@ def k5_direction(taus, fs):
           f"tau=1e-12 保留 {fs[0]:.3f}, tau=1.0 保留 {fs[-1]:.3f}")
 
 
+def k6_guard_runs_last():
+    """★ 带牙 ★ keep 闸门不能撤销零 size 闸门的修复。
+
+    实测证据：闸门在 keep 之后时，非法率 0.000%（关闭 keep）-> 0.289%（tau 0.01）
+    -> 0.538%（tau 0.1）—— 保留 draft 的两位 size 数字，就把刚被修掉的 size=0
+    放了回来。闸门执行的是对**输出**的硬约束，所以任何能改输出的东西都必须在它
+    之前跑。
+    """
+    from dfm_sampler import digit_zero_guard
+    rng = onp.random.default_rng(6)
+    HI, LO, ZERO = 5, 6, 3
+    mask = onp.zeros((L, V), bool)
+    for p in range(L):
+        legal = rng.choice(V, size=8, replace=False)
+        mask[p, legal] = True
+        if p % MSG in (HI, LO):
+            mask[p, ZERO] = True     # 零在两个数位上都合法（真实编码就是这样）
+    logits = jnp.asarray(rng.normal(0, 3.0, (B, L, V)).astype(onp.float32))
+    draft = onp.zeros((B, L), onp.int32)
+    for p in range(L):
+        legal = onp.nonzero(mask[p])[0]
+        draft[:, p] = rng.choice(legal, size=B)
+    for p in range(L):                      # 在 draft 里埋 size=0
+        if p % MSG in (HI, LO):
+            draft[:, p] = ZERO
+    draft = jnp.asarray(draft)
+    g = digit_zero_guard(L, MSG, HI, LO, ZERO, jnp)
+
+    def n_zero_size(out):
+        o = onp.asarray(out)
+        hi, lo = o[:, HI::MSG], o[:, LO::MSG]
+        n = min(hi.shape[1], lo.shape[1])
+        return int(((hi[:, :n] == ZERO) & (lo[:, :n] == ZERO)).sum())
+
+    kw = dict(rng=jax.random.key(3), jax=jax, mask=jnp.asarray(mask),
+              draft=draft, keep_tau=1e-12)          # 最保守：几乎全保留 draft
+    a = n_zero_size(predict_x1(logits, draft, jnp, guard=g, **kw))
+    b = n_zero_size(predict_x1(logits, draft, jnp, guard=None, **kw))
+    check("K6* keep 闸门撤销不了零 size 闸门", a == 0, f"剩余 size=0 共 {a} 个")
+    check("K6* 去掉闸门后它们会留下（证明测试有牙）", b > 0, f"剩余 {b} 个")
+
+
 if __name__ == "__main__":
     print("keep_tau 单元测试（合成 logits, CPU）\n")
     k1_canary()
@@ -123,5 +165,6 @@ if __name__ == "__main__":
     taus, fs = k3_monotone()
     k4_illegal_draft_replaced()
     k5_direction(taus, fs)
+    k6_guard_runs_last()
     print(f"\n{sum(OK)}/{len(OK)} 通过")
     sys.exit(0 if all(OK) else 1)
