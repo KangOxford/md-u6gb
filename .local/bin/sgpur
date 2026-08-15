@@ -1582,12 +1582,11 @@ def live_section(live, err) -> str:
            '<div class="tail spacer"></div></div>']
 
     for job, hosts, jerr in live:
-        ngpu = sum(len(d.get("gpus", [])) for d in hosts.values())
         left_s = max(0, getattr(job, "left_s", 0))
+        # No node/GPU count here: every allocation on this account is 4N 16GPU,
+        # and the numbered node rows below state the size anyway.
         jh = [mono(" ▸ job ", None, "dim"), mono(job.jobid, None, "hdr"),
               mono(f"  {job.name}", None, "accent"),
-              mono(f"  {job.nnodes}N", None, "norm"),
-              mono(f" {ngpu}GPU", None, "norm"),
               mono(f"  used {g.fmt_dur(getattr(job, 'used_s', 0))}", None, "dim"),
               mono("  left ", None, "dim"),
               mono(g.fmt_dur(left_s), None, "crit" if left_s < 3600 else "warn")]
