@@ -387,6 +387,11 @@ h2 .alt{color:var(--faint); font-weight:400}
    A two-colour row splits that same slot into two equal cells. */
 .lgrow .swpair{display:flex; gap:5px}
 .lgrow i.swatch{flex:1 1 0; height:22px; border-radius:4px; border:1px solid}
+/* The node-chip specimens keep the mini bars' real size: full-height blocks
+   here would read as one more kind of GPU bar, which is exactly what a node
+   chip is not. */
+.lgrow .swpair.mini i.swatch{flex:0 0 46px; height:10px; margin:6px 0;
+  border-radius:3px}
 .lgrow i.swatch.hatched{border-style:dashed;
   background:repeating-linear-gradient(135deg,transparent 0 4px,var(--c) 4px 8px)}
 .lgsep{height:1px; background:var(--line); margin:11px 0 9px}
@@ -1873,7 +1878,7 @@ def live_section(live, err) -> str:
     # the symbols that carried the verdict were the least legible part.
     out.append(
         '<div class="legendbox"><div class="lgtitle">reading this section</div>'
-        f'<div class="lgrow"><span class="swpair">'
+        f'<div class="lgrow"><span class="swpair mini">'
         f'<i class="swatch" style="background:{NODE_CPU_COLOR};'
         f'border-color:{NODE_CPU_EDGE}"></i>'
         f'<i class="swatch" style="background:{NODE_MEM_COLOR};'
