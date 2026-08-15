@@ -1091,13 +1091,13 @@ def _sess_cands(ident: str) -> list:
 def lanes_section(snap, t0, t1, step, lw, sess=None) -> str:
     """One row per experiment identity, across jobs.  The holes are the breaks."""
     grid = grid_html(t0, t1, step, snap.now)
-    # Rows that ran within the fold window stay in sight; the rest collapse
-    # behind one line.  The criterion is time, not a row count, so how many
-    # fold moves with the data.  The sort is already most-recent-first, so
-    # each bucket keeps its order.
-    QUIET_S = 8 * 3600
+    # Only identities running right now stay in sight -- same LIVE_TOL test
+    # as the green dot, so the visible set and the dots can never disagree --
+    # and at most ten of them; everything else folds behind one line.  The
+    # sort is already most-recent-first, so each bucket keeps its order.
+    LIMIT = 10
     act, quiet = [], []
-    n_quiet = 0
+    n_quiet = n_act = 0
     split_seen = {False: False, True: False}
     for h in snap.hist:
         # Same device as the restart-history section below: the non-experiment
@@ -1106,10 +1106,13 @@ def lanes_section(snap, t0, t1, step, lw, sess=None) -> str:
         # wall clock, that one is cumulative running time.
         other = h.ident in S.NON_EXPERIMENT
         la = last_active(h)
-        is_quiet = la is None or (snap.now - la).total_seconds() > QUIET_S
+        running = la is not None and (snap.now - la).total_seconds() <= LIVE_TOL
+        is_quiet = (not running) or n_act >= LIMIT
         rows = quiet if is_quiet else act
         if is_quiet:
             n_quiet += 1
+        else:
+            n_act += 1
         if other and not split_seen[is_quiet]:
             split_seen[is_quiet] = True
             rows.append('<div class="hsplit">not experiments &mdash; a shell '
@@ -1160,8 +1163,8 @@ def lanes_section(snap, t0, t1, step, lw, sess=None) -> str:
     if quiet:
         act.append(
             f'<details class="lanesfold"><summary><span class="arr">▸</span>'
-            f'{n_quiet} quiet identities &mdash; nothing ran in the last 8h, '
-            f'click to open</summary>{"".join(quiet)}</details>')
+            f'{n_quiet} folded &mdash; only what is running right now shows, '
+            f'ten at most; click to open</summary>{"".join(quiet)}</details>')
     return "".join(act)
 
 
