@@ -452,6 +452,12 @@ h2 .alt{color:var(--faint); font-weight:400}
 .hrun .rc.bad{background:#e58f8f; border-color:#c97a7a}
 .hrow.other .hid{color:var(--faint); font-style:italic}
 .row.lane.other .lbl .nm{color:var(--faint); font-style:italic}
+/* Which Claude session drives the experiment: a small badge on the right of
+   the label column, so the shared time axis moves not one pixel. */
+.row.lane .lbl .sess{margin-left:auto; flex:0 0 auto; max-width:104px;
+  overflow:hidden; text-overflow:ellipsis; color:var(--faint);
+  font-size:10px; line-height:15px; background:var(--rule);
+  border:1px solid var(--line); border-radius:4px; padding:0 5px}
 .hrow.other .hrun .rc{background:#c6ccd3; border-color:#aab1b9}
 .hrow.other .hrun .rc.bad{background:#dcb4b4; border-color:#c39d9d}
 .hsplit{margin:12px 0 5px; padding-top:9px; border-top:1px dashed var(--line);
@@ -911,7 +917,103 @@ def overview_section(snap, t0, t1, fc_t1, step, lw, deadlines) -> str:
     return "".join(rows)
 
 
-def lanes_section(snap, t0, t1, step, lw) -> str:
+SESSION_DIR = os.environ.get(
+    "SGPUR_SESSION_DIR",
+    "/projects/public/u6gb/.claude/projects/-lus-lfs1aip2-projects-public-u6gb")
+SESS_CFG = os.path.expanduser("~/.config/sgpur/session_names.json")
+
+
+def session_map(idents) -> dict:
+    """ident -> (short session name, hover text): which Claude session drives
+    which experiment.
+
+    Resolved by who wrote the identity string FIRST.  Mere mentions cannot
+    tell driver from spectator -- every session that ever ran gtop contains
+    every job id -- but the driving session composes the srun command line
+    before the step exists, so the earliest timestamped occurrence wins; a
+    same-second tie goes to the larger log, the main-session rule.  Verified
+    on real data: dfm-rung* resolves to the dfm session, v5m3-dump* to
+    mid-train, ctx2k-hybpm-train to the hybrid session.
+
+    The name is the session's own title (its first segment: one word), a
+    hand-given override, or the id prefix.  Resolutions are cached in
+    SESS_CFG, so a resolved identity costs nothing; each batch of new ones
+    costs one sequential sweep of the recently-active session logs.
+    """
+    try:
+        with open(SESS_CFG) as fh:
+            cfg = json.load(fh)
+    except Exception:
+        cfg = {}
+    ids = cfg.setdefault("idents", {})       # ident -> session id ("" = no hit)
+    titles = cfg.setdefault("titles", {})    # session id -> full title
+    over = cfg.setdefault("overrides", {})   # session id -> hand-given name
+    todo = {i for i in idents if i not in ids}
+    if todo and os.path.isdir(SESSION_DIR):
+        now = time.time()
+        try:
+            files = [(e.path, e.stat().st_size) for e in os.scandir(SESSION_DIR)
+                     if e.name.endswith(".jsonl") and e.is_file()
+                     and now - e.stat().st_mtime < 14 * 86400]
+        except OSError:
+            files = []
+        ts_re = re.compile(rb'"timestamp":"([^"]+)"')
+        best = {}                            # ident -> (ts, -size, sid, title)
+        for path, size in files:
+            want = {t.encode() for t in todo}
+            try:
+                with open(path, "rb") as f:
+                    sid, title = os.path.basename(path)[:-6], ""
+                    try:
+                        h = json.loads(f.readline())
+                        sid = h.get("sessionId") or sid
+                        title = h.get("aiTitle") or ""
+                    except Exception:
+                        pass
+                    for line in f:
+                        if not want:
+                            break
+                        for t in list(want):
+                            if t in line:
+                                m = ts_re.search(line)
+                                cand = ((m.group(1).decode() if m else "9999"),
+                                        -size, sid, title)
+                                tt = t.decode()
+                                if tt not in best or cand < best[tt]:
+                                    best[tt] = cand
+                                want.discard(t)
+            except OSError:
+                continue
+        for tt in todo:
+            if tt in best:
+                _ts, _ns, sid, title = best[tt]
+                ids[tt] = sid
+                titles.setdefault(sid, title)
+            else:
+                ids[tt] = ""       # cached miss: do not rescan every refresh
+        try:
+            os.makedirs(os.path.dirname(SESS_CFG), exist_ok=True)
+            tmp = SESS_CFG + ".tmp"
+            with open(tmp, "w") as fh:
+                json.dump(cfg, fh, ensure_ascii=False, indent=1)
+            os.replace(tmp, SESS_CFG)
+        except OSError:
+            pass
+    out = {}
+    for i in idents:
+        sid = ids.get(i) or ""
+        if not sid:
+            continue
+        title = titles.get(sid, "")
+        name = over.get(sid) or (title.split("⑂")[0].strip() if title
+                                 else sid[:8])
+        tip = (f"driving session: {title or '(untitled)'}\n{sid}\n"
+               f"claude --resume {sid}")
+        out[i] = (name[:16], tip)
+    return out
+
+
+def lanes_section(snap, t0, t1, step, lw, sess=None) -> str:
     """One row per experiment identity, across jobs.  The holes are the breaks."""
     grid = grid_html(t0, t1, step, snap.now)
     rows = []
@@ -958,11 +1060,14 @@ def lanes_section(snap, t0, t1, step, lw) -> str:
         ltip = (f"{h.ident}\n{len(h.runs)} runs · {h.breaks} breaks · {h.bad} bad exits\n"
                 f"{S.fmt_dur(h.secs)} busy · {h.gpu_hours:.1f} GPU-h\n"
                 f"jobs: {jids}")
+        sn = (sess or {}).get(h.ident)
+        stag = (f'<span class="sess" data-tip="{att(sn[1])}">{esc(sn[0])}</span>'
+                if sn else "")
         rows.append(
             f'<div class="row lane{" other" if other else ""}">'
             f'<div class="lbl" style="--lw:{lw}px">'
             f'<span class="nm" data-tip="{att(ltip)}">{live_dot(h, snap.now)}'
-            f'{esc(h.ident)}</span></div>'
+            f'{esc(h.ident)}</span>{stag}</div>'
             f'<div class="track"><div class="tinner">{grid}{"".join(bars)}</div></div>'
             f'<div class="tail"><span>{" · ".join(bits)}</span>'
             f'<span>{h.gpu_hours:,.0f} GPU-h</span></div></div>')
@@ -2027,6 +2132,8 @@ def render_body(snap, opts, live=None, live_err=None) -> str:
 
     lane_lw = 250
     job_lw = 250
+    sess_names = session_map({h.ident for h in snap.hist
+                              if h.ident not in S.NON_EXPERIMENT})
     tzabbr = L(snap.now).strftime("%Z")          # BST or GMT, whichever applies
     title = page_title(opts)
     scope = f"jobs {', '.join(opts.job)}" if opts.job else "all jobs"
@@ -2069,7 +2176,7 @@ def render_body(snap, opts, live=None, live_err=None) -> str:
 
 <section>
   <h2>experiments <span class="hint">&nbsp;one row per identity, across jobs · the holes are the breaks</span></h2>
-  {lanes_section(snap, t0, t1, step, lane_lw)}
+  {lanes_section(snap, t0, t1, step, lane_lw, sess_names)}
   {ruler_html(t0, t1, fc_t1, step, lane_lw)}
   {legend()}
 </section>
