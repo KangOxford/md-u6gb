@@ -169,6 +169,10 @@ body{
    --lw, so a GPU's bars start exactly where a gantt track starts. */
 .lrow{display:flex; align-items:baseline}
 .lrow.full{display:block}
+/* The job header holds the node chips, and .lrow's white-space:pre would
+   clip whatever falls past the viewport edge; as a wrapping flex row the
+   chips fold to the next line instead of vanishing. */
+.lrow.full.jobhead{display:flex; flex-wrap:wrap; align-items:baseline; row-gap:1px}
 .llabel{flex:0 0 var(--lw); padding-right:10px; white-space:nowrap;
   overflow:hidden; text-overflow:ellipsis}
 .llabel.node{color:var(--fg)}
@@ -190,7 +194,12 @@ body{
   border:1px solid var(--line); border-radius:5px; white-space:nowrap}
 /* one hairline per node, so four cards read as one machine */
 .row.node-top{border-top:1px solid var(--line); margin-top:5px; padding-top:4px}
-.row.gpu .lbl.idx{padding-left:28px; gap:8px}
+/* The left padding became the overall-index column: every card carries its
+   1-based position within the whole job (node 2's card 0 on a 4-GPU-per-node
+   job is 5), so "card 13 of this job" needs no arithmetic. */
+.row.gpu .lbl.idx{padding-left:0; gap:8px}
+.row.gpu .lbl .ggidx{flex:0 0 26px; text-align:right; color:var(--dim);
+  font-size:11px}
 .row.gpu .lbl .gi{color:var(--accent); font-weight:640}
 /* A node folded onto its job's header line: index, name, then cores busy and
    RAM as mini bars against the machine's total.  The machine row carried no
@@ -1607,30 +1616,28 @@ def live_section(live, err) -> str:
               mono(f"  used {g.fmt_dur(getattr(job, 'used_s', 0))}", None, "dim"),
               mono("  left ", None, "dim"),
               mono(g.fmt_dur(left_s), None, "crit" if left_s < 3600 else "warn")]
-        # The job's identity and what it is computing are one thought, so they
-        # share one row; a second line bought nothing but vertical space.
-        real = [x for x in getattr(job, "steps", []) if not x.get("batch")]
-        if real:
-            s = "  ".join(f"{x['id']} {x['name']}({x['time']})" for x in real[:4])
-            jh += [mono("   steps: ", None, "dim"), mono(s, None, "accent")]
-        else:
-            jh += [mono("   steps: ", None, "dim"),
-                   mono(".batch only · nothing computing", None, "crit")]
+        # No step list: whether anything is computing is already visible on
+        # the utilisation bars below, card by card, and there it is measured
+        # rather than inferred from Slurm's step table.
 
         # Machine rows carried no GPU information, so they no longer get rows:
         # each node folds into a chip here on the job line, numbered 1-based
-        # within its job.  The chip keeps every fact the row had -- cores busy
-        # and RAM as mini bars with the exact numbers beside them, load and
-        # uptime on hover.
+        # within its job, with the node count stated once at the end.  The
+        # chip keeps every fact the row had -- cores busy and RAM as mini bars
+        # with the exact numbers beside them, load and uptime on hover.
         hostlist = list(getattr(job, "nodes", None) or sorted(hosts))
         for ni, host in enumerate(hostlist, 1):
             jh.append(node_chip(host, hosts.get(host), g, ni))
-        out.append(f'<div class="lrow full">{"".join(jh)}</div>')
+        jh.append(mono(f"   · {len(hostlist)} nodes", None, "dim"))
+        out.append(f'<div class="lrow full jobhead">{"".join(jh)}</div>')
 
         if jerr:
             out.append(f'<div class="lrow full">{mono("     sample failed: ", None, "crit")}'
                        f'{mono(jerr[:120], None, "dim")}</div>')
 
+        # gcount runs 1..N across the whole job, so a card's first column is
+        # its overall position (node 2 card 0 -> 5 when nodes hold 4 GPUs).
+        gcount = 0
         for ni, host in enumerate(hostlist, 1):
             d = hosts.get(host)
             if d is None:
@@ -1639,8 +1646,9 @@ def live_section(live, err) -> str:
             for p in d.get("procs", []):
                 by_uuid.setdefault(p["uuid"], []).append(p)
             for k, gp in enumerate(d.get("gpus", [])):
+                gcount += 1
                 out.append(gpu_row(host, gp, by_uuid.get(gp["uuid"], []), job, g,
-                                   ni, first=(k == 0)))
+                                   ni, first=(k == 0), gidx=gcount))
         out.append('<div class="lgap"></div>')
     # Every mark this section can print, spelled out.  A colour and a bare
     # session name told the reader nothing about whether it was good news, and
@@ -1679,10 +1687,11 @@ def live_section(live, err) -> str:
         '<div class="lgrow"><code>4/288c</code>'
         '<span>in a node chip: cores busy out of the machine\'s total; the '
         'mini bar left of it is the same number as a fraction</span></div>'
-        '<div class="lgrow"><code>2[0]</code>'
-        '<span>card 0 of node 2 — nodes are numbered 1-based within their '
-        'job, matching the chips on the job line, and the rule above a card '
-        'row marks where a new node starts</span></div>'
+        '<div class="lgrow"><code>5&nbsp; 2[0]</code>'
+        '<span>the card\'s overall position within its job (5th of 16), then '
+        'card 0 of node 2 — nodes are numbered 1-based within their job, '
+        'matching the chips on the job line, and the rule above a card row '
+        'marks where a new node starts</span></div>'
         '</div>')
     return f'<div class="lwrap">{"".join(out)}</div>'
 
@@ -1748,7 +1757,7 @@ def twin_track(frac: float, fill: str, edge: str, hatch: bool = False) -> str:
             f'width:{w:.2f}%;{style}"></div></div>')
 
 
-def gpu_row(host, gp, procs, job, g, ni=None, first=False) -> str:
+def gpu_row(host, gp, procs, job, g, ni=None, first=False, gidx=None) -> str:
     u, mu, mt = gp["util"], gp["mused"], gp["mtot"]
     mfrac = mu / mt if mt else 0.0
     st = g.gpu_state(gp)
@@ -1796,10 +1805,12 @@ def gpu_row(host, gp, procs, job, g, ni=None, first=False) -> str:
     # With the machine rows folded into chips, the node boundary line moves to
     # each node's first card, and the node's 1-based index prefixes every card
     # ("2[0]" = node 2, card 0) so a row can still be placed without counting.
+    # The first column is the card's overall 1..N position within its job.
+    ovx = f'<span class="ggidx">{gidx}</span>' if gidx is not None else ""
     nix = f'<span class="nidx">{ni}</span>' if ni is not None else ""
     cls = "row gpu node-top" if first else "row gpu"
     return (f'<div class="{cls}" data-tip="{att(tip)}">'
-            f'<div class="lbl idx">{nix}<span class="gi">[{gp["i"]}]</span>'
+            f'<div class="lbl idx">{ovx}{nix}<span class="gi">[{gp["i"]}]</span>'
             f'<span class="nm">{esc(tag)}</span></div>'
             f'{twin_track(u / 100.0, COMPUTE_COLOR, COMPUTE_EDGE)}'
             f'{twin_track(mfrac, mfill, medge, mhatch)}'
