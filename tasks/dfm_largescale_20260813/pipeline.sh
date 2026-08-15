@@ -54,7 +54,9 @@ for MO in $MONTHS; do
   for ARM in learned random; do
     echo "=== $TAG $MO $ARM $(date -u +%H:%M:%SZ) ==="
     for k in $(seq 0 $((NSLOT-1))); do
-      ex=""; [ "$ARM" = random ] && ex="--random-p --random-p-seed 7"
+      # EXTRA 透传：value 度量需要 --a-target/--schedule/--sched-p（sidecar
+      # 里没有的话 runner 会 fail-closed 而不是猜），keep-tau / 冻结字段同理。
+      ex="${EXTRA:-}"; [ "$ARM" = random ] && ex="$ex --random-p --random-p-seed 7"
       run ${SLOT_NODE[$k]} ${SLOT_GPU[$k]} \
           $OUT/logs/${TAG}_chunk_$(printf %02d $k) $MO $ARM $ex
     done

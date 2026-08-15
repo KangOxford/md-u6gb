@@ -34,7 +34,7 @@ JOB=${JOB:-6014307}; NODE=${NODE:-nid010895}; MO=${MO:-2026-01}; NTK=${NTK:-60}
 # GPU0：这一批臂从哪张卡起排。节点上通常只有**部分**卡空出来，写死 0
 # 会把新臂压到还在训练的卡上（今天正好只有 g0/g1 空）。
 GPU0=${GPU0:-0}
-mkdir -p $T/rollouts_tau $T/logs
+mkdir -p $T/${TAUDIR:-rollouts_tau} $T/logs
 head -n $NTK $A/logs/tk_feb.txt > $T/logs/tau_tk.txt
 
 i=0
@@ -53,7 +53,7 @@ for A_ in $TAUS; do
   TAG=t$(echo $A_ | tr -d .)
   env -u SLURM_NNODES -u SLURM_NTASKS -u SLURM_JOB_ID -u SLURMD_NODENAME \
   setsid nohup srun --jobid=$JOB --overlap --exact --cpus-per-task=8 -w $NODE -N1 -n1 \
-    --cpu-bind=none --job-name=dfm-tau-$TAG \
+    --cpu-bind=none --job-name=dfm-${PFX:-tau}-$TAG \
     --export=ALL,DFM_GPU=$((GPU0 + i)),DFM_SCRIPT=dfm_correct_runner.py,\
 XLA_PYTHON_CLIENT_MEM_FRACTION=${MEMFRAC:-0.30},XLA_FLAGS=--xla_gpu_enable_triton_gemm=false \
     bash $W --month $MO --n-cond 500 --n-gen 500 \
@@ -61,8 +61,8 @@ XLA_PYTHON_CLIENT_MEM_FRACTION=${MEMFRAC:-0.30},XLA_FLAGS=--xla_gpu_enable_trito
       --validate-first 8 --gate-batches 2 --state "$STATE" \
       --t-start 0.80 --n-steps 8 --n-seq 8 --batch-size 2 --corr-batch 2 \
       --keep-tau $A_ --skip-existing \
-      --out-template "$T/rollouts_tau/tau_${TAG}_{stock}_{month}_learned.npz" \
-    > $T/logs/tau_$TAG.log 2>&1 < /dev/null &
+      --out-template "$T/${TAUDIR:-rollouts_tau}/${PFX:-tau}_${TAG}_{stock}_{month}_learned.npz" \
+    > $T/logs/${PFX:-tau}_$TAG.log 2>&1 < /dev/null &
   echo "  tau=$A_ -> $NODE gpu$((GPU0 + i)) tag=$TAG"; i=$((i+1)); sleep 3
 done
 echo "=== keep-tau 扫描 launched $(date -u +%H:%M:%SZ) ==="
