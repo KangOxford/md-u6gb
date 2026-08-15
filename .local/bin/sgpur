@@ -483,6 +483,15 @@ tr:hover td{background:var(--rule)}
 .warnv{color:var(--bad); font-weight:600}
 details summary{cursor:pointer; color:var(--dim); font-size:12px; padding:4px 0}
 details summary:hover{color:var(--fg)}
+/* A whole section folded behind its heading, closed by default: restart
+   history is consulted, not monitored, and it is the tallest block on the
+   page.  The triangle carries the state; the heading stays a heading. */
+.secfold>summary{list-style:none; padding:0}
+.secfold>summary::-webkit-details-marker{display:none}
+.secfold>summary h2 .arr{display:inline-block; margin-right:7px;
+  color:var(--faint); transition:transform .15s}
+.secfold[open]>summary h2 .arr{transform:rotate(90deg)}
+.secfold>summary:hover h2{color:var(--fg)}
 details pre{font-size:11px; color:var(--dim); background:var(--rule); padding:9px 11px;
             border-radius:5px; overflow-x:auto; margin:4px 0 12px; white-space:pre}
 
@@ -2065,8 +2074,10 @@ def render_body(snap, opts, live=None, live_err=None) -> str:
 </section>
 
 <section>
-  <h2>restart history <span class="hint">&nbsp;one row per identity · each block is one run · hover for exact times</span></h2>
+  <details class="secfold">
+  <summary><h2><span class="arr">▸</span>restart history <span class="hint">&nbsp;one row per identity · each block is one run · hover for exact times · folded, click to open</span></h2></summary>
   {history_chart(snap, t0, t1, step, opts.window)}
+  </details>
 </section>
 
 </div></div>
