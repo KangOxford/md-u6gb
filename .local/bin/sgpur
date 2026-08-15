@@ -190,7 +190,7 @@ body{
   border:1px solid var(--line); border-radius:5px; white-space:nowrap}
 /* one hairline per node, so four cards read as one machine */
 .row.node-top{border-top:1px solid var(--line); margin-top:5px; padding-top:4px}
-.row.gpu .lbl.idx{padding-left:20px; gap:8px}
+.row.gpu .lbl.idx{padding-left:28px; gap:8px}
 .row.gpu .lbl .gi{color:var(--accent); font-weight:640}
 .track.twin{flex:1 1 0; height:20px}
 .track.twin+.track.twin{margin-left:9px}
@@ -283,6 +283,9 @@ section{margin-bottom:6px}
    whole page reads as one instrument rather than two. */
 .lbl,.hid,.lname{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .lbl .jid{font-weight:640; font-size:12.5px}
+/* Node ordinal within its job (1-based).  Fixed-width and right-aligned so
+   the nid names still start on one vertical line past index 9. */
+.lbl .nidx{color:var(--faint); font-size:11px; flex:0 0 14px; text-align:right}
 .lbl .meta{color:var(--faint); font-size:11px; flex:0 0 auto}
 .lbl .nm{color:var(--dim); overflow:hidden; text-overflow:ellipsis}
 .lbl a{color:inherit; text-decoration:none}
@@ -1588,30 +1591,33 @@ def live_section(live, err) -> str:
               mono(f"  used {g.fmt_dur(getattr(job, 'used_s', 0))}", None, "dim"),
               mono("  left ", None, "dim"),
               mono(g.fmt_dur(left_s), None, "crit" if left_s < 3600 else "warn")]
+        # The job's identity and what it is computing are one thought, so they
+        # share one row; a second line bought nothing but vertical space.
+        real = [x for x in getattr(job, "steps", []) if not x.get("batch")]
+        if real:
+            s = "  ".join(f"{x['id']} {x['name']}({x['time']})" for x in real[:4])
+            jh += [mono("   steps: ", None, "dim"), mono(s, None, "accent")]
+        else:
+            jh += [mono("   steps: ", None, "dim"),
+                   mono(".batch only · nothing computing", None, "crit")]
         out.append(f'<div class="lrow full">{"".join(jh)}</div>')
 
         if jerr:
             out.append(f'<div class="lrow full">{mono("     sample failed: ", None, "crit")}'
                        f'{mono(jerr[:120], None, "dim")}</div>')
-        real = [x for x in getattr(job, "steps", []) if not x.get("batch")]
-        if real:
-            s = "  ".join(f"{x['id']} {x['name']}({x['time']})" for x in real[:4])
-            out.append(f'<div class="lrow full">{mono("     steps: ", None, "dim")}'
-                       f'{mono(s, None, "accent")}</div>')
-        else:
-            out.append(f'<div class="lrow full">{mono("     steps: ", None, "dim")}'
-                       f'{mono(".batch only · nothing computing", None, "crit")}</div>')
 
-        for host in (getattr(job, "nodes", None) or sorted(hosts)):
+        # Nodes numbered within their job, 1-based: "node 3 of 4" is how one
+        # talks about an allocation, and the nid barcodes carry no order.
+        for ni, host in enumerate(getattr(job, "nodes", None) or sorted(hosts), 1):
             d = hosts.get(host)
             if d is None:
-                out.append(f'<div class="lrow full">{mono("   " + host, 14, "norm")}'
+                out.append(f'<div class="lrow full">{mono(f" {ni:>2} {host}", 14, "norm")}'
                            f'{mono("no data", None, "crit")}</div>')
                 continue
             by_uuid = {}
             for p in d.get("procs", []):
                 by_uuid.setdefault(p["uuid"], []).append(p)
-            out.append(node_row(host, d, g))
+            out.append(node_row(host, d, g, ni))
             for gp in d.get("gpus", []):
                 out.append(gpu_row(host, gp, by_uuid.get(gp["uuid"], []), job, g))
         out.append('<div class="lgap"></div>')
@@ -1650,7 +1656,7 @@ def live_section(live, err) -> str:
     return f'<div class="lwrap">{"".join(out)}</div>'
 
 
-def node_row(host, d, g) -> str:
+def node_row(host, d, g, idx=None) -> str:
     """Built out of the gantt's own row/label/track/tail parts.
 
     The bar means the same thing it means everywhere else on this page: the
@@ -1670,8 +1676,9 @@ def node_row(host, d, g) -> str:
     tip = (f"{host}\ncpu {cpu:.1f}% = {busy_cores:.0f} of {ncpu} cores\n"
            f"RAM {used:.0f} / {tot:.0f} GiB ({frac * 100:.0f}%)\n"
            f"load {d.get('load1', 0):.2f}   up {g.fmt_dur(d.get('up', 0))}")
+    nix = f'<span class="nidx">{idx}</span>' if idx is not None else ""
     return (f'<div class="row node-top" data-tip="{att(tip)}">'
-            f'<div class="lbl"><span class="jid">{esc(host)}</span></div>'
+            f'<div class="lbl">{nix}<span class="jid">{esc(host)}</span></div>'
             f'{twin_track(cpu / 100.0, NODE_CPU_COLOR, NODE_CPU_EDGE)}'
             f'{twin_track(frac, NODE_MEM_COLOR, NODE_MEM_EDGE)}'
             f'<div class="tail"><span class="g">{busy_cores:.0f}/{ncpu}c</span>'
