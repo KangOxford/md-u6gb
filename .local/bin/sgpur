@@ -450,6 +450,7 @@ h2 .alt{color:var(--faint); font-weight:400}
 .hrun .rc{min-width:1px; border-radius:2px; background:#7fb3e8; border:1px solid #5c93c9}
 .hrun .rc.bad{background:#e58f8f; border-color:#c97a7a}
 .hrow.other .hid{color:var(--faint); font-style:italic}
+.row.lane.other .lbl .nm{color:var(--faint); font-style:italic}
 .hrow.other .hrun .rc{background:#c6ccd3; border-color:#aab1b9}
 .hrow.other .hrun .rc.bad{background:#dcb4b4; border-color:#c39d9d}
 .hsplit{margin:12px 0 5px; padding-top:9px; border-top:1px dashed var(--line);
@@ -904,12 +905,29 @@ def lanes_section(snap, t0, t1, step, lw) -> str:
     """One row per experiment identity, across jobs.  The holes are the breaks."""
     grid = grid_html(t0, t1, step, snap.now)
     rows = []
+    split_done = False
     for h in snap.hist:
+        # Same device as the restart-history section below: the non-experiment
+        # buckets already sort last, so mark the boundary and desaturate them.
+        # Only the caption differs, because the axes differ -- this chart is
+        # wall clock, that one is cumulative running time.
+        other = h.ident in S.NON_EXPERIMENT
+        if other and not split_done:
+            split_done = True
+            rows.append('<div class="hsplit">not experiments &mdash; a shell '
+                        'someone attached, or a command line Slurm did not '
+                        'record. Same clock as the rows above, because they '
+                        'hold GPUs all the same.</div>')
         bars = []
         for r in h.runs:
             left = pct(r.start, t0, t1)
             width = max(pct(r.end, t0, t1) - left, 0.12)
             bad = r.end_state in S.BAD_STATES
+            fill = RUN_COLOR if not bad else BAD_COLOR
+            edge = "#5c93c9" if not bad else "#c97a7a"
+            if other:
+                fill = "#c6ccd3" if not bad else "#dcb4b4"
+                edge = "#aab1b9" if not bad else "#c39d9d"
             tip = (f"{h.ident}   run #{r.seq} of {len(h.runs)}\n"
                    f"{r.gpus:g} GPU  ·  {S.fmt_dur(r.secs)}  ·  "
                    f"{gh(r.secs, r.gpus):.1f} GPU-h\n"
@@ -919,8 +937,7 @@ def lanes_section(snap, t0, t1, step, lw) -> str:
             bars.append(
                 f'<div class="seg{" bad" if bad else ""}" '
                 f'style="left:{left:.4f}%;width:{width:.4f}%;'
-                f'background:{RUN_COLOR if not bad else BAD_COLOR};'
-                f'border-color:{"#5c93c9" if not bad else "#c97a7a"}" '
+                f'background:{fill};border-color:{edge}" '
                 f'data-tip="{att(tip)}"></div>')
         bits = [f'<span class="g">{len(h.runs)}</span> runs']
         if h.breaks:
@@ -932,7 +949,8 @@ def lanes_section(snap, t0, t1, step, lw) -> str:
                 f"{S.fmt_dur(h.secs)} busy · {h.gpu_hours:.1f} GPU-h\n"
                 f"jobs: {jids}")
         rows.append(
-            f'<div class="row lane"><div class="lbl" style="--lw:{lw}px">'
+            f'<div class="row lane{" other" if other else ""}">'
+            f'<div class="lbl" style="--lw:{lw}px">'
             f'<span class="nm" data-tip="{att(ltip)}">{live_dot(h, snap.now)}'
             f'{esc(h.ident)}</span></div>'
             f'<div class="track"><div class="tinner">{grid}{"".join(bars)}</div></div>'
