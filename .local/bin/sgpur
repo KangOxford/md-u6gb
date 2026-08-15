@@ -1095,7 +1095,7 @@ def lanes_section(snap, t0, t1, step, lw, sess=None) -> str:
     # behind one line.  The criterion is time, not a row count, so how many
     # fold moves with the data.  The sort is already most-recent-first, so
     # each bucket keeps its order.
-    QUIET_S = 12 * 3600
+    QUIET_S = 8 * 3600
     act, quiet = [], []
     n_quiet = 0
     split_seen = {False: False, True: False}
@@ -1160,7 +1160,7 @@ def lanes_section(snap, t0, t1, step, lw, sess=None) -> str:
     if quiet:
         act.append(
             f'<details class="lanesfold"><summary><span class="arr">▸</span>'
-            f'{n_quiet} quiet identities &mdash; nothing ran in the last 12h, '
+            f'{n_quiet} quiet identities &mdash; nothing ran in the last 8h, '
             f'click to open</summary>{"".join(quiet)}</details>')
     return "".join(act)
 
