@@ -41,7 +41,8 @@ class Arm(nn.Module):
 
     def __init__(self, T, D, hidden=256, learn_L=False, L_init=None, emb=32,
                  trunk="paper", depth=2, L_bank=None, norm_L=False, anchor=None,
-                 param_mode="chol", logdet=False, eig=None, tbins=8, tdep_pow=1.0):
+                 param_mode="chol", logdet=False, eig=None, tbins=8, tdep_pow=1.0,
+                 whiten_io=False, whiten_L=None, det_norm=False, det_psi_geo=10.0):
         super().__init__()
         self.T, self.D, self.input_dim = T, D, T * D
         self.time_embed = nn.Embedding(1000, emb)
@@ -72,6 +73,36 @@ class Arm(nn.Module):
         # 开方本身就把谱推向各向同性; 补回 logdet 后最优解变成 C, 且平凡解自动被堵死。
         self.param_mode = param_mode
         self.use_logdet = logdet
+        # ---- I/O 白化(2026-08-08, 用户指出"归一化/标准化没做好"后加) ----
+        # 问题: 逐通道 quantile 归一化只把**每个坐标**的边际压到 N(0,1),
+        # 但各向异性藏在**相关结构**里: Σ_data 的 cond=2.91e5, 沿主成分方向的 std
+        # 跨 540 倍(σ_max=18.37 vs σ_min=0.0340), 最大的一个方向独占 49% 方差。
+        # 网络的输入层 Linear(688+32->1024) 直接吃这个, 严重病态。
+        # 而这对 learned 比对 fixed 更不利: fixed 满足守恒, Cov(x_t)=Σ_data 对所有 t
+        # 恒定(病态但稳定); learned 的 Cov(x_t)=ᾱΣ_data+(1-ᾱ)Σ **随 t 漂移**
+        # (实测 σ_max 18.36->12.47, cond 2.9e5->1.1e5), 病态叠加漂移。
+        #
+        # 修法: 网络在**白化坐标**里工作。
+        #   输入 x̃_t = W x_t,  W = L_data^-1  (对所有臂**相同**, 纯预处理, 不引入臂间差异)
+        #   输出 ξ̂,  目标 ξ = L^-1 ε ~ N(0,I)  (各方向 std 恒为 1)
+        #   loss = ‖ξ̂-ξ‖²/D  与 Mahalanobis 损失**恒等**, 且省掉一次 O(D³) 三角求解
+        #   采样时 ε_θ = L ξ̂ 还原回原空间
+        # Scheme C(论文附录 C 的最优方案)要用的时间滞后权重 e^{β|t_i-t_j|}。
+        # 论文是单变量, |i-j| 直接是时间滞后; 本数据坐标 k = t*C + c, 故 t_k = k // C。
+        _idx = torch.arange(self.input_dim) // D          # D 是通道数 C
+        self.register_buffer("lag_mat", (_idx[:, None] - _idx[None, :]).abs().float())
+        # det_norm: 用 det Σ=常数 代替 trace 归一化(见 _det_scale)
+        self.det_norm = bool(det_norm)
+        if self.det_norm:
+            _Ld = torch.as_tensor(L_init, dtype=torch.float32)
+            _ld = 2.0 * torch.log(torch.diagonal(_Ld).abs().clamp_min(1e-12)).sum()
+            # 目标 det 取 det(Σ_data)·psi_geo^D, psi_geo 由 --det-psi-geo 给(默认 10, 曲率判据)
+            self.register_buffer('det_log_target',
+                                 _ld + self.input_dim * math.log(float(det_psi_geo)))
+        self.whiten_io = bool(whiten_io)
+        if self.whiten_io:
+            Wm = np.linalg.inv(np.asarray(whiten_L, dtype=np.float64))
+            self.register_buffer("W_in", torch.as_tensor(Wm, dtype=torch.float32))
         # anchor: 把可学的 L 锚定在 Sigma_data 的 Cholesky 上。
         # 动机(实测): 固定的样本协方差精确编码了数据的时间相关结构; 而自由学习的 L 在
         # 优化 Mahalanobis loss —— 那个目标不奖励时间依赖, 梯度会把 L 推向"让去噪更容易"
@@ -162,6 +193,32 @@ class Arm(nn.Module):
             L = torch.eye(self.input_dim) if L_init is None else torch.as_tensor(L_init, dtype=torch.float32)
             self.register_buffer("L_fixed", L)
 
+    def _det_scale(self, L):
+        """把 L 归一化到 **det Σ = det_target**(单位行列式 Cholesky 的推广)。
+
+        依据(2026-08-08 的可辨识性推导 + 玩具问题数值):
+        论文的损失 tr(Σ⁻¹C) 是 **GL(D) 不变**的 —— 随机坐标变换下相对变化 ~1e-13,
+        即它关于 Σ 的信息**精确为零**, 最终拿到什么 Σ 100% 由约束的几何决定。
+        而论文用的 ‖L‖_F² = tr Σ **不是几何不变量**(坐标变换下变 1000%),
+        logdet Σ 才是(只差常数 2log|det A|)。**用非几何量约束几何不变的损失,
+        答案必然是坐标系的产物** —— 这就是"换参数化得到相反 Σ"的完整机制。
+
+        玩具问题(D=20, cond(S)=1e3, 自由优化全矩阵 Σ):
+          tr Σ = D 约束      psi_spread 278.7  gamma 0.191  shape_err 0.7089
+          论文 λ‖L‖_F²       psi_spread 180.7  gamma 0.253  shape_err 0.6246
+          **det Σ = 常数     psi_spread 1.000  gamma 1.000  shape_err 0.0000**
+        且 det 约束**不需要知道 S**。
+
+        三个前提(必须验): (i) det_target 要让 ψ_geo=(det Σ/det S)^{1/D} ≳ 10(曲率判据);
+        (ii) 必须用均匀 t 加权的 simple loss(ELBO 权重下 ψ~1 处曲率为负);
+        (iii) 初始化要落在吸引域(Σ₀=I 可以, S²/S⁻¹ 不行且加 16 倍步数救不回来)。
+        """
+        D = self.input_dim
+        ld = 2.0 * torch.log(torch.diagonal(L).abs().clamp_min(1e-12)).sum()
+        # 缩放 c 使 logdet(c²Σ) = det_log_target  =>  2D·log c = target − ld
+        c = torch.exp((self.det_log_target - ld) / (2.0 * D))
+        return L * c, torch.log(c)
+
     def _norm_scale(self, L):
         """trace(Sigma)=||L||_F^2 归一化到 D, 返回 (缩放后的 L, log 缩放系数)。
         logdet 要用同一个系数修正, 故这里一并返回而不是各算各的。"""
@@ -175,7 +232,7 @@ class Arm(nn.Module):
             return self.L_fixed
         if self.param_mode == "logchol":
             L = self.A * self.strict_mask + torch.diag(torch.exp(self.dlog))
-            return self._norm_scale(L)[0]
+            return (self._det_scale(L)[0] if self.det_norm else self._norm_scale(L)[0])
         if self.param_mode == "spectral":
             return self._norm_scale(self.Q * torch.exp(self.s))[0]
         if self.param_mode == "tdep":
@@ -216,6 +273,20 @@ class Arm(nn.Module):
         """t(0..999) → 分箱索引, 与 delta_k 对齐。"""
         return (t.long() * self.n_tbins // 1000).clamp(0, self.n_tbins - 1)
 
+    def get_noise_xi(self, n, generator=None, regimes=None):
+        """返回 (ε, ξ)。ξ~N(0,I) 是白化空间的目标, ε=Lξ 是原空间注入的噪声。
+        白化训练用 ξ 当目标, 免去每步一次 O(D³) 三角求解。"""
+        xi = torch.randn(n, self.input_dim, device=self.tril_mask.device, generator=generator)
+        if not self.has_bank:
+            return xi @ self.get_L().T, xi
+        Lb = self.bank()
+        out = torch.empty_like(xi)
+        for k in range(Lb.shape[0]):
+            m = regimes == k
+            if m.any():
+                out[m] = xi[m] @ Lb[k].T
+        return out, xi
+
     def get_noise(self, n, generator=None, regimes=None):
         xi = torch.randn(n, self.input_dim, device=self.tril_mask.device, generator=generator)
         if not self.has_bank:
@@ -247,6 +318,36 @@ class Arm(nn.Module):
             return 2.0 * torch.log(torch.diagonal(L).clamp_min(1e-12)).sum() / self.input_dim
         _, logc = self._norm_scale(L)
         return (raw + 2.0 * self.input_dim * logc) / self.input_dim
+
+    def reg_scheme(self, scheme, beta=0.2, lam=None, tau=1e-2):
+        """论文附录 C 的四种正则方案(Table 8)。
+
+          A  Loff-F  = λ_off ‖L − diag(L)‖²_F           λ_off = 1e-3/T ≈ 1e-5
+          B  Lrobust = Loff-F + [− log det Σ + τ tr Σ]  τ = 1e-2      ← 论文测出**最差**
+          C  Ltaper  = λ_d Σ_ij e^{β|i−j|} L²_ij        β=0.2, λ_d=1e-4  ← 论文**最优**
+          D  Lfull-F = λ ‖L‖²_F                          λ = 1e-3
+
+        Scheme B 就是 log-det barrier —— 论文自己测出它"slightly degrades performance",
+        独立佐证了本项目 v4/v5 的失败; 而 13H.4c 给出了原因(C 内生于 Σ 时 logdet 独自主导)。
+        Scheme C 编码"时间相关随滞后衰减"这个先验, 是一个**外生**的时间结构约束 ——
+        与 13H.4c 的结论(要让学 Σ 有意义, 信号必须外生)方向一致。
+        """
+        if not self.learn_L or scheme in (None, "none"):
+            return 0.0
+        L = self.get_L()
+        off = L - torch.diag(torch.diagonal(L))
+        if scheme == "A":
+            return (lam if lam is not None else 1e-3 / self.T) * (off ** 2).sum()
+        if scheme == "B":
+            la = (lam if lam is not None else 1e-3 / self.T) * (off ** 2).sum()
+            logdet = 2.0 * torch.log(torch.diagonal(L).clamp_min(1e-12)).sum()
+            return la + (-logdet + tau * (L ** 2).sum())
+        if scheme == "C":
+            w = torch.exp(beta * self.lag_mat)
+            return (lam if lam is not None else 1e-4) * (w * L ** 2).sum()
+        if scheme == "D":
+            return (lam if lam is not None else 1e-3) * (L ** 2).sum()
+        raise ValueError(f"未知 scheme {scheme}")
 
     def kl_to_anchor(self):
         """KL( N(0,Σ_anchor) ‖ N(0,Σ) ) / D —— 一个**外生**的锚定项。
@@ -297,6 +398,8 @@ class Arm(nn.Module):
         return tot / (r.shape[0] * r.shape[1])
 
     def forward(self, x_flat, t):
+        if getattr(self, "whiten_io", False):
+            x_flat = x_flat @ self.W_in.T          # x̃ = W x, W=L_data^-1
         h = torch.cat([x_flat, self.time_embed(t)], 1)
         if self.trunk == "paper":
             return self.model(h)
@@ -307,7 +410,7 @@ class Arm(nn.Module):
 
 
 def arm_specs(hidden, hidden_wide, L_data, L_bank=None, eig=None,
-              L_toe=None, trunk="deep", depth=3):
+              L_toe=None, trunk="deep", depth=3, whiten_io=False):
     """所有臂的定义 —— 训练(run_ncd)与重评估(reeval_ts)共用的**单一来源**。
 
     这份定义曾经在两个文件里各写一遍。后果不是报错而是静默漏做: reeval 的循环是
@@ -315,7 +418,9 @@ def arm_specs(hidden, hidden_wide, L_data, L_bank=None, eig=None,
     与 lobbench_eval/feature_ts_metrics 的特征定义重复是同一个病 ——
     **能被遗忘的重复, 迟早会被遗忘。**
     """
-    TK = dict(trunk=trunk, depth=depth)
+    # whiten_io 是**全局**开关: 对所有臂一致地白化网络 I/O, 故不引入臂间差异。
+    TK = dict(trunk=trunk, depth=depth, whiten_io=whiten_io,
+              whiten_L=(L_data if whiten_io else None))
     S = {
         "iid":            dict(hidden=hidden,      learn_L=False, L_init=None, **TK),
         "iid_wide":       dict(hidden=hidden_wide, learn_L=False, L_init=None, **TK),
@@ -353,6 +458,11 @@ def arm_specs(hidden, hidden_wide, L_data, L_bank=None, eig=None,
     S["hdgn_learned_v8b"] = dict(hidden=hidden, learn_L=True, L_init=L_data,
                                  param_mode="tdep", logdet=False, norm_L=False,
                                  anchor=L_data, tbins=8, tdep_pow=2.0, **TK)
+    # v9: det Σ=常数 代替 trace 归一化 —— 唯一在玩具问题上给出 shape_err=0.0000 的约束,
+    # 且不需要知道 S。理由见 Arm._det_scale。
+    S["hdgn_learned_v9"] = dict(hidden=hidden, learn_L=True, L_init=L_data,
+                                param_mode="logchol", logdet=False, norm_L=False,
+                                det_norm=True, **TK)
     # v8c/v8d: δ(t)=ᾱ_t^3 / ᾱ_t^4。实测 p 的效果**非单调**(p=0 的 v7 是 16/25,
     # p=1 的 v8 只有 5/30, p=2 的 v8b 是 20/30) —— 因为守恒违反 ∝ ᾱ_t(1-ᾱ_t),
     # 峰在 ᾱ=0.5 处; p=1 恰好把偏离堆在那个峰上, p 越大越绕开它。
@@ -375,6 +485,23 @@ def arm_specs(hidden, hidden_wide, L_data, L_bank=None, eig=None,
                                     param_mode="spectral", logdet=True,
                                     norm_L=True, eig=eig, **TK)
     return S
+
+
+def _eps_pred(model, x, t, regimes=None):
+    """返回**原空间**的 ε_θ。白化模式下网络输出的是 ξ̂, 这里乘回 L。
+    非白化模式直接返回网络输出 —— 两条路径的采样代码因此完全一致。"""
+    out = model(x, t)
+    if not getattr(model, "whiten_io", False):
+        return out
+    if getattr(model, "has_bank", False) and regimes is not None:
+        Lb = model.bank()
+        e = torch.empty_like(out)
+        for k in range(Lb.shape[0]):
+            m = regimes == k
+            if m.any():
+                e[m] = out[m] @ Lb[k].T
+        return e
+    return out @ model.get_L().T
 
 
 def cosine_alphas(Tsteps, s=0.008, device="cpu"):
@@ -416,7 +543,7 @@ def ddim_sample(model, ab, n, nfe, device, seed=0, Tsteps=1000, x0_clip=None, re
     for i in range(nfe):
         t = ts[i]; a_t = ab[t]
         a_prev = ab[ts[i + 1]] if i + 1 < nfe else torch.tensor(1.0, device=device)
-        e = model(x, t.repeat(n))
+        e = _eps_pred(model, x, t.repeat(n), regimes)
         x0 = (x - (1 - a_t).sqrt() * e) / a_t.sqrt()
         if x0_clip is not None:
             x0 = x0.clamp(-x0_clip, x0_clip)
@@ -439,6 +566,14 @@ def main():
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--lam1", type=float, default=1e-2)   # 论文 HP_LAMBDA_1 默认
     ap.add_argument("--lam2", type=float, default=0.0)
+    ap.add_argument("--det-psi-geo", type=float, default=10.0,
+                    help="v9 的 det 目标: det Σ = det(Σ_data)·psi_geo^D; 曲率判据要求 >=10")
+    ap.add_argument("--reg-scheme", default="none", choices=["none","A","B","C","D"],
+                    help="论文附录 C 的正则方案; C 是论文自己的最优")
+    ap.add_argument("--reg-beta", type=float, default=0.2)
+    ap.add_argument("--reg-lam", type=float, default=-1.0, help="<=0 用论文默认")
+    ap.add_argument("--whiten-io", type=int, default=0,
+                    help="1=网络在白化坐标里工作(输入 L_data⁻¹x, 输出 ξ)。全局开关, 对所有臂一致")
     ap.add_argument("--toeplitz-blend", type=float, default=1.0,
                     help="hdgn_toeplitz 的投影强度, 1.0=完全平稳")
     ap.add_argument("--lam-kl", type=float, default=1.0,
@@ -570,7 +705,8 @@ def main():
 
     SPEC = arm_specs(args.hidden, Hw, L_data, L_bank=L_bank,
                      eig=(eig_lam, eig_Q), L_toe=L_toe,
-                     trunk=args.trunk, depth=args.depth)
+                     trunk=args.trunk, depth=args.depth,
+                     whiten_io=bool(args.whiten_io))
 
     Xtr_t = torch.as_tensor(Xtr, device=dev)
     regimes_t = torch.as_tensor(regimes_all[:ntr], device=dev)
@@ -605,17 +741,25 @@ def main():
             # tdep 臂的分组索引是 **t 分箱**(每步不同), regime 臂才是市场态(每样本固定)。
             reg_b = (model.tbin_of(t) if model.param_mode == "tdep"
                      else (regimes_t[idx] if model.has_bank else None))
-            eps = model.get_noise(args.batch, generator=gen, regimes=reg_b)
+            eps, xi = model.get_noise_xi(args.batch, generator=gen, regimes=reg_b)
             a = ab[t][:, None]
             xt = a.sqrt() * x0 + (1 - a).sqrt() * eps
-            r = model(xt, t) - eps
-            loss = model.mahalanobis(r, reg_b)
+            if getattr(model, "whiten_io", False):
+                # 白化空间: 网络直接预测 ξ~N(0,I)。‖ξ̂-ξ‖²/D 与 ‖L⁻¹(ε_θ-ε)‖²/D **恒等**,
+                # 但目标已标准化(各方向 std=1), 且省掉每步一次 O(D³) 三角求解。
+                loss = ((model(xt, t) - xi) ** 2).sum(1).mean() / model.input_dim
+            else:
+                r = model(xt, t) - eps
+                loss = model.mahalanobis(r, reg_b)
             # 白名单必须覆盖**所有**用 KL 锚的参数化。血泪教训(2026-08-08):
             # 这里原本只写了 "logchol", 新增的 "tdep" 不在名单里 —— 于是 v8/v8b 的
             # KL 锚**从未被加上**, 而它们同时 logdet=False、norm_L=False,
             # 结果是完全无约束: 学到的 Σ trace 涨到 123700(180 倍)、有效秩 302,
             # 直接跌进 13H.2 推导的 L→∞ 平凡解。**不报错, 且 loss 反而更好看**(0.0378)。
             # 改为按"有锚点就用 KL"判定, 不再枚举 param_mode。
+            if model.learn_L and args.reg_scheme not in (None, "none"):
+                loss = loss + model.reg_scheme(args.reg_scheme, beta=args.reg_beta,
+                                               lam=(args.reg_lam if args.reg_lam > 0 else None))
             if (model.learn_L and not model.use_logdet
                     and model.L_anchor.numel() > 0 and args.lam_kl > 0):
                 loss = loss + args.lam_kl * model.kl_to_anchor()
