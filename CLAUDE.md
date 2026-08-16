@@ -153,6 +153,18 @@ gtop                 # 先看：自己名下的分配里，此刻哪些卡是空
 这条规则本来就以「Reuse active allocations」的形式写在下面，我没执行。现在提到 4.0
 并升级为硬标准：**`sgpu` 是 `sbatch` 的前置条件，跳过它就是违规。**
 
+**血泪教训第二例（2026-08-16，用户再令 "always think about using attach before any
+sbatch"）**：XVLA 四连发（2 评测 + 2 训练重启）全走 sbatch 排队，同一时刻自己名下
+`6022465` 的 **16 张卡显存 1-4 MiB 彻底空转、还剩 13h49m**。错误机制是把前一天的
+「假窗口黑名单」当成了免检章——黑名单是**时点判定，会过期**：昨天它忙、今天它空。
+三条修正入规：
+1. **每一次 sbatch 前逐卡重查显存**（`nvidia-smi --query-gpu=memory.used` 经
+   `srun --overlap` 到目标节点，或读 gtop 逐卡行），gtop 头行的 idle 计数把
+   held（显存 86G+ 驻留）也算进去，**头行不可作判据**；1-4 MiB 才是真空。
+2. **1N/1GPU 的小任务（eval/冒烟/benchmark）一律 attach-first**——暴露面小、
+   分钟级起跑；sbatch 只留给需要独立 walltime 保障的多节点长段。
+3. attach 版与排队版并存时用**不同 TAG/输出目录**防结果目录冲突，取先完成者。
+
 **attach 起来之后必须真的在算。** 一个 attach 的 srun step **随启动它的会话一起死**，
 所以要用 `setsid nohup srun ... &` 让它脱离会话进程组，否则会话一重启，卡就白占着
 空转。起完 40 秒内用 `squeue -s -j <alloc>` 确认 step 在，并且 `gtop` 里 util 起来了；
