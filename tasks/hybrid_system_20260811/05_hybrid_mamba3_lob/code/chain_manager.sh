@@ -118,7 +118,8 @@ arm_alive() {
 }
 
 # 找一个能接手的 allocation：自己的、RUNNING、四节点、剩余够久、且卡是空的。
-# 排除当前这个（它正是要被替换的那个）和别人锁着的节点。
+# 排除当前这个（它正是要被替换的那个）。「卡是空的」由 nvidia-smi 判定，
+# 这是唯一判据：锁表机制已于 2026-08-14 废止。
 find_free_alloc() {
     local cur="$1" jid nodes left
     while read -r jid nodes left; do
@@ -133,9 +134,6 @@ p=[int(x) for x in s.split(':')]
 while len(p)<3: p.insert(0,0)
 print(d*1440+p[0]*60+p[1])" "$left" 2>/dev/null)
         [ "${m:-0}" -lt 120 ] && continue
-        # 别人声明过的分配不接（R4）。这一步在物理探测之前：读锁表是本地文件，
-        # 探测要起一个 srun，先做便宜的那个。
-        foreign_claimed "$nodes" >/dev/null && continue
         local hs; hs=$(scontrol show hostnames "$nodes" 2>/dev/null | tr '\n' ' ')
         local first; first=$(echo "$hs" | awk '{print $1}')
         [ -z "$first" ] && continue
@@ -175,27 +173,6 @@ declare -A LAUNCHED_AT
 
 # 该臂 allocation 的全部节点；分配没了返回空
 nodes_of() { squeue -j "$1" -h -o "%N" 2>/dev/null | tr -d ' '; }
-
-# 这批节点是不是被别人（非 LOCK_OWNER）声明了。只读锁表，不探测。
-# 没有它的话，控制器会一直往别人的地盘上投，claim_gate 每次拒、每 COOLDOWN 白试
-# 一轮，那条臂就永远停在那儿——无人值守时这等于实验静默死亡。
-foreign_claimed() {
-    local nl="$1" me="${LOCK_OWNER:-claude-ctx2k}" ns
-    local NL=/lus/lfs1aip2/projects/public/u6gb/tasks/node_status/nodelock
-    [ -x "$NL" ] || return 1
-    ns=$(scontrol show hostnames "$nl" 2>/dev/null | tr '\n' ' ')
-    timeout 60 "$NL" ls --json --no-probe 2>/dev/null | \
-      NODES="$ns" OWNER="$me" python3 -c '
-import json, os, sys
-try: reg = json.load(sys.stdin)
-except Exception: sys.exit(1)
-me = os.environ["OWNER"]
-for n in os.environ["NODES"].split():
-    w = (reg.get(n) or {}).get("who")
-    if w and w != me:
-        print(w); sys.exit(0)
-sys.exit(1)'
-}
 
 # 达标后停掉这条臂的训练。**不这样做整条流水线就跑不通**：评测起在同一批卡上，
 # 而训练占着 87 GB/卡，评测必然 OOM。
@@ -255,12 +232,8 @@ stop_at_target() {
 }
 
 resume_arm() {   # $1=arm(A|B) $2=alloc $3=ckpt_dir $4=step
-    local arm="$1" alloc="$2" dir="$3" step="$4" nl nn script tag who
+    local arm="$1" alloc="$2" dir="$3" step="$4" nl nn script tag
     nl=$(nodes_of "$alloc")
-    if [ -n "$nl" ] && who=$(foreign_claimed "$nl"); then
-        log "$arm 的分配 $alloc 已被 $who 声明，换别处"
-        nl=""
-    fi
     if [ -z "$nl" ]; then
         log "$arm 的分配 $alloc 不可用，另找"
         local nj nhosts
@@ -285,9 +258,9 @@ resume_arm() {   # $1=arm(A|B) $2=alloc $3=ckpt_dir $4=step
     fi
     # DEDICATED_ALLOC 不再设 1。它会无差别 kill 目标节点上的全部 compute 进程，
     # 与 PRIORITY.md 的 R4「抢占只向下且永不由 agent 执行」直接冲突。
-    # 现在由 launcher 里的 claim_gate.sh 判：别人声明过或有别人的进程就不起。
+    # 现在由 launcher 里的 claim_gate.sh 判：卡上有别人的进程就不起。
     setsid nohup env ATTACH_JOBID="$alloc" NNODES_ATTACH="$nn" NODELIST="$nl" SMOKE=0 \
-        DEDICATED_ALLOC=0 LOCK_OWNER="${LOCK_OWNER:-claude-ctx2k}" \
+        DEDICATED_ALLOC=0 GATE_OWNER="${GATE_OWNER:-claude-ctx2k}" \
         COSINE_STEPS="${COSINE_STEPS:-6400}" GRAD_ACCUM_STEPS="${GRAD_ACCUM_STEPS:-5}" \
         CHECKPOINT_EVERY=auto LOG_GRAD_NORMS=1 LOG_EVERY=250 \
         RESTORE_PATH="$dir" RESTORE_STEP="$step" \

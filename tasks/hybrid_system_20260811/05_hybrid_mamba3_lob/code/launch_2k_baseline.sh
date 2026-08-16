@@ -126,13 +126,13 @@ if [ "$DEDICATED_ALLOC" = "1" ]; then
         ' 2>&1 | grep "^\[clear\]"
 fi
 
-# 闸门换成 claim_gate.sh：先查锁表、再上锁、最后体检。
+# 闸门是 claim_gate.sh：nvidia-smi 物理体检（锁层已于 2026-08-14 删除）。
 #
-# 换掉的原因是老闸门只有体检这一层，而 2026-08-13 10:19 baseline 就死在这个
-# 缺口上：邻居（claude-dfm / crps-wm_ft）在锁表上**都声明过**，我却没读，
-# 体检那一刻卡是空的，8 分钟启动窗口里 vLLM 起来把 rank2 挤死。
+# 已知盲区：体检只能证明 t=0 干净。2026-08-13 10:19 baseline 就死在这里 ——
+# 体检那一刻卡是空的，8 分钟启动窗口里邻居的 vLLM 起来把 rank2 挤死。
+# 曾用声明层覆盖这个窗口，2026-08-14 按用户令删除（锁比使用活得久，代价更大）。
 # 详细推理见 claim_gate.sh 的头注释。
-if ! ALLOC="$ATTACH_JOBID" NODELIST="$NODELIST" OWNER="${LOCK_OWNER:-claude-ctx2k}" \
+if ! ALLOC="$ATTACH_JOBID" NODELIST="$NODELIST" OWNER="${GATE_OWNER:-claude-ctx2k}" \
      TIER=T0 NOTE="2k baseline arm (${TAG}), critical comparison" \
      MAX_RESIDUAL_MIB="${MAX_RESIDUAL_MIB:-4096}" \
      bash "$TASKDIR/code/claim_gate.sh"; then
@@ -261,12 +261,44 @@ export MSG_SEQ_LEN=2000
 # ── 4. 并行与批量（与 baseline 相同）────────────────────────────────────────
 export GPUS_PER_NODE=4
 export TP_SIZE=1
-# 可覆盖。两条臂各占半个 allocation 时用 K=2 把全局批量补回 500 上下文那一档：
-#   effective_bsz = micro_bsz x devices x processes x K = 1 x 4 x 2 x 2 = 16 样本
-#   16 x 2000 条 = 32,000 条消息/步 = 500 上下文时的 64 x 500，两者一致。
+# ── K（梯度累积）不是自由参数，是有效批量的因变量 ──────────────────────────
+#
+# 定义实验的是**有效批量**，不是 K。三者的关系是恒等式：
+#
+#   有效批量 = micro_bsz × GPU/节点 × 节点数 × K
+#      80    =     1     ×    4     ×  节点数 × K      →  节点数 × K = 20
+#
+#   节点数   2    4    5   10   20
+#   正确 K  10    5    4    2    1
+#
+# 旧写法 `GRAD_ACCUM_STEPS=${GRAD_ACCUM_STEPS:-10}` 是**按 2 节点写死的默认值**，
+# 靠调用方（chain_manager.sh:291 传 5）记得覆盖。这个形状必然出事：
+#   · 4 节点忘了覆盖 → 有效批量 160，是设计值的 2 倍
+#   · **不会报任何错**，训练照跑、loss 照降，只是训出一个与对照臂不可比的模型
+#   · 而「不可比」要到几小时后做配对比较时才发现，那时机器已经烧掉了
+# 这正是 feedback_config_only_reaches_one_path 那族缺陷：一个必须随环境变的量，
+# 被写成固定默认值 + 藏在别处的覆盖。
+#
+# 现在改成：**声明有效批量，推导 K，并对调用方传进来的 K 做硬校验。**
+export EFFECTIVE_BSZ=${EFFECTIVE_BSZ:-80}
+_bsz_denom=$(( PER_GPU_BSZ * GPUS_PER_NODE * NNODES_ATTACH ))
+if [ "$_bsz_denom" -le 0 ] || [ $(( EFFECTIVE_BSZ % _bsz_denom )) -ne 0 ]; then
+    echo "FATAL: 有效批量 $EFFECTIVE_BSZ 无法被 micro_bsz($PER_GPU_BSZ) × GPU/节点($GPUS_PER_NODE) × 节点数($NNODES_ATTACH) = $_bsz_denom 整除。" >&2
+    echo "       换节点数时必须选能整除的：节点数 × K = $(( EFFECTIVE_BSZ / (PER_GPU_BSZ * GPUS_PER_NODE) ))。" >&2
+    exit 5
+fi
+_k_derived=$(( EFFECTIVE_BSZ / _bsz_denom ))
+if [ -n "${GRAD_ACCUM_STEPS:-}" ] && [ "${GRAD_ACCUM_STEPS}" != "${_k_derived}" ]; then
+    echo "FATAL: 调用方传了 GRAD_ACCUM_STEPS=$GRAD_ACCUM_STEPS，但 $NNODES_ATTACH 节点下" >&2
+    echo "       有效批量 $EFFECTIVE_BSZ 要求 K=$_k_derived（会得到 $(( _bsz_denom * GRAD_ACCUM_STEPS ))，不是 $EFFECTIVE_BSZ）。" >&2
+    echo "       要改有效批量就显式传 EFFECTIVE_BSZ=，不要靠改 K 来间接改它。" >&2
+    exit 5
+fi
+export GRAD_ACCUM_STEPS=$_k_derived
+echo "[bsz] 有效批量 $EFFECTIVE_BSZ = ${PER_GPU_BSZ} × ${GPUS_PER_NODE}GPU × ${NNODES_ATTACH}节点 × K${GRAD_ACCUM_STEPS}"
+#
 # 注意 train.py:413 的 curtail_epochs 数的是 micro-batch，K>1 时必须乘 K，
 # 否则会在 32000/K 步静默早停；COSINE_STEPS 数的是优化器步，不乘。
-export GRAD_ACCUM_STEPS=${GRAD_ACCUM_STEPS:-10}
 export HIERARCHICAL=True
 export REMAT=0
 # profiling 指标。梯度范数按参数组分开（global/muon/ssm/regular/in_proj/out_proj）
