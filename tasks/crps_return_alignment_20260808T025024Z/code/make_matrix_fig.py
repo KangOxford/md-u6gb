@@ -28,9 +28,15 @@ TICKERS = ["GOOG", "MSFT", "AMZN", "META", "AMD", "INTC", "NFLX", "JPM"]
 BLUE, RED, GREEN = "#4878b0", "#d1495b", "#2E7D32"
 DPI = 110
 
-ARM_DIRS = {"GOOG": [f"hp_mdwmftb_s9100{i}" for i in (1, 2, 3)]}
-BASE_DIRS = {"GOOG": ([f"hp_mdbase_s9100{i}" for i in (1, 2, 3)], "hp_mdbase_s91001")}
-ARM_LABEL = "wm_ft_b (mid-trained)"
+# Uniform protocol across every row: real, base and the mid-trained arm all
+# on the ticker's held-out evaluation index, so the three curves in a cell
+# are paired on identical contexts.
+import os
+
+ARM_TAG = os.environ.get("ARM_TAG", "v5mem")
+ARM_SEEDS = os.environ.get("ARM_SEEDS", "97101,97102").split(",")
+BASE_SEEDS = ("97001", "97002")
+ARM_LABEL = os.environ.get("ARM_LABEL", "wm_ft_multi (mid-trained)")
 
 
 def multih(root, kind):
@@ -39,17 +45,13 @@ def multih(root, kind):
 
 
 def pools(tk):
-    t = TICKERS.index(tk)
-    if tk in BASE_DIRS:
-        gen_roots, real_root = BASE_DIRS[tk]
-        base = np.vstack([multih(r, "gen") for r in gen_roots])
-        real = multih(real_root, "real")
-    else:
-        base = np.vstack([multih(f"v5m_train_s{96000 + t * 10 + k}", "gen")
-                          for k in range(6)])
-        real = multih(f"v5m_train_s{96000 + t * 10}", "real")
-    ft = (np.vstack([multih(r, "gen") for r in ARM_DIRS[tk]])
-          if tk in ARM_DIRS else None)
+    base = np.vstack([multih(f"hp_v5meb_{tk}_s{s}", "gen") for s in BASE_SEEDS])
+    real = multih(f"hp_v5meb_{tk}_s{BASE_SEEDS[0]}", "real")
+    try:
+        ft = np.vstack([multih(f"hp_{ARM_TAG}_{tk}_s{s}", "gen")
+                        for s in ARM_SEEDS])
+    except FileNotFoundError:
+        ft = None
     return real, base, ft
 
 

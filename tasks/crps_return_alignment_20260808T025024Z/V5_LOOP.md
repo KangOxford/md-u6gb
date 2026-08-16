@@ -324,3 +324,205 @@ log-w 截断 + ESS 必报；权重按 **rollout 整条**给，不逐 token。
 | META | −39.3% | −3.18 | 0.79→0.68 | JPM | −7.2% | ns | 0.87→0.78 |
 
 **判读**：① **shape 普适化达成**——八票全降、四票 ≥1.85σ、混池标准化 qL1 −26%（0.138→0.102）：逐票权重把 shape 修复推广到了全横截面（S9 单票权重做不到的事）；② **sd 轴一剂未兑现**（混池 0.760→0.734 微降）——与单票弧线同构：r1 剂量先出 shape、sd 要第二剂（且矩阵图显示 GOOG h=100/250 raw 尾部大幅外扩=尾质量先于二阶矩恢复）；③ 安全面三绿创纪录。**自然下一剂 = multi-IPF r2**（从 wm_ft_multi 重采重估逐票权重再训一轮，对照单票 r2 出 sd 的先例）。产物：v5m_scoreboard.json、fig_v5m_matrix.png（全红版，Overleaf 84fb9d2）、ceFIX_wm_ft_multi、lobbench2/hp_v5me{b,m}_GOOG。注意口径：eval 集 n=500×2seed 比多日集噪；跨集比较无效，只读集内配对 delta。
+
+## S16 (2026-08-13 21:55Z) 图册补上八票记分板图；surge 面板上线
+- 新图 `figs/fig_v5m_scoreboard.pdf`（脚本 `code/make_v5m_scoreboard_fig.py`，数据 `v5m_scoreboard.json`）：左 = 每票 ΔqL1% 棒 + day-block z（≥1.85σ 实色四票，pooled 标准化 −25.9% 灰棒），右 = sd 前后哑铃对 1.0 虚线（pooled 0.760→0.734，INTC/NFLX 朝真走、GOOG/META/JPM 反向）。
+- 已接入 midtrain_figs.tex（atlas 与 matrix 之间，图册现 16 张），tectonic 编译过，Overleaf push 7793b02。
+- 核查结论：此前 15 张图的 PDF/PNG 资产全部已跟踪已推送（main == origin/main），本次唯一缺口就是记分板无图形版。
+- 工程面板 https://midtrain-ledger-x7k4q9.surge.sh 部署成功（HTTP 200，16.7KB，含泳道图/前沿表/八票 ΔqL1 条/画廊，已脱敏）。
+
+## S17 (2026-08-13 22:2xZ) multi-IPF r2 起跑（4 卡档）；用户所指 16 卡被 mink3 锁挡
+- 用户贴出 6006424（ctx2k-base-alloc, 4N16G 全 idle）授意使用；但锁表显示 nid010667/670/672/715 全部有 claude-mink3 live 锁（"P4 scaling sweep 16-way, user authorised 2026-08-13"）。按「别人 lock 的不碰」+ R1 双查，未占用，交用户仲裁。gtop 显示 🔓 与锁表不一致，疑 gpu_locks.json / nodelocks.json 双注册表未合并显示。
+- 改在自有节点 nid010943（6000412，剩 10h17m，锁表 crps-wm_ft live）起 r2 素材：`v5m2_fanout.sh`（槽数=4×节点数泛化版），48 run = 8票×6 seeds（98000+t*10+k），DUMP_PREFIX=v5m2，CKPT_OVERRIDE=ckpt/wm_ft_multi（69378 layout 复用）。4 槽×12 连跑，r1 实测 ~20min/run → dump ≈4h；全周期估 ~7.5h。
+- nid010943 现驻：GPU0-2 各 743MB ram_repro SD3 进程（0% util）、GPU3 52MB spinner（100% util）+ JAX 探针，全为他会话实验，不杀；闸门按「锁表∧剩余显存≥需求」通过（94.9G 空闲）。GPU3 槽若拖速，折份额给 0-2（幂等）。
+- 后续链：build weights（v5m2_w_*，逐票，分母=新素材）→ wmle_full_ft 从 wm_ft_multi 续训 → ckpt/wm_ft_multi2 → eval fanout（seeds 97201/97202, tag v5me2）→ scoreboard/matrix r2 版。
+- 24 格账目（S16 后补算）：qL1 22/24 改善 vs sd 仅 10/24 朝 1；GOOG/META/JPM 全 horizon sd 反向；短 horizon 过冲（NFLX h25 qL1 +47%）——r2 的靶就是这三票的 sd 和短端过冲。
+
+### S17a (2026-08-13 23:5xZ) GPU3 wedged，12 seed 折给 GPU0-2 长闸门救援
+- slot3 首查即暴露：12 个 rid 全部秒退 exit=1，per-seed 日志根因 `jax.errors.JaxRuntimeError: INTERNAL: no supported devices found for platform CUDA`——GPU3 新 CUDA context 建立失败。卡上驻着 ram_repro 的 52MB 100% util spinner + JAX 探针；`nvidia-smi -i 3 -q`：Compute Mode Default、有 "Pending: Enabled" 挂起项。判定 wedged，root 权限的 reset 不可得，spinner 是他会话实验进程不杀。
+- 处置：`v5m2_rescue.sh`——12 个搁浅 (ticker,seed) 平分三份挂到 GPU0-2，闸门 60s×300 次（5h 耐心），各卡主链结束显存回落 743MB 地板即自动接力；不与主链并卡，幂等可重投。
+- 修订 ETA：dump 主链 ~03:45 完，救援 ~05:05 完 → 权重 ~05:25 → 训练 ~07:25 → 评估（16 run ÷ 3 卡）~09:10 → 记分 ~09:30；6000412 约 09:50 到点，余量 ~20min。若窗口不够：训练带 step 链 checkpoint、eval/dump 幂等，均可换分配续跑，不丢工作。教训归档：物理闸门（显存<1000MB）判不出 wedged 卡——显存空 ≠ context 可建，首查协议再次救场。
+
+### S17b (2026-08-14 02:0xZ) 会话重启后接管；r2 训练 argv 钉死
+- 会话重启带走后台驱动，但 16 条 v5m2-dump step 01:15 起以孤儿身份自行重启（srun 客户端树 setsid 存活，幂等跳过已完成 seed，尸体 seed 顺序覆写无撞车）；与 mink3-sweep16 同分配共存（它 88.2G/卡 + dump 足印 6.6G ≈ 94.8G < 95.6G）。哨兵 v1 的 15 分钟日志静默判据误报（单 run 30-40min 无日志输出属正常），v2 改用 squeue step 计数判活。
+- 锁表机制已按用户令废除：tasks/node_status → node_status_deprecated_20260814；memory 已更新（feedback_node_lock_usage_policy）。
+- **r2 训练输入（照抄 r1 argv 换代）**：`ARM=wm_ft_multi2 LR=1e-5 EPOCHS=1 LAMBDA=1.0 run_wmle_ft.sh --ckpt $T/ckpt/wm_ft_multi --step 69378 --prefix v5m2 --weights v5m2_weights.npz --train-seeds <每票k0-k3共32个98xxx> --hold-seeds <每票k4-k5共16个> --eval-every 100 --save-every 200 --micro 2`，跑法 = srun --overlap 单卡（需 ~空卡 + XLA_MEM_FRACTION 0.92）+ OMP_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8（r1 futex 教训）+ --job-name=v5m2-train。权重构建 = build_v5m2_weights.sh（新写，CPU）。
+
+### S17c (2026-08-14 10:2xZ) 七小时空转的根因 + 第三次重铺（这次验证过）
+- 复盘：03:07 的"重启"发 send-keys 到当时不存在的 tmux 会话（claude-nid010463 是 10:0x 本次 resume 才创建的），命令根本没执行；我数到的 9 条 step 是垂死旧波。**违反了"起完 40 秒内验 step 在且在算"的军规**，代价 7h（素材停在 32/48，6006424 与 6000412 相继到期）。教训并入 stmux 记忆：send-keys 之后必须 capture-pane 验回显，或直接用 §4.0 的 setsid nohup。
+- 10:15 检查点：论文数学节已推送（d6536b2：tilt 两推导、I-projection 链式分解、wMLE=蒸馏、REINFORCE、IPF 不动点、taxonomy、algorithm 浮动件）。
+- 恢复：6007121（u6gb-4-node-chain，20h43m，nid010463/010485/011084/011090，16 卡全空，我就在 010463 上）`setsid nohup` 起 driver5，40 秒验证 16 条 v5m2-dump step 在跑 ✓。缺口 16 seed ≈ 2 轮 × 20min。哨兵 v4：48/48 后自动跑 build_v5m2_weights.sh。
+
+### S17d (2026-08-14 11:1xZ) 9 seed 三层连环事故破案 + 修正重投
+- 三个时代三个死因，全靠 member_0/inference.log 尸检定案：**01:15 波**＝跑到 73% 被 02:53 团灭外杀（无辜）；**10:22 波**＝manifest FileExistsError 撞车，疑似 tmux 里那条"以为没发出去"的 driver4 延迟点火与 driver5 成双驱动互踩；**10:57 波**＝rescue2 索引文件名手误 `v5m2_train_idx_`（正确为 r1 命名 `v5m_train_idx_`，票内索引与轮次无关）→ FileNotFoundError 秒死。
+- 两个复发教训：① `run_v5w_dump.sh` 恒 exit=0（尾部 echo 吞状态），"[r2] exit=0" 九连全是假绿——退出码不可作产物证据，必须数 .done；② 我先验归因"thundering herd"是错的，真证据在 member 层日志，"同槽后续成功"只因后续是不同 seed。
+- 11:1x 修正重投：确认零残留 step（单驱动）、尸体 .part5、sed 修 idx 路径、9 条错峰 step 40s 台阶起跑、42 秒验证 9/9 在列。哨兵 v6 值守，48/48 自动建权重。
+
+### S18-勘误（2026-08-14 14:4x，对抗复核发现）
+- S15 里 LOB-Bench 「1/21 恶化」表述不准：原始符号计数为 **8/21 恶化**（其中 7 个幅度 ≤+0.0033
+  属种子噪声量级，超噪声的实质恶化才是 1/21 = bid_volume +0.0193）。聚合 −10.77% 与宽基性
+  （13/21 改善、leave-one-out 稳）经独立重算确认。勘误由隔离批评者 agent 提出（V2 判决）。
+
+### S18-勘误2（2026-08-14 15:0x，隔离批评者 V4）
+- S9/S12 的「MSFT dispersion 被推反（0.77→0.68）」**不成立**：全部效应来自单一 context
+  （id 95946，01-30）的两条爆炸 rollout（base 26.5σ / arm 18.1σ）；6000 点剔 2 点后两臂
+  sd 0.593 vs 0.592 持平。正确结论 = **dispersion 修正不迁移（不动）**，非反向。z2 校准
+  「复现」同为该伪影（day-boot z=−0.28）。shape 复现经全切法确认，稳健幅度 −17~−21%
+  （头条 −32/−38% 为乐观端）。逐票权重的动机不受影响（非迁移本身已足够）。论文与图册
+  措辞已更正。附带新现象：生成会出 20σ+ 爆炸轨迹，评测须报告单 context 敏感性。
+
+## S19 (2026-08-14 15:0x) 对照训练收官 + 第二批对抗判决 + P4 架构落地
+
+**训练**：wm_ft_multi2 全 2400 步完成，final ckpt 落地；hold real-CE 全程闸内（最终
+−1.32%，方向为好）。注意事项：训练日志 13:59Z 冻在 step1600（stdout 传输死亡），但
+step1800..2400 checkpoint 全部按时落盘——日志是传输不是自述，以产物裁决。
+
+**D0 链 a**（8 ckpt × 1024 seqs）：selfcheck 精确 0；clip-binding 3.75%(s200) →
+4.53%(s1400)，600 步后饱和 ~4.5%；token 中位 |logρ| ~7e-6；corr(Δseq,w) 全程负
+（−0.09..−0.14）。预注册开臂条件（>10% 且集中高 w）两条均不满足。链 b（1800..2400）待跑。
+
+**第二批批评者（V5/V6/V7）**，两条内部前提被驳倒：
+- V5：GOOG 弧线三主张全 CONFIRMED；stop rule 有 git 时间戳证明真预注册；发现引用陷阱
+  （round2=r3.json、round3=r4.json、r2.json 是被否决侧臂）；红旗：随机方向对照 rnd2 的
+  qL1 也 −43%（DEV 集）——qL1 幅度非机制特异。
+- V6：「ESS 50-69→80-90」与「ceiling 近完美」按原表述 REFUTED；真值：ESS 中位 72.1→76.9%
+  非均匀；ceiling GOOG 0.873 / AMD 0.893（<0.9 = round two 的数学上界）、INTC 1.060 会
+  过冲；clip 仅 0.083% 触发全在下界。
+- V7：「NFLX h25 1.47 过冲」REFUTED（真值 1.09）；唯一 >1.1 的 GOOG h25 (1.29) 其 base
+  本来就 1.18；单条 blow-up 承载 22-38% cell 方差，剔一条后两臂所有 h25 cell ≤1.0——
+  **短视界过冲整体是爆炸轨迹伪影**，Arm G 动机除名；8 票 pooled base sd = 0.76
+  （0.62 是 GOOG 单票集的，台账勘误）。
+
+**架构落地**：RESULTS.md（去噪台账）+ BELIEF.md（信念文件 v1）+ A1/A2（两信任层成文）
++ dream Stop hook（ledger_repo/.claude/settings.json → code/dream_gate.sh）安装。
+
+**评测**：v5me2 eval fanout wave 1（14 slots）在跑；slots 9/11 因邻居占卡（nid011084
+GPU1/3）延后补跑。fanout 脚本新增 SKIP_SLOTS 参数（向后兼容）。
+
+## S20 (2026-08-14 16:xx) D0/D1 终判、tokens-per-step 勘误、Arm B 三次发射
+
+**D0 全链终判**（12 ckpt × 1024 seqs，双段 selfcheck 均精确 0）：binding 饱和 4.5-4.7%
+（峰 4.72%@s1800），corr(Δ,w) 全程负。预注册开臂条件两分支均不满足 → **Arm P 关闭，
+C1 无理，C2 本设置成立**（clip 对 ~95.5% 位置是 no-op）。
+
+**D1 判决 + 口径勘误**：cos̄ = 0.068/0.189/0.461 @ micro 2/8/32，注册分支在 cos̄(2) 上
+触发 → Arm B 开。随后发现 **micro 是梯度累积 chunk 不是 batch**：真实 1 step = 1 item
+= 8 seqs = **104k tokens（K=4）**，预训练 gap 10× 非 40×；真实训练步画像是 cos̄(8)=0.189。
+勘误红字入 plan Answers；C6 信念 H→M（症状仍在但更温和）。
+
+**Arm B 三次发射教训链**：
+1. v1 漏抄 --train-seeds（wmle 默认是 r1 老 seed）→ "no training items" exit 2 假绿身亡；
+2. v1.5 补 seeds 但 --micro 16 在 chunk 语义下是 **no-op**——实际是 lr-only 变体，
+   发现后 kill（driver kill 不停远端计算——「srun 客户端死计算继续」反向验证；
+   经由 overlap step pkill 清理，pattern 匹配到自身 cmdline 自杀 exit 144 但目标已清）；
+3. v2 用新参数 --group-items 4（洗牌后并 4 item/step = 32 seqs = 416k tokens，正好是
+   D1 实测 cos̄=0.461 档；lr 2e-5=√4 缩放）在 GPU2 起 → **OOM 51 GiB**：GPU0/1/2 被
+   三连号进程组（88G×3, 99% util，另一会话的三卡计算）接管，物理闸门没重查；
+4. v3 挪到真空的 GPU3，存活。ckpt/日志假启动产物均已 trash/改名（never rm）。
+
+**eval 进度**：8/16 .done（s9/s11 善终后 GPU 被上述三卡任务接管属正常交接）。
+
+## S21 (2026-08-14 17:0x) 三臂主判决（partial+robust）+ D2 双版本 + 尾部画像反转
+
+**R2 主判决**（PRELIMINARY，批评者 V8 在跑）：pooled std sd 0.760→0.734→0.792，7/8 票
+向真实；§7 剔单轨迹敏感性通过（0.720/0.709/0.765，每票 r2≥r1）；shape 保持、hold-CE 更好。
+预注册 fixed 线（≥0.80）差 0.008 → 落 partial 出口。出口重打分：Arm G 不开（V7 已杀其
+前提），对症臂改为 E11——GOOG 全样本 0.868 精确顶到 V6 天花板 0.873（剔后 0.764 并报）。
+
+**D2 v1→v2**：v1 的 scipy t.fit 把 ν 全钉在 1.99±0.00（方差存在边界的 MLE 病理）——
+tail-LL 腿可信（t 完胜 KDE 8/8，MSFT 上 KDE 崩至 −27），ν 腿仪器报废。v2 三仪器交叉
+（有界 profile likelihood + Hill + 按日标准化）：**ν-gap 7/8 显著且方向全体反转预设**——
+日标准化后 real ν 8-50（真实重尾主要是日间波动混合），gen ν 3-6（**生成器日内条件尾
+更肥** = blow-up 家族的定量化）。尾部失配 = 条件过肥 × 跨日状态调制不足，两因子正交。
+E11 两腿门开，但权重设计改为「日标准化空间 t-ratio × 尺度通道分离」。
+「generator too Gaussian」的旧工作假设被自家修好的仪器驳倒——如实记录。
+
+**Arm B**：G=4 在真空卡上重现 51.07 GiB OOM（32-seq item 触发的 XLA 物化，谜题入账
+不追）；G=2（16 seqs=208k tokens/step，恰为 E9 原注册量级）过首步在跑，lr 1.4e-5=√2。
+
+## S22 (2026-08-14 17:4x-18:1x) — Arm B lands: shape-for-dispersion trade; bench extra-arm defect found+fixed
+- Arm B train done (1200 steps, drift −1.54%); eval fanout 16/16 on NEW chain alloc (old one rotated out mid-day); two sentinel false alarms were MY monitoring bugs (setsid fork makes $! the dead parent → verify via squeue/artifacts; .done lives at member_0/.done — layout guessed, not read), compute itself clean both times.
+- bench v1's first unregistered-arm use exposed a stage-4 hard-code: bench_v5me2b.json packaged the CONTROL board under B's tag (caught because pooled m2 matched control bit-for-bit). Fixed via EXTRA_ARMS (empty = bit-identical legacy); plus-file never overwrites source-of-record.
+- Verdict computation (armB_verdict.py, §7 excision + joint day-block z): dispersion B beats control excision-ROBUSTLY (0.804 vs 0.765 excised, z +2.27; control's fullsample number was inflated by its own GOOG +12.9σ blow-up); shape gives back most of dose one (+21% qL1, misses 0.1122). AMZN sd 1.029/t998 5.50 = one −8.2σ rollout (excised 0.998). Neither arm passes both bars. V9 critic dispatched (isolated, told to rebuild the bootstrap itself).
+
+## S22 — 2026-08-15 05:5x–06:1x consolidation window (while material + zk/ak run)
+
+- PROTOCOL §8 pre-registered BEFORE the round-3 material audit: power-before-bars
+  (V11's DOA lesson), μ̂-tilt gate (V10 channel + V11 measurement), repeat-offender
+  context registry {149580} + paired drop-context view (V12), per-dose constructor
+  license re-earn = E4 conjecture → executable rule, straddle/stale-count/blow-up-mass
+  wording rules. Ablation arms upgraded to 4 seeds pre-launch (97503/4, 97603/4
+  registered — B1.13: attribution is decision-critical).
+- abl_verdict.py pre-written + compile-checked; ctx id "149580" format verified
+  present in GOOG eval ids (registry match is string equality — checked, not assumed).
+- BELIEF rewritten (cycle 08-15 #1): B1.12 (E11 verdict), B1.13 (seed-spread
+  discipline) new; B1.2/B1.6/B1.10/B1.11 updated; C6 final; posteriors current.
+- Plan: +2 Q→A pairs (E11 verdict, V12); master table E11 → FAILED; E4 erratum
+  resolved pointer. STATE.md rewritten to the event-driven watch shape.
+- A1: 3 additive UPDATEs (round-2 landed + ceiling refuted; blow-up family case #3/#4
+  two-species; header scope note). Panel refreshed with Phase B band (four-arm 4-seed
+  board, C1–C6 verdicts, E11 FAIL row, in-flight strip) + V2 erratum fix (8/21 raw);
+  redeployed to surge (21.2 KB live).
+- Ledger 72818f7 pushed (sigma0-midtrain); code 917f18b pushed (sigma-0 branch).
+- Ops: allocations checked — all 40 dumps + 2 trains on 10–13h-remaining allocations;
+  6007121 expires 06:57Z with nothing critical (4 stale bash steps die harmlessly).
+  Watch healthy: material 39/80 at 05:55, zk/ak ETA ~07:4x.
+- S22b 06:3x: material first wave 72/80 — slots 36-39's cards were occupied mid-run
+  (zk/ak + DFM sweep took 6014307), busy-gate skipped by design. My first audit cried
+  72/80 ALL-short: wrong filename layer (plog/gplog guess vs real data_*/ subdirs) —
+  layout-is-not-a-data-source again; corrected audit: 72/72 clean vs v5m2 shape.
+  Retry: 8 dumps re-launched on 6011842's idle cards (gtop-verified), 8/8 live at 40s.
+  Monitor dedupe: ghost bwthk67uv stopped, single channel bl8jk4ee0.
+- S22c 12:2x re-attach: 3h stall discovered (watch v1 + all steps dead). Failure
+  census: retry4 = manifest leftover (3rd occurrence — the guard works, my
+  clearing discipline lagged); zk eval wave1 8/8 = FUSE family, mixed with dumps
+  on same nodes; ak wave1 8/8 SUCCESS on quiet nodes = the clean control that
+  pins the trigger to same-node collect exits. Adopted layout rule: one node one
+  class, batches start/end together. Cleared 16 partials, relaunched 28 steps
+  (zk 16 isolated / ak 8 / dumps 4), night_watch2 + new Monitor armed.
+- S23 15:1x-15:3x ROUND-3 LAUNCH CHAIN: material 80/80 green -> S8.4 audit
+  (nu-gap 3/8, t license lapses, KDE by rule; dose-2 converged the gap 7/8->3/8)
+  -> 48k KDE weights (ESS .73-.93, ceilings 0.91-1.05, GOOG/AMD sub-0.9 cap gone)
+  -> seeds 97701-4 registered -> wm_ft_multi3 training live (4800/1200 split
+  confirmed). Timeout expected ~3h40m; --start-step resume patched+committed
+  (4f2c779). V13 process note: the constructor decision ran through the
+  REGISTERED gate (material-side), not the eval-side nulls — category error
+  caught by the critic before it entered the record.
+- S24 22:5x DOSE-3 TRAINING COMPLETE (4800/4800). The auto-handoff "failed
+  forward": my heredoc triple-escaping broke the GPU probe ([: $u -lt: unary
+  operator expected → CUDA_VISIBLE_DEVICES=0,1,2,3), but JAX just used the
+  first visible card and the resumed run trained 3450→4800 cleanly. final
+  hold real CE 0.5517 (drift ≈ −1.9%, inside gate, improving direction);
+  ckpt wm_ft_multi3/69378. Lesson (same family as "don't replicate env blocks
+  from memory"): generated-script escaping is untestable by eye — probe-then-
+  hardcode beats clever inline probing. Session died with nid010723 as
+  predicted; reborn on nid010110. final_eval_chain launched (verdict 97701-4
+  1-deep serial halves; trajectory s3000/3600; 8-seed reruns with self-clear).
+- S25 23:4x-00:0x INODE QUOTA WALL + DOSE-3 PREVIEW WIN. 51.2M files hard cap
+  hit (space only 112.8T/200T): every NEW file creation on Lustre refused —
+  eval pipeline dead (6,600 csv per run), git dead, Edit tool dead (tmp
+  files). Discovery: OVERWRITING existing files still works (no new inode) =>
+  ledger appends resumed via python open("a"). Verdict computed on a tmpfs
+  copy of the stack with np.savez monkeypatched to best-effort (module
+  shadowing via sys.path failed twice — the monkeypatch at the numpy layer is
+  the robust move). DOSE-3 PREVIEW (2-seed): ALL bars pass with margin — sd
+  z +4.47, level clears 0.80 in BOTH computations (0.8895/0.8432, first arm
+  ever), qL1 −39% z −2.55, toward-1 8/8, tilt corrective z −4.75, t998 →
+  0.9375. FUSE root cause also closed: orphan squashfuse mounts accumulate
+  (45 on nid011037, unremovable — pids alive/recycled), exhaust the mount
+  quota, new setups fail (farm empty => assert len(message_files)>0); halves
+  died, their exits freed quota, later halves lived. 011037 blacklisted.
+  User decision needed: inode cleanup/quota raise (my deprecated partials
+  ≈150k inodes = drop in the 51.2M bucket; the bulk is historical).
+- S26 03:0x-03:3x DOSE-3 ACCEPTED (dispersion axis) — quota freed by user
+  ("solved"), refill 8 cells landed on clean nodes, 4-seed final verdict ran:
+  sd +0.0743 z +5.65, level clears 0.80 in ALL THREE computations, qL1 −34%
+  z −2.99, toward-1 7/8. V14 isolated critic: "尽全力也推翻不了" — independent
+  bootstrap z +5.75 (0/2000 ≤0), single-seed separation total (worst m3 > best
+  m2), LOSO min z +4.36, real-reference drift zero (125/125 md5), the skipped
+  §8.5c co-read computed by the critic and FAVORABLE (all-excised z +6.47).
+  Wording corrections adopted (safety face open at verdict time → landed
+  separately: LOB-Bench m3 ks21 0.1221/0.1288 best-since-r1, hold-CE −1.9%).
+  P1 dispersion bar met in FULL. Effect ANTI-FRAGILE under seed hardening
+  (4.47→5.65) where E11 shrank. Keepsake: bit-identical 18.268σ across arms =
+  tick-grid saturation of independent blow-ups, not contamination.
