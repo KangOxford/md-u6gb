@@ -187,7 +187,10 @@ def main() -> int:
         slug = name.replace(" ", "_").replace("/", "-")
         path = out_dir / f"{slug}_s{args.seed}.mp4"
         if encode_video is not None:
-            encode_video(frames, fps=int(H.FPS), output_path=str(path),
+            # `encode_video` pulls with `next()`, so it needs an iterator; a list
+            # raises `'list' object is not an iterator` after the whole generation
+            # has already been paid for.
+            encode_video(iter(frames), fps=int(H.FPS), output_path=str(path),
                          audio=waves[i], audio_sample_rate=H.AUDIO_SAMPLING_RATE)
         else:
             export_to_video(frames, str(path), fps=int(H.FPS))
