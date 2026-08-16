@@ -194,12 +194,7 @@ body{
   border:1px solid var(--line); border-radius:5px; white-space:nowrap}
 /* one hairline per node, so four cards read as one machine */
 .row.node-top{border-top:1px solid var(--line); margin-top:5px; padding-top:4px}
-/* The left padding became the overall-index column: every card carries its
-   1-based position within the whole job (node 2's card 0 on a 4-GPU-per-node
-   job is 5), so "card 13 of this job" needs no arithmetic. */
-.row.gpu .lbl.idx{padding-left:0; gap:8px}
-.row.gpu .lbl .ggidx{flex:0 0 26px; text-align:right; color:var(--dim);
-  font-size:11px}
+.row.gpu .lbl.idx{padding-left:20px; gap:8px}
 .row.gpu .lbl .gi{color:var(--accent); font-weight:640}
 /* A node folded onto its job's header line: index, name, then cores busy and
    RAM as mini bars against the machine's total.  The machine row carried no
@@ -304,9 +299,6 @@ section{margin-bottom:6px}
    whole page reads as one instrument rather than two. */
 .lbl,.hid,.lname{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .lbl .jid{font-weight:640; font-size:12.5px}
-/* Node ordinal within its job (1-based).  Fixed-width and right-aligned so
-   the nid names still start on one vertical line past index 9. */
-.lbl .nidx{color:var(--faint); font-size:11px; flex:0 0 14px; text-align:right}
 .lbl .meta{color:var(--faint); font-size:11px; flex:0 0 auto}
 .lbl .nm{color:var(--dim); overflow:hidden; text-overflow:ellipsis}
 .lbl a{color:inherit; text-decoration:none}
@@ -458,8 +450,9 @@ h2 .alt{color:var(--faint); font-weight:400}
 .hrow.other .hid{color:var(--faint); font-style:italic}
 .row.lane.other .lbl .nm{color:var(--faint); font-style:italic}
 /* Which Claude session drives the experiment: a small badge on the right of
-   the label column, so the shared time axis moves not one pixel. */
-.row.lane .lbl .sess{margin-left:auto; flex:0 0 auto; max-width:104px;
+   the label column, so the shared time axis moves not one pixel.  Worn by
+   lanes rows and live GPU rows alike -- same badge, same meaning. */
+.row .lbl .sess{margin-left:auto; flex:0 0 auto; max-width:104px;
   overflow:hidden; text-overflow:ellipsis; color:var(--faint);
   font-size:10px; line-height:15px; background:var(--rule);
   border:1px solid var(--line); border-radius:4px; padding:0 5px}
@@ -969,7 +962,11 @@ def session_map(idents) -> dict:
     # window.  Cached verdicts pointing at them are purged so those idents
     # resolve afresh; stale too-short keys are purged the same way.
     ign = set(cfg.get("ignore") or [])
-    for k in [k for k, v in ids.items() if v in ign]:
+    # The 6-character floor applies to full names too: "train" appears in any
+    # session that ever discussed training, so an exact hit on it is as weak
+    # as a short prefix hit -- verified once when "train" resolved to the
+    # validation-set session.  Too short to resolve stays unbadged.
+    for k in [k for k, v in ids.items() if v in ign or len(k) < 6]:
         del ids[k]
     for k in [k for k, v in pref.items()
               if v in ign or len(k.rstrip("-")) < 6]:
@@ -993,7 +990,10 @@ def session_map(idents) -> dict:
     for i in idents:
         if resolve(i)[0]:
             continue
-        if i not in ids or any(c not in pref for c in _sess_cands(i)):
+        if len(i) < 6 and not _sess_cands(i):
+            continue                # can never resolve; do not rescan forever
+        if (i not in ids and len(i) >= 6) or any(c not in pref
+                                                 for c in _sess_cands(i)):
             todo.add(i)
     if todo and os.path.isdir(SESSION_DIR):
         now = time.time()
@@ -1008,7 +1008,8 @@ def session_map(idents) -> dict:
         # Search for every fallback key of every unresolved identity at once:
         # a fleet name like dfm-rung54000-3 never appears verbatim anywhere,
         # but the template it was formatted from carries "dfm-rung" literally.
-        keys = {c for i in todo for c in _sess_cands(i)} | set(todo)
+        keys = ({c for i in todo for c in _sess_cands(i)}
+                | {i for i in todo if len(i) >= 6})
         best = {}                            # key -> (ts, -size, sid, title)
         for path, size in files:
             want = {k.encode() for k in keys}
@@ -1794,7 +1795,7 @@ def cbar(frac: float, width=None, style: str = "norm") -> str:
             f'<i style="width:{f:.1f}%"></i></span>')
 
 
-def live_section(live, err) -> str:
+def live_section(live, err, sess=None) -> str:
     """gtop's wide layout, column for column.
 
     Not a redesign: the terminal view is what the user reads every day, and
@@ -1870,10 +1871,7 @@ def live_section(live, err) -> str:
             out.append(f'<div class="lrow full">{mono("     sample failed: ", None, "crit")}'
                        f'{mono(jerr[:120], None, "dim")}</div>')
 
-        # gcount runs 1..N across the whole job, so a card's first column is
-        # its overall position (node 2 card 0 -> 5 when nodes hold 4 GPUs).
-        gcount = 0
-        for ni, host in enumerate(hostlist, 1):
+        for host in hostlist:
             d = hosts.get(host)
             if d is None:
                 continue
@@ -1881,9 +1879,8 @@ def live_section(live, err) -> str:
             for p in d.get("procs", []):
                 by_uuid.setdefault(p["uuid"], []).append(p)
             for k, gp in enumerate(d.get("gpus", [])):
-                gcount += 1
                 out.append(gpu_row(host, gp, by_uuid.get(gp["uuid"], []), job, g,
-                                   ni, first=(k == 0), gidx=gcount))
+                                   first=(k == 0), sess=sess))
         out.append('<div class="lgap"></div>')
     # Every mark this section can print, spelled out.  A colour and a bare
     # session name told the reader nothing about whether it was good news, and
@@ -1922,11 +1919,11 @@ def live_section(live, err) -> str:
         '<div class="lgrow"><code>4/288c</code>'
         '<span>in a node chip: cores busy out of the machine\'s total; the '
         'mini bar left of it is the same number as a fraction</span></div>'
-        '<div class="lgrow"><code>5&nbsp; 2[0]</code>'
-        '<span>the card\'s overall position within its job (5th of 16), then '
-        'card 0 of node 2 — nodes are numbered 1-based within their job, '
-        'matching the chips on the job line, and the rule above a card row '
-        'marks where a new node starts</span></div>'
+        '<div class="lgrow"><code>[0]</code>'
+        '<span>the card\'s index on its machine; the rule above a card row '
+        'marks where a new node starts, and the grey badge on the right '
+        'names the Claude session driving what the card runs — the same '
+        'badge, with the same meaning, as on the experiments chart</span></div>'
         '</div>')
     return f'<div class="lwrap">{"".join(out)}</div>'
 
@@ -1992,7 +1989,7 @@ def twin_track(frac: float, fill: str, edge: str, hatch: bool = False) -> str:
             f'width:{w:.2f}%;{style}"></div></div>')
 
 
-def gpu_row(host, gp, procs, job, g, ni=None, first=False, gidx=None) -> str:
+def gpu_row(host, gp, procs, job, g, first=False, sess=None) -> str:
     u, mu, mt = gp["util"], gp["mused"], gp["mtot"]
     mfrac = mu / mt if mt else 0.0
     st = g.gpu_state(gp)
@@ -2018,12 +2015,14 @@ def gpu_row(host, gp, procs, job, g, ni=None, first=False, gidx=None) -> str:
     # directory this card is actually working for, and sgpu already knows how
     # to read an identity out of one -- the same rule the charts below use, so
     # a card here and a lane down there carry the same name.
-    tag = "—"
+    tag, skey = "—", None
     if procs:
         who = procs[0]
         ident = S.extract_identity(who.get("cmd", ""), "")
-        tag = (ident if ident not in (S.UNKNOWN, S.INTERACTIVE)
-               else f"{who['comm']}/{who['pid']}")
+        if ident not in (S.UNKNOWN, S.INTERACTIVE):
+            tag, skey = ident, ident
+        else:
+            tag = f"{who['comm']}/{who['pid']}"
         if len(procs) > 1:
             tag += f" +{len(procs) - 1}"
 
@@ -2037,16 +2036,18 @@ def gpu_row(host, gp, procs, job, g, ni=None, first=False, gidx=None) -> str:
     # that makes the section scannable: blue always means memory.
     mfill, medge = MEM_COLOR, MEM_EDGE
     mhatch = st != "run"          # held or idle: occupied, producing nothing
-    # With the machine rows folded into chips, the node boundary line moves to
-    # each node's first card, and the node's 1-based index prefixes every card
-    # ("2[0]" = node 2, card 0) so a row can still be placed without counting.
-    # The first column is the card's overall 1..N position within its job.
-    ovx = f'<span class="ggidx">{gidx}</span>' if gidx is not None else ""
-    nix = f'<span class="nidx">{ni}</span>' if ni is not None else ""
+    # No index columns: on the 1N4G jobs that dominate they were a wall of
+    # ones, and the boundary rule on each node's first card already carries
+    # the grouping.  Provenance replaces them -- the same session badge the
+    # experiments chart wears, from the same resolver, so a card and its lane
+    # carry the same name.
+    sn = (sess or {}).get(skey) if skey else None
+    stag = (f'<span class="sess" data-tip="{att(sn[1])}">{esc(sn[0])}</span>'
+            if sn else "")
     cls = "row gpu node-top" if first else "row gpu"
     return (f'<div class="{cls}" data-tip="{att(tip)}">'
-            f'<div class="lbl idx">{ovx}{nix}<span class="gi">[{gp["i"]}]</span>'
-            f'<span class="nm">{esc(tag)}</span></div>'
+            f'<div class="lbl idx"><span class="gi">[{gp["i"]}]</span>'
+            f'<span class="nm">{esc(tag)}</span>{stag}</div>'
             f'{twin_track(u / 100.0, COMPUTE_COLOR, COMPUTE_EDGE)}'
             f'{twin_track(mfrac, mfill, medge, mhatch)}'
             f'<div class="tail"><span class="g">{u}%</span>'
@@ -2235,8 +2236,20 @@ def render_body(snap, opts, live=None, live_err=None) -> str:
 
     lane_lw = 250
     job_lw = 250
+    # One provenance map for both charts.  The live section names identities
+    # from process command lines and the lanes chart from srun step names --
+    # two spellings of the same work -- so both sets feed the resolver and
+    # both wear the same badge.
+    live_idents = set()
+    for _ljob, _lhosts, _lerr in (live or []):
+        for _ld in _lhosts.values():
+            for _lp in _ld.get("procs", []):
+                _li = S.extract_identity(_lp.get("cmd", ""), "")
+                if _li not in (S.UNKNOWN, S.INTERACTIVE):
+                    live_idents.add(_li)
     sess_names = session_map({h.ident for h in snap.hist
-                              if h.ident not in S.NON_EXPERIMENT})
+                              if h.ident not in S.NON_EXPERIMENT}
+                             | live_idents)
     tzabbr = L(snap.now).strftime("%Z")          # BST or GMT, whichever applies
     title = page_title(opts)
     scope = f"jobs {', '.join(opts.job)}" if opts.job else "all jobs"
@@ -2297,7 +2310,7 @@ def render_body(snap, opts, live=None, live_err=None) -> str:
 {pending_block(snap, t0, t1, fc_t1, step, job_lw, opts.user, fc_label)}
 <section>
   <h2>live GPUs <span class="hint">&nbsp;physical utilisation right now, read off the cards themselves · the only measurement here that does not come from accounting</span></h2>
-  {live_section(live, live_err)}
+  {live_section(live, live_err, sess_names)}
 </section>
 
 
