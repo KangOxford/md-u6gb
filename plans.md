@@ -1123,3 +1123,8 @@ P284 UTC 2026-08-12T02:56:36Z: 用户澄清真实需求：12 小时证书有效�
 P282 UTC 2026-08-12T03:15:00Z: dump 完成（8/8+plog）后的执行序已备妥：①wmle_weights.py --roots 全 8 seed（正式权重，含 ESS/clip 审计+轮廓图）；②wmle_step.py（train=92000-5，hold=92006/7；出 held-out slope 与 cos-vs-cond_tilt 两审计）；③run_frontier_arm.sh 三臂 STEP=v5w_step.npz SCALE∈{0.1,0.2,0.4}（ARM=wm_s010/020/040，各 3 eval seed n=2000）——三臂分三节点并行，~25 分钟；④score_v5_primary + ceFIX gate + run_gates（spread KS/1-tick 占比重点盯）。
 
 P285 UTC 2026-08-12T04:10:00Z: [find-session] 用户以 profile_r6.py 输出片段索要历史会话 ID。计划：走 /find-session-id skill 的单管线（高选择性 key grep + 按大小取最大），若空则跨 17 个 project 目录回退；同时利用引用文本自带的 scratchpad 路径直接读出 UUID 作为交叉验证。
+
+P286 UTC 2026-08-12T03:27:58Z: [问答] 用户询问 bash 里的 cc 是什么。计划：type cc 拿运行时定义 + grep .bashrc 拿原文与注释（含被停用的历史 alias），两者并行，一次性给出定义、分支表与设计理由。
+P287 UTC 2026-08-12T03:47:48Z: [CRPS v5-diag2] 计划：在 inference_no_errcorr.py 里给推理管线加"生成后 on-policy price-logit dump"。原 EVAL_CE/DUMP_PRICE_LOGITS 块在生成之前跑，抓的是 teacher-forced 真实续写；把该块抽成 _ce_dump(m_tokens,b_msgs,out_dir,tag) 复用，生成结束后按 DUMP_GEN_LOGITS=1/GEN_LOGIT_OUT 再调一次，输入为 cond+GENERATED 序列，book 流按 _generate_msg 第 1055 行的 new_book_raw 构造精确重放（p_change 链 + token 解码时间 + l2_book_states 前 40 值）。GPU 验证走 j5980502 attach 单次。
+
+P1786563482 UTC 2026-08-12T19:38:02Z: [论文复现路径: 合成数据 -> 全参 SFT] 用户指令"那就做好这件事", 即把并行 session 的合成数据接到我的全参管线上, 走真正对着论文的复现路径。已完成: ①sft_fsdp.py 加 PretokSFT/make_dataset 吃预 tokenize 格式 ②量出 seq_len 需从 1024 提到 8192 ③拆出合成产出的瓶颈(31% 纯格式失败可用 guided_json 消掉) ④写好 scripts/synth_scale.sh: 把空闲卡切成多个 TP=4 的 vLLM 服务, 每服务挂一路高并发 synth 客户端(CONC=32 对他们的 4), 合并后 to_sft --max-len 8192。待办(需等当前训练 2026-08-12T23:53Z 结束腾出 12 卡): ①跑 synth_scale.sh 造数据 ②全参 SFT on 合成数据(seq_len=8192, micro_bsz=1) ③进他们的 SciCode-Verified harness 与其 LoRA adapter 做同数据同 harness 的全参 vs LoRA 对照 —— 这是论文没给而两边合起来能给的数。
