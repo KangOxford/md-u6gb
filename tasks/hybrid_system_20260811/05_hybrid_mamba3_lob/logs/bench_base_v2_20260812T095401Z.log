@@ -17,3 +17,357 @@ GATE nid011179 target_worst_mib=2
 [infer-wide-squashfs] farm=/tmp/kangli.u6gb/m3bench/20260812T095402Z_127722/infer_wide_farm_5980502_0_127722/GOOG (20 orderbook files, L=500, 1 months)
 [gen] sequences=3136 cond=250 gen=250 seed=2026
 [gen] data=/tmp/kangli.u6gb/m3bench/20260812T095402Z_127722/infer_farm_5980502_0_127722/GOOG wide=/tmp/kangli.u6gb/m3bench/20260812T095402Z_127722/infer_wide_farm_5980502_0_127722/GOOG
+[gen] 完成，inventory 见 /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/inference_inventory.json
+[bench] generation rc=0 10:18:57Z
+[bench] === score 开始 10:18:57Z ===
+[score] host=nid011179 inference=/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/inference workers=48
+{
+  "benchmark_revision": "1128d37c9ceeaf5a74db25396d8bb238ef0ceb16",
+  "benchmark_root": "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/AlphaTrade/lob_pipeline",
+  "command": [
+    "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/bin/python",
+    "-u",
+    "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/AlphaTrade/lob_pipeline/lob_bench/run_bench.py",
+    "--data_dir",
+    "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/lobbench/bench_data",
+    "--model_name",
+    "baseline-mamba3-step12000",
+    "--stock",
+    "GOOG",
+    "--time_period",
+    "2026-01",
+    "--save_dir",
+    "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/lobbench/results",
+    "--uncond_only",
+    "--run_id",
+    "base_m3_12000",
+    "--n_workers",
+    "48",
+    "--progress_interval",
+    "60"
+  ],
+  "expected_features": [
+    "spread",
+    "orderbook_imbalance",
+    "log_inter_arrival_time",
+    "log_time_to_cancel",
+    "ask_volume_touch",
+    "bid_volume_touch",
+    "ask_volume",
+    "bid_volume",
+    "limit_ask_order_depth",
+    "limit_bid_order_depth",
+    "ask_cancellation_depth",
+    "bid_cancellation_depth",
+    "limit_ask_order_ticks",
+    "limit_bid_order_ticks",
+    "ask_cancellation_ticks",
+    "bid_cancellation_ticks",
+    "vol_per_min",
+    "ofi",
+    "ofi_up",
+    "ofi_stay",
+    "ofi_down"
+  ],
+  "inference_dir": "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/inference",
+  "inventory": {
+    "conditional_books": 3136,
+    "conditional_messages": 3136,
+    "generated_books": 3136,
+    "generated_messages": 3136,
+    "inference_dir": "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/inference",
+    "real_books": 3136,
+    "real_messages": 3136
+  },
+  "period": "2026-01",
+  "results_dir": "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/lobbench/results",
+  "run_name": "baseline-mamba3-step12000",
+  "score_path": "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/lobbench/results/scores/scores_uncond_GOOG_baseline-mamba3-step12000_base_m3_12000.pkl",
+  "staging_root": "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/lobbench/bench_data",
+  "stock": "GOOG"
+}
+[metrics] JAX available — devices: [CpuDevice(id=0)]
+*** 	The assumed file structure for files in this package is:
+***	 	 {DATA_DIR}/{MODEL}/{STOCK}/data_*
+***	whereby DATA_DIR is passed as an argument when launching the script
+***	{MODEL}s and {STOCK}s may either be passed as a str or a list of str
+***	The script will iterate over all combinations of models and stocks
+
+[*] Loading generated data from /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/lobbench/bench_data/baseline-mamba3-step12000/GOOG/2026-01
+0it [00:00, ?it/s]3it [00:00, 27.72it/s]6it [00:00, 27.18it/s]9it [00:00, 25.74it/s]12it [00:00, 26.67it/s]15it [00:00, 27.21it/s]18it [00:00, 27.66it/s]21it [00:00, 27.96it/s]24it [00:00, 28.15it/s]27it [00:00, 28.27it/s]30it [00:01, 28.29it/s]33it [00:01, 28.37it/s]36it [00:01, 28.46it/s]39it [00:01, 28.30it/s]42it [00:01, 28.46it/s]45it [00:01, 28.59it/s]48it [00:01, 28.67it/s]51it [00:01, 28.74it/s]54it [00:01, 28.76it/s]57it [00:02, 28.81it/s]60it [00:02, 28.85it/s]63it [00:02, 28.87it/s]66it [00:02, 28.68it/s]69it [00:02, 28.65it/s]72it [00:02, 28.63it/s]75it [00:02, 28.64it/s]78it [00:02, 28.65it/s]81it [00:02, 28.28it/s]84it [00:02, 28.39it/s]87it [00:03, 28.49it/s]90it [00:03, 28.59it/s]93it [00:03, 28.65it/s]96it [00:03, 28.69it/s]99it [00:03, 28.72it/s]102it [00:03, 28.73it/s]105it [00:03, 28.77it/s]108it [00:03, 28.56it/s]111it [00:03, 28.64it/s]114it [00:04, 28.69it/s]117it [00:04, 28.76it/s]120it [00:04, 28.76it/s]123it [00:04, 28.77it/s]126it [00:04, 28.74it/s]129it [00:04, 28.65it/s]132it [00:04, 28.60it/s]135it [00:04, 28.50it/s]138it [00:04, 28.52it/s]141it [00:04, 28.53it/s]144it [00:05, 28.55it/s]147it [00:05, 28.56it/s]150it [00:05, 28.57it/s]153it [00:05, 28.54it/s]156it [00:05, 28.55it/s]159it [00:05, 27.91it/s]162it [00:05, 27.90it/s]165it [00:05, 27.99it/s]168it [00:05, 28.08it/s]171it [00:06, 28.09it/s]174it [00:06, 27.17it/s]177it [00:06, 27.44it/s]180it [00:06, 27.68it/s]183it [00:06, 27.92it/s]186it [00:06, 28.08it/s]189it [00:06, 28.21it/s]192it [00:06, 28.24it/s]195it [00:06, 28.26it/s]198it [00:06, 28.33it/s]201it [00:07, 28.40it/s]204it [00:07, 28.42it/s]207it [00:07, 28.44it/s]210it [00:07, 28.47it/s]213it [00:07, 28.49it/s]216it [00:07, 28.48it/s]219it [00:07, 28.52it/s]222it [00:07, 28.64it/s]225it [00:07, 28.71it/s]228it [00:09,  7.44it/s]231it [00:09,  9.53it/s]234it [00:09, 11.86it/s]237it [00:09, 14.37it/s]240it [00:09, 16.93it/s]243it [00:09, 19.35it/s]246it [00:09, 21.19it/s]249it [00:09, 22.63it/s]252it [00:09, 23.84it/s]255it [00:09, 25.11it/s]258it [00:10, 26.05it/s]261it [00:10, 26.76it/s]264it [00:10, 27.06it/s]267it [00:10, 26.30it/s]270it [00:10, 26.75it/s]273it [00:10, 27.30it/s]276it [00:10, 27.65it/s]279it [00:10, 26.28it/s]282it [00:10, 26.75it/s]285it [00:11, 27.19it/s]288it [00:11, 27.59it/s]291it [00:11, 27.84it/s]294it [00:11, 28.07it/s]297it [00:11, 28.26it/s]300it [00:11, 28.44it/s]303it [00:11, 28.43it/s]306it [00:11, 28.40it/s]309it [00:11, 28.46it/s]312it [00:12, 28.47it/s]315it [00:12, 28.51it/s]318it [00:12, 28.32it/s]321it [00:12, 28.44it/s]324it [00:12, 28.53it/s]327it [00:12, 28.60it/s]330it [00:12, 28.63it/s]333it [00:12, 28.68it/s]336it [00:12, 28.69it/s]339it [00:12, 28.70it/s]342it [00:13, 28.72it/s]345it [00:13, 28.36it/s]348it [00:13, 28.46it/s]351it [00:13, 28.52it/s]354it [00:13, 28.60it/s]357it [00:13, 28.66it/s]360it [00:13, 28.66it/s]363it [00:13, 28.58it/s]366it [00:13, 28.59it/s]369it [00:14, 28.64it/s]372it [00:14, 28.70it/s]375it [00:14, 28.73it/s]378it [00:14, 28.75it/s]381it [00:14, 28.77it/s]384it [00:14, 28.72it/s]387it [00:14, 28.73it/s]390it [00:14, 28.75it/s]393it [00:14, 28.73it/s]396it [00:14, 28.68it/s]399it [00:15, 28.67it/s]402it [00:15, 28.68it/s]405it [00:15, 28.70it/s]408it [00:15, 28.69it/s]411it [00:15, 28.71it/s]414it [00:15, 28.74it/s]417it [00:15, 28.74it/s]420it [00:15, 28.73it/s]423it [00:15, 28.74it/s]426it [00:16, 28.72it/s]429it [00:16, 28.74it/s]432it [00:16, 28.72it/s]435it [00:16, 28.73it/s]438it [00:16, 28.71it/s]441it [00:16, 28.44it/s]444it [00:16, 28.52it/s]447it [00:16, 28.33it/s]450it [00:16, 28.43it/s]453it [00:16, 28.37it/s]456it [00:17, 28.45it/s]459it [00:17, 28.53it/s]462it [00:17, 28.59it/s]465it [00:17, 28.63it/s]468it [00:17, 28.57it/s]471it [00:17, 28.59it/s]474it [00:17, 28.63it/s]477it [00:17, 28.63it/s]480it [00:17, 28.63it/s]483it [00:18, 28.65it/s]486it [00:18, 28.66it/s]489it [00:18, 28.66it/s]492it [00:18, 28.63it/s]495it [00:18, 28.63it/s]498it [00:18, 28.63it/s]501it [00:18, 28.66it/s]504it [00:18, 28.70it/s]507it [00:18, 28.74it/s]510it [00:18, 28.62it/s]513it [00:19, 28.67it/s]516it [00:19, 28.73it/s]519it [00:19, 28.50it/s]522it [00:19, 28.60it/s]525it [00:19, 28.59it/s]528it [00:19, 28.63it/s]531it [00:19, 28.53it/s]534it [00:19, 28.59it/s]537it [00:19, 28.66it/s]540it [00:20, 28.61it/s]543it [00:20, 28.66it/s]546it [00:20, 27.90it/s]549it [00:20, 28.17it/s]552it [00:20, 27.77it/s]555it [00:20, 28.05it/s]558it [00:20, 28.27it/s]561it [00:20, 26.82it/s]564it [00:20, 27.20it/s]567it [00:20, 27.05it/s]570it [00:21, 27.02it/s]573it [00:21, 27.54it/s]576it [00:21, 27.89it/s]579it [00:21, 28.09it/s]582it [00:21, 28.30it/s]585it [00:21, 28.43it/s]588it [00:21, 28.48it/s]591it [00:21, 28.55it/s]594it [00:21, 28.63it/s]597it [00:22, 28.65it/s]600it [00:22, 28.70it/s]603it [00:22, 28.73it/s]606it [00:22, 28.69it/s]609it [00:22, 28.70it/s]612it [00:22, 28.73it/s]615it [00:22, 28.72it/s]618it [00:22, 28.75it/s]621it [00:22, 28.72it/s]624it [00:22, 28.71it/s]627it [00:23, 28.69it/s]630it [00:23, 28.71it/s]633it [00:23, 28.71it/s]636it [00:23, 28.71it/s]639it [00:23, 28.72it/s]642it [00:23, 28.72it/s]645it [00:23, 28.70it/s]648it [00:23, 28.71it/s]651it [00:23, 28.73it/s]654it [00:24, 28.74it/s]657it [00:24, 28.76it/s]660it [00:24, 28.68it/s]663it [00:24, 28.67it/s]666it [00:24, 28.66it/s]669it [00:24, 28.48it/s]672it [00:24, 28.48it/s]675it [00:24, 28.51it/s]678it [00:24, 28.54it/s]681it [00:24, 28.57it/s]684it [00:25, 28.55it/s]687it [00:25, 28.56it/s]690it [00:25, 28.43it/s]693it [00:25, 28.50it/s]696it [00:25, 28.32it/s]699it [00:25, 28.40it/s]702it [00:25, 28.48it/s]705it [00:25, 28.54it/s]708it [00:25, 28.49it/s]711it [00:26, 28.50it/s]714it [00:26, 28.24it/s]717it [00:26, 28.34it/s]720it [00:26, 28.45it/s]723it [00:26, 28.45it/s]726it [00:26, 28.55it/s]729it [00:26, 28.59it/s]732it [00:26, 28.48it/s]735it [00:26, 28.52it/s]738it [00:26, 28.34it/s]741it [00:27, 28.49it/s]744it [00:27, 28.56it/s]747it [00:27, 28.62it/s]750it [00:27, 28.68it/s]753it [00:27, 28.71it/s]756it [00:27, 28.56it/s]759it [00:27, 28.59it/s]762it [00:27, 28.64it/s]765it [00:27, 28.64it/s]768it [00:28, 28.67it/s]771it [00:28, 28.70it/s]774it [00:28, 28.19it/s]777it [00:28, 28.35it/s]780it [00:28, 27.65it/s]783it [00:28, 27.95it/s]786it [00:28, 28.17it/s]789it [00:28, 28.32it/s]792it [00:28, 28.36it/s]795it [00:28, 27.93it/s]798it [00:29, 28.17it/s]801it [00:29, 28.32it/s]804it [00:29, 28.43it/s]807it [00:29, 28.43it/s]810it [00:29, 28.51it/s]813it [00:29, 28.54it/s]816it [00:29, 28.56it/s]819it [00:29, 28.54it/s]822it [00:29, 28.55it/s]825it [00:30, 28.57it/s]828it [00:30, 28.58it/s]831it [00:30, 28.59it/s]834it [00:30, 28.54it/s]837it [00:30, 28.51it/s]840it [00:30, 28.47it/s]843it [00:30, 28.34it/s]846it [00:30, 28.40it/s]849it [00:30, 28.49it/s]852it [00:30, 28.53it/s]855it [00:31, 28.61it/s]858it [00:31, 28.66it/s]861it [00:31, 28.70it/s]864it [00:31, 28.33it/s]867it [00:31, 28.41it/s]870it [00:31, 28.49it/s]873it [00:31, 28.52it/s]876it [00:31, 28.56it/s]879it [00:31, 28.59it/s]882it [00:32, 28.63it/s]885it [00:32, 28.67it/s]888it [00:32, 28.69it/s]891it [00:32, 28.70it/s]894it [00:32, 28.70it/s]897it [00:32, 28.67it/s]900it [00:32, 28.69it/s]903it [00:32, 28.62it/s]906it [00:32, 28.63it/s]909it [00:32, 28.65it/s]912it [00:33, 28.66it/s]915it [00:33, 28.14it/s]918it [00:33, 28.30it/s]921it [00:33, 28.42it/s]924it [00:33, 28.51it/s]927it [00:33, 28.26it/s]930it [00:33, 28.35it/s]933it [00:33, 28.00it/s]936it [00:33, 28.17it/s]939it [00:34, 28.31it/s]942it [00:34, 28.42it/s]945it [00:34, 28.32it/s]948it [00:34, 28.45it/s]951it [00:34, 28.53it/s]954it [00:34, 28.61it/s]957it [00:34, 28.68it/s]960it [00:34, 28.30it/s]963it [00:34, 28.24it/s]966it [00:34, 28.38it/s]969it [00:35, 28.44it/s]972it [00:35, 28.52it/s]975it [00:35, 28.58it/s]978it [00:35, 28.35it/s]981it [00:35, 28.45it/s]984it [00:35, 28.54it/s]987it [00:35, 28.62it/s]990it [00:35, 28.24it/s]993it [00:35, 28.39it/s]996it [00:36, 28.49it/s]999it [00:36, 28.59it/s]1002it [00:36, 28.65it/s]1005it [00:36, 28.70it/s]1008it [00:36, 28.74it/s]1011it [00:36, 28.77it/s]1014it [00:36, 28.79it/s]1017it [00:36, 28.81it/s]1020it [00:36, 28.81it/s]1023it [00:36, 28.79it/s]1026it [00:37, 28.77it/s]1029it [00:37, 28.74it/s]1032it [00:37, 28.76it/s]1035it [00:37, 28.77it/s]1038it [00:37, 28.76it/s]1041it [00:37, 28.71it/s]1044it [00:37, 28.74it/s]1047it [00:37, 28.77it/s]1050it [00:37, 28.78it/s]1053it [00:38, 28.75it/s]1056it [00:38, 28.73it/s]1059it [00:38, 27.86it/s]1062it [00:38, 27.84it/s]1065it [00:38, 28.04it/s]1068it [00:38, 28.21it/s]1071it [00:38, 28.27it/s]1074it [00:38, 28.39it/s]1077it [00:38, 28.48it/s]1080it [00:38, 28.54it/s]1083it [00:39, 28.60it/s]1086it [00:39, 28.62it/s]1089it [00:39, 28.62it/s]1092it [00:39, 28.63it/s]1095it [00:39, 28.62it/s]1098it [00:39, 28.16it/s]1101it [00:39, 28.31it/s]1104it [00:39, 28.43it/s]1107it [00:39, 28.51it/s]1110it [00:40, 28.56it/s]1113it [00:40, 28.61it/s]1116it [00:40, 28.64it/s]1119it [00:40, 28.67it/s]1122it [00:40, 28.66it/s]1125it [00:40, 28.57it/s]1128it [00:40, 28.55it/s]1131it [00:40, 28.53it/s]1134it [00:40, 28.56it/s]1137it [00:40, 28.62it/s]1140it [00:41, 28.66it/s]1143it [00:41, 28.66it/s]1146it [00:41, 28.67it/s]1149it [00:41, 28.65it/s]1152it [00:41, 28.66it/s]1155it [00:41, 28.66it/s]1158it [00:41, 28.64it/s]1161it [00:41, 28.64it/s]1164it [00:41, 28.67it/s]1167it [00:42, 28.71it/s]1170it [00:42, 28.73it/s]1173it [00:42, 28.74it/s]1176it [00:42, 28.71it/s]1179it [00:42, 28.74it/s]1182it [00:42, 28.72it/s]1185it [00:42, 28.71it/s]1188it [00:42, 28.73it/s]1191it [00:42, 28.70it/s]1194it [00:42, 28.73it/s]1197it [00:43, 28.74it/s]1200it [00:43, 28.70it/s]1203it [00:43, 28.50it/s]1206it [00:43, 28.57it/s]1209it [00:43, 28.61it/s]1212it [00:43, 28.65it/s]1215it [00:43, 28.66it/s]1218it [00:43, 28.70it/s]1221it [00:43, 28.73it/s]1224it [00:44, 28.73it/s]1227it [00:44, 28.77it/s]1230it [00:44, 28.71it/s]1233it [00:44, 28.49it/s]1236it [00:44, 28.43it/s]1239it [00:44, 28.43it/s]1242it [00:44, 28.50it/s]1245it [00:44, 28.54it/s]1248it [00:44, 28.58it/s]1251it [00:44, 28.43it/s]1254it [00:45, 28.50it/s]1257it [00:45, 28.54it/s]1260it [00:45, 28.60it/s]1263it [00:45, 28.63it/s]1266it [00:45, 28.63it/s]1269it [00:45, 28.58it/s]1272it [00:45, 28.60it/s]1275it [00:45, 28.61it/s]1278it [00:45, 28.62it/s]1281it [00:46, 28.66it/s]1284it [00:46, 28.69it/s]1287it [00:46, 28.49it/s]1290it [00:46, 28.55it/s]1293it [00:46, 28.62it/s]1296it [00:46, 28.64it/s]1299it [00:46, 28.57it/s]1302it [00:46, 28.40it/s]1305it [00:46, 28.26it/s]1308it [00:46, 28.16it/s]1311it [00:47, 28.29it/s]1314it [00:47, 27.87it/s]1317it [00:47, 28.09it/s]1320it [00:47, 28.23it/s]1323it [00:47, 28.36it/s]1326it [00:47, 28.42it/s]1329it [00:47, 28.47it/s]1332it [00:47, 28.58it/s]1335it [00:47, 28.63it/s]1338it [00:48, 28.65it/s]1341it [00:48, 28.69it/s]1344it [00:48, 28.70it/s]1347it [00:48, 28.72it/s]1350it [00:48, 28.68it/s]1353it [00:48, 28.67it/s]1356it [00:48, 28.03it/s]1359it [00:48, 28.25it/s]1362it [00:48, 28.38it/s]1365it [00:48, 28.46it/s]1368it [00:49, 28.51it/s]1371it [00:49, 28.55it/s]1374it [00:49, 28.24it/s]1377it [00:49, 28.33it/s]1380it [00:49, 28.36it/s]1383it [00:49, 28.39it/s]1386it [00:49, 28.45it/s]1389it [00:49, 28.50it/s]1392it [00:49, 28.50it/s]1395it [00:50, 28.55it/s]1398it [00:50, 28.56it/s]1401it [00:50, 28.59it/s]1404it [00:50, 28.64it/s]1407it [00:50, 28.57it/s]1410it [00:50, 28.59it/s]1413it [00:50, 28.60it/s]1416it [00:50, 28.59it/s]1419it [00:50, 28.58it/s]1422it [00:50, 28.56it/s]1425it [00:51, 28.57it/s]1428it [00:51, 28.61it/s]1431it [00:51, 28.51it/s]1434it [00:51, 28.43it/s]1437it [00:51, 28.49it/s]1440it [00:51, 28.55it/s]1443it [00:51, 28.60it/s]1446it [00:51, 28.57it/s]1449it [00:51, 28.62it/s]1452it [00:52, 28.66it/s]1455it [00:52, 28.69it/s]1458it [00:52, 28.10it/s]1461it [00:52, 28.20it/s]1464it [00:52, 28.35it/s]1467it [00:52, 28.23it/s]1470it [00:52, 28.39it/s]1473it [00:52, 28.46it/s]1476it [00:52, 28.42it/s]1479it [00:52, 28.43it/s]1482it [00:53, 28.44it/s]1485it [00:53, 28.45it/s]1488it [00:53, 28.43it/s]1491it [00:53, 28.48it/s]1494it [00:53, 28.43it/s]1497it [00:53, 28.48it/s]1500it [00:53, 28.47it/s]1503it [00:53, 28.49it/s]1506it [00:53, 28.53it/s]1509it [00:54, 28.58it/s]1512it [00:54, 28.62it/s]1515it [00:54, 28.65it/s]1518it [00:54, 28.68it/s]1521it [00:54, 28.65it/s]1524it [00:54, 28.36it/s]1527it [00:54, 28.45it/s]1530it [00:54, 28.51it/s]1533it [00:54, 28.54it/s]1536it [00:54, 28.57it/s]1539it [00:55, 28.54it/s]1542it [00:55, 28.54it/s]1545it [00:55, 28.50it/s]1548it [00:55, 28.48it/s]1551it [00:55, 28.32it/s]1554it [00:55, 28.37it/s]1557it [00:55, 28.44it/s]1560it [00:55, 28.49it/s]1563it [00:55, 28.57it/s]1566it [00:56, 28.58it/s]1569it [00:56, 28.59it/s]1572it [00:56, 28.63it/s]1575it [00:56, 28.66it/s]1578it [00:56, 28.62it/s]1581it [00:56, 28.64it/s]1584it [00:56, 28.66it/s]1587it [00:56, 28.66it/s]1590it [00:56, 28.67it/s]1593it [00:56, 28.67it/s]1596it [00:57, 28.70it/s]1599it [00:57, 28.65it/s]1602it [00:57, 28.70it/s]1605it [00:57, 28.52it/s]1608it [00:57, 28.00it/s]1611it [00:57, 28.17it/s]1614it [00:57, 28.34it/s]1617it [00:57, 28.45it/s]1620it [00:57, 28.55it/s]1623it [00:58, 28.62it/s]1626it [00:58, 28.67it/s]1629it [00:58, 28.69it/s]1632it [00:58, 28.67it/s]1635it [00:58, 28.63it/s]1638it [00:58, 28.65it/s]1641it [00:58, 28.68it/s]1644it [00:58, 28.69it/s]1647it [00:58, 28.72it/s]1650it [00:58, 28.72it/s]1653it [00:59, 28.73it/s]1656it [00:59, 28.71it/s]1659it [00:59, 28.74it/s]1662it [00:59, 28.72it/s]1665it [00:59, 28.70it/s]1668it [00:59, 28.71it/s]1671it [00:59, 28.74it/s]1674it [00:59, 28.76it/s]1677it [00:59, 28.76it/s]1680it [00:59, 28.45it/s]1683it [01:00, 28.48it/s]1686it [01:00, 28.55it/s]1689it [01:00, 28.55it/s]1692it [01:00, 28.58it/s]1695it [01:00, 28.61it/s]1698it [01:00, 28.64it/s]1701it [01:00, 28.64it/s]1704it [01:00, 28.56it/s]1707it [01:00, 28.55it/s]1710it [01:01, 28.59it/s]1713it [01:01, 28.59it/s]1716it [01:01, 28.42it/s]1719it [01:01, 28.38it/s]1722it [01:01, 28.48it/s]1725it [01:01, 28.54it/s]1728it [01:01, 28.52it/s]1731it [01:01, 28.45it/s]1734it [01:01, 28.51it/s]1737it [01:01, 28.34it/s]1740it [01:02, 28.44it/s]1743it [01:02, 28.51it/s]1746it [01:02, 28.54it/s]1749it [01:02, 28.62it/s]1752it [01:02, 28.64it/s]1755it [01:02, 28.66it/s]1758it [01:02, 28.65it/s]1761it [01:02, 28.65it/s]1764it [01:02, 28.68it/s]1767it [01:03, 28.71it/s]1770it [01:03, 28.73it/s]1773it [01:03, 28.54it/s]1776it [01:03, 28.61it/s]1779it [01:03, 28.65it/s]1782it [01:03, 28.62it/s]1785it [01:03, 28.66it/s]1788it [01:03, 28.69it/s]1791it [01:03, 28.64it/s]1794it [01:03, 28.69it/s]1797it [01:04, 28.52it/s]1800it [01:04, 28.53it/s]1803it [01:04, 28.60it/s]1806it [01:04, 28.64it/s]1809it [01:04, 28.68it/s]1812it [01:04, 28.69it/s]1815it [01:04, 28.67it/s]1818it [01:04, 28.66it/s]1821it [01:04, 28.67it/s]1824it [01:05, 28.52it/s]1827it [01:05, 28.03it/s]1830it [01:05, 28.15it/s]1833it [01:05, 28.30it/s]1836it [01:05, 24.31it/s]1839it [01:05, 24.53it/s]1842it [01:05, 25.27it/s]1845it [01:05, 26.12it/s]1848it [01:05, 26.73it/s]1851it [01:06, 27.21it/s]1854it [01:06, 27.54it/s]1857it [01:06, 27.83it/s]1860it [01:06, 28.10it/s]1863it [01:06, 28.19it/s]1866it [01:06, 28.35it/s]1869it [01:06, 28.47it/s]1872it [01:06, 28.57it/s]1875it [01:06, 28.60it/s]1878it [01:07, 28.64it/s]1881it [01:07, 28.68it/s]1884it [01:07, 28.69it/s]1887it [01:07, 28.72it/s]1890it [01:07, 28.72it/s]1893it [01:07, 28.64it/s]1896it [01:07, 28.62it/s]1899it [01:07, 28.62it/s]1902it [01:07, 28.69it/s]1905it [01:07, 28.72it/s]1908it [01:08, 28.69it/s]1911it [01:08, 28.71it/s]1914it [01:09,  7.75it/s]1917it [01:09,  9.74it/s]1920it [01:09, 12.09it/s]1923it [01:09, 14.62it/s]1926it [01:09, 17.15it/s]1929it [01:09, 19.51it/s]1932it [01:09, 21.57it/s]1935it [01:09, 23.25it/s]1938it [01:10, 24.51it/s]1941it [01:10, 25.60it/s]1944it [01:10, 26.43it/s]1947it [01:10, 27.06it/s]1950it [01:10, 27.52it/s]1953it [01:10, 27.80it/s]1956it [01:10, 28.03it/s]1959it [01:10, 28.01it/s]1962it [01:10, 28.25it/s]1965it [01:11, 28.41it/s]1968it [01:11, 28.54it/s]1971it [01:11, 28.63it/s]1974it [01:11, 28.65it/s]1977it [01:11, 28.71it/s]1980it [01:11, 28.77it/s]1983it [01:11, 28.77it/s]1986it [01:11, 28.79it/s]1989it [01:11, 28.81it/s]1992it [01:11, 28.82it/s]1995it [01:12, 28.55it/s]1998it [01:12, 28.63it/s]2001it [01:12, 28.70it/s]2004it [01:12, 28.75it/s]2007it [01:12, 28.77it/s]2010it [01:12, 28.75it/s]2013it [01:12, 28.70it/s]2016it [01:12, 28.72it/s]2019it [01:12, 28.77it/s]2022it [01:12, 28.75it/s]2025it [01:13, 28.74it/s]2028it [01:13, 28.79it/s]2031it [01:13, 28.82it/s]2034it [01:13, 28.84it/s]2037it [01:13, 28.78it/s]2040it [01:13, 28.77it/s]2043it [01:13, 28.74it/s]2046it [01:13, 28.71it/s]2049it [01:13, 28.67it/s]2052it [01:14, 28.64it/s]2055it [01:14, 28.48it/s]2058it [01:14, 28.49it/s]2061it [01:14, 28.50it/s]2064it [01:14, 28.41it/s]2067it [01:14, 28.54it/s]2070it [01:14, 28.64it/s]2073it [01:14, 28.63it/s]2076it [01:14, 28.25it/s]2079it [01:14, 28.43it/s]2082it [01:15, 28.51it/s]2085it [01:15, 28.58it/s]2088it [01:15, 28.57it/s]2091it [01:15, 28.45it/s]2094it [01:15, 28.52it/s]2097it [01:15, 28.57it/s]2100it [01:15, 28.61it/s]2103it [01:15, 28.66it/s]2106it [01:15, 28.69it/s]2109it [01:16, 28.63it/s]2112it [01:16, 28.68it/s]2115it [01:16, 28.70it/s]2118it [01:16, 28.73it/s]2121it [01:16, 28.76it/s]2124it [01:16, 28.74it/s]2127it [01:16, 28.71it/s]2130it [01:16, 26.65it/s]2133it [01:16, 27.04it/s]2136it [01:17, 27.49it/s]2139it [01:17, 27.86it/s]2142it [01:17, 28.14it/s]2145it [01:17, 28.28it/s]2148it [01:17, 28.24it/s]2151it [01:17, 28.38it/s]2154it [01:17, 28.46it/s]2157it [01:17, 28.52it/s]2160it [01:17, 28.59it/s]2163it [01:17, 28.68it/s]2166it [01:18, 28.73it/s]2169it [01:18, 28.76it/s]2172it [01:18, 28.71it/s]2175it [01:18, 28.74it/s]2178it [01:18, 28.76it/s]2181it [01:18, 28.76it/s]2184it [01:18, 28.77it/s]2187it [01:18, 28.76it/s]2190it [01:18, 28.71it/s]2193it [01:18, 28.73it/s]2196it [01:19, 28.75it/s]2199it [01:19, 28.71it/s]2202it [01:19, 28.67it/s]2205it [01:19, 28.56it/s]2208it [01:19, 28.58it/s]2211it [01:19, 28.56it/s]2214it [01:19, 28.60it/s]2217it [01:19, 28.63it/s]2220it [01:19, 28.65it/s]2223it [01:20, 28.64it/s]2226it [01:20, 28.17it/s]2229it [01:20, 28.32it/s]2232it [01:20, 28.44it/s]2235it [01:20, 28.49it/s]2238it [01:20, 28.57it/s]2241it [01:20, 28.64it/s]2244it [01:20, 27.21it/s]2247it [01:20, 27.68it/s]2250it [01:21, 27.97it/s]2253it [01:21, 28.20it/s]2256it [01:21, 28.37it/s]2259it [01:21, 28.48it/s]2262it [01:21, 28.58it/s]2265it [01:21, 28.60it/s]2268it [01:21, 28.65it/s]2271it [01:21, 28.68it/s]2274it [01:21, 28.61it/s]2277it [01:21, 28.63it/s]2280it [01:22, 28.55it/s]2283it [01:22, 28.60it/s]2286it [01:22, 28.64it/s]2289it [01:22, 28.67it/s]2292it [01:22, 28.45it/s]2295it [01:22, 28.53it/s]2298it [01:22, 27.30it/s]2301it [01:22, 27.70it/s]2304it [01:22, 27.98it/s]2307it [01:23, 28.09it/s]2310it [01:23, 28.26it/s]2313it [01:23, 28.26it/s]2316it [01:23, 28.35it/s]2319it [01:23, 28.42it/s]2322it [01:23, 28.34it/s]2325it [01:23, 28.15it/s]2328it [01:23, 27.65it/s]2331it [01:23, 27.89it/s]2334it [01:23, 28.13it/s]2337it [01:24, 28.31it/s]2340it [01:24, 28.43it/s]2343it [01:24, 28.11it/s]2346it [01:24, 28.28it/s]2349it [01:24, 28.38it/s]2352it [01:24, 28.49it/s]2355it [01:24, 28.55it/s]2358it [01:24, 28.49it/s]2361it [01:24, 28.54it/s]2364it [01:25, 28.60it/s]2367it [01:25, 28.52it/s]2370it [01:25, 28.42it/s]2373it [01:25, 28.53it/s]2376it [01:25, 28.61it/s]2379it [01:25, 28.65it/s]2382it [01:25, 28.67it/s]2385it [01:25, 28.54it/s]2388it [01:25, 28.34it/s]2391it [01:25, 28.44it/s]2394it [01:26, 28.46it/s]2397it [01:26, 28.51it/s]2400it [01:26, 28.56it/s]2403it [01:26, 28.56it/s]2406it [01:26, 28.59it/s]2409it [01:26, 28.60it/s]2412it [01:26, 28.61it/s]2415it [01:26, 28.61it/s]2418it [01:26, 28.65it/s]2421it [01:27, 28.68it/s]2424it [01:27, 28.70it/s]2427it [01:27, 28.72it/s]2430it [01:27, 28.73it/s]2433it [01:27, 28.74it/s]2436it [01:27, 28.74it/s]2439it [01:27, 28.71it/s]2442it [01:27, 28.71it/s]2445it [01:27, 28.70it/s]2448it [01:27, 28.71it/s]2451it [01:28, 28.37it/s]2454it [01:28, 28.48it/s]2457it [01:28, 28.54it/s]2460it [01:28, 28.56it/s]2463it [01:28, 28.63it/s]2466it [01:28, 28.67it/s]2469it [01:28, 28.67it/s]2472it [01:28, 28.66it/s]2475it [01:28, 28.55it/s]2478it [01:29, 28.62it/s]2481it [01:29, 28.63it/s]2484it [01:29, 28.64it/s]2487it [01:29, 28.62it/s]2490it [01:29, 28.61it/s]2493it [01:29, 28.55it/s]2496it [01:29, 28.58it/s]2499it [01:29, 28.38it/s]2502it [01:29, 28.43it/s]2505it [01:29, 28.48it/s]2508it [01:30, 28.39it/s]2511it [01:30, 28.46it/s]2514it [01:30, 28.54it/s]2517it [01:30, 28.64it/s]2520it [01:30, 28.71it/s]2523it [01:30, 28.74it/s]2526it [01:30, 28.76it/s]2529it [01:30, 28.77it/s]2532it [01:30, 28.80it/s]2535it [01:30, 28.75it/s]2538it [01:31, 28.75it/s]2541it [01:31, 28.74it/s]2544it [01:31, 28.66it/s]2547it [01:31, 28.62it/s]2550it [01:31, 28.54it/s]2553it [01:31, 28.59it/s]2556it [01:31, 28.53it/s]2559it [01:31, 28.55it/s]2562it [01:31, 28.56it/s]2565it [01:32, 28.57it/s]2568it [01:32, 28.53it/s]2571it [01:32, 28.59it/s]2574it [01:32, 28.62it/s]2577it [01:32, 28.62it/s]2580it [01:32, 28.61it/s]2583it [01:32, 28.58it/s]2586it [01:32, 28.63it/s]2589it [01:32, 28.67it/s]2592it [01:32, 28.72it/s]2595it [01:33, 28.70it/s]2598it [01:33, 28.69it/s]2601it [01:33, 28.69it/s]2604it [01:33, 28.69it/s]2607it [01:33, 28.66it/s]2610it [01:33, 28.70it/s]2613it [01:33, 28.74it/s]2616it [01:33, 28.76it/s]2619it [01:33, 28.78it/s]2622it [01:34, 28.78it/s]2625it [01:34, 28.79it/s]2628it [01:34, 28.79it/s]2631it [01:34, 28.79it/s]2634it [01:34, 28.78it/s]2637it [01:34, 28.79it/s]2640it [01:34, 28.75it/s]2643it [01:34, 28.77it/s]2646it [01:34, 28.76it/s]2649it [01:34, 28.77it/s]2652it [01:35, 28.77it/s]2655it [01:35, 28.78it/s]2658it [01:35, 28.78it/s]2661it [01:35, 28.80it/s]2664it [01:35, 28.78it/s]2667it [01:35, 28.77it/s]2670it [01:35, 28.78it/s]2673it [01:35, 28.53it/s]2676it [01:35, 28.61it/s]2679it [01:36, 28.57it/s]2682it [01:36, 28.64it/s]2685it [01:36, 28.64it/s]2688it [01:36, 28.54it/s]2691it [01:36, 28.61it/s]2694it [01:36, 28.66it/s]2697it [01:36, 28.69it/s]2700it [01:36, 28.45it/s]2703it [01:36, 28.23it/s]2706it [01:36, 28.37it/s]2709it [01:37, 28.47it/s]2712it [01:37, 28.52it/s]2715it [01:37, 28.60it/s]2718it [01:37, 28.67it/s]2721it [01:37, 28.72it/s]2724it [01:37, 28.54it/s]2727it [01:37, 28.52it/s]2730it [01:37, 28.59it/s]2733it [01:37, 28.66it/s]2736it [01:38, 28.75it/s]2739it [01:38, 28.81it/s]2742it [01:38, 28.82it/s]2745it [01:38, 28.77it/s]2748it [01:38, 28.82it/s]2751it [01:38, 28.87it/s]2754it [01:38, 28.89it/s]2757it [01:38, 28.91it/s]2760it [01:38, 28.88it/s]2763it [01:38, 28.86it/s]2766it [01:39, 28.86it/s]2769it [01:39, 28.85it/s]2772it [01:39, 28.58it/s]2775it [01:39, 28.54it/s]2778it [01:39, 20.51it/s]2781it [01:39, 17.05it/s]2784it [01:39, 19.17it/s]2787it [01:40, 21.31it/s]2790it [01:40, 23.10it/s]2793it [01:40, 24.58it/s]2796it [01:40, 25.67it/s]2799it [01:40, 26.52it/s]2802it [01:40, 27.19it/s]2805it [01:40, 27.67it/s]2808it [01:40, 28.03it/s]2811it [01:40, 28.29it/s]2814it [01:41, 28.49it/s]2817it [01:41, 28.63it/s]2820it [01:41, 28.71it/s]2823it [01:41, 28.79it/s]2826it [01:41, 28.80it/s]2829it [01:41, 28.84it/s]2832it [01:41, 28.87it/s]2835it [01:41, 28.88it/s]2838it [01:41, 28.89it/s]2841it [01:41, 28.88it/s]2844it [01:42, 28.92it/s]2847it [01:42, 28.94it/s]2850it [01:42, 28.93it/s]2853it [01:42, 28.93it/s]2856it [01:42, 28.95it/s]2859it [01:42, 28.95it/s]2862it [01:42, 28.97it/s]2865it [01:42, 28.94it/s]2868it [01:42, 28.94it/s]2871it [01:42, 28.94it/s]2874it [01:43, 28.96it/s]2877it [01:43, 26.14it/s]2880it [01:43, 26.80it/s]2883it [01:43, 26.68it/s]2886it [01:43, 27.20it/s]2889it [01:43, 26.60it/s]2892it [01:43, 27.15it/s]2895it [01:43, 27.57it/s]2898it [01:43, 27.89it/s]2901it [01:44, 28.11it/s]2904it [01:44, 28.30it/s]2907it [01:44, 28.48it/s]2910it [01:44, 28.39it/s]2913it [01:44, 28.00it/s]2916it [01:44, 28.10it/s]2919it [01:44, 28.29it/s]2922it [01:44, 28.42it/s]2925it [01:44, 28.52it/s]2928it [01:45, 28.51it/s]2931it [01:45, 28.54it/s]2934it [01:45, 28.58it/s]2937it [01:45, 28.67it/s]2940it [01:45, 28.74it/s]2943it [01:45, 28.80it/s]2946it [01:45, 28.85it/s]2949it [01:45, 28.87it/s]2952it [01:45, 28.43it/s]2955it [01:45, 28.54it/s]2958it [01:46, 28.68it/s]2961it [01:46, 28.75it/s]2964it [01:46, 28.70it/s]2967it [01:46, 28.77it/s]2970it [01:46, 28.81it/s]2973it [01:46, 28.79it/s]2976it [01:46, 28.80it/s]2979it [01:46, 28.64it/s]2982it [01:46, 28.65it/s]2985it [01:47, 28.62it/s]2988it [01:47, 28.65it/s]2991it [01:47, 28.68it/s]2994it [01:47, 28.53it/s]2997it [01:47, 28.60it/s]3000it [01:47, 28.64it/s]3003it [01:47, 28.74it/s]3006it [01:47, 28.81it/s]3009it [01:47, 28.84it/s]3012it [01:47, 28.86it/s]3015it [01:48, 28.74it/s]3018it [01:48, 28.75it/s]3021it [01:48, 28.75it/s]3024it [01:48, 28.77it/s]3027it [01:48, 28.79it/s]3030it [01:48, 28.77it/s]3033it [01:48, 28.76it/s]3036it [01:48, 28.77it/s]3039it [01:48, 28.67it/s]3042it [01:49, 28.70it/s]3045it [01:49, 28.68it/s]3048it [01:49, 28.56it/s]3051it [01:49, 28.53it/s]3054it [01:49, 28.42it/s]3057it [01:49, 28.50it/s]3060it [01:49, 28.52it/s]3063it [01:49, 28.62it/s]3066it [01:49, 28.70it/s]3069it [01:49, 28.78it/s]3072it [01:50, 28.81it/s]3075it [01:50, 28.83it/s]3078it [01:50, 28.82it/s]3081it [01:50, 28.78it/s]3084it [01:50, 28.77it/s]3087it [01:50, 28.77it/s]3090it [01:50, 28.75it/s]3093it [01:50, 28.80it/s]3096it [01:50, 28.81it/s]3099it [01:50, 28.85it/s]3102it [01:51, 28.84it/s]3105it [01:51, 28.84it/s]3108it [01:51, 28.77it/s]3111it [01:51, 28.81it/s]3114it [01:51, 28.81it/s]3117it [01:51, 28.83it/s]3120it [01:51, 28.90it/s]3123it [01:51, 28.93it/s]3126it [01:51, 28.97it/s]3129it [01:52, 28.71it/s]3132it [01:52, 28.80it/s]3135it [01:52, 28.81it/s]3136it [01:52, 27.93it/s]
+[*] Running unconditional scoring
+[progress] unconditional | stock=GOOG model=baseline-mamba3-step12000 time_period=2026-01 model_version=None (+216s)
+[scoring] Parallelizing 21 metrics across 4 threads
+[metrics] Bootstrap subsample: 509174 → 50000 samples
+[metrics] Bootstrap subsample: 509174 → 50000 samples
+[metrics] Bootstrap subsample: 509174 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1561728 → 50000 samples
+  [done] log_time_to_cancel
+  [done] spread
+[metrics] Bootstrap subsample: 1561728 → 50000 samples
+[metrics] Bootstrap subsample: 1561728 → 50000 samples
+  [done] orderbook_imbalance
+  [done] log_inter_arrival_time
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+  [done] ask_volume_touch
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+  [done] bid_volume_touch
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+  [done] bid_volume
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+[metrics] Bootstrap subsample: 1568000 → 50000 samples
+  [done] ask_volume
+[metrics] Bootstrap subsample: 382035 → 50000 samples
+[metrics] Bootstrap subsample: 382035 → 50000 samples
+[metrics] Bootstrap subsample: 382035 → 50000 samples
+  [done] limit_ask_order_depth
+[metrics] Bootstrap subsample: 391914 → 50000 samples
+[metrics] Bootstrap subsample: 391914 → 50000 samples
+[metrics] Bootstrap subsample: 391914 → 50000 samples
+  [done] limit_bid_order_depth
+[metrics] Bootstrap subsample: 373392 → 50000 samples
+[metrics] Bootstrap subsample: 373392 → 50000 samples
+[metrics] Bootstrap subsample: 373392 → 50000 samples
+[metrics] Bootstrap subsample: 394504 → 50000 samples
+[metrics] Bootstrap subsample: 394504 → 50000 samples
+[metrics] Bootstrap subsample: 394504 → 50000 samples
+  [done] ask_cancellation_depth
+  [done] bid_cancellation_depth
+[metrics] Bootstrap subsample: 388350 → 50000 samples
+[metrics] Bootstrap subsample: 388350 → 50000 samples
+[metrics] Bootstrap subsample: 388350 → 50000 samples
+  [done] limit_ask_order_ticks
+[metrics] Bootstrap subsample: 391914 → 50000 samples
+[metrics] Bootstrap subsample: 391914 → 50000 samples
+[metrics] Bootstrap subsample: 391914 → 50000 samples
+  [done] limit_bid_order_ticks
+[metrics] Bootstrap subsample: 393156 → 50000 samples
+[metrics] Bootstrap subsample: 393156 → 50000 samples
+[metrics] Bootstrap subsample: 393156 → 50000 samples
+[metrics] Bootstrap subsample: 373334 → 50000 samples
+[metrics] Bootstrap subsample: 373334 → 50000 samples
+[metrics] Bootstrap subsample: 373334 → 50000 samples
+  [done] bid_cancellation_ticks
+  [done] ask_cancellation_ticks
+  [done] vol_per_min
+[metrics] Bootstrap subsample: 940800 → 50000 samples
+[metrics] Bootstrap subsample: 940800 → 50000 samples
+[metrics] Bootstrap subsample: 940800 → 50000 samples
+  [done] ofi
+[metrics] Bootstrap subsample: 906369 → 50000 samples
+[metrics] Bootstrap subsample: 906369 → 50000 samples
+[metrics] Bootstrap subsample: 906369 → 50000 samples
+  [done] ofi_stay
+  [done] ofi_up
+  [done] ofi_down
+[*] Saving results...
+... done
+[*] Done
+Finished Run, time (s) is: 327.6931722164154
+{
+  "benchmark_revision": "1128d37c9ceeaf5a74db25396d8bb238ef0ceb16",
+  "benchmark_root": "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/AlphaTrade/lob_pipeline",
+  "distances": {
+    "ks": 0.11070229413762481,
+    "l1": 0.1799718597072067,
+    "wasserstein": 0.22073174110050295
+  },
+  "expected_feature_count": 21,
+  "feature_count": 21,
+  "feature_scores": {
+    "ask_cancellation_depth": {
+      "ks": 0.14870686270917632,
+      "l1": 0.23771592412981843,
+      "wasserstein": 0.34758266295819484
+    },
+    "ask_cancellation_ticks": {
+      "ks": 0.14787812271349432,
+      "l1": 0.27374780666117504,
+      "wasserstein": 0.3479007772700514
+    },
+    "ask_volume": {
+      "ks": 0.046577806122448995,
+      "l1": 0.07475637755102041,
+      "wasserstein": 0.06500984156357033
+    },
+    "ask_volume_touch": {
+      "ks": 0.061331632653061297,
+      "l1": 0.1547704081632653,
+      "wasserstein": 0.0595686763667955
+    },
+    "bid_cancellation_depth": {
+      "ks": 0.15668883961566893,
+      "l1": 0.21851833477779967,
+      "wasserstein": 0.33044833383042604
+    },
+    "bid_cancellation_ticks": {
+      "ks": 0.15669446196744075,
+      "l1": 0.25439198101231963,
+      "wasserstein": 0.3303400542087439
+    },
+    "bid_volume": {
+      "ks": 0.02771301020408168,
+      "l1": 0.06143622448979592,
+      "wasserstein": 0.04633046729087688
+    },
+    "bid_volume_touch": {
+      "ks": 0.047961734693877545,
+      "l1": 0.1716530612244898,
+      "wasserstein": 0.05906974361104165
+    },
+    "limit_ask_order_depth": {
+      "ks": 0.15078318133660173,
+      "l1": 0.22445221312109012,
+      "wasserstein": 0.2413180243006574
+    },
+    "limit_ask_order_ticks": {
+      "ks": 0.145997294483865,
+      "l1": 0.2871279091589835,
+      "wasserstein": 0.24499968335401584
+    },
+    "limit_bid_order_depth": {
+      "ks": 0.17151146341839807,
+      "l1": 0.2570091435079847,
+      "wasserstein": 0.35561869360089005
+    },
+    "limit_bid_order_ticks": {
+      "ks": 0.1714651673602502,
+      "l1": 0.29204303384771363,
+      "wasserstein": 0.3550589856054164
+    },
+    "log_inter_arrival_time": {
+      "ks": 0.038106507663306255,
+      "l1": 0.04720412261290059,
+      "wasserstein": 0.05749201144196719
+    },
+    "log_time_to_cancel": {
+      "ks": 0.10374530652703634,
+      "l1": 0.12402361370608142,
+      "wasserstein": 0.24466397648853247
+    },
+    "ofi": {
+      "ks": 0.1344557823129251,
+      "l1": 0.21065688775510205,
+      "wasserstein": 0.3190323107725811
+    },
+    "ofi_down": {
+      "ks": 0.1008552897004848,
+      "l1": 0.14825680886340278,
+      "wasserstein": 0.2207686713015927
+    },
+    "ofi_stay": {
+      "ks": 0.13465563865829755,
+      "l1": 0.2114644578624547,
+      "wasserstein": 0.32064773706253114
+    },
+    "ofi_up": {
+      "ks": 0.16504587290799724,
+      "l1": 0.18726796843047905,
+      "wasserstein": 0.2699622301765323
+    },
+    "orderbook_imbalance": {
+      "ks": 0.04655484693877554,
+      "l1": 0.1029451530612245,
+      "wasserstein": 0.1061762323946405
+    },
+    "spread": {
+      "ks": 0.10395790816326522,
+      "l1": 0.10413392857142859,
+      "wasserstein": 0.26930512587767363
+    },
+    "vol_per_min": {
+      "ks": 0.06406144673966775,
+      "l1": 0.13583369534281048,
+      "wasserstein": 0.04407232363383114
+    }
+  },
+  "ks21": 0.11070229413762481,
+  "l1_21": 0.1799718597072067,
+  "period": "2026-01",
+  "run_name": "baseline-mamba3-step12000",
+  "score_path": "/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/lobbench/results/scores/scores_uncond_GOOG_baseline-mamba3-step12000_base_m3_12000.pkl",
+  "stock": "GOOG",
+  "ws21": 0.22073174110050295
+}
+[score] 完成，summary=/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/summary.json
+[bench] score rc=0 10:24:36Z
+[bench] === (7.2) return bench 开始 10:24:36Z ===
+Inference dir: /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/inference
+Horizons: [10, 50, 100, 250]
+N conditioning: 250
+Found 3136 paired sequences
+Computing returns:   0%|          | 0/3136 [00:00<?, ?it/s]Computing returns:   2%|▏         | 53/3136 [00:00<00:07, 439.87it/s]Computing returns:   3%|▎         | 97/3136 [00:00<00:11, 258.01it/s]Computing returns:   4%|▍         | 127/3136 [00:00<00:12, 243.05it/s]Computing returns:   5%|▍         | 154/3136 [00:00<00:13, 224.80it/s]Computing returns:   6%|▌         | 182/3136 [00:00<00:12, 230.28it/s]Computing returns:   7%|▋         | 207/3136 [00:00<00:12, 231.70it/s]Computing returns:   7%|▋         | 231/3136 [00:00<00:13, 219.87it/s]Computing returns:   8%|▊         | 257/3136 [00:01<00:13, 220.77it/s]Computing returns:   9%|▉         | 280/3136 [00:01<00:13, 217.33it/s]Computing returns:  10%|▉         | 302/3136 [00:01<00:13, 217.16it/s]Computing returns:  10%|█         | 324/3136 [00:01<00:14, 189.20it/s]Computing returns:  11%|█▏        | 360/3136 [00:01<00:12, 214.11it/s]Computing returns:  12%|█▏        | 382/3136 [00:01<00:13, 201.16it/s]Computing returns:  13%|█▎        | 416/3136 [00:01<00:11, 233.00it/s]Computing returns:  14%|█▍        | 440/3136 [00:01<00:12, 215.77it/s]Computing returns:  15%|█▍        | 468/3136 [00:02<00:11, 224.27it/s]Computing returns:  16%|█▌        | 491/3136 [00:02<00:12, 206.26it/s]Computing returns:  17%|█▋        | 523/3136 [00:02<00:11, 219.06it/s]Computing returns:  17%|█▋        | 546/3136 [00:02<00:12, 211.17it/s]Computing returns:  18%|█▊        | 572/3136 [00:02<00:11, 223.27it/s]Computing returns:  19%|█▉        | 595/3136 [00:02<00:11, 220.47it/s]Computing returns:  20%|█▉        | 618/3136 [00:03<00:43, 57.73it/s] Computing returns:  21%|██        | 645/3136 [00:03<00:32, 76.78it/s]Computing returns:  21%|██▏       | 670/3136 [00:04<00:26, 94.35it/s]Computing returns:  22%|██▏       | 701/3136 [00:04<00:20, 117.03it/s]Computing returns:  23%|██▎       | 728/3136 [00:04<00:17, 135.62it/s]Computing returns:  24%|██▍       | 756/3136 [00:04<00:16, 148.20it/s]Computing returns:  25%|██▌       | 788/3136 [00:04<00:14, 157.23it/s]Computing returns:  26%|██▌       | 819/3136 [00:04<00:16, 141.88it/s]Computing returns:  27%|██▋       | 853/3136 [00:05<00:13, 171.36it/s]Computing returns:  28%|██▊       | 889/3136 [00:05<00:11, 202.90it/s]Computing returns:  29%|██▉       | 916/3136 [00:05<00:10, 208.29it/s]Computing returns:  30%|███       | 945/3136 [00:05<00:09, 226.32it/s]Computing returns:  31%|███       | 971/3136 [00:05<00:09, 221.52it/s]Computing returns:  32%|███▏      | 995/3136 [00:05<00:10, 194.95it/s]Computing returns:  33%|███▎      | 1027/3136 [00:05<00:09, 221.21it/s]Computing returns:  34%|███▎      | 1051/3136 [00:05<00:11, 188.26it/s]Computing returns:  35%|███▍      | 1092/3136 [00:06<00:08, 237.89it/s]Computing returns:  36%|███▌      | 1119/3136 [00:06<00:08, 232.40it/s]Computing returns:  37%|███▋      | 1145/3136 [00:06<00:08, 224.66it/s]Computing returns:  37%|███▋      | 1169/3136 [00:06<00:09, 198.11it/s]Computing returns:  38%|███▊      | 1196/3136 [00:06<00:09, 214.28it/s]Computing returns:  39%|███▉      | 1221/3136 [00:06<00:09, 201.47it/s]Computing returns:  40%|███▉      | 1254/3136 [00:06<00:08, 229.30it/s]Computing returns:  41%|████      | 1279/3136 [00:06<00:08, 224.35it/s]Computing returns:  42%|████▏     | 1303/3136 [00:07<00:08, 208.62it/s]Computing returns:  42%|████▏     | 1325/3136 [00:07<00:25, 71.91it/s] Computing returns:  43%|████▎     | 1350/3136 [00:08<00:20, 88.41it/s]Computing returns:  44%|████▍     | 1378/3136 [00:08<00:15, 111.22it/s]Computing returns:  45%|████▍     | 1401/3136 [00:08<00:14, 122.47it/s]Computing returns:  45%|████▌     | 1423/3136 [00:08<00:12, 133.13it/s]Computing returns:  46%|████▋     | 1458/3136 [00:08<00:09, 171.80it/s]Computing returns:  47%|████▋     | 1481/3136 [00:08<00:09, 176.59it/s]Computing returns:  48%|████▊     | 1506/3136 [00:08<00:09, 178.95it/s]Computing returns:  49%|████▉     | 1541/3136 [00:08<00:07, 207.88it/s]Computing returns:  50%|████▉     | 1565/3136 [00:09<00:07, 210.97it/s]Computing returns:  51%|█████     | 1588/3136 [00:09<00:07, 201.75it/s]Computing returns:  51%|█████▏    | 1610/3136 [00:09<00:07, 202.77it/s]Computing returns:  52%|█████▏    | 1636/3136 [00:09<00:07, 207.64it/s]Computing returns:  53%|█████▎    | 1664/3136 [00:09<00:06, 212.77it/s]Computing returns:  54%|█████▍    | 1686/3136 [00:09<00:07, 205.14it/s]Computing returns:  55%|█████▍    | 1712/3136 [00:09<00:06, 212.85it/s]Computing returns:  55%|█████▌    | 1734/3136 [00:09<00:06, 204.73it/s]Computing returns:  56%|█████▋    | 1764/3136 [00:09<00:06, 219.40it/s]Computing returns:  57%|█████▋    | 1795/3136 [00:10<00:05, 241.02it/s]Computing returns:  58%|█████▊    | 1820/3136 [00:10<00:06, 206.67it/s]Computing returns:  59%|█████▉    | 1848/3136 [00:10<00:06, 205.45it/s]Computing returns:  60%|█████▉    | 1873/3136 [00:10<00:06, 208.39it/s]Computing returns:  61%|██████    | 1904/3136 [00:10<00:05, 230.99it/s]Computing returns:  61%|██████▏   | 1928/3136 [00:10<00:06, 199.70it/s]Computing returns:  63%|██████▎   | 1961/3136 [00:10<00:05, 230.05it/s]Computing returns:  63%|██████▎   | 1986/3136 [00:11<00:05, 209.53it/s]Computing returns:  64%|██████▍   | 2015/3136 [00:11<00:04, 225.84it/s]Computing returns:  65%|██████▌   | 2039/3136 [00:11<00:05, 208.72it/s]Computing returns:  66%|██████▌   | 2066/3136 [00:11<00:04, 223.03it/s]Computing returns:  67%|██████▋   | 2090/3136 [00:11<00:04, 221.23it/s]Computing returns:  67%|██████▋   | 2114/3136 [00:11<00:04, 224.31it/s]Computing returns:  68%|██████▊   | 2139/3136 [00:11<00:04, 227.61it/s]Computing returns:  69%|██████▉   | 2163/3136 [00:11<00:04, 207.27it/s]Computing returns:  70%|██████▉   | 2186/3136 [00:11<00:04, 206.70it/s]Computing returns:  71%|███████   | 2216/3136 [00:12<00:04, 194.31it/s]Computing returns:  72%|███████▏  | 2250/3136 [00:12<00:03, 221.75it/s]Computing returns:  72%|███████▏  | 2273/3136 [00:12<00:04, 208.89it/s]Computing returns:  73%|███████▎  | 2303/3136 [00:12<00:03, 228.22it/s]Computing returns:  74%|███████▍  | 2327/3136 [00:12<00:03, 230.13it/s]Computing returns:  75%|███████▍  | 2351/3136 [00:12<00:03, 212.24it/s]Computing returns:  76%|███████▌  | 2376/3136 [00:12<00:03, 216.12it/s]Computing returns:  77%|███████▋  | 2400/3136 [00:12<00:03, 217.46it/s]Computing returns:  77%|███████▋  | 2424/3136 [00:13<00:03, 222.27it/s]Computing returns:  78%|███████▊  | 2447/3136 [00:13<00:03, 214.81it/s]Computing returns:  79%|███████▉  | 2471/3136 [00:13<00:03, 217.34it/s]Computing returns:  80%|███████▉  | 2495/3136 [00:13<00:03, 206.75it/s]Computing returns:  80%|████████  | 2524/3136 [00:16<00:21, 28.39it/s] Computing returns:  82%|████████▏ | 2561/3136 [00:16<00:13, 43.64it/s]Computing returns:  82%|████████▏ | 2582/3136 [00:16<00:10, 53.38it/s]Computing returns:  83%|████████▎ | 2602/3136 [00:16<00:08, 62.85it/s]Computing returns:  84%|████████▍ | 2629/3136 [00:16<00:06, 81.79it/s]Computing returns:  85%|████████▍ | 2659/3136 [00:16<00:04, 106.82it/s]Computing returns:  85%|████████▌ | 2681/3136 [00:16<00:03, 122.14it/s]Computing returns:  86%|████████▋ | 2707/3136 [00:16<00:02, 143.85it/s]Computing returns:  87%|████████▋ | 2730/3136 [00:17<00:02, 160.46it/s]Computing returns:  88%|████████▊ | 2753/3136 [00:17<00:02, 168.03it/s]Computing returns:  89%|████████▊ | 2778/3136 [00:17<00:01, 182.95it/s]Computing returns:  89%|████████▉ | 2800/3136 [00:17<00:01, 188.24it/s]Computing returns:  90%|█████████ | 2823/3136 [00:17<00:01, 192.63it/s]Computing returns:  91%|█████████ | 2852/3136 [00:17<00:01, 213.37it/s]Computing returns:  92%|█████████▏| 2878/3136 [00:17<00:01, 220.07it/s]Computing returns:  93%|█████████▎| 2902/3136 [00:17<00:01, 216.54it/s]Computing returns:  93%|█████████▎| 2925/3136 [00:17<00:01, 199.88it/s]Computing returns:  94%|█████████▍| 2949/3136 [00:18<00:00, 210.23it/s]Computing returns:  95%|█████████▍| 2975/3136 [00:18<00:00, 218.65it/s]Computing returns:  96%|█████████▌| 2998/3136 [00:18<00:00, 219.34it/s]Computing returns:  96%|█████████▋| 3021/3136 [00:18<00:00, 215.85it/s]Computing returns:  97%|█████████▋| 3043/3136 [00:18<00:00, 209.36it/s]Computing returns:  98%|█████████▊| 3072/3136 [00:18<00:00, 228.06it/s]Computing returns:  99%|█████████▊| 3096/3136 [00:18<00:00, 217.32it/s]Computing returns: 100%|██████████| 3136/3136 [00:18<00:00, 166.93it/s]
+
+====================================================================================================
+RETURN BENCH RESULTS
+====================================================================================================
+ Horizon |       IC |  Rank IC |  Dir Acc | N_total |   N_eff |   dt 25% |  dt mean |   dt med |   dt 75%
+----------------------------------------------------------------------------------------------------
+      10 |   0.5884 |   0.6078 |    86.5% |    3136 |     855 |    0.00s |    0.04s |    0.00s |    0.03s
+      50 |   0.5038 |   0.5372 |    62.3% |    3136 |    2113 |    0.00s |    0.21s |    0.06s |    0.23s
+     100 |   0.3198 |   0.3506 |    53.2% |    3136 |    2590 |    0.04s |    0.41s |    0.19s |    0.52s
+     250 |   0.1362 |   0.1753 |    49.4% |    3136 |    2865 |    0.26s |    1.02s |    0.67s |    1.37s
+====================================================================================================
+
+Saved to: /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/return_bench_base_m3_12000.csv
+[bench] (7.2) rc=0 10:27:04Z
+[bench] === (7.4) refer success 开始 10:27:04Z ===
+label: base_m3_12000
+sequences: 3136   generated messages: 784000
+
+resolution by event class
+       event        n     L1 exact   L2 fallback      miss   not-a-cancel
+-------------------------------------------------------------------------
+         new  387,010        0.00%         0.00%     0.00%        100.00%
+      cancel      841       13.67%        69.44%    16.88%          0.00%
+      delete  387,264       63.57%        29.98%     6.45%          0.00%
+   execution    8,885        0.00%         0.00%     0.00%        100.00%
+
+cancel + delete combined  (the published comparison basis)
+  L1 exact           246,305 / 388,105 = 63.4635%   <- primary criterion
+  + L2 fallback      116,672            = +30.0620 pp
+  = any live id      362,977 / 388,105 = 93.5255%
+  unresolved          25,128 / 388,105 = 6.4745%
+
+execution class
+  8,885 execution messages, all recorded as 'not-a-cancel'.
+  The generator resolves references only for event types 2 and 3;
+  executions receive a fresh order id, so the model's predicted
+  reference triple is discarded. An execution success rate is not
+  undefined by accident here, it is undefined by construction.
+
+L1 exact rate by age of the referenced order  (mechanism criterion)
+   age (messages back)         n   L1 exact        L2      miss
+---------------------------------------------------------------
+                  1-10   114,670     88.78%    11.22%     0.00%
+                 11-25    62,417     89.12%    10.88%     0.00%
+                 26-50    35,606     80.20%    19.80%     0.00%
+                51-100    24,914     69.21%    30.79%     0.00%
+               101-250    12,440     48.83%    51.17%     0.00%
+         before-window   138,058     26.80%    55.00%    18.20%
+
+nan branch fired: 0 / 784,000 = 0.0000%
+price differs from ref: 140,481 (17.92%)  <- not a defect count; real messages trip it at the same rate
+
+saved /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/refer_success_base_m3_12000.json
+[bench] (7.4) rc=0 10:27:08Z
+════════════════════════════════════════════════════════════
+ 完成 2026-08-12T10:27:08Z
+ summary   /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/summary.json                    (7.3 LOB-Bench)
+ return    /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/return_bench_base_m3_12000.csv   (7.2)
+ refer     /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/refer_success_base_m3_12000.json (7.4)
+ lobbench  /lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench_20260812T095402Z_j5980502_base_m3_127713/lobbench
+════════════════════════════════════════════════════════════

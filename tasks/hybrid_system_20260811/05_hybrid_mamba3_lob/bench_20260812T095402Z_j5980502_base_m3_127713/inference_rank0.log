@@ -61,3 +61,759 @@ Generation time for batch of size 8: 5.14 seconds
 num_errors [167 155 221 168 199 182 218 104]
   4%|▎         | 7/196 [01:44<28:39,  9.10s/it](8, 13001)
 Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [187 173 241 235 154 123 124 181]
+  4%|▍         | 8/196 [01:51<26:19,  8.40s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [170 158 164 143 217 173 176 111]
+  5%|▍         | 9/196 [01:58<24:39,  7.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [157 187 187 112 110 176 226 160]
+  5%|▌         | 10/196 [02:05<23:33,  7.60s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [211 230 195 190 202 198 148 127]
+  6%|▌         | 11/196 [02:12<22:49,  7.40s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [223 129 184 133 152 202 117  80]
+  6%|▌         | 12/196 [02:19<22:16,  7.26s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [175 245 188 182 112  85 151 142]
+  7%|▋         | 13/196 [02:25<21:49,  7.16s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [147 249  82 214 153 194 177 131]
+  7%|▋         | 14/196 [02:32<21:28,  7.08s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [172 184 183 165 174 142 141 141]
+  8%|▊         | 15/196 [02:39<21:14,  7.04s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [151 178 186 209 178 158 179 204]
+  8%|▊         | 16/196 [02:49<23:08,  7.71s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [131 101 171 183 140 153 149 145]
+  9%|▊         | 17/196 [02:56<22:18,  7.48s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [ 98 120 196 103 140 169 111 162]
+  9%|▉         | 18/196 [03:03<21:48,  7.35s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [128 159 190 160 232 191  99 165]
+ 10%|▉         | 19/196 [03:10<21:23,  7.25s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [151 134 216 214 108 245 181 156]
+ 10%|█         | 20/196 [03:17<21:04,  7.18s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [155 179 161 122 136 187 128  94]
+ 11%|█         | 21/196 [03:24<20:41,  7.10s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [163  94 161 110 130 175 165 219]
+ 11%|█         | 22/196 [03:30<20:26,  7.05s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [178 186  92 127  71 101 149  99]
+ 12%|█▏        | 23/196 [03:37<20:11,  7.00s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [104 112 155 149 151 103 127  81]
+ 12%|█▏        | 24/196 [03:44<20:04,  7.00s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [143 144 165  93  85 131 192  56]
+ 13%|█▎        | 25/196 [03:51<19:51,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [149  46 160 154  65 120 138  76]
+ 13%|█▎        | 26/196 [03:58<19:40,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [124 179 172 235 121 168 148 187]
+ 14%|█▍        | 27/196 [04:05<19:33,  6.95s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [195 184 190 201 189 171 154 203]
+ 14%|█▍        | 28/196 [04:12<19:32,  6.98s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [155 140 167  71  97 103 129 128]
+ 15%|█▍        | 29/196 [04:19<19:30,  7.01s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [ 92  66 191 175 156 108 103 104]
+ 15%|█▌        | 30/196 [04:27<19:38,  7.10s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [133 170 164 188 167 118 114 101]
+ 16%|█▌        | 31/196 [04:34<19:26,  7.07s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [158 160 188 127 215 127 158 117]
+ 16%|█▋        | 32/196 [04:41<19:23,  7.10s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.17 seconds
+num_errors [172 220 211 155 154  16 180 235]
+ 17%|█▋        | 33/196 [04:48<19:13,  7.08s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.18 seconds
+num_errors [173 200 179 128 177 130 135 127]
+ 17%|█▋        | 34/196 [04:55<19:07,  7.08s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [122 212 125 142 118 181 120 136]
+ 18%|█▊        | 35/196 [05:02<19:00,  7.08s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [ 57  92 175 230 249 171 156 139]
+ 18%|█▊        | 36/196 [05:09<18:41,  7.01s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [147 240 144 209 173 171 122 175]
+ 19%|█▉        | 37/196 [05:16<18:32,  6.99s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [120 173 220 181 131 160 177 170]
+ 19%|█▉        | 38/196 [05:23<18:24,  6.99s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [ 95 167 196 161 185 138 142 195]
+ 20%|█▉        | 39/196 [05:30<18:15,  6.98s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [179 176 177 199 203 158 235 144]
+ 20%|██        | 40/196 [05:37<18:03,  6.95s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [128 209 165 159 132 151 123 214]
+ 21%|██        | 41/196 [05:43<17:50,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [185 143 122 123 171 143 191 224]
+ 21%|██▏       | 42/196 [05:50<17:39,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [222  73 104 142 104 152 134 162]
+ 22%|██▏       | 43/196 [05:57<17:34,  6.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [118 115 169 196 132 121 132 156]
+ 22%|██▏       | 44/196 [06:04<17:31,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [189 107 104 194 173 194 102 161]
+ 23%|██▎       | 45/196 [06:11<17:29,  6.95s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.17 seconds
+num_errors [158 140 144 101 126 134 203 168]
+ 23%|██▎       | 46/196 [06:18<17:26,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [ 86 191  83 210 165 152 158 152]
+ 24%|██▍       | 47/196 [06:25<17:14,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [175 148 186 165 195 203 124 174]
+ 24%|██▍       | 48/196 [06:32<17:01,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [ 76 245 194 197 142 134 215 189]
+ 25%|██▌       | 49/196 [06:39<17:03,  6.96s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [177 127  93 128 179 101 141 136]
+ 26%|██▌       | 50/196 [06:46<16:59,  6.99s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [ 88 144 202  96 172 203 149 135]
+ 26%|██▌       | 51/196 [06:53<16:55,  7.01s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.18 seconds
+num_errors [219 137 120 116 176 200 165 164]
+ 27%|██▋       | 52/196 [07:00<16:50,  7.01s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [156 159 204 170 240 134 178 138]
+ 27%|██▋       | 53/196 [07:07<16:38,  6.98s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [196 231 122 103 188 168 208 193]
+ 28%|██▊       | 54/196 [07:14<16:30,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [155 173 127 125 160 115 162 237]
+ 28%|██▊       | 55/196 [07:21<16:18,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [175 194 193 167 211 158 171  90]
+ 29%|██▊       | 56/196 [07:28<16:07,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.16 seconds
+num_errors [198 144 172  94 148 188 212 198]
+ 29%|██▉       | 57/196 [07:34<15:59,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [123 200 243 188 168 163 147 149]
+ 30%|██▉       | 58/196 [07:41<15:49,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [107 174 117  99 174 217 169 160]
+ 30%|███       | 59/196 [07:48<15:42,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [187 206 193 196 190 127 175 185]
+ 31%|███       | 60/196 [07:55<15:34,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.16 seconds
+num_errors [177 124 211 139 114 195 112 180]
+ 31%|███       | 61/196 [08:02<15:25,  6.85s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [213  88 180  85 104 137 249 212]
+ 32%|███▏      | 62/196 [08:09<15:15,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [149 149 167 107 218 165 190 152]
+ 32%|███▏      | 63/196 [08:15<15:09,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [155 175  87 190 189 154 215 172]
+ 33%|███▎      | 64/196 [08:22<15:04,  6.85s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [184 150 151 124 126 132 169 170]
+ 33%|███▎      | 65/196 [08:29<14:59,  6.86s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [ 97 185 231 174 107 194 177  84]
+ 34%|███▎      | 66/196 [08:36<14:53,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.18 seconds
+num_errors [190 142 168 193 199 167 147 159]
+ 34%|███▍      | 67/196 [08:43<14:47,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.16 seconds
+num_errors [159 149 160 151 206 136 136  88]
+ 35%|███▍      | 68/196 [08:50<14:44,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [ 92 103 145 163 135  56 112 228]
+ 35%|███▌      | 69/196 [08:57<14:34,  6.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [144  81 105  88 100 155 168 143]
+ 36%|███▌      | 70/196 [09:04<14:29,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [121 158 149 170 169 124 159 189]
+ 36%|███▌      | 71/196 [09:11<14:25,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.16 seconds
+num_errors [106 146 120 128 170 240  44 109]
+ 37%|███▋      | 72/196 [09:18<14:15,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [214 120 153 180  80 125 145 182]
+ 37%|███▋      | 73/196 [09:24<14:07,  6.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [152 178 163 124 142 135 134 128]
+ 38%|███▊      | 74/196 [09:31<14:04,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [202 125 150 186 116 170 171 224]
+ 38%|███▊      | 75/196 [09:38<14:00,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.16 seconds
+num_errors [187  78 135 201 139 138 203 173]
+ 39%|███▉      | 76/196 [09:45<13:55,  6.96s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [173 159 114 121 115 146  71 205]
+ 39%|███▉      | 77/196 [09:52<13:46,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [167 100 212 153 139 101 172 248]
+ 40%|███▉      | 78/196 [09:59<13:37,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [188 136 123 177 162 106 120 102]
+ 40%|████      | 79/196 [10:06<13:30,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [168 143 123 146 167 101  99 155]
+ 41%|████      | 80/196 [10:13<13:28,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [222 149 194 137 126 161 100 123]
+ 41%|████▏     | 81/196 [10:20<13:22,  6.98s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [157 152 135 158  74 178 165 228]
+ 42%|████▏     | 82/196 [10:27<13:13,  6.96s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [129 112 121 168 201 124 163 143]
+ 42%|████▏     | 83/196 [10:34<13:02,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [102  60 138 120 113 139 206 135]
+ 43%|████▎     | 84/196 [10:41<12:52,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [162 165 194 180 187 135 183  81]
+ 43%|████▎     | 85/196 [10:48<12:45,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [111 136  66 192  88 136 195 102]
+ 44%|████▍     | 86/196 [10:55<12:38,  6.90s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [178 105 184 137 167 150 137 200]
+ 44%|████▍     | 87/196 [11:02<12:32,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.17 seconds
+num_errors [198 192 226 166 125 115  87 118]
+ 45%|████▍     | 88/196 [11:08<12:27,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [151 181 214 170 222 173  87 208]
+ 45%|████▌     | 89/196 [11:16<12:24,  6.96s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [205 212  64 150 137  88 117 165]
+ 46%|████▌     | 90/196 [11:23<12:18,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [134 168 179 132 158 178  98 189]
+ 46%|████▋     | 91/196 [11:29<12:11,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [107 190 145  88 129 173 112 131]
+ 47%|████▋     | 92/196 [11:37<12:06,  6.99s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [168 168 159 158 135 119 116 179]
+ 47%|████▋     | 93/196 [11:44<11:59,  6.99s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [222 112 172 148 109 146 163  75]
+ 48%|████▊     | 94/196 [11:52<12:40,  7.45s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [194 155 158 140 197 135 157 135]
+ 48%|████▊     | 95/196 [11:59<12:20,  7.34s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [131 177 132 101 133 212 103 135]
+ 49%|████▉     | 96/196 [12:06<12:03,  7.23s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [151 193 162 157 237 124 236  96]
+ 49%|████▉     | 97/196 [12:13<11:47,  7.14s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [160 136 182 103 195 164 101 161]
+ 50%|█████     | 98/196 [12:20<11:31,  7.06s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [153 226 148 153 130 101 180 130]
+ 51%|█████     | 99/196 [12:27<11:34,  7.16s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [165  91  54 172 177 163 138 227]
+ 51%|█████     | 100/196 [12:34<11:21,  7.10s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [188 206 148 142 182 136 207 134]
+ 52%|█████▏    | 101/196 [12:41<11:08,  7.04s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [120 225  96 171 132 191 204 168]
+ 52%|█████▏    | 102/196 [12:48<10:58,  7.01s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [140 211 190 191 223 193 204 194]
+ 53%|█████▎    | 103/196 [12:55<10:51,  7.01s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [178 184 226 165 168 214 178  84]
+ 53%|█████▎    | 104/196 [13:02<10:38,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [ 99 205 227 141 154 166 155 110]
+ 54%|█████▎    | 105/196 [13:09<10:28,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.16 seconds
+num_errors [205 150 158 117 204 214  66 185]
+ 54%|█████▍    | 106/196 [13:16<10:22,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [122 172 182 218 166 120 214 171]
+ 55%|█████▍    | 107/196 [13:23<10:15,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [151 217 175 155 168 115 235 139]
+ 55%|█████▌    | 108/196 [13:29<10:08,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [170 241 200 207 160 183 136 155]
+ 56%|█████▌    | 109/196 [13:36<10:02,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [171 130 151 114  96  90 136 125]
+ 56%|█████▌    | 110/196 [13:43<09:58,  6.96s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [113 136 144 150 186 101 169 154]
+ 57%|█████▋    | 111/196 [13:51<09:57,  7.03s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [151 157 169 111 134 143 135 194]
+ 57%|█████▋    | 112/196 [13:58<09:50,  7.03s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [147  91 147 180 165  95 186 160]
+ 58%|█████▊    | 113/196 [14:08<10:54,  7.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [ 86 141 211 153 153 177 183 152]
+ 58%|█████▊    | 114/196 [14:15<10:25,  7.62s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.16 seconds
+num_errors [158 199 180 210 132 173 174 189]
+ 59%|█████▊    | 115/196 [14:22<10:02,  7.44s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [145 101 103 135 154 175 139  72]
+ 59%|█████▉    | 116/196 [14:29<09:48,  7.36s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [180 219 194 188 119 201 142 144]
+ 60%|█████▉    | 117/196 [14:36<09:33,  7.26s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [133 120 175 184 118 175 193 128]
+ 60%|██████    | 118/196 [14:43<09:19,  7.17s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [168 135 170 109 166  71 156 159]
+ 61%|██████    | 119/196 [14:50<09:13,  7.19s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [150 246  87 139 179 176  53 156]
+ 61%|██████    | 120/196 [14:57<08:58,  7.09s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [202 172 142 183 146 151 114 136]
+ 62%|██████▏   | 121/196 [15:04<08:45,  7.01s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [203  84 161 127 227 225 189 145]
+ 62%|██████▏   | 122/196 [15:12<09:11,  7.46s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [151 141 154 156 131 104 153 123]
+ 63%|██████▎   | 123/196 [15:20<09:08,  7.51s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [142 128 134 182 200 134 198  69]
+ 63%|██████▎   | 124/196 [15:27<08:43,  7.28s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [ 99 241 191 125 113  90 181 200]
+ 64%|██████▍   | 125/196 [15:33<08:24,  7.10s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [106 179 101 121 127 136 185 128]
+ 64%|██████▍   | 126/196 [15:41<08:23,  7.19s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.09 seconds
+num_errors [186 114 130 130 162  97 113 151]
+ 65%|██████▍   | 127/196 [15:47<08:06,  7.05s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.09 seconds
+num_errors [140 115 190 177 131 136 197 177]
+ 65%|██████▌   | 128/196 [15:54<07:54,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [240 160 124 216 124 162 155 152]
+ 66%|██████▌   | 129/196 [16:01<07:44,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [205 164 206 108 218  70 111 155]
+ 66%|██████▋   | 130/196 [16:08<07:39,  6.96s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [182 193 184 135 165 206 110 176]
+ 67%|██████▋   | 131/196 [16:15<07:29,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [120 206 122 177 143 130 158 138]
+ 67%|██████▋   | 132/196 [16:24<08:08,  7.63s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [157 141 158 176 167 201 192 113]
+ 68%|██████▊   | 133/196 [16:31<07:45,  7.39s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [188 135 107 164 158 126 156 137]
+ 68%|██████▊   | 134/196 [16:38<07:28,  7.24s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [130 200 175 162 110  97 155 145]
+ 69%|██████▉   | 135/196 [16:45<07:15,  7.15s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [147 191  74 205 173  75 151 167]
+ 69%|██████▉   | 136/196 [16:52<07:03,  7.06s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.16 seconds
+num_errors [237 130 206 174 146 175 135 182]
+ 70%|██████▉   | 137/196 [16:58<06:53,  7.01s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [143 247 203 218 225 167 152 164]
+ 70%|███████   | 138/196 [17:05<06:44,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [119 173 167 159 136 192 118 153]
+ 71%|███████   | 139/196 [17:12<06:34,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [101 145 127 158 186 249 170 178]
+ 71%|███████▏  | 140/196 [17:19<06:29,  6.95s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [ 97 118 167 149 197 152 202 118]
+ 72%|███████▏  | 141/196 [17:26<06:18,  6.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [129 202 172 152 201 176 167 115]
+ 72%|███████▏  | 142/196 [17:33<06:12,  6.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [133 135 149 249 119 142 134 154]
+ 73%|███████▎  | 143/196 [17:40<06:13,  7.05s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [195 128 186 163 173 158 162 168]
+ 73%|███████▎  | 144/196 [17:47<06:02,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [151 176 228 189 141 135 183 230]
+ 74%|███████▍  | 145/196 [17:54<05:51,  6.89s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [ 98 149 214 148 176 239 108 172]
+ 74%|███████▍  | 146/196 [18:01<05:52,  7.06s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [177 147 126 105 151 173 202 175]
+ 75%|███████▌  | 147/196 [18:08<05:40,  6.95s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.09 seconds
+num_errors [119 126 175 171 168 195 148 184]
+ 76%|███████▌  | 148/196 [18:15<05:29,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.09 seconds
+num_errors [ 51 138 140 111 188 134 165 124]
+ 76%|███████▌  | 149/196 [18:21<05:20,  6.82s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [162 144 236 148 136 157 235 213]
+ 77%|███████▋  | 150/196 [18:28<05:14,  6.83s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [221  89 142 213 195 216 207 215]
+ 77%|███████▋  | 151/196 [18:36<05:14,  7.00s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [192  71 168 189 223 211 158 148]
+ 78%|███████▊  | 152/196 [18:42<05:05,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [169 135 182 195 207 187 117 132]
+ 78%|███████▊  | 153/196 [18:49<04:57,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [115 145 183 139 179 160 184 159]
+ 79%|███████▊  | 154/196 [18:56<04:47,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [188 163  86 162 119 169 198 122]
+ 79%|███████▉  | 155/196 [19:03<04:45,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [136 145 200 132 163  91 133 138]
+ 80%|███████▉  | 156/196 [19:10<04:41,  7.03s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [145 135 151 146 212 130 159 138]
+ 80%|████████  | 157/196 [19:17<04:33,  7.01s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [155 192 142 104 101 143 117 170]
+ 81%|████████  | 158/196 [19:24<04:23,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.09 seconds
+num_errors [133 209 165 138 146 164 126 138]
+ 81%|████████  | 159/196 [19:31<04:14,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [146 209 108 191 115 187 178 153]
+ 82%|████████▏ | 160/196 [19:38<04:07,  6.86s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.09 seconds
+num_errors [147  72 132 146 161 224 143 163]
+ 82%|████████▏ | 161/196 [19:44<03:59,  6.86s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [104 179 113 136 173  85 102 145]
+ 83%|████████▎ | 162/196 [19:52<03:56,  6.95s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [134 175  80  39 149 167 137 216]
+ 83%|████████▎ | 163/196 [19:59<03:49,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [131 151 197  92 116 163  91 187]
+ 84%|████████▎ | 164/196 [20:05<03:41,  6.91s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [140 162 151 160 216 158 108 101]
+ 84%|████████▍ | 165/196 [20:12<03:33,  6.87s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [152 121 137 160 126 149 114  77]
+ 85%|████████▍ | 166/196 [20:19<03:25,  6.86s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [116 169 171 197 115 155 180 102]
+ 85%|████████▌ | 167/196 [20:26<03:19,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [158  71 240 106  65 184 141 181]
+ 86%|████████▌ | 168/196 [20:33<03:11,  6.84s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [164 138 115 164  95 169 135 112]
+ 86%|████████▌ | 169/196 [20:39<03:03,  6.80s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [139 116 171 150 163 192  90 129]
+ 87%|████████▋ | 170/196 [20:47<03:02,  7.02s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [169 111 134 214 134 180 178 117]
+ 87%|████████▋ | 171/196 [20:54<02:54,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [165 136 204 132 185 102 123 165]
+ 88%|████████▊ | 172/196 [21:01<02:46,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [114 197  83 105 180 181  89 193]
+ 88%|████████▊ | 173/196 [21:08<02:42,  7.08s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [102 191 183 170 174  88 192 155]
+ 89%|████████▉ | 174/196 [21:15<02:33,  6.99s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [140 141 238  40 122 172 189 161]
+ 89%|████████▉ | 175/196 [21:22<02:29,  7.11s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.15 seconds
+num_errors [206 175 235 138 129  92 108 128]
+ 90%|████████▉ | 176/196 [21:31<02:29,  7.49s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [152 230 183 210 148 119 135 166]
+ 90%|█████████ | 177/196 [21:37<02:18,  7.28s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.09 seconds
+num_errors [196 134 144 186 185 140 141 127]
+ 91%|█████████ | 178/196 [21:44<02:09,  7.19s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [171 147 219 152 163 156 175 194]
+ 91%|█████████▏| 179/196 [21:51<02:00,  7.08s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [222 127 139 158 149 119 150 103]
+ 92%|█████████▏| 180/196 [21:58<01:51,  6.98s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [191 145 173 128 151 159 131 162]
+ 92%|█████████▏| 181/196 [22:05<01:43,  6.92s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [107  78 214 135 173 110 158 178]
+ 93%|█████████▎| 182/196 [22:12<01:37,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.10 seconds
+num_errors [117 211 112  81 169 161 166 235]
+ 93%|█████████▎| 183/196 [22:18<01:29,  6.88s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [154 144 173 193 170 116 133  97]
+ 94%|█████████▍| 184/196 [22:25<01:23,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [136 172 194 143 132 215 138 126]
+ 94%|█████████▍| 185/196 [22:32<01:16,  6.93s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [173 172 126 128 120 160  94 140]
+ 95%|█████████▍| 186/196 [22:39<01:09,  6.95s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [187 133 109 148 157 208 148 119]
+ 95%|█████████▌| 187/196 [22:46<01:02,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [129 243 116 130  94  85 192 158]
+ 96%|█████████▌| 188/196 [22:53<00:55,  6.94s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [210  85 133 111 163 141 112  88]
+ 96%|█████████▋| 189/196 [23:01<00:49,  7.05s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [129 144 111 113 208 133  76 197]
+ 97%|█████████▋| 190/196 [23:07<00:41,  7.00s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.12 seconds
+num_errors [190 208 123 152  98  86  67 187]
+ 97%|█████████▋| 191/196 [23:14<00:34,  6.98s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.17 seconds
+num_errors [190 186 173 163 159 127 166 134]
+ 98%|█████████▊| 192/196 [23:21<00:27,  6.99s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.13 seconds
+num_errors [118 153 138 172 193 155 209  81]
+ 98%|█████████▊| 193/196 [23:28<00:20,  6.98s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [182 123 117 175 144 226 131 112]
+ 99%|█████████▉| 194/196 [23:35<00:13,  6.97s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.14 seconds
+num_errors [123 110 149 209 170 180 189 137]
+ 99%|█████████▉| 195/196 [23:42<00:06,  6.96s/it](8, 13001)
+Before generation, real book is (should be none): None
+Generation time for batch of size 8: 5.11 seconds
+num_errors [198 162 102 167 180 168 123 154]
+100%|██████████| 196/196 [23:49<00:00,  6.90s/it]100%|██████████| 196/196 [23:49<00:00,  7.29s/it]
+[Rank 0/2] Generation time for 1568 sequences across 8 batch size: 1430.125859260559

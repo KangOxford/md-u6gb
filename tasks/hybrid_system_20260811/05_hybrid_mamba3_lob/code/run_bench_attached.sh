@@ -71,6 +71,14 @@ export BENCH_WORLD_SIZE BENCH_GPU_OFFSET
 export ARM_ID="${ARM_ID:-arm}" ARM_NAME="${ARM_NAME:-arm}"
 export SLURM_JOB_ID="$ATTACH_JOBID"
 
+# --job-name 必须给真名字。node_budget_monitor.py 按正则 ^(bash|sh|zsh|...)$ 判 step 是否
+# idle，没名字的 step 会让整个作业被记成 IDLE-HELD 并随时可能被预算闸门 scancel。
+# 2026-08-15 12:53 有 9 个 step 在两秒内 CANCELLED(0:9)，主因是父进程随会话死（已用 setsid 修），
+# 但这些 step 当时全叫 `bash` —— 那是另一条独立的、还敞开着的失败通道。起名字不是绕过闸门，
+# 是把度量修对。出处 [[reference_u6gb_node_budget_guardrail]]。
+STEP_JOB_NAME="${STEP_JOB_NAME:-bench-${ARM_ID:-arm}${CHECKPOINT_STEP}-s${GENERATION_SEED:-2026}}"
+echo "[bench] srun step name = $STEP_JOB_NAME"
 exec srun --jobid="$ATTACH_JOBID" --overlap --exact --nodes=1 --ntasks=1 \
+     --job-name="$STEP_JOB_NAME" \
      -w "$NODE" --cpus-per-task=72 --cpu-bind=none \
      bash "${BENCH_BATCH:-$TASKDIR/bench_scripts/bench_hybrid.batch}"

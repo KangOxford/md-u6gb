@@ -55,3 +55,10 @@ Total GPUs: 16
     DATA_ROOT=/lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs
     TRAIN_DATE_RANGE=2022-01-01,2025-12-31
     TEST_DATE_RANGE=2026-01-01,2026-01-31
+============================================
+Training finished at: Wed 12 Aug 11:59:31 UTC 2026
+srun exit code: 0
+============================================
+[Auto-Resume] srun exit=0. Latest checkpoint: /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811/checkpoints/j5980745_2ska8a8q_5980745 step 12000
+[Auto-Resume] RESUME_FROM_STEP=12000 (from metadata step_in_epoch, BSZ-adjusted)
+[Auto-Resume] WARNING: Reached 20 consecutive auto-resumes. Stopping to prevent infinite loop.

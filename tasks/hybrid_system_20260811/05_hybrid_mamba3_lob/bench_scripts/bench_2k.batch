@@ -38,10 +38,34 @@ export GENERATION_SEED=${GENERATION_SEED:-2026}
 # data_gen 变成两个模型输出的混合物，LOB-Bench 照样给出一个看起来正常的分数。
 # 加上臂名与本进程 PID，两者任一都足以拆开。
 export OUTPUT_ROOT="$TASKDIR/bench2k_${BENCH_TS}_j${SLURM_JOB_ID}_${ARM_ID:-arm}_s${GENERATION_SEED}_$$"
-export INFERENCE_DIR="$OUTPUT_ROOT/inference"
 export LOBBENCH_OUTPUT="$OUTPUT_ROOT/lobbench"
 export SUMMARY="$OUTPUT_ROOT/summary.json"
 mkdir -p "$OUTPUT_ROOT" "$TASKDIR/logs"
+
+# ── 生成产物放节点本地盘：inode 配额是独立于空间配额的第二堵墙 ─────────────
+#
+# 2026-08-16 00:1x：/projects/public/u6gb 的 **文件数**配额打满
+# （51,200,000 / 51,200,000，而空间只用了 112.8T/200T），任何写入都报
+# `OSError: [Errno 122] Disk quota exceeded`，训练和 bench 同时死。
+# 报错只说 "Disk quota exceeded"，不说是哪一堵——看空间列会得出「还有 87T，
+# 怎么会满」，必须看 `lfs quota` 的 files 列有没有 `*`。
+#
+# 一个 bench 目录 649 个文件，其中 **642 个在 inference/**，而那些生成产物
+# 只在紧接着的打分步骤里用一次，之后再没读过。放本地盘后每个 bench 在 Lustre
+# 上只剩 3 个结果文件 + 4 个 rank 日志，**降约 90 倍**。
+#
+# 打分与生成在同一个 srun step、同一个节点上，所以本地路径对两者都可见。
+# INFER_ON_LOCAL=0 可退回旧行为（产物留在 Lustre，便于事后翻查生成样本）。
+if [ "${INFER_ON_LOCAL:-1}" = "1" ]; then
+    export INFERENCE_DIR="${LOCAL_SCRATCH:-/tmp/$USER}/m3bench_infer/$(basename "$OUTPUT_ROOT")"
+    mkdir -p "$INFERENCE_DIR" || { echo "FATAL: 建不了本地 INFERENCE_DIR=$INFERENCE_DIR" >&2; exit 7; }
+    echo "[inode] INFERENCE_DIR 落本地盘 → $INFERENCE_DIR（Lustre 上只留结果文件）"
+    # 不自己删：项目规矩是「删除一律改名」，而节点本地 /tmp 由 Slurm 在作业结束时
+    # 统一回收，本来就不需要脚本动手。留着还便于作业期间回查生成样本。
+else
+    export INFERENCE_DIR="$OUTPUT_ROOT/inference"
+    echo "[inode] INFER_ON_LOCAL=0 → INFERENCE_DIR 留在 Lustre（$INFERENCE_DIR），每个 bench 约 642 个额外文件"
+fi
 
 # ── 2,000 条上下文的 half-half：cond 1000 / gen 1000 ────────────────────────
 #
