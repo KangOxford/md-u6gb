@@ -1,0 +1,1655 @@
+#!/usr/bin/env python3
+"""
+sgpu —— 终端里的 GPU 时间账本：过去一段时间，我的 GPU 到底跑了谁、断了几次。
+
+它回答的问题
+------------
+不是「现在几张卡在跑」（那是 gtop 的活），而是「过去 24 小时里，我申请到的
+GPU-hours 有多少真的在算，每一段跑的是哪个实验，哪个实验断了几次又重跑了几次」。
+
+输出三层，三层共享同一条时间轴，可以上下对照着读：
+    1. 总览甘特   一行一个作业，每格颜色 = 那一刻分配到的卡有多大比例在算
+    2. 身份泳道   一行一个实验，行上的空隙就是断点；行尾给出「N 段 断M ✗K」
+    3. 重跑史     跨作业按实验身份归组，直接给出「断 N 次、几次异常退出」
+
+为什么详情要按身份分行而不是按时间分段：一个长期 allocation 里常常同时挂着
+好几个实验（5980502 同时跑 R6p2、crps、hybrid bench）。线性段落每一刻只能挑
+一个「主身份」，结果段落被撕碎、重跑序号乱跳；一行一个实验就没有这个问题。
+
+判据（重要，决定这张图可不可信）
+--------------------------------
+Slurm accounting 有两层记录，二者之差就是浪费：
+
+    job  级 (5980745)     → allocation：Slurm 把卡划给了你
+    step 级 (5980745.833) → 真的有进程被 srun 起来并占了卡
+
+所以 busy 只认 step，held 是「有 allocation 但没有合格 step」。三条清洗规则：
+
+  1. 剔除 .batch / .extern。.batch 全程存在且带 gres/gpu=<单节点卡数>，
+     不剔的话 4 节点分配会恒显 25% 利用，图永远是绿的。
+  2. 剔除时长 < --min-step 的 step（默认 60 秒）。gtop-probe 这类 1 秒探针
+     同样占 gres/gpu=16，每 2 分钟打一枪就能把空转段染成活跃。
+     用时长而不是 CPU 数做判据：真训练里既有 cpu=1152 也有 cpu=256。
+  3. 同时刻多个 step 的 GPU 数要 clip 到 allocation，不能相加。
+     `srun --overlap` 附着的 shell 和训练 step 占的是同一批物理卡。
+
+「跑的是谁」从哪来
+------------------
+sacct 里 step 的 JobName 一律是 bash，毫无信息量。真正的身份藏在 SubmitLine
+（Slurm 记下的完整 srun/sbatch 命令行）里，按优先级提取：显式的
+--name/--tag/--job-name > worktree 或 tasks 目录名 > 脚本名。目录名尾部的
+时间戳（-20260811T0520Z）会被剥掉，否则同一实验的两次重跑会被当成两个实验，
+「断了几次」就永远数不出来。
+
+这些之外不做任何猜测：本工具只读 sacct，不碰节点、不碰 Lustre、不采样
+nvidia-smi。所以它能看历史（nvidia-smi 看不了），但看不到「进程活着却在空转」
+——那种情况这里会显示为 busy。要查实时真实占用请用 gtop。
+
+用法
+----
+  sgpu                # 过去 24 小时：总览 + 身份泳道 + 重跑史
+  sgpu 6h             # 过去 6 小时（位置参数：30m / 6h / 3d / 90min）
+  sgpu -w             # TUI 常驻，默认 120 秒重采样，r 刷新 q 退出
+  sgpu --brief        # 只要总览甘特，不要明细
+  sgpu -j 5980745     # 只看某个作业（窗口自动放大到覆盖它）
+  sgpu --segments     # 额外列出线性段落，给精确到分钟的起止时刻
+  sgpu --segments --cmd   # 段落里再展开完整命令行，看清到底跑的什么
+  sgpu --gap 300      # 间隔 5 分钟以内的重启不算「断」
+  sgpu --min-step 300 # 5 分钟以下的 step 都当探针滤掉
+  sgpu -u other.user  # 看别人的（需要 accounting 权限）
+  sgpu --ascii        # 终端不支持 unicode 时
+  sgpu --color        # 强制上色（管道默认关色，贴文档或 less -R 时用）
+
+TUI 按键
+--------
+  r 立刻重采样   p/空格 暂停   +/- 调采样间隔   ↑↓/PgUp/PgDn 滚动   q 退出
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import shutil
+import subprocess
+import sys
+import unicodedata
+import threading
+import time
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+
+# --- 字符集 ---------------------------------------------------------------
+# 填充密度 = 忙碌度。颜色只是第二条通道：--no-color 或截图贴进文档时，
+# 光靠字形也读得出「占着没算」和「满载」的区别。
+GLYPH = {
+    "unicode": {
+        "held": "░", "low": "▒", "mid": "▓", "full": "█",
+        "pending": "·", "gap": " ",
+        "bars": " ▁▂▃▄▅▆▇█",
+        "tick": "┬", "axis": "─", "sep": "│", "rule": "─",
+        "restart": "⟲", "arrow": "→", "block": "▌", "dot": "·",
+        "bad": "✗", "ell": "…",
+        "tl": "╭", "tr": "╮", "bl": "╰", "br": "╯", "v": "│", "h": "─",
+        "itl": "┌", "itr": "┐", "ibl": "└", "ibr": "┘",
+    },
+    "ascii": {
+        "held": ".", "low": ":", "mid": "+", "full": "#",
+        "pending": "_", "gap": " ",
+        "bars": " .:-=+*#",
+        "tick": "+", "axis": "-", "sep": "|", "rule": "-",
+        "restart": "@", "arrow": "->", "block": "#", "dot": "*",
+        "bad": "!", "ell": "~",
+        "tl": "+", "tr": "+", "bl": "+", "br": "+", "v": "|", "h": "-",
+        "itl": "+", "itr": "+", "ibl": "+", "ibr": "+",
+    },
+}
+
+# 样式键 -> (curses color pair index, ANSI 序列)。两个后端共用一套键名。
+STYLES = {
+    "held":    (1, "\033[38;5;240m"),   # 灰：有分配，没有合格 step
+    "low":     (2, "\033[38;5;173m"),   # 土橙：< 35%
+    "mid":     (3, "\033[38;5;179m"),   # 黄：35% ~ 80%
+    "full":    (4, "\033[38;5;77m"),    # 绿：>= 80%
+    "pending": (5, "\033[38;5;236m"),   # 极暗：排队中，没占卡
+    "fail":    (6, "\033[38;5;203m"),
+    "warn":    (7, "\033[38;5;214m"),
+    "ok":      (4, "\033[38;5;77m"),
+    "dim":     (8, "\033[38;5;244m"),
+    "label":   (9, "\033[38;5;252m"),
+    "head":    (10, "\033[1;38;5;255m"),
+    "ident":   (11, "\033[38;5;117m"),  # 青：实验身份，图里最该被一眼找到的东西
+    "axis":    (1, "\033[38;5;240m"),
+    "plain":   (0, ""),
+}
+RESET = "\033[0m"
+
+# 作业/步骤终态 → (标记, 样式, 人话)。参考图里最有信息量的就是这些收尾标注。
+END_MARK = {
+    "COMPLETED": ("|", "ok",   "done"),
+    "RUNNING":   (">", "ok",   "running"),
+    "FAILED":    ("x", "fail", "FAILED"),
+    "TIMEOUT":   ("T", "warn", "TIMEOUT"),
+    "CANCELLED": ("/", "warn", "cancelled"),
+    "NODE_FAIL": ("!", "fail", "NODE_FAIL"),
+    "OUT_OF_ME": ("O", "fail", "OOM"),
+    "PREEMPTED": ("p", "warn", "preempted"),
+    "REQUEUED":  ("r", "warn", "requeued"),
+}
+# 非正常收尾：段落末尾会打断点标记，重跑史里计入「异常中断」
+BAD_STATES = {"FAILED", "TIMEOUT", "CANCELLED", "NODE_FAIL", "OUT_OF_ME", "PREEMPTED"}
+
+
+def sgr(text: str, key: str) -> str:
+    code = STYLES.get(key, ("", ""))[1]
+    return f"{code}{text}{RESET}" if code else text
+
+
+# --- 时间与解析 -----------------------------------------------------------
+
+_DUR = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*([smhdw]|min|hr|hrs|day|days|week|weeks)?\s*$", re.I)
+_UNIT = {"s": 1, "m": 60, "min": 60, "h": 3600, "hr": 3600, "hrs": 3600,
+         "d": 86400, "day": 86400, "days": 86400, "w": 604800,
+         "week": 604800, "weeks": 604800}
+
+
+def parse_duration(text: str) -> timedelta:
+    m = _DUR.match(text)
+    if not m:
+        raise argparse.ArgumentTypeError(f"cannot parse duration {text!r}; try 30m / 6h / 3d")
+    val, unit = float(m.group(1)), (m.group(2) or "h").lower()
+    return timedelta(seconds=val * _UNIT[unit])
+
+
+def parse_time(text: str) -> datetime | None:
+    """sacct 的时间列。RUNNING 的 End 是 'Unknown'，没启动过的 Start 是 'None'。"""
+    if not text or text in ("Unknown", "None", "N/A"):
+        return None
+    try:
+        return datetime.strptime(text, "%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        return None
+
+
+def parse_tres(text: str) -> dict[str, float]:
+    out: dict[str, float] = {}
+    for part in (text or "").split(","):
+        if "=" not in part:
+            continue
+        k, _, v = part.partition("=")
+        v = v.strip()
+        mult = 1.0
+        if v and v[-1] in "KMGT":
+            mult = {"K": 1e3, "M": 1e6, "G": 1e9, "T": 1e12}[v[-1]]
+            v = v[:-1]
+        try:
+            out[k.strip()] = float(v) * mult
+        except ValueError:
+            pass
+    return out
+
+
+def fmt_dur(seconds: float) -> str:
+    seconds = int(max(0, seconds))
+    h, rem = divmod(seconds, 3600)
+    m, s = divmod(rem, 60)
+    if h:
+        return f"{h}h{m:02d}m"
+    if m:
+        return f"{m}m{s:02d}s"
+    return f"{s}s"
+
+
+# --- 身份提取 -------------------------------------------------------------
+
+# 目录名尾部的时间戳。剥掉它，同一实验的多次重跑才会归到一组；
+# 不剥的话 varlen-R6p2-...-20260811T0520Z 和 ...-20260812T0100Z 会被当成
+# 两个不同实验，「断了几次 / 重跑了几次」就永远数不出来。
+_TS_SUFFIX = re.compile(
+    r"[-_](?:\d{8}T\d{4,6}Z?|\d{8}[-_]?\d{6}|\d{4}-\d{2}-\d{2}|\d{8}|\d{10,13})$")
+# node_wrapper.sh / run.sh 这类通用启动器不是身份，得继续往上找实验目录
+_GENERIC_SCRIPT = re.compile(
+    r"^(node_wrapper|wrapper|launch|launcher|run|start|entrypoint|srun_\w+)\.(sh|bash|py)$")
+_EXPLICIT_FLAGS = ("--name", "--tag", "--run-name", "--run_name", "--exp-name",
+                   "--exp_name", "--job-name", "--experiment")
+_DIR_PATTERNS = (
+    r"[-\w]*worktrees?/([^/\s'\"]+)",       # sigma-0-worktrees/<实验>
+    r"/experiments?/([^/\s'\"]+)",
+    r"/tasks/([^/\s'\"]+)",
+    r"/runs?/([^/\s'\"]+)",
+)
+
+
+def strip_ts(name: str) -> str:
+    prev = None
+    while prev != name:                      # 尾部可能挂了不止一层时间戳
+        prev = name
+        name = _TS_SUFFIX.sub("", name)
+    return name or prev
+
+
+INTERACTIVE = "(interactive shell)"
+UNKNOWN = "(unidentified)"
+# 这两类不是实验，排序时沉底，别让它们占据「最该看」的位置
+NON_EXPERIMENT = (INTERACTIVE, UNKNOWN)
+# `srun --pty ... bash -l` 是人手动 attach 进去的壳，本来就没有实验身份。
+# 回退到作业名会把它冒充成实验，所以单独归一类。
+_PTY = re.compile(r"--pty\b|(?:bash|sh|zsh)\s+-l\s*$|(?:bash|sh)\s+-lc\s*$")
+
+
+def extract_identity(cmdline: str, fallback: str) -> str:
+    """从 srun/sbatch 命令行里提取一个短的实验标识。
+
+    优先级：显式 --name/--tag > worktree/tasks 目录名 > 非通用脚本名 > 作业名。
+    这是把参考图上手写的「R6.2 training」「Hybrid Mamba3」自动化的关键一步。
+    """
+    if not cmdline:
+        return UNKNOWN
+    if _PTY.search(cmdline) and not re.search(r"worktrees?/|/tasks/", cmdline):
+        return INTERACTIVE
+
+    for flag in _EXPLICIT_FLAGS:
+        m = re.search(re.escape(flag) + r"[=\s]+['\"]?([^\s'\"]+)", cmdline)
+        if m and m.group(1) not in ("bash", "sh", "python"):
+            return strip_ts(m.group(1))
+
+    # 环境变量式的身份（--export=ALL,ARM_NAME=hybrid-m3-nemotron,...）
+    m = re.search(r"\b(?:ARM_NAME|EXP_NAME|RUN_NAME|ARCHITECTURE)=([^\s,]+)", cmdline)
+    if m:
+        return strip_ts(m.group(1))
+
+    for pat in _DIR_PATTERNS:
+        m = re.search(pat, cmdline)
+        if m:
+            return strip_ts(m.group(1))
+
+    # 脚本名兜底，跳过通用启动器
+    for tok in reversed(cmdline.split()):
+        base = tok.rstrip("'\"").split("/")[-1]
+        if base.endswith((".py", ".sh", ".batch")) and not _GENERIC_SCRIPT.match(base):
+            return strip_ts(base.rsplit(".", 1)[0])
+    return UNKNOWN
+
+
+# --- 节点 / GPU 层 --------------------------------------------------------
+
+_NODELIST = re.compile(r"^([a-z]+)\[(.*)\]$")
+
+
+def expand_nodes(nodelist: str) -> list[str]:
+    """nid[010580,010631,010669-010670] → 四个节点名。
+
+    Slurm 的紧凑写法，节点层要按物理节点分组就必须先展开。
+    """
+    nl = (nodelist or "").strip()
+    if not nl or nl in ("None assigned", "None"):
+        return []
+    m = _NODELIST.match(nl)
+    if not m:
+        return [nl]
+    prefix, body, out = m.group(1), m.group(2), []
+    for part in body.split(","):
+        if "-" in part:
+            a, b = part.split("-", 1)
+            width = len(a)
+            out += [f"{prefix}{i:0{width}d}" for i in range(int(a), int(b) + 1)]
+        else:
+            out.append(prefix + part)
+    return out
+
+
+@dataclass
+class GpuSlot:
+    """一个节点上的一张卡。
+
+    idx 是**槽位**不是物理卡号：sacct 只记 gres/gpu 的数量，
+    只有 1% 的 step 带 --gpu-bind=map_gpu，所以「哪一张」无从得知。
+    每节点占不满时按 0..k-1 顺序填，这是显示约定，不是测量结果。
+    """
+    idx: int
+    node: str
+    events: list = field(default_factory=list)      # list[Step]
+
+    @property
+    def busy_s(self) -> float:
+        """区间并集，不是简单相加。
+
+        `srun --overlap` 让多个 step 同时挂在同一张卡上（三个 attach shell 各
+        8h45m 全落在 03:16→12:04 这一段里），相加会算出超过墙钟的 busy 时间，
+        节点标题上就会出现「171% busy」这种不可能的数字。
+        """
+        iv = sorted((e.start, e.end) for e in self.events)
+        total, cur_s, cur_e = 0.0, None, None
+        for a, b in iv:
+            if cur_e is None or a > cur_e:
+                if cur_e is not None:
+                    total += (cur_e - cur_s).total_seconds()
+                cur_s, cur_e = a, b
+            elif b > cur_e:
+                cur_e = b
+        if cur_e is not None:
+            total += (cur_e - cur_s).total_seconds()
+        return total
+
+
+@dataclass
+class NodeView:
+    name: str
+    jid: str
+    slots: list = field(default_factory=list)       # list[GpuSlot]
+    gpus_per_node: int = 4
+
+
+# --- 数据模型 -------------------------------------------------------------
+
+@dataclass
+class Step:
+    sid: str
+    name: str
+    state: str
+    start: datetime
+    end: datetime
+    gpus: float
+    nodes: int
+    cmd: str
+    ident: str
+    nodelist: str = ""
+
+    @property
+    def secs(self) -> float:
+        return (self.end - self.start).total_seconds()
+
+    @property
+    def base_state(self) -> str:
+        return self.state.split()[0] if self.state else ""
+
+
+@dataclass
+class Segment:
+    """作业时间轴上的一个语义段：一段时间里在跑同一件事（或什么都没跑）。"""
+    start: datetime
+    end: datetime
+    kind: str                       # busy | held | pending
+    ident: str = ""
+    gpus: float = 0.0
+    alloc_gpus: float = 0.0
+    end_state: str = ""
+    run_seq: int = 0                # 该身份在本窗口内的第几次运行
+    steps: list[Step] = field(default_factory=list)
+
+    @property
+    def secs(self) -> float:
+        return (self.end - self.start).total_seconds()
+
+    @property
+    def gpu_hours(self) -> float:
+        return self.secs * self.alloc_gpus / 3600
+
+
+@dataclass
+class Job:
+    jid: str
+    name: str
+    state: str
+    start: datetime | None
+    end: datetime | None
+    submit: datetime | None
+    nodes: int
+    gpus: float
+    exit_code: str
+    cmd: str
+    nodelist: str = ""
+    steps: list[Step] = field(default_factory=list)
+    nodes_view: list = field(default_factory=list)   # list[NodeView]
+    segments: list[Segment] = field(default_factory=list)
+    lanes: list[Lane] = field(default_factory=list)
+    alloc_gs: list[float] = field(default_factory=list)
+    busy_gs: list[float] = field(default_factory=list)
+    pend_bins: list[bool] = field(default_factory=list)
+
+    @property
+    def base_state(self) -> str:
+        return self.state.split()[0] if self.state else ""
+
+
+# --- 采集 -----------------------------------------------------------------
+
+SACCT_FIELDS = ["JobID", "JobName", "State", "Start", "End", "Submit",
+                "AllocNodes", "AllocTRES", "ReqTRES", "ExitCode", "NodeList",
+                "SubmitLine"]
+
+
+def run_sacct(user: str, start: datetime, end: datetime,
+              jobs: list[str] | None) -> tuple[list[dict[str, str]], str]:
+    cmd = ["sacct", "-P", "-n", "--format=" + ",".join(SACCT_FIELDS)]
+    if jobs:
+        cmd += ["-j", ",".join(jobs)]
+    else:
+        cmd += ["-u", user,
+                "--starttime=" + start.strftime("%Y-%m-%dT%H:%M:%S"),
+                "--endtime=" + end.strftime("%Y-%m-%dT%H:%M:%S")]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except FileNotFoundError:
+        return [], "sacct not found: no Slurm accounting on this machine"
+    except subprocess.TimeoutExpired:
+        return [], "sacct timed out after 120s; try a shorter window"
+    if proc.returncode != 0:
+        return [], f"sacct failed ({proc.returncode}): {proc.stderr.strip()[:200]}"
+
+    rows = []
+    for line in proc.stdout.splitlines():
+        parts = line.split("|", len(SACCT_FIELDS) - 1)
+        if len(parts) < len(SACCT_FIELDS):
+            continue
+        rows.append(dict(zip(SACCT_FIELDS, parts)))
+    return rows, ""
+
+
+def build_jobs(rows: list[dict[str, str]], now: datetime,
+               min_step: float) -> tuple[list[Job], int, int]:
+    jobs: dict[str, Job] = {}
+    step_rows: list[dict[str, str]] = []
+
+    for r in rows:
+        jid = r["JobID"]
+        if "." in jid:
+            step_rows.append(r)
+            continue
+        jobs[jid] = Job(
+            jid=jid, name=r["JobName"], state=r["State"],
+            start=parse_time(r["Start"]), end=parse_time(r["End"]),
+            submit=parse_time(r["Submit"]),
+            nodes=int(r["AllocNodes"] or 0),
+            gpus=parse_tres(r["AllocTRES"]).get("gres/gpu", 0.0)
+            or parse_tres(r["ReqTRES"]).get("gres/gpu", 0.0),
+            exit_code=r["ExitCode"], cmd=r["SubmitLine"],
+            nodelist=r["NodeList"],
+        )
+
+    dropped = 0
+    for r in step_rows:
+        base, _, suffix = r["JobID"].partition(".")
+        job = jobs.get(base)
+        if job is None:
+            continue
+        # 清洗 1：.batch / .extern 是 Slurm 自己的包装，不代表用户在算
+        if suffix in ("batch", "extern"):
+            continue
+        st = parse_time(r["Start"])
+        if st is None:
+            continue
+        en = parse_time(r["End"]) or now
+        gpus = parse_tres(r["AllocTRES"]).get("gres/gpu", 0.0)
+        secs = (en - st).total_seconds()
+        # 清洗 2：短 step 当探针滤掉
+        if secs < min_step or gpus <= 0:
+            dropped += 1
+            continue
+        job.steps.append(Step(
+            sid=r["JobID"], name=r["JobName"], state=r["State"],
+            start=st, end=en, gpus=gpus,
+            nodes=int(parse_tres(r["AllocTRES"]).get("node", 0)),
+            cmd=r["SubmitLine"],
+            ident=extract_identity(r["SubmitLine"], job.name),
+            nodelist=r["NodeList"],
+        ))
+
+    never = sum(1 for j in jobs.values() if j.start is None or j.gpus <= 0)
+    return list(jobs.values()), dropped, never
+
+
+# --- 段落化 ---------------------------------------------------------------
+
+def segment_job(job: Job, t0: datetime, t1: datetime, now: datetime,
+                min_frac: float = 0.004) -> None:
+    """把作业时间轴切成语义段。
+
+    按事件边界切而不是按像素桶合并：收集所有 step 的起止时刻排序，相邻两点
+    构成原子区间，同状态同身份的相邻区间再合并。按桶合并会把 5h00m 量化成
+    4h45m，而这些精确时长恰恰是要点。
+    """
+    job.segments = []
+    j0 = job.start
+    j1 = job.end or (now if job.base_state == "RUNNING" else job.start)
+    if j0 is None or j1 is None or job.gpus <= 0:
+        return
+    lo, hi = max(j0, t0), min(j1, t1)
+    if hi <= lo:
+        return
+
+    marks = {lo, hi}
+    for s in job.steps:
+        for t in (s.start, s.end):
+            if lo < t < hi:
+                marks.add(t)
+    pts = sorted(marks)
+
+    raw: list[Segment] = []
+    for a, b in zip(pts, pts[1:]):
+        mid = a + (b - a) / 2
+        live = [s for s in job.steps if s.start <= mid < s.end]
+        if live:
+            # 同刻多 step：主身份归给占卡最多的那个（clip 后的总量另算）
+            main = max(live, key=lambda s: (s.gpus, s.secs))
+            used = min(sum(s.gpus for s in live), job.gpus)
+            raw.append(Segment(a, b, "busy", main.ident, used, job.gpus,
+                               steps=list(live)))
+        else:
+            raw.append(Segment(a, b, "held", "", 0.0, job.gpus))
+
+    # 合并相邻的同类段
+    merged: list[Segment] = []
+    for seg in raw:
+        if merged and merged[-1].kind == seg.kind and merged[-1].ident == seg.ident:
+            prev = merged[-1]
+            prev.end = seg.end
+            prev.gpus = max(prev.gpus, seg.gpus)
+            for s in seg.steps:
+                if s not in prev.steps:
+                    prev.steps.append(s)
+        else:
+            merged.append(seg)
+
+    # 抹掉碎屑段（短于窗口的 min_frac），并入前一段，避免明细被噪声淹没
+    span = (hi - lo).total_seconds()
+    cleaned: list[Segment] = []
+    for seg in merged:
+        if cleaned and seg.secs < span * min_frac and seg.kind == "held":
+            cleaned[-1].end = seg.end
+        else:
+            cleaned.append(seg)
+
+    # 段落收尾状态取该段最后结束的 step；held 段没有收尾状态
+    for seg in cleaned:
+        if seg.kind == "busy" and seg.steps:
+            last = max(seg.steps, key=lambda s: s.end)
+            seg.end_state = last.base_state
+    job.segments = cleaned
+
+
+@dataclass
+class Run:
+    """一次连续运行：同身份若干 step 合并后的一段不间断计算。"""
+    start: datetime
+    end: datetime
+    gpus: float
+    end_state: str
+    seq: int = 0
+
+    @property
+    def secs(self) -> float:
+        return (self.end - self.start).total_seconds()
+
+
+@dataclass
+class Lane:
+    """一个作业内、一个实验身份占用的时间轴。共享 allocation 会有好几条。"""
+    ident: str
+    jid: str
+    steps: list[Step] = field(default_factory=list)
+    runs: list[Run] = field(default_factory=list)
+    alloc_gpus: float = 0.0
+
+    @property
+    def breaks(self) -> int:
+        return max(0, len(self.runs) - 1)
+
+    @property
+    def bad(self) -> int:
+        return sum(1 for r in self.runs if r.end_state in BAD_STATES)
+
+    @property
+    def secs(self) -> float:
+        return sum(r.secs for r in self.runs)
+
+    @property
+    def gpu_hours(self) -> float:
+        return sum(s.secs * s.gpus for s in self.steps) / 3600
+
+
+def build_lanes(job: Job, gap_tol: float) -> None:
+    """把作业的 step 按实验身份分组，同组内做区间并集得到「几次连续运行」。
+
+    并集而不是数 step：同一次训练的多个 srun 之间常常只隔几秒（wrapper 重
+    启、多节点先后拉起），那不算中断。间隔超过 gap_tol 才算断了一次。
+    """
+    by_ident: dict[str, list[Step]] = {}
+    for s in job.steps:
+        by_ident.setdefault(s.ident, []).append(s)
+
+    lanes = []
+    for ident, steps in by_ident.items():
+        steps.sort(key=lambda s: s.start)
+        runs: list[Run] = []
+        for s in steps:
+            if runs and (s.start - runs[-1].end).total_seconds() <= gap_tol:
+                prev = runs[-1]
+                if s.end > prev.end:
+                    prev.end = s.end
+                prev.gpus = max(prev.gpus, s.gpus)
+                prev.end_state = s.base_state
+            else:
+                runs.append(Run(s.start, s.end, s.gpus, s.base_state))
+        lanes.append(Lane(ident, job.jid, steps, runs, job.gpus))
+    lanes.sort(key=lambda ln: (ln.ident in NON_EXPERIMENT, -ln.secs))
+    job.lanes = lanes
+
+
+def build_nodes(job: Job) -> None:
+    """把作业的 step 落到 node → GPU 槽位 → 事件 三层上。
+
+    node 层来自 sacct 的 NodeList，100% 可靠。GPU 层是推断：已知该 step 在每个
+    节点上占了几张卡（gres/gpu ÷ node），但不知道是哪几张，所以按 0..k-1 顺序
+    填槽位。实测 99.7% 的 step 每节点占满 4 张，因此同节点的 4 个槽位内容通常
+    完全相同，这不是渲染出错，是作业本来就整节点占用。
+    """
+    job.nodes_view = []
+    names = expand_nodes(job.nodelist)
+    if not names:
+        return
+    per_node = int(round(job.gpus / len(names))) if job.gpus else 0
+    per_node = max(1, per_node)
+    views = {n: NodeView(n, job.jid,
+                         [GpuSlot(i, n) for i in range(per_node)], per_node)
+             for n in names}
+
+    for st in job.steps:
+        hit = [n for n in expand_nodes(st.nodelist) if n in views] or names
+        k = int(round(st.gpus / len(hit))) if hit else 0
+        k = max(1, min(per_node, k))
+        for n in hit:
+            for i in range(k):
+                views[n].slots[i].events.append(st)
+    job.nodes_view = [views[n] for n in names]
+
+
+@dataclass
+class RunHistory:
+    """一个实验身份跨作业的运行史——直接回答「断了几次、重跑了几次」。"""
+    ident: str
+    lanes: list[Lane] = field(default_factory=list)
+
+    @property
+    def runs(self) -> list[Run]:
+        return sorted((r for ln in self.lanes for r in ln.runs),
+                      key=lambda r: r.start)
+
+    @property
+    def jobs(self) -> set[str]:
+        return {ln.jid for ln in self.lanes}
+
+    @property
+    def breaks(self) -> int:
+        """中断次数 = 连续运行段数 - 1。"""
+        return max(0, len(self.runs) - 1)
+
+    @property
+    def bad(self) -> int:
+        return sum(1 for r in self.runs if r.end_state in BAD_STATES)
+
+    @property
+    def secs(self) -> float:
+        return sum(r.secs for r in self.runs)
+
+    @property
+    def gpu_hours(self) -> float:
+        return sum(ln.gpu_hours for ln in self.lanes)
+
+
+def build_history(jobs: list[Job]) -> list[RunHistory]:
+    hist: dict[str, RunHistory] = {}
+    for j in jobs:
+        for ln in j.lanes:
+            hist.setdefault(ln.ident, RunHistory(ln.ident)).lanes.append(ln)
+    for h in hist.values():
+        for i, r in enumerate(h.runs, 1):
+            r.seq = i            # ⟲N = 该实验（跨作业）第 N 次运行
+    return sorted(hist.values(),
+                  key=lambda h: (h.ident in NON_EXPERIMENT, -h.secs))
+
+
+# --- 分桶（总览甘特用） ---------------------------------------------------
+
+def overlap(a0: datetime, a1: datetime, b0: datetime, b1: datetime) -> float:
+    return max(0.0, (min(a1, b1) - max(a0, b0)).total_seconds())
+
+
+def spread(dst: list[float], t0: datetime, bin_s: float, width: int,
+           a: datetime, b: datetime, rate: float) -> None:
+    """把区间 [a,b] 按 rate（GPU 数）摊进桶数组，只触碰它真正覆盖的桶。"""
+    if b <= a or rate <= 0:
+        return
+    lo = max(0, int((a - t0).total_seconds() // bin_s))
+    hi = min(width - 1, int((b - t0).total_seconds() // bin_s))
+    for i in range(lo, hi + 1):
+        b0 = t0 + timedelta(seconds=i * bin_s)
+        ov = overlap(a, b, b0, b0 + timedelta(seconds=bin_s))
+        if ov > 0:
+            dst[i] += ov * rate
+
+
+def bin_job(job: Job, t0: datetime, t1: datetime, width: int, now: datetime) -> None:
+    bin_s = (t1 - t0).total_seconds() / width
+    job.alloc_gs = [0.0] * width
+    job.busy_gs = [0.0] * width
+    job.pend_bins = [False] * width
+
+    j0 = job.start
+    j1 = job.end or (now if job.base_state == "RUNNING" else job.start)
+
+    if job.submit:                       # 排队段：回答「空白是在排队还是没提交」
+        qbins = [0.0] * width
+        spread(qbins, t0, bin_s, width, job.submit, j0 or job.end or now, 1.0)
+        job.pend_bins = [v > bin_s * 0.5 for v in qbins]
+
+    if j0 is None or j1 is None or job.gpus <= 0:
+        return
+    spread(job.alloc_gs, t0, bin_s, width, j0, j1, job.gpus)
+    for s in job.steps:
+        spread(job.busy_gs, t0, bin_s, width, s.start, s.end, s.gpus)
+    # 清洗 3：同刻多 step 的 GPU 数 clip 到 allocation，不能相加。
+    job.busy_gs = [min(b, a) for b, a in zip(job.busy_gs, job.alloc_gs)]
+
+
+def util_key(ratio: float) -> str:
+    if ratio <= 0.02:
+        return "held"
+    if ratio < 0.35:
+        return "low"
+    if ratio < 0.80:
+        return "mid"
+    return "full"
+
+
+def nice_step(span_s: float, width: int) -> float:
+    """标签 'HH:MM' 占 5 列，留 2 列余量 → 每 ~10 列一个刻度。"""
+    target = span_s / max(1, width / 10)
+    for cand in (60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 14400,
+                 21600, 43200, 86400, 172800, 604800):
+        if cand >= target:
+            return cand
+    return 604800
+
+
+def dwidth(text: str) -> int:
+    """终端显示宽度。CJK 字符占两列，len() 会少算一半。
+
+    '(交互 shell)' 是 8 个字符却占 12 列；用 len() 去 ljust 对齐，那一行的
+    分隔符就会右移 4 列，整片泳道的时间轴全部错位。
+    """
+    w = 0
+    for ch in text:
+        w += 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+    return w
+
+
+def ljust_w(text: str, n: int) -> str:
+    return text + " " * max(0, n - dwidth(text))
+
+
+def truncate_hard(text: str, n: int) -> str:
+    """按显示宽度硬截断，不加省略号（curses 写屏用）。"""
+    if n <= 0:
+        return ""
+    out, w = "", 0
+    for ch in text:
+        cw = 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+        if w + cw > n:
+            break
+        out += ch
+        w += cw
+    return out
+
+
+ELLIPSIS = "…"      # --ascii 时切成 '~'，见 main()
+
+
+def truncate(text: str, n: int) -> str:
+    """按显示宽度截断（不是字符数）。"""
+    if n <= 0:
+        return ""
+    if dwidth(text) <= n:
+        return text
+    out, w = "", 0
+    for ch in text:
+        cw = 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+        if w + cw > n - 1:
+            break
+        out += ch
+        w += cw
+    return out + ELLIPSIS
+
+
+# --- 渲染：产出 [(文本, 样式)] 行列表，ANSI 与 curses 两个后端共用 -------
+
+class Renderer:
+    def __init__(self, opts):
+        self.o = opts
+        self.g = GLYPH["ascii" if opts.ascii else "unicode"]
+        self._w = 80          # 当前整页宽度，build() 每次刷新
+
+    # -- 总览甘特 --
+    def gantt_rows(self, jobs, t0, t1, width, pad, now) -> list[list[tuple]]:
+        g, rows = self.g, []
+        for j in jobs:
+            keys, chars = [], []
+            for i, alloc in enumerate(j.alloc_gs):
+                if alloc <= 0:
+                    k = "pending" if j.pend_bins[i] else "gap"
+                else:
+                    k = util_key(j.busy_gs[i] / alloc)
+                keys.append(k)
+                chars.append(g[k] if k != "gap" else g["gap"])
+
+            mark, mkey, _ = END_MARK.get(j.base_state[:9], ("?", "dim", ""))
+            j1 = j.end or (now if j.base_state == "RUNNING" else None)
+            # 终态标记落在作业真正结束的那一列。放行尾会撒谎：一个 18:03 就
+            # 结束的作业，'完成' 标在最右边等于说它跑到了窗口末尾。
+            tail = []
+            if j1 is None or j1 >= t1:
+                tail = [(mark, mkey)]
+            else:
+                col = int((j1 - t0).total_seconds() / (t1 - t0).total_seconds() * width)
+                col = max(0, min(width - 1, col))
+                pos = col + 1 if col + 1 < width and keys[col + 1] == "gap" else col
+                keys[pos], chars[pos] = mkey, mark
+
+            name_w = pad - 18
+            label = [(f"{j.jid:>8}", "label"),
+                     (f" {j.nodes:>2}N{int(j.gpus):>3}G", "dim")]
+            if name_w > 0:
+                label.append((" " + ljust_w(truncate(j.name, name_w), name_w), "dim"))
+            label.append((g["sep"], "axis"))
+            rows.append(label + self._runs(keys, chars) + tail)
+        return rows
+
+    @staticmethod
+    def _runs(keys, chars) -> list[tuple]:
+        """按颜色游程合并：一行 200 列逐格上色要多出 ~2KB 转义码。"""
+        out, i, n = [], 0, len(keys)
+        while i < n:
+            j = i
+            while j < n and keys[j] == keys[i]:
+                j += 1
+            out.append(("".join(chars[i:j]), keys[i] if keys[i] != "gap" else "plain"))
+            i = j
+        return out
+
+    def total_row(self, jobs, width, pad) -> list[tuple]:
+        g = self.g
+        alloc = [0.0] * width
+        busy = [0.0] * width
+        for j in jobs:
+            for i in range(width):
+                if j.alloc_gs:
+                    alloc[i] += j.alloc_gs[i]
+                    busy[i] += j.busy_gs[i]
+        peak = max(alloc) or 1.0
+        bars = g["bars"]
+        keys, chars = [], []
+        for i in range(width):
+            if alloc[i] <= 0:
+                keys.append("gap")
+                chars.append(g["gap"])
+                continue
+            lvl = min(len(bars) - 1, int(round(busy[i] / peak * (len(bars) - 1))))
+            if busy[i] > 0:
+                lvl = max(1, lvl)
+            keys.append(util_key(busy[i] / alloc[i]))
+            chars.append(bars[lvl])
+        return ([("   TOTAL", "head"), (" " * (pad - 9), "plain"), (g["sep"], "axis")]
+                + self._runs(keys, chars))
+
+    def axis_rows(self, t0, t1, width, pad) -> list[list[tuple]]:
+        g = self.g
+        span = (t1 - t0).total_seconds()
+        step = nice_step(span, width)
+        first = t0 + timedelta(seconds=(-t0.timestamp()) % step)
+        ticks, t = [], first
+        while t <= t1:
+            col = int((t - t0).total_seconds() / span * width)
+            if 0 <= col < width:
+                ticks.append((col, t))
+            t += timedelta(seconds=step)
+
+        axis = [g["axis"]] * width
+        labels = [" "] * width
+        prev_day = None
+        for col, t in ticks:
+            axis[col] = g["tick"]
+            text = t.strftime("%m-%d") if (prev_day is not None and t.day != prev_day) \
+                else t.strftime("%H:%M")
+            prev_day = t.day
+            s = max(0, min(width - len(text), col - len(text) // 2))
+            if s + len(text) <= width and all(labels[s + k] == " " for k in range(len(text))):
+                for k, ch in enumerate(text):
+                    labels[s + k] = ch
+        return [[(" " * pad + "".join(axis), "axis")],
+                [(" " * pad + "".join(labels), "dim")]]
+
+    # -- 身份泳道：一行一个实验，与总览共享时间轴，行上的空隙就是断点 --
+    def lane_rows(self, job, t0, t1, bar_w, pad, now) -> list[list[tuple]]:
+        g, rows = self.g, []
+        _, _, word = END_MARK.get(job.base_state[:9], ("?", "dim", job.base_state))
+        j1 = job.end or now
+        span = fmt_dur((j1 - job.start).total_seconds() if job.start else 0)
+        idle_h = (sum(job.alloc_gs) - sum(job.busy_gs)) / 3600
+        rows.append(self.section(
+            f"{job.jid}  {truncate(job.name, 24)}",
+            f"{job.nodes}N/{int(job.gpus)}G {g['dot']} {word} {span} "
+            f"{g['dot']} idle {idle_h:.0f} GPU-h", self._w))
+
+        bin_s = (t1 - t0).total_seconds() / bar_w
+        # 全部列出，不折叠：折叠掉的那几个往往正是「这段时间到底谁在跑」的答案。
+        # max_lanes 只在用户显式给了正数时才生效。
+        exps = [l for l in job.lanes if l.ident not in NON_EXPERIMENT]
+        others = [l for l in job.lanes if l.ident in NON_EXPERIMENT]
+        shown = (exps[:self.o.max_lanes] if self.o.max_lanes > 0 else exps) + others
+        for ln in shown:
+            gs = [0.0] * bar_w
+            for s in ln.steps:
+                spread(gs, t0, bin_s, bar_w, s.start, s.end, s.gpus)
+            keys, chars = [], []
+            for v in gs:
+                r = v / (bin_s * job.gpus) if job.gpus else 0.0
+                if r <= 0.005:
+                    keys.append("gap")
+                    chars.append(g["gap"])
+                else:
+                    k = util_key(r)
+                    k = "low" if k == "held" else k     # 有活动就不能显示成空
+                    keys.append(k)
+                    chars.append(g[k])
+            stat = f"  {len(ln.runs)}x {fmt_dur(ln.secs)}"
+            skey = "dim"
+            if ln.breaks:
+                stat += f" brk{ln.breaks}"
+                skey = "warn"
+            if ln.bad:
+                stat += f" {g['bad']}{ln.bad}"
+                skey = "fail"
+            style = "dim" if ln.ident == INTERACTIVE else "ident"
+            rows.append([("  " + ljust_w(truncate(ln.ident, pad - 4), pad - 3), style),
+                         (g["sep"], "axis")] + self._runs(keys, chars)
+                        + [(stat, skey)])
+
+
+        # 空转行：分配了却没有任何 step 的时间，直接对照上面的泳道看
+        keys, chars = [], []
+        idle_gh = 0.0
+        for i, alloc in enumerate(job.alloc_gs[:bar_w]):
+            free = alloc - job.busy_gs[i]
+            idle_gh += free / 3600
+            if alloc <= 0 or free <= alloc * 0.02:
+                keys.append("gap")
+                chars.append(g["gap"])
+            else:
+                keys.append("held")
+                chars.append(g["held"])
+        rows.append([("  " + ljust_w("idle", pad - 3), "held"), (g["sep"], "axis")]
+                    + self._runs(keys, chars)
+                    + [(f"  {idle_gh:.0f} GPU-h burned", "fail" if idle_gh > 10 else "dim")])
+        return rows
+
+    # -- node → GPU → 事件 三层框 --
+    @staticmethod
+    def _fit(cells, target, fill=" ", style="plain"):
+        """在倒数第一段之前插入填充，把整行补到恰好 target 列宽。
+
+        框线右边界靠逐处 ±1 去凑必然对不齐（三种行、两层嵌套、CJK 双宽），
+        统一在这里按实际显示宽度补齐，任何一行都不会跑偏。标题行传 fill='─'
+        让横线一直画到框边，其余行用空格。
+        """
+        used = sum(dwidth(t) for t, _ in cells)
+        if used < target:
+            cells = cells[:-1] + [(fill * (target - used), style)] + cells[-1:]
+        return cells
+
+    def node_rows(self, job, t0, t1, width, now) -> list[list[tuple]]:
+        """外框 = 物理节点，内层 = 该节点的每张 GPU，再往里 = 该卡上的事件。
+
+        不带 -e 时 GPU 只占一行（不开内框），带 -e 才用内框把事件裹住——
+        每行都开一个框会看起来像一堆没闭合的括号。
+        """
+        g, rows = self.g, []
+        span = (t1 - t0).total_seconds()
+        inner = width - 2                    # 外框内部
+        box_w = inner - 2                    # 内框整体（含自身两条竖线）
+
+        for nv in job.nodes_view:
+            busy = sum(sl.busy_s for sl in nv.slots)
+            cap = span * len(nv.slots)
+            title = (f" {nv.name} {g['dot']} {len(nv.slots)} GPU {g['dot']} "
+                     f"{busy / cap * 100 if cap else 0:.0f}% busy ")
+            rows.append(self._fit(
+                [(g["tl"] + g["h"], "axis"), (title, "head"), (g["h"], "axis"),
+                 (g["tr"], "axis")], width, g["h"], "axis"))
+
+            for sl in nv.slots:
+                if self.o.events:
+                    rows += self._slot_boxed(sl, t0, span, width, box_w)
+                else:
+                    rows.append(self._slot_line(sl, t0, span, width, inner))
+            rows.append([(g["bl"] + g["h"] * inner + g["br"], "axis")])
+        return rows
+
+    def _slot_line(self, sl, t0, span, width, inner) -> list[tuple]:
+        """不带 -e：一张卡一行，直接挂在节点框里。"""
+        g = self.g
+        stat = f"  {len(sl.events):>3} ev {fmt_dur(sl.busy_s):>7}"
+        bar_w = max(16, inner - 7 - dwidth(stat))
+        return self._fit([(g["v"], "axis"), (f" GPU{sl.idx} ", "label")]
+                         + self._slot_bar(sl, t0, span, bar_w)
+                         + [(stat, "dim"), (g["v"], "axis")], width)
+
+    def _slot_boxed(self, sl, t0, span, width, box_w) -> list[list[tuple]]:
+        """带 -e：一张卡一个内框，框里第一行是甘特，其余逐条列事件。"""
+        g, rows = self.g, []
+        head = (f" GPU{sl.idx} {g['dot']} {len(sl.events)} events {g['dot']} "
+                f"{fmt_dur(sl.busy_s)} busy ")
+        rows.append(self._fit(
+            [(g["v"] + " ", "axis"), (g["itl"] + g["h"], "axis"), (head, "label"),
+             (g["h"], "axis"), (g["itr"] + " " + g["v"], "axis")],
+            width, g["h"], "axis"))
+
+        bar_w = max(16, box_w - 4)
+        rows.append(self._fit(
+            [(g["v"] + " ", "axis"), (g["v"] + " ", "axis")]
+            + self._slot_bar(sl, t0, span, bar_w)
+            + [(g["v"] + " " + g["v"], "axis")], width))
+
+        for ev in sorted(sl.events, key=lambda e: e.start):
+            mk, mks, word = END_MARK.get(ev.base_state[:9], ("?", "dim", ev.base_state))
+            when = (f" {ev.start:%m-%d %H:%M}{g['arrow']}{ev.end:%H:%M}"
+                    f" {fmt_dur(ev.secs):>7}  ")
+            tail = f"{mk} {word} "
+            idw = max(8, box_w - 2 - dwidth(when) - dwidth(tail))
+            rows.append(self._fit(
+                [(g["v"] + " ", "axis"), (g["v"], "axis"), (when, "dim"),
+                 (ljust_w(truncate(ev.ident, idw), idw), "ident"), (tail, mks),
+                 (g["v"] + " " + g["v"], "axis")], width))
+
+        rows.append(self._fit(
+            [(g["v"] + " ", "axis"), (g["ibl"] + g["h"] * (box_w - 2) + g["ibr"], "axis"),
+             (" " + g["v"], "axis")], width))
+        return rows
+
+    def _slot_bar(self, slot, t0, span, bar_w) -> list[tuple]:
+        g = self.g
+        bin_s = span / bar_w
+        gs = [0.0] * bar_w
+        for ev in slot.events:
+            spread(gs, t0, bin_s, bar_w, ev.start, ev.end, 1.0)
+        gs = [min(v, bin_s) for v in gs]        # 一张卡最多满载，重叠不叠加
+        keys, chars = [], []
+        for v in gs:
+            r = v / bin_s if bin_s else 0.0
+            if r <= 0.02:
+                keys.append("held")
+                chars.append(g["held"])
+            else:
+                k = util_key(r)
+                keys.append("low" if k == "held" else k)
+                chars.append(g["low"] if k == "held" else g[k])
+        return self._runs(keys, chars)
+
+    # -- 线性段落明细（--segments）：给精确到分钟的起止时刻 --
+    def segment_rows(self, job, width) -> list[list[tuple]]:
+        g, rows = self.g, []
+        head = f" {g['rule'] * 2} {job.jid} segments "
+        rows.append([(head, "head"),
+                     ((g["rule"] * max(0, width - dwidth(head) - 1)), "axis")])
+
+        ident_w = max(16, min(30, width - 46))
+        for seg in job.segments:
+            if seg.kind == "busy":
+                key = util_key(seg.gpus / seg.alloc_gpus if seg.alloc_gpus else 0)
+                mk, mks, word = END_MARK.get(seg.end_state[:9], ("?", "dim", seg.end_state))
+                cells = [
+                    (f"  {seg.start:%m-%d %H:%M} ", "dim"),
+                    (g[key] * 2 + " ", key),
+                    (f"{fmt_dur(seg.secs):>7}  ", "label"),
+                    (ljust_w(truncate(seg.ident, ident_w), ident_w), "ident"),
+                    (f" {int(seg.gpus):>3}G ", "dim"),
+                    (f"{mk} {word}", mks),
+                ]
+                if seg.run_seq > 1:      # 同一实验的第 N 次运行 → 一眼看出重跑
+                    cells.append((f"  {g['restart']}{seg.run_seq}", "warn"))
+                if seg.end_state in BAD_STATES:
+                    cells.append(("  <- break", "fail"))
+            else:
+                waste = seg.gpu_hours
+                cells = [
+                    (f"  {seg.start:%m-%d %H:%M} ", "dim"),
+                    (g["held"] * 2 + " ", "held"),
+                    (f"{fmt_dur(seg.secs):>7}  ", "label"),
+                    (f"held, no compute - {waste:.1f} GPU-h burned", "held"),
+                ]
+            rows.append(cells)
+            if self.o.cmd and seg.kind == "busy" and seg.steps:
+                for s in seg.steps:
+                    rows.append([(f"        {s.sid}  ", "dim"),
+                                 (truncate(s.cmd, max(20, width - 24)), "dim")])
+        return rows
+
+    # -- 重跑史 --
+    def history_rows(self, hist, width) -> list[list[tuple]]:
+        """重跑史按「断没断」分两组。
+
+        分组的意义不在画线，而在给行分配不同的视觉权重：断了的展开成表，
+        一次跑完的折叠成一行。否则「断 9 次」和「跑了 6 分钟没断」长得一样重，
+        真正该看的那条就淹了。
+        """
+        g = self.g
+        broken = [h for h in hist if h.breaks or h.bad]
+        clean = [h for h in hist if not (h.breaks or h.bad)]
+        rows = [self.section("Restart history", f"{len(hist)} identities, "
+                                                f"{len(broken)} restarted", width)]
+
+        # 窄终端下渐进裁剪，优先级：身份 > 次数/断次 > 时长 > GPU-h > 时间段。
+        # 折行会把「断 N 次」冲到下一行，那正是这张表唯一要传达的东西。
+        show_span = width >= 104
+        show_jobs = width >= 96
+        show_gh = width >= 82
+        # 列宽跟着最长的身份名走。泳道里的名字为了跟总览对齐必须截断，重跑史
+        # 是唯一能看到全名的地方，所以这里只要放得下就不截。
+        fixed = 4 + 4 + 8 + (12 if show_gh else 0) + (19 if show_span else 0) + 13
+        longest = max((dwidth(h.ident) for h in hist), default=14)
+        ident_w = max(14, min(longest, width - fixed))
+
+        if broken:
+            rows.append([("  RESTARTED OR FAILED", "warn"),
+                         ("   <- broke and came back, or exited abnormally", "dim")])
+        for h in broken:
+            rows.append(self._hist_row(h, ident_w, show_gh, show_span, show_jobs))
+
+        if clean:
+            rows.append([("  RAN ONCE", "ok"),
+                         (f"   <- started once, ended cleanly ({len(clean)}, total "
+                          f"{fmt_dur(sum(h.secs for h in clean))})", "dim")])
+            for h in clean:
+                rows.append(self._hist_row(h, ident_w, show_gh, show_span, show_jobs))
+        return rows
+
+    def _hist_row(self, h, ident_w, show_gh, show_span, show_jobs) -> list[tuple]:
+        g = self.g
+        runs = h.runs
+        style = "dim" if h.ident in NON_EXPERIMENT else "ident"
+        bits = [("    " + ljust_w(truncate(h.ident, ident_w), ident_w), style),
+                (f" {len(runs):>2}x", "label"),
+                (f" {fmt_dur(h.secs):>7}", "label")]
+        if show_gh:
+            bits.append((f" {h.gpu_hours:6.1f} GPU-h", "dim"))
+        if show_span:
+            bits.append((f"  {runs[0].start:%m-%d %H:%M}{g['arrow']}"
+                         f"{runs[-1].end:%H:%M}", "dim"))
+        bits.append((f"  {h.breaks} break{'s' if h.breaks > 1 else ''}"
+                     if h.breaks else "  no break",
+                     "fail" if h.bad else ("warn" if h.breaks else "ok")))
+        if h.bad:
+            bits.append((f" {g['bad']}{h.bad}", "fail"))
+        if show_jobs and len(h.jobs) > 1:
+            bits.append((f"  across {len(h.jobs)} jobs", "dim"))
+        return bits
+
+    # -- 分区标题带：整页的视觉锚点，扫一眼就知道分几块 --
+    def section(self, title, extra="", width=80, style="head") -> list[tuple]:
+        g = self.g
+        bits = [(g["block"] + " ", style), (title, style)]
+        used = 2 + dwidth(title)
+        if extra:
+            bits.append(("   " + extra, "dim"))
+            used += 3 + dwidth(extra)
+        bits.append((" " + g["rule"] * max(0, width - used - 2), "axis"))
+        return bits
+
+    # -- 汇总 --
+    def summary_rows(self, live, hidden, never, dropped, width) -> list[list[tuple]]:
+        alloc_h = sum(sum(j.alloc_gs) for j in live) / 3600
+        busy_h = sum(sum(j.busy_gs) for j in live) / 3600
+        idle_h = alloc_h - busy_h
+        pct = (busy_h / alloc_h * 100) if alloc_h else 0.0
+        verdict = "ok" if pct >= 70 else ("warn" if pct >= 40 else "fail")
+        rows = [[("  alloc ", "plain"), (f"{alloc_h:8.1f}", "label"), (" GPU-h   ", "plain"),
+                 ("busy ", "plain"), (f"{busy_h:8.1f}", "ok"), (" GPU-h   ", "plain"),
+                 ("idle ", "plain"), (f"{idle_h:8.1f}", verdict), (" GPU-h   ", "plain"),
+                 ("util ", "plain"), (f"{pct:.1f}%", verdict)]]
+        notes = []
+        if hidden:
+            notes.append(f"{hidden} more jobs not drawn (-n to change)")
+        if never:
+            notes.append(f"{never} jobs queued or never got GPUs")
+        if dropped:
+            notes.append(f"{dropped} probe steps <{int(self.o.min_step)}s filtered")
+        if notes:
+            rows.append([("  " + " · ".join(notes), "dim")])
+        return rows
+
+    def legend_rows(self, width) -> list[list[tuple]]:
+        g = self.g
+        glyphs = [("  ", "plain"), (g["full"], "full"), (" full ", "plain"),
+                  (g["mid"], "mid"), (" partial ", "plain"),
+                  (g["low"], "low"), (" light ", "plain"),
+                  (g["held"], "held"), (" held, no compute ", "plain"),
+                  (g["pending"], "pending"), (" queued", "plain")]
+        marks = [("  brkN", "warn"), (" N breaks   ", "plain"),
+                 ((g["bad"] + "N"), "fail"), (" N abnormal exits", "plain")]
+        # 宽终端一行放得下就一行，窄终端拆开，绝不让它折行
+        return [glyphs + marks] if width >= 92 else [glyphs, [("  ", "plain")] + marks]
+
+    # -- 组装整页 --
+    def build(self, snap, width, status="") -> list[list[tuple]]:
+        o = self.o
+        if snap.err:
+            return [[("  sgpu: " + snap.err, "fail")]]
+        if not snap.live:
+            return [[(f"  no GPU-holding jobs for {o.user} since "
+                       f"{snap.t0:%m-%d %H:%M}", "dim")]]
+
+        self._w = width
+        name_w = 16 if width >= 118 else (10 if width >= 102 else 0)
+        pad = 8 + 8 + (name_w + 1 if name_w else 0) + 1
+        # 右侧留出统计区（「3 段 5h01m 断2 ✗1」）。总览与泳道共用同一个
+        # bar_w 和 pad，两块图才能上下对齐、按时间直接对照。
+        bar_w = max(20, width - pad - 21)
+        for j in snap.live:
+            bin_job(j, snap.t0, snap.t1, bar_w, snap.now)
+
+        span_h = (snap.t1 - snap.t0).total_seconds() / 3600
+        cell = (snap.t1 - snap.t0).total_seconds() / bar_w
+        cell_txt = (f"{cell / 3600:.1f}h" if cell >= 3600 else
+                    f"{cell / 60:.0f}min" if cell >= 60 else f"{cell:.0f}s")
+        alloc_h = sum(sum(j.alloc_gs) for j in snap.live) / 3600
+        busy_h = sum(sum(j.busy_gs) for j in snap.live) / 3600
+        pct = (busy_h / alloc_h * 100) if alloc_h else 0.0
+        verdict = "ok" if pct >= 70 else ("warn" if pct >= 40 else "fail")
+        g = self.g
+
+        rows = [[]]
+        rows.append([(g["block"] + " ", "head"), (f"GPU time ledger  {o.user}", "head"),
+                     (f"   {snap.t0:%m-%d %H:%M}{g['arrow']}{snap.t1:%m-%d %H:%M}"
+                      f" ({span_h:.1f}h) {g['dot']} {cell_txt}/cell", "dim"),
+                     ((f"  {status}" if status else ""), "warn")])
+        rows.append([])
+
+        # 分区一：总览。汇总数字提到标题带里，省一行还更醒目。
+        rows.append(self.section("Overview", "", width))
+        rows.append([("  allocated ", "dim"), (f"{alloc_h:.0f}", "label"), (" GPU-h", "dim"),
+                     ("   computed ", "dim"), (f"{busy_h:.0f}", "ok"),
+                     (f" ({pct:.1f}%)", verdict),
+                     ("   idle ", "dim"), (f"{alloc_h - busy_h:.0f}", verdict),
+                     (" GPU-h", "dim")])
+        shown = snap.live[:o.max_rows] if o.max_rows > 0 else snap.live
+        rows += self.gantt_rows(shown, snap.t0, snap.t1, bar_w, pad, snap.now)
+        if len(snap.live) > 1:
+            rows.append(self.total_row(snap.live, bar_w, pad))
+        rows += self.axis_rows(snap.t0, snap.t1, bar_w, pad)
+
+        # 排队中的作业没占卡，各占一行全是点纯属噪声，折叠成一行
+        notes = []
+        if snap.pending:
+            ids = " ".join(j.jid for j in snap.pending[:6])
+            more = f" +{len(snap.pending) - 6} more" if len(snap.pending) > 6 else ""
+            notes.append(f"{len(snap.pending)} queued: {ids}{more}")
+        if len(snap.live) > len(shown):
+            notes.append(f"{len(snap.live) - len(shown)} jobs not drawn (-n)")
+        if snap.dropped:
+            notes.append(f"{snap.dropped} probe steps <{int(o.min_step)}s filtered")
+        if notes:
+            rows.append([("  " + f" {g['dot']} ".join(notes), "dim")])
+
+        # 分区二：每个作业一块身份泳道
+        if not o.brief:
+            for j in shown:
+                if not j.lanes:
+                    continue
+                rows.append([])
+                if o.by_experiment:
+                    rows += self.lane_rows(j, snap.t0, snap.t1, bar_w, pad, snap.now)
+                else:
+                    rows.append(self.section(
+                        f"{j.jid}  {truncate(j.name, 24)}",
+                        f"{j.nodes}N/{int(j.gpus)}G {g['dot']} "
+                        f"{END_MARK.get(j.base_state[:9], ('?', 'dim', ''))[2]} "
+                        f"{g['dot']} idle "
+                        f"{(sum(j.alloc_gs) - sum(j.busy_gs)) / 3600:.0f} GPU-h", width))
+                    rows += self.node_rows(j, snap.t0, snap.t1, width, snap.now)
+                if o.segments:
+                    rows += self.segment_rows(j, width)
+            # 分区三：重跑史
+            if snap.hist:
+                rows.append([])
+                rows += self.history_rows(snap.hist, width)
+        rows.append([])
+        rows += self.legend_rows(width)
+        return rows
+
+
+# --- 快照：一次采集的全部结果 --------------------------------------------
+
+@dataclass
+class Snapshot:
+    t0: datetime
+    t1: datetime
+    now: datetime
+    live: list[Job] = field(default_factory=list)
+    pending: list[Job] = field(default_factory=list)
+    hist: list[RunHistory] = field(default_factory=list)
+    dropped: int = 0
+    never: int = 0
+    err: str = ""
+
+
+def collect(opts) -> Snapshot:
+    now = datetime.now().replace(microsecond=0)
+    t0, t1 = now - opts.span, now
+    rows, err = run_sacct(opts.user, t0, t1, opts.job or None)
+    snap = Snapshot(t0, t1, now, err=err)
+    if err:
+        return snap
+    jobs, dropped, never = build_jobs(rows, now, opts.min_step)
+    snap.dropped, snap.never = dropped, never
+
+    if opts.job:            # -j 模式：窗口放大到覆盖被点名的作业
+        spans = [j.start for j in jobs if j.start]
+        if spans:
+            snap.t0 = t0 = min(spans) - timedelta(seconds=60)
+            snap.t1 = t1 = max([(j.end or now) for j in jobs if j.start]) + timedelta(seconds=60)
+
+    live = [j for j in jobs if j.start and j.gpus > 0
+            and (j.end or now) > t0 and j.start < t1]
+    for j in live:
+        segment_job(j, t0, t1, now)
+        build_lanes(j, opts.gap)
+        build_nodes(j)
+    # 正在跑的排前面，其次按持有时长。读图的人先关心还在烧卡的那些。
+    live.sort(key=lambda j: (j.base_state != "RUNNING",
+                             -((j.end or now) - max(j.start, t0)).total_seconds()))
+    snap.live = live
+    # sacct 会漏掉两类排队作业：带依赖、尚未 eligible 的（从没进过记账库），
+    # 以及提交时间早于回看窗口的老队员（最后一次状态变化在窗口外）。
+    # squeue 看的是队列本身，「此刻在等」以它为准，sacct 只作第一来源。
+    snap.pending = [j for j in jobs if j.base_state == "PENDING"]
+    seen_pd = {j.jid for j in snap.pending}
+    snap.pending += [j for j in squeue_pending(opts.user)
+                     if j.jid not in seen_pd]
+    snap.hist = build_history(live)
+    return snap
+
+
+def squeue_pending(user: str) -> list:
+    """Queued jobs straight from squeue, as minimal Job objects."""
+    try:
+        p = subprocess.run(["squeue", "-u", user, "-t", "PD", "-h",
+                            "-o", "%i|%j|%V|%D"],
+                           capture_output=True, text=True, timeout=20)
+    except Exception:
+        return []
+    out = []
+    for ln in (p.stdout or "").splitlines():
+        parts = ln.strip().split("|")
+        if len(parts) != 4:
+            continue
+        jid, name, sub, nodes = parts
+        try:
+            submit = datetime.fromisoformat(sub)
+        except ValueError:
+            submit = None
+        try:
+            nn = int(nodes)
+        except ValueError:
+            nn = 0
+        out.append(Job(jid=jid, name=name, state="PENDING", start=None,
+                       end=None, submit=submit, nodes=nn, gpus=0.0,
+                       exit_code="", cmd=""))
+    return out
+
+
+# --- 后端 1：一次性 ANSI 输出 --------------------------------------------
+
+def ansi_main(opts) -> None:
+    size = shutil.get_terminal_size((80, 24))
+    snap = collect(opts)
+    rend = Renderer(opts)
+    lines = []
+    for row in rend.build(snap, size.columns):
+        line = "".join(sgr(t, k) if opts.color and k != "plain" else t for t, k in row)
+        lines.append(line if opts.color else line.rstrip())
+    body = "\n".join(lines)
+
+    # 超过一屏就交给 pager：否则终端停在最后一屏，最上面的甘特图被滚出视野,
+    # 效果等同于图不见了。git/man/systemctl 都是这个做法。
+    if (opts.pager and sys.stdout.isatty() and len(lines) >= size.lines):
+        pager = os.environ.get("SGPU_PAGER") or os.environ.get("PAGER") or "less"
+        argv = [pager] + (["-R", "-F", "-X"] if os.path.basename(pager) == "less" else [])
+        try:
+            proc = subprocess.Popen(argv, stdin=subprocess.PIPE, text=True)
+            proc.communicate(body + "\n")
+        except (FileNotFoundError, BrokenPipeError, KeyboardInterrupt):
+            print(body)
+    else:
+        print(body)
+    if snap.err:
+        sys.exit(1)
+
+
+# --- 后端 2：curses TUI ---------------------------------------------------
+
+class State:
+    def __init__(self, opts):
+        self.opts = opts
+        self.lock = threading.Lock()
+        self.snap = Snapshot(datetime.now(), datetime.now(), datetime.now())
+        self.stop = False
+        self.force = True
+        self.paused = False
+        self.sampling = False
+        self.next_at = 0.0
+        self.first_done = False
+
+
+def sampler(state: State) -> None:
+    """后台采样线程。只调 sacct（Slurm 控制器查询），不碰节点也不碰 Lustre。"""
+    while not state.stop:
+        due = state.force or (not state.paused and time.time() >= state.next_at)
+        if not due:
+            time.sleep(0.2)
+            continue
+        state.force = False
+        state.sampling = True
+        try:
+            snap = collect(state.opts)
+        except Exception as exc:                      # 采样失败不该弄死界面
+            snap = Snapshot(datetime.now(), datetime.now(), datetime.now(),
+                            err=f"sampling error: {exc}")
+        with state.lock:
+            state.snap = snap
+            state.first_done = True
+        state.sampling = False
+        state.next_at = time.time() + state.opts.interval
+
+
+def curses_main(stdscr, opts, state: State) -> None:
+    import curses
+    curses.curs_set(0)
+    stdscr.nodelay(True)
+    curses.use_default_colors()
+    pairs = {
+        "held": 240, "low": 173, "mid": 179, "full": 77, "pending": 236,
+        "fail": 203, "warn": 214, "dim": 244, "label": 252, "head": 255,
+        "ident": 117,
+    }
+    for name, col in pairs.items():
+        idx = STYLES[name][0]
+        try:
+            curses.init_pair(idx, col, -1)
+        except Exception:
+            curses.init_pair(idx, curses.COLOR_WHITE, -1)
+
+    def attr(style):
+        idx = STYLES.get(style, (0, ""))[0]
+        if idx == 0:
+            return curses.A_NORMAL
+        a = curses.color_pair(idx)
+        if style == "dim" or style == "pending":
+            a |= curses.A_DIM
+        if style in ("head", "ident"):
+            a |= curses.A_BOLD
+        return a
+
+    rend = Renderer(opts)
+    scroll, keymsg = 0, ""
+    while not state.stop:
+        h, w = stdscr.getmaxyx()
+        with state.lock:
+            snap = state.snap
+            ready = state.first_done
+        if not ready:
+            rows = [[], [("  reading sacct ...", "dim")]]
+        else:
+            left = max(0, int(state.next_at - time.time()))
+            status = ("sampling..." if state.sampling else
+                      ("PAUSED (p to resume)" if state.paused
+                       else f"refresh in {left}s"))
+            rows = rend.build(snap, w - 1, status)
+
+        max_scroll = max(0, len(rows) - (h - 1))
+        scroll = min(scroll, max_scroll)
+        stdscr.erase()
+        for y, row in enumerate(rows[scroll:scroll + h - 1]):
+            x = 0
+            for text, style in row:
+                if x >= w - 1:
+                    break
+                seg = truncate_hard(text, max(0, w - 1 - x))
+                try:
+                    stdscr.addstr(y, x, seg, attr(style))
+                except Exception:
+                    pass
+                x += dwidth(seg)
+        foot = keymsg or ("  r refresh   p pause   +/- interval   b brief   "
+                          "c cmdline   arrows scroll   q quit"
+                          f"      window {opts.window}   every {opts.interval}s")
+        try:
+            stdscr.addstr(h - 1, 0, foot[: w - 1], curses.A_REVERSE)
+        except Exception:
+            pass
+        stdscr.refresh()
+
+        # 250ms tick：倒计时每秒都在动，界面因此始终「活着」
+        t_end = time.time() + 0.25
+        while time.time() < t_end:
+            ch = stdscr.getch()
+            if ch == -1:
+                time.sleep(0.03)
+                continue
+            keymsg = ""
+            if ch in (ord("q"), ord("Q"), 27):
+                state.stop = True
+            elif ch in (ord("r"), ord("R")):
+                state.force = True
+            elif ch in (ord("p"), ord("P"), ord(" ")):
+                state.paused = not state.paused
+                if not state.paused:
+                    state.next_at = time.time()
+            elif ch in (ord("+"), ord("=")):
+                opts.interval = min(3600, opts.interval + 30)
+                keymsg = f" interval -> {opts.interval}s "
+            elif ch in (ord("-"), ord("_")):
+                opts.interval = max(30, opts.interval - 30)
+                keymsg = f" interval -> {opts.interval}s "
+            elif ch in (ord("b"), ord("B")):
+                opts.brief = not opts.brief
+                keymsg = " detail " + ("hidden " if opts.brief else "shown ")
+            elif ch in (ord("c"), ord("C")):
+                opts.cmd = not opts.cmd
+                keymsg = " cmdline " + ("shown " if opts.cmd else "hidden ")
+            elif ch == curses.KEY_DOWN:
+                scroll = min(max_scroll, scroll + 1)
+            elif ch == curses.KEY_UP:
+                scroll = max(0, scroll - 1)
+            elif ch == curses.KEY_NPAGE:
+                scroll = min(max_scroll, scroll + (h - 2))
+            elif ch == curses.KEY_PPAGE:
+                scroll = max(0, scroll - (h - 2))
+            elif ch in (ord("g"),):
+                scroll = 0
+            elif ch in (ord("G"),):
+                scroll = max_scroll
+            elif ch == curses.KEY_RESIZE:
+                break
+
+
+def watch_main(opts) -> None:
+    import curses
+    state = State(opts)
+    th = threading.Thread(target=sampler, args=(state,), daemon=True)
+    th.start()
+    try:
+        curses.wrapper(curses_main, opts, state)
+    finally:
+        state.stop = True
+
+
+# --- 主流程 ---------------------------------------------------------------
+
+def main() -> None:
+    ap = argparse.ArgumentParser(
+        prog="sgpu", add_help=True,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="what ran on my GPUs and how often it broke (sacct gantt + detail)",
+        epilog="例: sgpu 6h   |   sgpu -w   |   sgpu -j 5980745 --cmd")
+    ap.add_argument("window", nargs="?", default="24h",
+                    help="look-back window, default 24h (30m / 6h / 3d)")
+    ap.add_argument("-w", "--watch", action="store_true",
+                    help="live TUI, resamples periodically (r refresh / q quit)")
+    ap.add_argument("-i", "--interval", type=int, default=120,
+                    help="TUI resample interval in seconds, default 120")
+    ap.add_argument("-j", "--job", action="append", default=[],
+                    help="only these jobs (repeatable); window widens to cover them")
+    ap.add_argument("-u", "--user", default=os.environ.get("USER", ""),
+                    help="whose jobs to show, default yourself")
+    ap.add_argument("-n", "--max-rows", type=int, default=0,
+                    help="max jobs to draw, 0 = all (default)")
+    ap.add_argument("--min-step", type=float, default=60.0,
+                    help="steps shorter than this are probes and get filtered, default 60")
+    ap.add_argument("--gap", type=float, default=60.0,
+                    help="gap above this counts as a break for the same identity, default 60")
+    ap.add_argument("--max-lanes", type=int, default=0,
+                    help="max identity lanes per job, 0 = all (default)")
+    ap.add_argument("-c", "--compact", dest="events", action="store_false",
+                    help="one line per GPU instead of listing every event")
+    ap.add_argument("-X", "--by-experiment", action="store_true",
+                    help="group by experiment identity instead of node/GPU")
+    ap.add_argument("--segments", action="store_true",
+                    help="also list linear segments with exact start/end times")
+    ap.add_argument("--brief", action="store_true", help="overview gantt only, no detail")
+    ap.add_argument("--cmd", action="store_true", help="expand full command lines in segments")
+    ap.add_argument("--ascii", action="store_true", help="plain ASCII glyphs")
+    ap.add_argument("--color", action="store_true", help="force color (pipes default to no color)")
+    ap.add_argument("--no-color", action="store_true", help="no ANSI color")
+    ap.add_argument("--no-pager", dest="pager", action="store_false",
+                    help="never pipe through a pager, even if output exceeds one screen")
+    opts = ap.parse_args()
+
+    opts.span = parse_duration(opts.window)
+    if opts.ascii:
+        globals()["ELLIPSIS"] = GLYPH["ascii"]["ell"]
+    opts.color = opts.color or (not opts.no_color and sys.stdout.isatty()
+                                and os.environ.get("TERM") != "dumb")
+    if opts.watch:
+        if not sys.stdout.isatty():
+            sys.exit("sgpu: -w needs a real terminal (stdout is not a tty)")
+        watch_main(opts)
+    else:
+        ansi_main(opts)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(130)
+    except BrokenPipeError:
+        os._exit(0)

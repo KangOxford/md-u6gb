@@ -1397,11 +1397,37 @@ def pending_block(snap, t0, t1, fc_t1, step, lw, user, fc_label) -> str:
     sitting there since before the window opened, or that four of them were
     submitted in the same minute.  On the shared axis both are one glance.
     """
-    if not snap.pending:
-        return ""
-    grid = grid_html(t0, t1, step, snap.now)
     est = wait_estimators(queue_history(user))
     pred = est.get("ewma")
+    # The four ways of answering "how long will the next one wait".  Boxed
+    # and side by side rather than run together in the caption, because the
+    # point is the comparison -- tight cluster means the queue is in a steady
+    # state and the shading can be trusted, spread means it is not.
+    if est:
+        cards = [("EWMA", f"&alpha;={EWMA_ALPHA}", est["ewma"],
+                  "drives the shading", True),
+                 ("mean", f"all {est['n']}", est["mean"], "whole history", False),
+                 (f"MA({est['k']})", f"last {est['k']}", est["ma"],
+                  "recent window", False),
+                 ("copy-last", "n = 1", est["last"], "most recent wait", False)]
+        est_row = '<div class="estrow">' + "".join(
+            f'<div class="estbox{" on" if on else ""}">'
+            f'<div class="estk">{k} <span>{sub}</span></div>'
+            f'<div class="estv">{esc(S.fmt_dur(v))}</div>'
+            f'<div class="estn">{note}</div></div>'
+            for k, sub, v, note, on in cards) + "</div>"
+    else:
+        est_row = ('<div class="estrow"><div class="estbox">'
+                   '<div class="estn">no completed jobs in the last 7 days '
+                   'to estimate from</div></div></div>')
+    if not snap.pending:
+        # An empty queue must not silently drop the block: the estimators
+        # answer "how long would the next submission sit", which matters
+        # precisely when deciding whether to submit -- with nothing queued.
+        return (f'<h2>queued <span class="hint">&nbsp;nothing queued right '
+                f'now &mdash; the estimators say how long the next '
+                f'submission would wait</span></h2>{est_row}')
+    grid = grid_html(t0, t1, step, snap.now)
     rows = []
     for j in sorted(snap.pending, key=lambda x: x.submit or snap.now):
         if not j.submit:
@@ -1463,27 +1489,6 @@ def pending_block(snap, t0, t1, fc_t1, step, lw, user, fc_label) -> str:
             f'<div class="tail"><span>waiting</span>'
             f'<span class="g">{S.fmt_dur(wait)}</span></div></div>')
 
-    # Second row: the four ways of answering "how long will the next one wait".
-    # Boxed and side by side rather than run together in the caption, because
-    # the point is the comparison -- tight cluster means the queue is in a
-    # steady state and the shading can be trusted, spread means it is not.
-    if est:
-        cards = [("EWMA", f"&alpha;={EWMA_ALPHA}", est["ewma"],
-                  "drives the shading", True),
-                 ("mean", f"all {est['n']}", est["mean"], "whole history", False),
-                 (f"MA({est['k']})", f"last {est['k']}", est["ma"],
-                  "recent window", False),
-                 ("copy-last", "n = 1", est["last"], "most recent wait", False)]
-        est_row = '<div class="estrow">' + "".join(
-            f'<div class="estbox{" on" if on else ""}">'
-            f'<div class="estk">{k} <span>{sub}</span></div>'
-            f'<div class="estv">{esc(S.fmt_dur(v))}</div>'
-            f'<div class="estn">{note}</div></div>'
-            for k, sub, v, note, on in cards) + "</div>"
-    else:
-        est_row = ('<div class="estrow"><div class="estbox">'
-                   '<div class="estn">no completed jobs in the last 7 days '
-                   'to estimate from</div></div></div>')
     btn = (f'<button class="fbtn" data-label="{esc(fc_label)}">{esc(fc_label)}</button>'
            if est else "")
     return (f'<h2>queued <span class="hint">&nbsp;not holding GPUs yet · '
