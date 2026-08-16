@@ -1687,6 +1687,10 @@ def read_quota() -> dict:
         used = None
     if used is None:
         used = float(q.get("used_node_hours") or 0)
+    # sreport shows only this user's rows -- PrivateData hides the teammates'
+    # -- so the hand-calibrated offset carries what the portal bills beyond
+    # what sreport can see.  Recalibrated whenever the portal is checked.
+    used += float(q.get("used_offset_node_hours") or 0)
 
     end = S.parse_time(q.get("ends", "") + "T23:59:59") if q.get("ends") else None
     days = max(0.0, (end - datetime.now()).total_seconds() / 86400) if end else 0.0

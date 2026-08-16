@@ -1,0 +1,9 @@
+{
+  "offering": "Isambard-AI Phase 2",
+  "account": "brics.u6gb",
+  "total_node_hours": 29999,
+  "ends": "2026-09-10",
+  "since": "2026-06-01",
+  "used_offset_node_hours": 956,
+  "_note": "total and ends come from the BriCS portal and must be edited by hand when the grant changes. used is read from sreport --tres=node, so it updates itself; `since` is what aligns it with the portal's billing start. sreport shows only this user's rows (PrivateData hides teammates), so used_offset_node_hours carries the rest: on each portal check set it to portal_used minus the sreport value at that moment. Calibrated 2026-08-16: portal 7346 - sreport 6390 = 956."
+}
