@@ -41,6 +41,10 @@ num_train_epochs 覆盖,对冒烟无害,正式跑用整 epoch 本来就是意图
 | 14:5x | **6144379 起跑即崩**:16 节点全部拉起、`[bsz]` 行正确,但数据集阶段 rank45 报 `FileNotFoundError: .../cache-e8464cf0db750e38.arrow` → torchrun 连锁 SIGTERM(exit 15:0 / EXIT=143) | ❌ 竞态 |
 | 15:0x | 根因:**map 缓存文件名 = 数据内容哈希**。64g 用 `DATASET_CAP=1000`,与冒烟的 600 指向两套缓存;1000 的缓存不存在 → 64 rank 同时抢写共享缓存目录。mini(4 rank 冷缓存)侥幸建好 600 缓存,full16(16 rank)纯读所以稳 | ✅ 定性 |
 | 15:0x | 修复:cap 改回 **600** 复用已验证缓存(64 rank 全程只读);重新提交 **6146475**(时限压到 1.5h 提高 backfill 概率);config 里写死警告「换 cap 先单进程预热」 | 🔄 排队 |
+| 19:26 | **6146475 二崩,死点后移**:zh/en 热缓存过关(证明缓存方向对),rank58/59 死在 **self-cognition** 的 `cache-ec005639e6a6e5b7.arrow` ENOENT | ❌ 同族竞态 |
+| 19:3x | 取证推翻「同 cap ⇒ 同缓存」:self-cognition 缓存目录里 mini(13:56)/full16(14:19)/64g(19:26)**各留一个不同名的 cache-\*.arrow**——它的某个 map 闭包哈希含随运行变化的输入,预热对它原则上无效;报缺文件其实已被赢家 rank 建成(19:26:19),输家踩进「存在→打开→被并发重命名」窗口 | ✅ 定性 |
+| 19:35 | 根治:**cached_dataset 官方路径**。`export_cached_ds.sh` 登录节点单进程离线 tokenize(train 1787 / val 13 → `data/cached_ds_cap600/`),train_lora.sh 改 `--cached_dataset/--cached_val_dataset`,运行时不再有 map/fingerprint/缓存写,竞态整类消失;目录缺失 fail-fast(exit 6) | ✅ |
+| 19:37 | 重新提交 **6148177**(16N,1.5h);gtop 3 空卡 ≪ 64,attach 不可行;队列无重复 | 🔄 排队 |
 
 ## full16 通过后的结论
 

@@ -20,8 +20,15 @@ EP_SIZE=${EP_SIZE:-16}
 MBS=${MBS:-1}
 GBS=${GBS:-$WORLD}                           # 缺省: DP 张数一人一条,零累积
 TAG=${TAG:-run}
-DATASET_CAP=${DATASET_CAP:-1000}             # 每个数据集取多少条
+DATASET_CAP=${DATASET_CAP:-600}              # 只决定 cached 数据目录名,训练时不再触碰原始数据集
 TRAIN_ITERS=${TRAIN_ITERS:-}                 # 空 = 按 1 epoch 跑
+
+# 数据一律走离线 cached dataset(export_cached_ds.sh 单进程建好):训练时 64 rank
+# 只 mmap 只读 arrow,无 map、无 fingerprint、无缓存竞态(6144379/6146475 两次死因)
+CACHED_DS=${CACHED_DS:-$DSV4_TASK/data/cached_ds_cap${DATASET_CAP}}
+if [ ! -d "$CACHED_DS/train" ]; then
+    echo "FATAL: cached dataset 不存在: $CACHED_DS/train —— 先跑 code/export_cached_ds.sh" >&2; exit 6
+fi
 
 # 有效批量自查: GBS 必须能被 DP×MBS 整除(TP=1,PP=1 ⇒ DP=WORLD)
 if [ $(( GBS % (WORLD * MBS) )) -ne 0 ]; then
@@ -35,16 +42,12 @@ EXTRA_ARGS=()
 exec megatron sft \
     --model $MODEL_DIR \
     --save_safetensors true \
-    --dataset "AI-ModelScope/alpaca-gpt4-data-zh#${DATASET_CAP}" \
-              "AI-ModelScope/alpaca-gpt4-data-en#${DATASET_CAP}" \
-              "swift/self-cognition#${DATASET_CAP}" \
-    --model_author swift \
-    --model_name swift-robot \
+    --cached_dataset "$CACHED_DS/train" \
+    --cached_val_dataset "$CACHED_DS/val" \
     --merge_lora false \
     --load_from_cache_file true \
     --add_non_thinking_prefix true \
     --loss_scale ignore_empty_think \
-    --split_dataset_ratio 0.01 \
     --tuner_type lora \
     --lora_rank 16 \
     --lora_alpha 32 \
