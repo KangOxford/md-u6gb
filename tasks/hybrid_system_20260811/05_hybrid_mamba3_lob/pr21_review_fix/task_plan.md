@@ -10,9 +10,9 @@
 | 阶段 | 内容 | 依赖 | 状态 |
 |---|---|---|---|
 | P0 | 计划文件 + 工作区准备 | — | ✅ complete |
-| P1 | CI 系列落 main（A1：四 workflow pipefail + english-only 自扫修复 + 自检） | P0 | **in_progress**（代码已提交 a7fd450 并全部验收；剩 simulator 重录落地 + return-bench 重录决策 + push/开 PR） |
-| P2 | PR#21 机械修复（A2/A3/A4 + C3/C4/C5 + minors + reshard 出列） | P0，与 P1 并行 | pending |
-| P4 | PR body 重写（D1/D2 reword + token 表 + B3 张力句 + 15 files + 内存表行） | 与 P1/P2 并行 | pending |
+| P1 | CI 系列落 main（A1） | P0 | ✅ **complete**：PR#35+#36 已合并，main 四关卡全真绿；两份过期 evidence 重录；稳定输入家建立 |
+| P2 | PR#21 机械修复（A2/A3/A4 + C3/C4/C5 + minors + reshard 出列） | P0 | ✅ **complete**（ece14dc 已推送，合并树 295/0/8；PR checks 等确认；唯一已知红 = injection.json 待 GPU 重录） |
+| P4 | PR body 重写（D1/D2 reword + token 表 + B3 张力句 + 23 files + 内存表行） | 与 P1/P2 并行 | ✅ **complete**（已 gh pr edit） |
 | P3 | reshard 独立 PR（C1 集体协商修复 + C2 round-trip 证据 + 脚本入库 + 模式校验） | 代码部分随时；round-trip 等 GPU | pending |
 | P5 | 八点逐格 SHA 表（B2，login CPU 从 bench 日志重建） | 与其余并行 | pending |
 | P6 | 训练矩阵 6 组 + ask2/ask3 评测 | **等卡**（当前 32/32 忙，hyper-recipe ~18h 到期） | pending |
@@ -134,4 +134,7 @@ P1–P5 全绿 + P6 至少中期计分后，PR#21 发 comment 请求 re-review�
 | u6gb conda 缺 `chex`（s5e env 无权限） | 1 | scratchpad 建 `--system-site-packages` venv 叠加层，不动用户环境 |
 | simulator 重录 pthread EAGAIN：沙箱 cgroup 线程上限，XLA 按 288 核开池被拒；限线程 env 全无效（tsl 池不理会） | 2 | 转 claude-login43 tmux（沙箱外、正常用户限额、单次有界命令）执行 |
 | tmux send-keys 忘带 `cd`，**连犯三次**（相对路径在错误 cwd 解析） | 3 | 第三次才用 `CMD="cd … && …"` 变量构造 + 发送后 capture-pane 验证。教训：重发失败命令前先 diff 自己到底改了什么 |
-| return-bench 重录：记录的输入目录 `data/hp_rn` 已被 0817 prepurge 清除 | 1 | 同输入重录不可能；换基线 = 数据语义决策，升级给 Kang（PR 里给两个选项：指定替代目录 `--accept-new-inputs` 重录，或接受该检查在 main 上如实变红直到 P6 产出新推理目录） |
+| return-bench 重录：记录的输入目录 `data/hp_rn` 已被 0817 prepurge 清除 | 1 | 同输入重录不可能；换基线 = 数据语义决策，升级给 Kang（PR 里给两个选项：指定替代目录 `--accept-new-inputs` 重录，或接受该检查在 main 上如实变红直到 P6 产出新推理目录）。**用户裁定选项 A + 稳定家**，已执行 |
+| 套件收集期 `ModuleNotFoundError: torchvision` | 1 | u6gb env 缺件（录制环境是 s5e 那套）；overlay venv 补装 torchvision 0.28，不动用户环境 |
+| 三个 mamba3 等价测试 setup 炸：`jnp.clip() got an unexpected keyword argument 'a_min'` | 2 | 初判 WIP 所致（stash 隔离后仍败，判断被推翻）；真因是 jax 0.11 移除 numpy 风格 kwargs，录制环境 jax0.9 掩盖了地雷。改位置参数写法（新旧 jax 语义相同），18/18 过。**教训：怀疑环境版本前先隔离掉最显眼的嫌疑人，但别停在第一个嫌疑人** |
+| 合并 main 冲突：`ci/evidence/register.json` 两侧都重录过 | 1 | 生成物不做文本合并——合并树上 `--register` 重录即是解 |
