@@ -15,8 +15,8 @@ TASK=/lus/lfs1aip2/projects/public/u6gb/tasks/large-discovery-model/dsv4_flash_l
 
 export MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
 export MASTER_PORT=29511
-export EP_SIZE=16 GBS=64 MBS=1 DATASET_CAP=1000 TAG=lora64_${SLURM_JOB_ID} MTP_LAYERS=1
-export TRAIN_ITERS=   # 空 = 完整 1 epoch(3000 样本 ÷ GBS64 ≈ 46 步)
+source $TASK/code/run64_config.env   # EP/GBS/MBS 等,启动时才读,排队期间可改
+export TAG=lora64_${SLURM_JOB_ID}
 
 echo "[64g] master=$MASTER_ADDR nodes=$SLURM_NNODES nodelist=$SLURM_JOB_NODELIST"
 srun --ntasks="$SLURM_NNODES" --ntasks-per-node=1 --cpus-per-task=72 --cpu-bind=none \

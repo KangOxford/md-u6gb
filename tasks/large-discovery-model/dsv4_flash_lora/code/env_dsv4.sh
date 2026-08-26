@@ -25,6 +25,11 @@ export CUDNN_HOME=$CUDNN_PATH
 # TE 的 CUDA_PATH 递归 glob 能匹配版本号 → 指到 nvidia 轮子根目录一次通杀
 export CUDA_PATH=$_BASE_SP/nvidia
 
+# megatron 是命名空间包:底层 slime-train 的 megatron-core 0.18.2 wheel 会在
+# sys.path 顺序上压过 editable 的 dev 版(legacy .pth 排末尾),旧版没有 dsv4_hybrid。
+# PYTHONPATH 置顶 vendor,强制 dev 版胜出:
+export PYTHONPATH=$DSV4_TASK/vendor/Megatron-LM${PYTHONPATH:+:$PYTHONPATH}
+
 # hub 缓存统一放共享盘(数据集在 16 节点间只下一份)
 export MODELSCOPE_CACHE=/lus/lfs1aip2/projects/public/u6gb/models/ms_cache
 export HF_HOME=/lus/lfs1aip2/projects/public/u6gb/models/hf_home
