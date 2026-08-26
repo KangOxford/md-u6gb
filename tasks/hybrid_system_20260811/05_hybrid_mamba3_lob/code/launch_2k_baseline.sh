@@ -43,17 +43,17 @@ TAG=$([ "$SMOKE" = "1" ] && echo smoke || echo prod)
 # 已经把它读进 srun 了，症状是两条臂用同一份配置且没有任何报错。
 GEN_BATCH="$TASKDIR/code/train_full_autoreg.attach.base.${TAG}.batch"
 
-# step 名字不是装饰，它决定这个作业会不会被预算闸门砍掉。
+# step 名字不是装饰，它决定这个作业会不会被预算关卡砍掉。
 #
 # node_budget_monitor.py 用正则 ^(bash|sh|zsh|...)$ 判 step 是不是 idle，有非
 # idle 名字的 step 就把整个作业记成 computing，而 **computing 不计入 20 节点上限**。
 # 本仓库普遍用 `srun bash -lc '...'` 包装训练，于是 step 名就叫 bash：
 #
 #   2026-08-13 10:40 的 dry-run 里，正在训练的 hybrid（5998835，已跑 5h45m）
-#   赫然显示 `IDLE-HELD  only bash,bash,bash,...`，随时可能被闸门当空转砍掉；
+#   赫然显示 `IDLE-HELD  only bash,bash,bash,...`，随时可能被关卡当空转砍掉；
 #   而邻居的 6000412 显示 `computing ldm-synth,dfm-rs-lg488b_g3`，安全。
 #
-# 起个真名字不是绕过闸门，是**把度量修对**——这个作业确实在算。
+# 起个真名字不是绕过关卡，是**把度量修对**——这个作业确实在算。
 STEP_NAME=${STEP_NAME:-base-m3-ctx2k}
 
 # ── 1. 生成 attach 版训练脚本 ────────────────────────────────────────────────
@@ -93,7 +93,7 @@ timeout 200 env $_CLEAN_ENV srun --jobid="${ATTACH_JOBID}" --overlap \
       echo "[preflight] $(hostname) stale_mounts=$before now=$(grep -c '"${ATTACH_JOBID}"' /proc/mounts 2>/dev/null || echo 0) dirs_removed"
     ' 2>&1 | head -8
 
-# ── 1.6 物理 GPU 闸门：--overlap 不等于显存安全 ─────────────────────────────
+# ── 1.6 物理 GPU 关卡：--overlap 不等于显存安全 ─────────────────────────────
 # 这一步是 2026-08-12 冒烟三号的直接产物。当时 5980502 在 20:15 和 02:22 两次
 # 快照里都是全空的，但 02:30 启动时 nid010473 GPU0 已被另一个实验
 # （crps-return-alignment 的 inference.py）占走 71.5 GB。训练侧
@@ -109,8 +109,8 @@ timeout 200 env $_CLEAN_ENV srun --jobid="${ATTACH_JOBID}" --overlap \
 # 节点上的全部 compute 进程。
 #
 # 为什么需要它：清一次场并不够。2026-08-12 19:13 手工清空这四个节点后，两条臂
-# 的冒烟在 90 秒内相继被闸门挡下——其它会话的作业已经自动重启回同一批卡上。
-# 清场与起飞之间只要有间隙，就会输掉这个竞争。所以清场必须紧贴闸门，在同一次
+# 的冒烟在 90 秒内相继被关卡挡下——其它会话的作业已经自动重启回同一批卡上。
+# 清场与起飞之间只要有间隙，就会输掉这个竞争。所以清场必须紧贴关卡，在同一次
 # 启动里完成。
 DEDICATED_ALLOC=${DEDICATED_ALLOC:-0}
 if [ "$DEDICATED_ALLOC" = "1" ]; then
@@ -126,7 +126,7 @@ if [ "$DEDICATED_ALLOC" = "1" ]; then
         ' 2>&1 | grep "^\[clear\]"
 fi
 
-# 闸门是 claim_gate.sh：nvidia-smi 物理体检（锁层已于 2026-08-14 删除）。
+# 关卡是 claim_gate.sh：nvidia-smi 物理体检（锁层已于 2026-08-14 删除）。
 #
 # 已知盲区：体检只能证明 t=0 干净。2026-08-13 10:19 baseline 就死在这里 ——
 # 体检那一刻卡是空的，8 分钟启动窗口里邻居的 vLLM 起来把 rank2 挤死。
@@ -155,7 +155,9 @@ export SLURM_SUBMIT_DIR="$WORKDIR"
 # 日志，而 attach 场景下两条臂共用同一个 SLURM_JOB_ID、procid 也都是 0..N-1，
 # 于是两条臂会 exec> 到同一个文件上，各写各的，内容交错且互相截断。
 # NODE_LOG_DIR 是 node_wrapper.sh:29 留出的覆盖点。
-export NODE_LOG_DIR="$WORKDIR/logs_lobs5/ctx2k_base"
+# 认调用方的覆盖（与 WANDB_PROJECT 同理）：32k 全预算跑要与 6.4k 那代分目录，
+# 否则 ckpt_dir_of 之类按日志目录找 checkpoint 的机制会把两代运行混在一起。
+export NODE_LOG_DIR="${NODE_LOG_DIR:-$WORKDIR/logs_lobs5/ctx2k_base}"
 ARCH_TAG=base
 # ── XLA 持久化编译缓存 ──────────────────────────────────────────────────────
 # 实测：一次重启到稳态约 3.5 分钟，其中 **XLA 编译训练步占 50 秒**
@@ -374,7 +376,7 @@ else
     # auto 是原本就有的正确档位，而给一个显式数字会同时踩两个坑：
     #   (1) checkpoint 变稀（3000 步在 2k 上是 50 分钟以上）
     #   (2) step_loss 被绑到同一个频率上，观测精度跟着一起塌
-    # auto 走的是时间判据：checkpoint 每 15 分钟、wandb 每 1 分钟、首存在 5 分钟。
+    # auto 走的是时间标准：checkpoint 每 15 分钟、wandb 每 1 分钟、首存在 5 分钟。
     # 26tok 那一代用的就是这个，我先前用数字覆盖掉了。
     export CHECKPOINT_EVERY=${CHECKPOINT_EVERY:-auto}
 fi
