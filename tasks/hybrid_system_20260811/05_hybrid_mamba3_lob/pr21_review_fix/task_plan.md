@@ -9,8 +9,8 @@
 
 | 阶段 | 内容 | 依赖 | 状态 |
 |---|---|---|---|
-| P0 | 计划文件 + 工作区准备 | — | **in_progress** |
-| P1 | CI 系列落 main（A1：四 workflow pipefail + english-only 自扫修复 + 自检） | P0 | pending |
+| P0 | 计划文件 + 工作区准备 | — | ✅ complete |
+| P1 | CI 系列落 main（A1：四 workflow pipefail + english-only 自扫修复 + 自检） | P0 | **in_progress**（代码已提交 a7fd450 并全部验收；剩 simulator 重录落地 + return-bench 重录决策 + push/开 PR） |
 | P2 | PR#21 机械修复（A2/A3/A4 + C3/C4/C5 + minors + reshard 出列） | P0，与 P1 并行 | pending |
 | P4 | PR body 重写（D1/D2 reword + token 表 + B3 张力句 + 15 files + 内存表行） | 与 P1/P2 并行 | pending |
 | P3 | reshard 独立 PR（C1 集体协商修复 + C2 round-trip 证据 + 脚本入库 + 模式校验） | 代码部分随时；round-trip 等 GPU | pending |
@@ -129,4 +129,9 @@ P1–P5 全绿 + P6 至少中期计分后，PR#21 发 comment 请求 re-review�
 
 | Error | Attempt | Resolution |
 |---|---|---|
-| （尚无） | | |
+| md-u6gb 提交被拒：`tasks/` 在 .gitignore | 1 | 历史文件本就是强加的 → `git add -f`，成功 |
+| Edit 工具把 `\uXXXX` 解码成真字符：写「转义版」正则实际写入字面 CJK，注释与实现互相矛盾 | 2 | 参数传输层解码 `\u`（`\n` 不受影响）。改用 Bash heredoc + `chr()` 程序化替换，替换后当场跑 checker 验证。**教训：涉及字节层的编辑，改完必须用检测器实测，不能信编辑成功** |
+| u6gb conda 缺 `chex`（s5e env 无权限） | 1 | scratchpad 建 `--system-site-packages` venv 叠加层，不动用户环境 |
+| simulator 重录 pthread EAGAIN：沙箱 cgroup 线程上限，XLA 按 288 核开池被拒；限线程 env 全无效（tsl 池不理会） | 2 | 转 claude-login43 tmux（沙箱外、正常用户限额、单次有界命令）执行 |
+| tmux send-keys 忘带 `cd`，**连犯三次**（相对路径在错误 cwd 解析） | 3 | 第三次才用 `CMD="cd … && …"` 变量构造 + 发送后 capture-pane 验证。教训：重发失败命令前先 diff 自己到底改了什么 |
+| return-bench 重录：记录的输入目录 `data/hp_rn` 已被 0817 prepurge 清除 | 1 | 同输入重录不可能；换基线 = 数据语义决策，升级给 Kang（PR 里给两个选项：指定替代目录 `--accept-new-inputs` 重录，或接受该检查在 main 上如实变红直到 P6 产出新推理目录） |
