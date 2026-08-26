@@ -36,6 +36,14 @@
 注:TRAIN_ITERS=12 未生效(swift 按 epoch 推导 111 步)——`--train_iters` 疑被
 num_train_epochs 覆盖,对冒烟无害,正式跑用整 epoch 本来就是意图。
 
+| 14:44 | **full16 冒烟全程通过**:111/111 步,loss 0.89→0.85(中段最低 0.45),稳态 ~4.3s/it,显存全程 52.6G;**多节点分布式保存 + safetensors 导出成功**(checkpoint-111);exit 0 | ✅ |
+
+## full16 通过后的结论
+
+64 卡(EP16×DP4)与 full16(EP16×DP1×16 卡)在**单卡显存形态上完全同构**:
+每卡 16 个专家 + 全部非专家权重 + LoRA。full16 实测 52.6/96 GiB ⇒ 64 卡无显存风险。
+剩余唯一变量是 DP 从 16 → 64 的 AllReduce 规模(成熟路径)与 16 节点的排队时间。
+
 ### CUDA 版本问答存档(用户问「没有 cuda 13 吗?」)
 
 模块表最高 CUDA 12.6(hpc_sdk 24.11)。就算有 13 也不能用:torch 是 cu12.8 构建,
