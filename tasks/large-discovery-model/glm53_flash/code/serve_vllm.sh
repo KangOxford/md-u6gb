@@ -18,6 +18,8 @@ mkdir -p "$TRITON_CACHE_DIR" "$VLLM_CACHE_ROOT"
 
 echo "[serve] host=$(hostname) port=$PORT maxlen=$MAXLEN tp=4"
 nvidia-smi --query-gpu=index,memory.used --format=csv,noheader
+# 记下服务落点,test_chat.sh 与 sbatch 防双跑检查都读这个文件
+hostname > /lus/lfs1aip2/projects/public/u6gb/tasks/large-discovery-model/glm53_flash/results/server_host
 
 exec vllm serve "$MODEL" \
     --served-model-name GLM-5.3-Flash \
