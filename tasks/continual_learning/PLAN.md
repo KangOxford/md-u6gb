@@ -77,7 +77,7 @@ plus unit tests runnable on CPU. Wiring into the sigma-0 training loop is a foll
 - Take one existing long sigma-0 run; pick θ_early and θ_late checkpoints separated by as many tokens as the run allows.
 - Fixed-budget adaptation of copies of both (identical tokens, batch, schedule, seeds) on a held-out later time slice; log validation NLL every fixed interval plus all Step-1 diagnostics.
 - ≥ 5 seeds per group before any claim; 95% bootstrap CI on AUC difference and R_steps; declare a difference only if the CI excludes equality.
-- Stress slices when data allows: the COVID window (2020-02..04) and the 2024-08 volatility spike (probe from a checkpoint trained through 2024-07 only — no leakage).
+- Stress slices when data allows: the COVID window (2020-02..04) and the 2024-08 volatility spike (probe from a checkpoint trained through 2024-07 only — no leakage). **Superseded by Step 0**: tokenized data starts 2022-01 (`results/INVENTORY.md` §2), so the primary slice is 2024-08, the secondary 2025-04, and the base window 2022-01..2024-07.
 - Decision: PRESENT / ABSENT / inconclusive per §2.3. If inconclusive, extend token budget before adding mechanisms.
 
 ### Step 3 — CPT pilot: fit replay × rewarm before committing a big run
@@ -118,7 +118,7 @@ Cyclic year/regime schedule over 34M / 100M / 300M-class sigma-0 models, probe s
 ## 6. Deliverables checklist
 
 - [x] PLAN.md (this file)
-- [ ] `code/plasticity_probes.py` + `code/test_plasticity_probes.py` (Step 1, this PR)
-- [ ] `results/INVENTORY.md` (Step 0)
+- [x] `code/plasticity_probes.py` + `code/test_plasticity_probes.py` (Step 1, this PR; 13 CPU tests pass)
+- [x] `results/INVENTORY.md` (Step 0; partial — 4 open items listed there, checkpoint roots need the user)
 - [ ] Probe wiring into the sigma-0 training loop (follow-up)
 - [ ] Step 2 readout: AUC(θ_late) vs AUC(θ_early), CI, diagnostics — reported on the PR as commits + comment updates
