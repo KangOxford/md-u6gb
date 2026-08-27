@@ -1,0 +1,24 @@
+{
+  "root": "/projects/public/u6gb/sigma-0/checkpoints_selftrain/j5705912_b30675li_5705912",
+  "rows": [
+    {
+      "step": 275,
+      "n_params_total": 78539423,
+      "l2_total": 429.65357951103755,
+      "l2_non_embed": 427.1868503328254,
+      "mean_abs_total": 0.025289234698347936,
+      "mean_abs_non_embed": 0.02529914738823383,
+      "n_matrices": 53,
+      "spectral_norm_mean": 24.791933570734084,
+      "spectral_norm_median": 3.083781535081809,
+      "spectral_norm_max": 64.00001396896367,
+      "spectral_top5": {
+        "fused_s5/layers_4/seq/C_bias": 64.0,
+        "fused_s5/layers_4/seq/B_bias": 64.0,
+        "message_encoder/layers_0/seq/C_bias": 64.0,
+        "message_encoder/layers_0/seq/B_bias": 64.0,
+        "fused_s5/layers_5/seq/B_bias": 64.0
+      }
+    }
+  ]
+}
