@@ -33,6 +33,9 @@
 | 23:55 | venv v1 完成(vllm 0.28.0/torch 2.13.0/transformers 5.16.1/flashinfer 0.6.16.post3),但节点 sanity 失败:**PyPI 默认轮子是 cu130 构建,节点驱动 565.57 只到 CUDA 12.7**,major 跨代 ⇒ `cuda_available=False` | ❌ |
 | 00:0x | 修正:GitHub release 有 **`vllm-0.28.0+cu129` aarch64 变体轮子**,pytorch cu129 索引有配套 torch 2.13.0+cu129(cp312 aarch64)。CUDA 12.x 内小版本前向兼容,dsv4 的 cu128 栈同驱动已验证。旧 venv 挪 `_cu130_deprecated_*`,v2 重建(tmux glm-venv2) | 🔄 |
 
+| 00:2x | venv v2 完成(**vllm 0.28.0+cu129 / torch 2.13.0+cu129**,nvidia 库全线 cu12 家族);nid010413 上 GPU sanity 全绿:cuda_avail=True、sm90、matmul 通、vllm 导入 | ✅ |
+| 00:2x | 起服双路预案入库:attach 优先(逐卡验空),`launch_serve.sbatch` 后备(启动先探 `results/server_host`,已有健康服务即退,防双跑);当刻 8 节点全被另一条线评测波占满,等下载完成时再探 | ✅ |
+
 注:flashinfer 解析为 0.6.16.post3(vllm 0.28.0 钉版),低于部署页写的 0.6.17;
 第一轮不带 MTP 先点亮,若 KDA/稀疏 MLA 核函数报错再单独升 flashinfer。
 另:nid010815 已被另一条线的评测重新占用(每卡 20.5G)——起服时 attach_serve.sh
