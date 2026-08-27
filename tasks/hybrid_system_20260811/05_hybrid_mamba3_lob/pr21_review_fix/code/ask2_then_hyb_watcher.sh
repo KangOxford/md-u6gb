@@ -21,8 +21,8 @@ CK2K=$WT/checkpoints/j6000409_gjnf0e03_6000409
 ALLOCS_HINT=""            # 空 = 每轮动态取账户全部 RUNNING 多节点分配
 POLL=600
 MAX_CYCLES=72
-QUEUE_MULTI="${QUEUE_MULTI_INIT:-base32k hyb32k pmatch32k}"
-QUEUE_SINGLE="${QUEUE_SINGLE_INIT:-doqrerun bench2k bench500}"
+QUEUE_MULTI="${QUEUE_MULTI_INIT-base32k hyb32k pmatch32k}"
+QUEUE_SINGLE="${QUEUE_SINGLE_INIT-doqrerun bench2k bench500}"
 WANDB_PROJECT_32K=sp500-mamba3-35m-ctx2k32k
 
 log() { echo "[$(date -u +%H:%M:%SZ)] $*"; }
@@ -79,7 +79,9 @@ launch_train() {   # $1=item $2=alloc $3=nodelist(逗号) $4=nn → rc0 成功�
         bash "$TD/code/$sc" \
         > "$TD/logs/launch_${item}_$(date -u +%m%dT%H%M%S).log" 2>&1 &
     sleep 300
-    if squeue -s -j "$alloc" -h 2>/dev/null | grep -q "$sn"; then
+    # -o "%j" 必须带：默认格式把 step 名截断到 8 字符，全名 grep 永远落空——
+    # 05:02 就这样把一个活得好好的 base32k 误判成失败，差点二次起跑。
+    if squeue -s -j "$alloc" -h -o "%j" 2>/dev/null | grep -qF "$sn"; then
         # 记下节点，chain_manager32k 达标收刀要用
         case "$item" in base32k) a=A;; hyb32k) a=B;; pmatch32k) a=P;; esac
         echo "$nl" > "$TD/results/.ctx2k32k_nodes_$a"

@@ -15,8 +15,10 @@
 set -u
 
 TASK=/home/u6gb/kangli.u6gb/pr21_doq_artifacts_20260826
-WT_P=/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/ci-pipefail-20260826
-WT_V=/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811
+# 可用 env 覆盖：判别实验（同节点重跑 0816 原始 commit 对）用
+#   WT_P=…/pr16-base-20260815  WT_V=…/pr16-verify-20260815(@41ec9284)  ARMS_SUBDIR=arms_v3
+WT_P=${WT_P:-/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/ci-pipefail-20260826}
+WT_V=${WT_V:-/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811}
 QUANT_ROOT=/lus/lfs1aip2/projects/public/s5e/quant_team/quant
 CONDA_PREFIX="$QUANT_ROOT/miniforge3"
 PYTHON="$CONDA_PREFIX/bin/python"
