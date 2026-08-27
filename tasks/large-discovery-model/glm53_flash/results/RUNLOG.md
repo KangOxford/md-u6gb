@@ -36,6 +36,9 @@
 | 00:2x | venv v2 完成(**vllm 0.28.0+cu129 / torch 2.13.0+cu129**,nvidia 库全线 cu12 家族);nid010413 上 GPU sanity 全绿:cuda_avail=True、sm90、matmul 通、vllm 导入 | ✅ |
 | 00:2x | 起服双路预案入库:attach 优先(逐卡验空),`launch_serve.sbatch` 后备(启动先探 `results/server_host`,已有健康服务即退,防双跑);当刻 8 节点全被另一条线评测波占满,等下载完成时再探 | ✅ |
 
+| 00:38 | **下载完成:62/62 分片,306G,一轮无重试**(全程 ~50 分钟) | ✅ |
+| 00:40 | 8 节点仍被评测波占满 ⇒ 双路启动:后备 sbatch **6150683**(1N,12h,防双跑检查)已入队;监视「空节点或 sbatch 起跑」先到先得 | 🔄 |
+
 注:flashinfer 解析为 0.6.16.post3(vllm 0.28.0 钉版),低于部署页写的 0.6.17;
 第一轮不带 MTP 先点亮,若 KDA/稀疏 MLA 核函数报错再单独升 flashinfer。
 另:nid010815 已被另一条线的评测重新占用(每卡 20.5G)——起服时 attach_serve.sh
