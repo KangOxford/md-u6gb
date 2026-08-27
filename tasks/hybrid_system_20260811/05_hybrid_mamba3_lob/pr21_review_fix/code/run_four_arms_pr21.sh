@@ -45,7 +45,8 @@ nvidia-smi --query-gpu=index,utilization.gpu,memory.used --format=csv,noheader
 CKPT=/lus/lfs1aip2/projects/public/u6gb/model_zoo/m3-goog-78m-u6gb/checkpoint
 # The 78M pin's own training corpus (43-col books: 3 metadata + 4*10 levels).
 DATA=/lus/lfs1aip2/projects/u6gb/quant/Mamba3_GOOG_pretraining_runs/data_npy/GOOG
-ARMS=$TASK/arms_v1
+# arms_v1 = 2026-08-26 与 88GB 邻居共存的那轮（J0 确定性失败，留档不覆盖）。
+ARMS=$TASK/${ARMS_SUBDIR:-arms_v1}
 mkdir -p "$ARMS"
 
 run_arm() {

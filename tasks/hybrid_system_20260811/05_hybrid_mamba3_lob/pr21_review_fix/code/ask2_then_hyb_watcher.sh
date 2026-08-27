@@ -17,7 +17,7 @@ CK2K=$WT/checkpoints/j6000409_gjnf0e03_6000409
 ALLOCS="6141106 6136391"
 POLL=600
 MAX_CYCLES=60
-QUEUE="bench2k bench500 hyb32k"
+QUEUE="doqrerun bench2k bench500 hyb32k"
 
 log() { echo "[$(date -u +%H:%M:%SZ)] $*"; }
 
@@ -49,6 +49,37 @@ node_free() {  # $1=alloc $2=node -> rc0 若 4 卡显存全 <4096MiB
 run_item() {  # $1=item $2=alloc $3=node -> rc
     local item=$1 alloc=$2 node=$3 lm mjh
     case "$item" in
+      doqrerun)
+        # 第一轮（arms_v1）与 88GB 邻居共存，J0 确定性失败：2GB 余量下算法自选
+        # 在两次运行间不稳定。整空节点上重跑四组 + stdlib 验证，约 10 分钟。
+        # 无论过与不过都出队（clean 节点上仍失败就是真发现，交给人，不空转重试）。
+        log "起 doqrerun on $node ($alloc)（同步，约 10min）"
+        timeout 2400 srun --overlap --jobid="$alloc" -w "$node" --ntasks=1 \
+            --job-name=doq-rerun --cpu-bind=none \
+            env ARMS_SUBDIR=arms_v2 bash "$TD/pr21_review_fix/code/run_four_arms_pr21.sh" \
+            > "$TD/logs/doq_pr21_rerun.log" 2>&1
+        if ! grep -q DRIVER_DONE "$TD/logs/doq_pr21_rerun.log"; then
+            log "DOQ_ROLLOUT_FAIL（driver 未完成，看 doq_pr21_rerun.log）"
+            return 0   # 出队，交给人
+        fi
+        A2=/home/u6gb/kangli.u6gb/pr21_doq_artifacts_20260826/arms_v2
+        CPX=$(git -C /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/ci-pipefail-20260826 rev-parse HEAD)
+        COIX=$(git -C "$WT" rev-parse HEAD)
+        python3 "$WT/tools/diagnostics/verify_injection.py" \
+            --dir-p "$A2/arm_P" --dir-p2 "$A2/arm_P2" --dir-o "$A2/arm_O" --dir-i "$A2/arm_I" \
+            --inject-step 8 --inject-event-type 1 --inject-side 1 --inject-qty 777 \
+            --inject-offset-ticks -1 --tick-size 100 \
+            --n-cond-msgs 16 --batch-size 1 --seed 42 --node "$node" --gpu 0 \
+            --ckpt-pin m3-goog-78m-u6gb \
+            --ckpt-metadata-sha256 02d6f8b0d9258fd0b5375dd896fab57ad0321e8aead4ac994255c082d4099c86 \
+            --checkpoint-step 28730 --data-day GOOG_2026-02-27 \
+            --commit-p "$CPX" --commit-oi "$COIX" \
+            --out "$TD/pr21_review_fix/injection_report_20260827_v2.json" \
+            >> "$TD/logs/doq_pr21_rerun.log" 2>&1
+        if [ $? -eq 0 ]; then log "DOQ_VERIFY_PASS（report v2 全绿，待录证据）"
+        else log "DOQ_VERIFY_FAIL（clean 节点仍不过，需要人看 report v2）"; fi
+        return 0
+        ;;
       bench2k)
         log "起 bench2k：base2k@6509 on $node ($alloc)（同步，约 2-3h）"
         env ATTACH_JOBID="$alloc" NODE="$node" ARCHITECTURE=mamba3 \
