@@ -35,6 +35,9 @@ export PYTHONPATH=/lus/lfs1aip2/projects/public/u6gb/openreview-v2
 export SQUASHFS_MULTI_MODE=1
 export SQUASHFS_DIR=/lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs
 export SQUASHFS_MONTHS=2024-08
+# Unique node-local mount root per run: avoids the stale dead mount left under
+# the default ${SLURM_JOB_ID}-derived path, and keeps the pair from colliding.
+export SQUASHFS_MULTI_MOUNT_ROOT=/tmp/kangli.u6gb/sigma0/cl_probe_${SHORT}/sp500_squashfs
 export FORBID_RAW_NPYZST=1
 export DATA_ROOT=/lus/lfs1aip2/projects/s5e/lob_preproc_sp500
 TICKERS=$(grep '^env_TICKERS:' "$YAML" | sed 's/^env_TICKERS: //')
