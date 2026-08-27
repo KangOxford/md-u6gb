@@ -11,9 +11,9 @@ MODEL=/lus/lfs1aip2/projects/public/u6gb/tasks/large-discovery-model/models/GLM-
 PORT=${PORT:-8383}
 MAXLEN=${MAXLEN:-65536}
 
-# 编译缓存放节点本地盘,不打 Lustre
-export TRITON_CACHE_DIR=/local/scratch/$USER/glm53_triton
-export VLLM_CACHE_ROOT=/local/scratch/$USER/glm53_vllm_cache
+# 编译缓存放节点本地盘,不打 Lustre(/local/scratch 计算节点不可写,沿 dsv4 用 TMPDIR)
+export TRITON_CACHE_DIR=${TMPDIR:-/tmp}/glm53_triton_${USER}
+export VLLM_CACHE_ROOT=${TMPDIR:-/tmp}/glm53_vllm_cache_${USER}
 mkdir -p "$TRITON_CACHE_DIR" "$VLLM_CACHE_ROOT"
 
 echo "[serve] host=$(hostname) port=$PORT maxlen=$MAXLEN tp=4"
