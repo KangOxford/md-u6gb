@@ -30,3 +30,10 @@
 |---|---|---|
 | 23:42 | 调研:vLLM 官方部署页 + HF config;PyPI 0.28.0 aarch64 轮子在;ModelScope 已上架 | ✅ |
 | 23:45 | 下载启动(tmux glm-dl,ModelScope 73 文件 → `models/GLM-5.3-Flash`);venv 构建启动(tmux glm-venv) | 🔄 |
+| 23:55 | venv v1 完成(vllm 0.28.0/torch 2.13.0/transformers 5.16.1/flashinfer 0.6.16.post3),但节点 sanity 失败:**PyPI 默认轮子是 cu130 构建,节点驱动 565.57 只到 CUDA 12.7**,major 跨代 ⇒ `cuda_available=False` | ❌ |
+| 00:0x | 修正:GitHub release 有 **`vllm-0.28.0+cu129` aarch64 变体轮子**,pytorch cu129 索引有配套 torch 2.13.0+cu129(cp312 aarch64)。CUDA 12.x 内小版本前向兼容,dsv4 的 cu128 栈同驱动已验证。旧 venv 挪 `_cu130_deprecated_*`,v2 重建(tmux glm-venv2) | 🔄 |
+
+注:flashinfer 解析为 0.6.16.post3(vllm 0.28.0 钉版),低于部署页写的 0.6.17;
+第一轮不带 MTP 先点亮,若 KDA/稀疏 MLA 核函数报错再单独升 flashinfer。
+另:nid010815 已被另一条线的评测重新占用(每卡 20.5G)——起服时 attach_serve.sh
+会逐卡验空,到时挑当刻真空的节点(6141106 或 6136391 皆可,后者剩 9h+ 也够)。
