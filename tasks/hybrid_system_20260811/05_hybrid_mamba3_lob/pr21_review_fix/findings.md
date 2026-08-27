@@ -46,3 +46,23 @@
 - 2/3 科学 B/D：issuecomment-5419896949
 - 3/3 计划矩阵：issuecomment-5419897611
 - PR body 备份：scratchpad/pr21_body.md（本会话）——P4 改前另存到本目录
+
+## 2026-08-27 凌晨（P6 首夜）
+
+1. **D-X10（已修死）**：单节点 + K>1 时累积路径不构建（`create_jit_train_step`
+   只在 shard_map 下返回三元组），K 静默丢弃、有效批量 4、cosine 20 倍速。
+   暴露量：checkpoint 步号间距 1800 = 900s × 2.0 micro/s（应为 90）。
+   守卫 + 单元探测器 + 注册 + 证据重录 = e7fe3a9。
+2. **ask-2 token 对齐点测完**（scoreboard comment 5434620002）：
+   base500@32001 在全部可比桶与三个分布聚合上领先 base2k@6509；
+   return bench 两者不可分。update-matched 半边等 run1 到 32k。
+3. **injection J2/3/5 是节点绑定的编译效应**：0816 原始 commit 对（82266d9/41ec928）
+   在今晚节点同败三判；J0/J1（独占 GPU 后）双过。三份报告存档
+   `pr21_review_fix/injection_report_20260827{,_v2,_v3_discriminator}.json`。
+   证据可录性的两条路（回原节点类 / J2-3-5 改语义断言）升级给 review 定。
+4. **inode 51.2M 打满**（0827 04:5x）：训练/编辑/git 全挡。pyc 引导释放 4.1k →
+   ladder bench 目录打包释放（bench2k_2026081[2-8]，223 目录，tar 验证后放）。
+   `~/.local/bin/env` 是 -rw- 坏占名，env 不可作 srun 远端命令。
+5. **自动机三修**：squeue -s 验证必带 `-o %j`（默认截断 8 字符）；
+   `${VAR-}` 与 `${VAR:-}` 空串语义；接力重启窗口里 setsid 子进程会幸存，
+   重启前先对账在飞任务再定队列种子。

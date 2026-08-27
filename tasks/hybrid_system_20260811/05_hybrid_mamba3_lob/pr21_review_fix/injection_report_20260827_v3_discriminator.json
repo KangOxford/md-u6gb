@@ -1,0 +1,75 @@
+{
+  "generated_utc": "2026-08-27T05:02:16Z",
+  "inputs": {
+    "arm_digest_i": "0b1318979f129411cc79fca196e2f62902d4f224a2a64d0349991f5062436277",
+    "arm_digest_o": "c07658e211e6d0e88ff2d865addb553e82cd7c98b1dcaf357b9e6f89e1b2fd34",
+    "arm_digest_p": "c07658e211e6d0e88ff2d865addb553e82cd7c98b1dcaf357b9e6f89e1b2fd34",
+    "arm_digest_p2": "c07658e211e6d0e88ff2d865addb553e82cd7c98b1dcaf357b9e6f89e1b2fd34",
+    "checkpoint_step": 28730,
+    "ckpt_metadata_sha256": "02d6f8b0d9258fd0b5375dd896fab57ad0321e8aead4ac994255c082d4099c86",
+    "ckpt_pin": "m3-goog-78m-u6gb",
+    "commit_oi": "41ec9284282bffcf535bbd8eb8ea9d9c11781e97",
+    "commit_p": "82266d943dd9f9cd1442930033f03b24005c7b8c",
+    "data_day": "GOOG_2026-02-27",
+    "dir_i": "/home/u6gb/kangli.u6gb/pr21_doq_artifacts_20260826/arms_v3/arm_I",
+    "dir_o": "/home/u6gb/kangli.u6gb/pr21_doq_artifacts_20260826/arms_v3/arm_O",
+    "dir_p": "/home/u6gb/kangli.u6gb/pr21_doq_artifacts_20260826/arms_v3/arm_P",
+    "dir_p2": "/home/u6gb/kangli.u6gb/pr21_doq_artifacts_20260826/arms_v3/arm_P2",
+    "gpu": "0",
+    "node": "nid010329"
+  },
+  "j0_determinism": {
+    "mismatched_files": [],
+    "n_files": 41,
+    "n_mismatch": 0,
+    "pass": 1
+  },
+  "j1_off_means_off": {
+    "files_only_o": [],
+    "files_only_p": [],
+    "mismatched_files": [],
+    "n_files": 41,
+    "n_mismatch": 0,
+    "pass": 1
+  },
+  "j2_prefix": {
+    "error": "window sets differ between O and I",
+    "n_windows": 0,
+    "only_i": [],
+    "only_o": [
+      "2026-02-27_101845",
+      "2026-02-27_13827",
+      "2026-02-27_77480",
+      "2026-02-27_94763"
+    ],
+    "pass": 0
+  },
+  "j3_msg_row_k": {
+    "n_windows": 0,
+    "pass": 0
+  },
+  "j4_book_injection": {
+    "n_windows": 0,
+    "n_windows_pass": 0,
+    "pass": 0,
+    "per_window": []
+  },
+  "j5_divergence": {
+    "pass": 0
+  },
+  "overall_pass": 0,
+  "params": {
+    "batch_size": 1,
+    "inject_event_type": 1,
+    "inject_price_offset_ticks": -1,
+    "inject_qty": 777,
+    "inject_side": 1,
+    "inject_step": 8,
+    "n_cond_msgs": 16,
+    "n_gen_msgs": null,
+    "n_windows": 0,
+    "seed": 42,
+    "tick_size": 100
+  },
+  "schema": "sigma0.injection_verification.v1"
+}

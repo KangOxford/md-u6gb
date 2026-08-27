@@ -45,3 +45,36 @@
 - ✅ 合入 origin/main（b362a7e，即我自己的 #35+#36）；唯一冲突 `ci/evidence/register.json` = 生成物 → 合并树上重录解决，不做文本合并
 - ▶ 合并树全量套件跑着（step 6136391.47），绿则就地录 suite.json → push → PR#21 checks → body 重写 → progress comment
 - ⏸ injection.json 重录需 4-arm GPU rollout → 与 C2 round-trip、训练矩阵同一个 GPU 批次（PR#21 的 evidence 关卡在那之前会红着这一格，comment 里明说）
+
+## 2026-08-26 深夜 —— P6 开跑（第一批卡空出来的当晚）
+
+用户贴 gtop（32 卡空）后数分钟内，Hyper-XVLA 线占走 6 节点、crps 线又占走 nid010329
+的 4 张卡——空窗以分钟计。两侧同查后按「先填卡再查别的」执行：
+
+| 动作 | 位置 | 状态 |
+|---|---|---|
+| **#1 baseline-2k-32k 起跑**（fresh 32k cosine，1N K=20，EXPECTED_PARAMS=33610439） | nid010252 (6141106)，MAX_JOB_HOURS=13.7 | 稳态 2.00 micro/s，wandb project `sp500-mamba3-35m-ctx2k32k` |
+| **injection 四组重录**（P/P2=main 内容 89cf0ff，O/I=ece14dc，参数与 0816 逐字节同） | nid010329 GPU0，与 crps 的 88G 预占共存（7.6G on-demand） | P/P2 各 ~90s 完成，O/I 进行中 |
+| **候位脚本** ask2 bench2k → bench500 → hyb32k | tmux ask2w，10min 轮询，10h 上限 | 运行中，等整空节点 |
+
+要点：nid010329 在我探测（零 PID）与起跑之间 18 分钟内被另一线占满——
+空闲快照有效期以分钟计（又一例）；四组 rollout 靠 on-demand 显存在 2GB 余量里跑完。
+
+**00:05 更正**：共存那轮四组虽然全部 rc=0 跑完，但 **J0（P==P2 逐字节）失败**
+（5/41 文件不同，4 窗口里 3 个的生成消息漂移），J1/J2/J3/J5 连带不可解释；
+J4（注入力学）单独通过。机制：2GB 显存余量下 cuBLAS/XLA 算法自选随邻居占用波动，
+两次运行选到不同算法。08-16 同代码在空节点上 J0 通过。处置：arms_v1 留档，
+`doqrerun` 插到候位队列最前（整空节点、~10 分钟、验证结果打 DOQ_VERIFY_* 标记）。
+教训：**字节恒等类验证要求独占 GPU，「跑得完」不等于「测得准」**。
+
+## 2026-08-27 06:5x —— run1/run2 执行侧验证通过
+
+| 组 | 节点 | micro 速率 | 存点间距(=优化器) | 已到更新 | 本段可入账 |
+|---|---|---|---|---|---|
+| base32k | nid010252,010817 (2N) | 1.72 it/s | Δ157 ✓=1.72÷10×900 | ~1,177 | ~5,400 (8.7h) |
+| hyb32k | nid010329,010413 (2N) | 1.26 it/s | Δ113 ✓=1.26÷10×900 | ~788 | ~1,800 (4.0h) |
+
+2N 吞吐：base ~620 更新/h（32k≈52h）、hyb ~452/h（≈71h）。
+打包完成：223 目录，释放 ~1,980,391 inode，余量 1.99M。
+pr16-verify worktree 已还原 2ba6ab6。pmatch32k 候位中（等 2 空节点，
+6141106 的两个 ft-rtw step 结束即自动放置）。
