@@ -48,3 +48,22 @@ EFFECTIVE_BSZ 恒等式保证换节点数不改实验定义（checkpoint auto �
 - wandb project 全预算一代单独用 `sp500-mamba3-35m-ctx2k32k`；日志目录 `logs_lobs5/ctx2k32k_<arm>`，与 6.4k 那代分开。
 - 每次动手前 gtop+PENDING 两侧同查；attach-first；step 起真名（`base-m3-2k32k` 等）。
 - 观测：CHECKPOINT_EVERY=auto（15 分钟 ckpt / 1 分钟 wandb），LOG_GRAD_NORMS=1，LOG_EVERY=250。
+
+## 2026-08-27 07:2x 执行形态修订：自有 sbatch 链为主，attach 为机会性补充
+
+共享占位分配上三线互踩实录：04:56 我按物理空拿下 nid010817/010413（X-VLA 段间
+空隙），07:00 X-VLA 链回收 010817 → base32k rank 被杀（barrier 遗言，无 Python
+级根因 = 外部 kill）；010413 上其 ft-van 与我方 hyb32k 以 9.2G+83G 共存（合计
+92.6G < 95.6G，侥幸活着）。**物理空探测对别家链的段间空隙无解**，故训练矩阵
+改走独占 sbatch：
+
+| 组 | 段（24h × 2N, afterany 链） | 作业号 |
+|---|---|---|
+| base | s1→s2→s3 | 6153336 → 6153357 → 6153359 |
+| hyb | s1→…→s4 | 6153363 → 6153364 → 6153365 → 6153366 |
+| pm | s1→…→s4 | 6153369 → 6153371 → 6153373 → 6153374 |
+
+段脚本 `pr21_review_fix/code/sbatch_2k32k_segment.batch`：起跑时收掉本组 attach
+副本（step 名匹配 + worktree 路径匹配 kill）、从共享 NODE_LOG_DIR 追最新
+checkpoint 续、达标段直接退出。attach 侧（候位/链控制器）保留：能捡到的空隙
+照捡，sbatch 段起跑时自动接管。
