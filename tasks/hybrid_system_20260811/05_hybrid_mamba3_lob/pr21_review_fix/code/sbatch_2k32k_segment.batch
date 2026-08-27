@@ -1,0 +1,93 @@
+#!/bin/bash
+#SBATCH --partition=workq
+#SBATCH --nodes=2
+#SBATCH --time=24:00:00
+#SBATCH --output=/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/logs/sbseg_%x_%j.log
+#
+# 32k 全预算矩阵的 sbatch 段（每段 24h，链式 afterany 续接）。
+#
+# 为什么从 attach 转 sbatch（2026-08-27 07:0x 的两次撞车）：
+#   u6gb-4-node-chain 是三条线共用的占位分配。X-VLA 的接续链会回收它的历史
+#   节点（nid010817 → 杀掉了我方 base32k 的 rank；nid010413 同型），crps 线
+#   在 nid010329 上堆 step。物理空探测在别家链的段间空隙里必然误判——
+#   自有 sbatch 分配是唯一没有回收方的落脚点。attach 侧保留为机会性补充，
+#   本段起跑时按 step 名杀掉本组的 attach 副本（防同实验双跑），
+#   从共享 NODE_LOG_DIR 追到的最新 checkpoint 续。
+#
+# 用法：ARM=base|hyb|pm sbatch --job-name=<arm>2k32k-seg<N> [--dependency=...] 本文件
+set -uo pipefail
+ARM=${ARM:?ARM=base|hyb|pm}
+TD=/lus/lfs1aip2/projects/public/u6gb/tasks/hybrid_system_20260811/05_hybrid_mamba3_lob
+WT=/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/hybrid-mamba3-nemotron-20260811
+TARGET=${TARGET:-32000}
+
+case "$ARM" in
+  base) SN=base-m3-2k32k; LD=$WT/logs_lobs5/ctx2k32k_base; SC=launch_2k_baseline.sh
+        EXTRA_ENV=(EXPECTED_PARAMS=33610439) ;;
+  hyb)  SN=hyb-m3-2k32k;  LD=$WT/logs_lobs5/ctx2k32k_hyb;  SC=launch_2k_hybrid.sh
+        EXTRA_ENV=(EXPECTED_PARAMS=35435423) ;;
+  pm)   SN=pm-m3-2k32k;   LD=$WT/logs_lobs5/ctx2k32k_pm;   SC=launch_2k_hybrid.sh
+        EXTRA_ENV=(EXPECTED_PARAMS=33609998 HYBRID_ATTN_D_FF=1135) ;;
+  *) echo "FATAL: ARM=$ARM"; exit 2 ;;
+esac
+
+echo "[seg] arm=$ARM job=$SLURM_JOB_ID nodes=$SLURM_JOB_NODELIST $(date -u +%FT%TZ)"
+
+# ── 0. 找最新 checkpoint（共享日志目录 → 最新日志 → Checkpoint dir 面包屑，
+#       退回链状态文件）。步号 ≥ 目标就直接退出，让后继段也依次快速退光。
+latest_log() { ls -t "$LD"/training_*_node0.log 2>/dev/null | head -1; }
+CKPT_DIR=""
+f=$(latest_log)
+[ -n "$f" ] && CKPT_DIR=$(grep -a "Checkpoint dir:" "$f" 2>/dev/null | tail -1 | sed 's|.*Checkpoint dir: ||' | tr -d ' \r')
+if [ -z "$CKPT_DIR" ] || [ ! -d "$CKPT_DIR" ]; then
+    case "$ARM" in base) SF=A;; hyb) SF=B;; pm) SF=P;; esac
+    read -r CKPT_DIR _ < "$TD/results/.ctx2k32k_state_$SF" 2>/dev/null || true
+fi
+STEP=""
+[ -n "$CKPT_DIR" ] && [ -d "$CKPT_DIR" ] && STEP=$(ls "$CKPT_DIR" 2>/dev/null | grep -E '^[0-9]+$' | sort -n | tail -1)
+if [ -n "$STEP" ] && [ "$STEP" -ge "$TARGET" ]; then
+    echo "[seg] $ARM 已达 $STEP >= $TARGET，本段无事退出"; exit 0
+fi
+echo "[seg] restore: dir=${CKPT_DIR:-<fresh>} step=${STEP:-0}"
+
+# ── 1. 杀掉本组的 attach 副本（别的 allocation 上同 step 名 = 同一实验的
+#       机会性副本；sbatch 段独占节点，优先级更高，副本让位）。
+while read -r sid sname; do
+    [ "$sname" = "$SN" ] || continue
+    jid=${sid%%.*}
+    [ "$jid" = "$SLURM_JOB_ID" ] && continue
+    nl=$(scontrol show step "$sid" 2>/dev/null | grep -oE "NodeList=[^ ]+" | cut -d= -f2)
+    [ -z "$nl" ] && continue
+    nn=$(scontrol show hostnames "$nl" 2>/dev/null | wc -l)
+    echo "[seg] 发现 attach 副本 $sid on $nl，收刀（按 worktree 路径匹配）"
+    _ce=$(env | grep -oE '^SLURM[A-Z_]*' | sed 's/^/-u /' | tr '\n' ' ')
+    timeout 180 /usr/bin/env $_ce srun --jobid="$jid" --overlap --nodes="$nn" --ntasks="$nn" \
+        --ntasks-per-node=1 -w "$nl" --cpu-bind=none bash -c '
+          K=""
+          for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader | sort -u); do
+            tr "\0" " " < /proc/$p/cmdline 2>/dev/null \
+              | grep -q "hybrid-mamba3-nemotron" && K="$K $p"
+          done
+          [ -n "$K" ] && { kill $K 2>/dev/null; sleep 8; kill -9 $K 2>/dev/null; }
+          echo "[seg-kill] $(hostname) killed=[$K]"' 2>&1 | grep seg-kill || true
+    sleep 20
+    # 副本可能刚存过盘；重读一次最新步号
+    f=$(latest_log)
+    [ -n "$f" ] && d2=$(grep -a "Checkpoint dir:" "$f" 2>/dev/null | tail -1 | sed 's|.*Checkpoint dir: ||' | tr -d ' \r')
+    [ -n "${d2:-}" ] && [ -d "$d2" ] && CKPT_DIR="$d2" && STEP=$(ls "$d2" | grep -E '^[0-9]+$' | sort -n | tail -1)
+done < <(squeue -s -u "$USER" -h -o "%i %j" 2>/dev/null)
+
+# ── 2. 对自身分配复用 attach 起跑器（零漂移：同一套 preflight/claim/env 推导）
+export ATTACH_JOBID=$SLURM_JOB_ID
+export NNODES_ATTACH=$SLURM_JOB_NUM_NODES
+export NODELIST=$SLURM_JOB_NODELIST
+export SMOKE=0 DEDICATED_ALLOC=0 GATE_OWNER=claude-ctx2k32k
+export STEP_NAME=$SN COSINE_STEPS=32000
+export CHECKPOINT_EVERY=auto LOG_GRAD_NORMS=1 LOG_EVERY=250
+export NODE_LOG_DIR=$LD WANDB_PROJECT=sp500-mamba3-35m-ctx2k32k
+export MAX_JOB_HOURS=${MAX_JOB_HOURS:-23.5}
+for kv in "${EXTRA_ENV[@]}"; do export "$kv"; done
+if [ -n "$STEP" ] && [ "$STEP" -gt 0 ]; then
+    export RESTORE_PATH=$CKPT_DIR RESTORE_STEP=$STEP
+fi
+exec bash "$TD/code/$SC"
