@@ -21,8 +21,8 @@ CK2K=$WT/checkpoints/j6000409_gjnf0e03_6000409
 ALLOCS_HINT=""            # 空 = 每轮动态取账户全部 RUNNING 多节点分配
 POLL=600
 MAX_CYCLES=72
-QUEUE_MULTI="base32k hyb32k pmatch32k"
-QUEUE_SINGLE="doqrerun bench2k bench500"
+QUEUE_MULTI="${QUEUE_MULTI_INIT:-base32k hyb32k pmatch32k}"
+QUEUE_SINGLE="${QUEUE_SINGLE_INIT:-doqrerun bench2k bench500}"
 WANDB_PROJECT_32K=sp500-mamba3-35m-ctx2k32k
 
 log() { echo "[$(date -u +%H:%M:%SZ)] $*"; }
@@ -96,12 +96,15 @@ launch_single() {   # $1=item $2=alloc $3=node → rc0 成功出队
     case "$item" in
       doqrerun)
         log "起 doqrerun on $node ($alloc)（同步，约 10min）"
-        timeout 2400 srun --overlap --jobid="$alloc" -w "$node" --ntasks=1 \
-            --job-name=doq-rerun --cpu-bind=none \
-            env ARMS_SUBDIR=arms_v2 bash "$TD/pr21_review_fix/code/run_four_arms_pr21.sh" \
+        # 不许把 `env` 当 srun 的远端命令：计算节点按 PATH 会先撞上
+        # ~/.local/bin/env（一个 -rw- 的坏占名文件），execve Permission denied。
+        # 变量前缀形式由 srun 自带的环境传播带过去。
+        ARMS_SUBDIR=arms_v2 timeout 2400 srun --overlap --jobid="$alloc" -w "$node" \
+            --ntasks=1 --job-name=doq-rerun --cpu-bind=none \
+            bash "$TD/pr21_review_fix/code/run_four_arms_pr21.sh" \
             > "$TD/logs/doq_pr21_rerun.log" 2>&1
         if ! grep -q DRIVER_DONE "$TD/logs/doq_pr21_rerun.log"; then
-            log "DOQ_ROLLOUT_FAIL（driver 未完成，看 doq_pr21_rerun.log）"; return 0
+            log "DOQ_ROLLOUT_FAIL（driver 未完成，环境性失败，留队重试）"; return 8
         fi
         local A2=/home/u6gb/kangli.u6gb/pr21_doq_artifacts_20260826/arms_v2
         local CPX COIX
