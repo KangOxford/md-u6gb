@@ -29,5 +29,6 @@ exec apptainer exec --nv \
       --kv-cache-dtype fp8 \
       --max-model-len "$MAXLEN" \
       --gpu-memory-utilization 0.92 \
+      --max-num-seqs 256 \
       --host 0.0.0.0 \
       --port "$PORT"
