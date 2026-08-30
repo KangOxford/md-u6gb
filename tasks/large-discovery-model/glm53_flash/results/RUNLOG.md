@@ -55,6 +55,20 @@
 | 17:1x | **弃源码构建,转官方镜像**:Docker Hub 有 `vllm/vllm-openai:glm53-flash-arm64-cu129`(NVIDIA/arm64/cu129,正对本机);集群有 apptainer(+brics 多节点模块)。apptainer pull 转 SIF 中(单文件落 Lustre,inode 友好) | 🔄 |
 | 17:1x | LDM 线:causal real campaign 在 nid011132 跑(pgmpy 评测机已转);MLS-Bench 钉版 cfd57a7e 核验✅;causal 任务 uv 环境✅;augment 接口核对✅(--base-url/--model 即 GLM 服务) | 🔄 |
 
+| 17:30-17:53 | **SIF 起服四连修**:①容器内 TMPDIR 指向宿主未绑定路径 → DeepGEMM JIT 的 nvcc 写不出临时文件(钉 TMPDIR=/tmp) ②KDA 状态块预算 512 < 默认并发 1024(--max-num-seqs 256) ③`--kv-cache-dtype fp8` 的 fp8_ds_mla 内核要求 pe_dim=64,与 **NoPE-MLA 不容**(去掉,MLA KV 本就 512 维压缩) → **Application startup complete** | ✅ **点亮** |
+| 17:55 | **冒烟通过**:nid010723:8383,思维链+算术正确(37×43=1591 平方差验算)+中文自介,tp4 指纹串确认 | ✅ |
+| 17:58 | **训练数据全链路闭环**:mock IR 4 行经 GLM 增强 4/4 成功(单行 reasoning 6,249 字,内容落在 schema 约束与具体数值上),渲染出 Alpaca 结构 SFT 行(`system/instruction/input/output`) | ✅ **交付** |
+| 17:5x | causal real campaign 收官:五网络 MLS-Bench 全量评测成功(precision/recall 全套指标);**deterministic proposer 在 real 模式 collectable=False 系设计使然**——规模化语料须走 LLM-in-the-loop 任务(nanogpt 为主力,config 直接吃 LLM_BASE_URL) | ✅ 定性 |
+
+## 部署最终形态
+
+```
+apptainer + vllm/vllm-openai:glm53-flash-arm64-cu129(官方镜像,9.5G SIF)
+attach_serve_sif.sh <jobid> <node>   # 逐卡验空 → TP4 → 端口 8383
+关键参数: TP4 / max-model-len 65536 / gpu-mem-util 0.92 / max-num-seqs 256 / KV=bf16
+容器环境: TMPDIR=/tmp, DG_JIT_CACHE_DIR、TRITON/VLLM 缓存全指节点本地 /tmp
+```
+
 注:flashinfer 解析为 0.6.16.post3(vllm 0.28.0 钉版),低于部署页写的 0.6.17;
 第一轮不带 MTP 先点亮,若 KDA/稀疏 MLA 核函数报错再单独升 flashinfer。
 另:nid010815 已被另一条线的评测重新占用(每卡 20.5G)——起服时 attach_serve.sh
