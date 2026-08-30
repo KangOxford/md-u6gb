@@ -19,6 +19,8 @@ exec apptainer exec --nv \
     --bind /lus/lfs1aip2:/lus/lfs1aip2 \
     --env VLLM_CACHE_ROOT=/tmp/glm53_vllm_cache_$USER \
     --env TRITON_CACHE_DIR=/tmp/glm53_triton_$USER \
+    --env TMPDIR=/tmp \
+    --env DG_JIT_CACHE_DIR=/tmp/glm53_dgjit_$USER \
     --env HF_HUB_OFFLINE=1 \
     "$SIF" \
     vllm serve "$MODEL" \
