@@ -1,0 +1,34 @@
+# A 组:LDM 完整回路(LLM 提案 + GP 代理 + LCB 采集选择)
+# 与 B 组唯一的差别是 breadth/depth —— 即「有没有一个候选池交给代理去挑」。
+# 其余(模型、预算、起点、评测、种子策略)逐项对齐。
+name: ng_A_ldm_glm53
+task: nanogpt
+algorithm: best_of_n
+mode: real
+contract_profile: repro_ldm_arm
+description: LDM arm - GLM-5.3-Flash proposals scored by GP/LCB before real training.
+args:
+  train-file: resources/train/real_train.py
+  operation-schema: resources/schemas/real_operations.json
+  generator: operation_tool
+  method: best_of_n
+  breadth: 4                # 每轮 4x4=16 个候选进代理打分,选 1 个真评测
+  depth: 4
+  iterations: 20
+  warmup: 5
+  seed-policy: best
+  initial-expansion-parameters: 5
+  max-expansion-parameters: 0
+  disable-expansion-schema-updates: false
+  allow-new-expansion-parameters: false
+  surrogate-mode: lcb
+  gp-beta: 1.0
+  gp-xi: 0.001
+  out-dir: runs
+  run-name: "{name}"
+  eval-command: "/home/u6gb/kangli.u6gb/envs/ldm-nanogpt/bin/python {train_path}"
+  llm-url: null
+  llm-model-name: null
+  api-key: null
+  temperature: 0.7
+  max-tokens: 8192

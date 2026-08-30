@@ -1,0 +1,34 @@
+# B 组:LLM-only 反思基准(单候选,代理无从选择 ⇒ 退化为 propose→evaluate→reflect)
+# 与 A 组逐项对齐,只有 breadth/depth=1 —— 论文里 LLM-only 的本质就是
+# 「没有经验代理来排序候选」,而不是「换一个模型」或「少跑几轮」。
+name: ng_B_llmonly_glm53
+task: nanogpt
+algorithm: best_of_n
+mode: real
+contract_profile: repro_llmonly_arm
+description: LLM-only reflection arm - same model/budget/start, no surrogate selection.
+args:
+  train-file: resources/train/real_train.py
+  operation-schema: resources/schemas/real_operations.json
+  generator: operation_tool
+  method: single_turn        # 单候选;无候选池即无代理选择
+  breadth: 1
+  depth: 1
+  iterations: 20             # 与 A 组同为 20 次真评测
+  warmup: 5
+  seed-policy: best          # 反思式:每轮从当前最好的代码继续改
+  initial-expansion-parameters: 5
+  max-expansion-parameters: 0
+  disable-expansion-schema-updates: false
+  allow-new-expansion-parameters: false
+  surrogate-mode: lcb
+  gp-beta: 1.0
+  gp-xi: 0.001
+  out-dir: runs
+  run-name: "{name}"
+  eval-command: "/home/u6gb/kangli.u6gb/envs/ldm-nanogpt/bin/python {train_path}"
+  llm-url: null
+  llm-model-name: null
+  api-key: null
+  temperature: 0.7
+  max-tokens: 8192
