@@ -16,11 +16,15 @@ step "1 工具链(dsv4 build_env.sh 验证过的组合)"
 # hpc_sdk 的 nvc++ 会被误选为宿主编译器,强制 GNU;conda cuda1281 是完整 12.8 工具链
 export CC=/usr/bin/gcc-12 CXX=/usr/bin/g++-12
 $CXX --version | head -1 || { echo "FATAL: 没有 g++-12"; exit 3; }
-export CUDA_HOME=/home/u6gb/kangli.u6gb/envs/cuda1281
-[ -x $CUDA_HOME/bin/nvcc ] || { echo "FATAL: cuda1281 无 nvcc"; exit 3; }
+# 第 5 轮教训:分支钉的 CUTLASS 需要 ≥12.9 的 nvcc 前端(12.8 在 cute/type_traits
+# 折叠表达式上报错),默认用 cuda129;conda 布局的三处补齐做成幂等步骤
+export CUDA_HOME=${CUDA_HOME_OVERRIDE:-/home/u6gb/kangli.u6gb/envs/cuda129}
+[ -x $CUDA_HOME/bin/nvcc ] || { echo "FATAL: $CUDA_HOME 无 nvcc"; exit 3; }
 export PATH=$CUDA_HOME/bin:$PATH
 export CPATH="$CUDA_HOME/targets/sbsa-linux/include${CPATH:+:$CPATH}"
 [ -e $CUDA_HOME/lib64 ] || ln -sfn lib $CUDA_HOME/lib64
+(cd $CUDA_HOME/include && for f in ../targets/sbsa-linux/include/*; do ln -sfn "$f" .; done)
+[ -e $CUDA_HOME/lib/libnvrtc.so ] || ln -sfn libnvrtc.so.12 $CUDA_HOME/lib/libnvrtc.so
 nvcc --version | tail -1
 
 step "2 venv 与构建工具"
