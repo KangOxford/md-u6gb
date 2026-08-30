@@ -26,7 +26,6 @@ exec apptainer exec --nv \
     vllm serve "$MODEL" \
       --served-model-name GLM-5.3-Flash \
       --tensor-parallel-size 4 \
-      --kv-cache-dtype fp8 \
       --max-model-len "$MAXLEN" \
       --gpu-memory-utilization 0.92 \
       --max-num-seqs 256 \
