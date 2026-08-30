@@ -51,6 +51,10 @@
 | 16:5x | **LDM 侧并行打通**:仓库 clone(b5dab16a)、uv 环境(ldm-venv)、mock campaign 跑通、**采集发射 4 行 ldm-2.0 IR + ldm_sft.jsonl**✅;机制结论:发射在任务侧,runner 会 pushd 进任务目录 ⇒ `LDM_DATA_COLLECTION_DIR` 必须绝对路径 | ✅ |
 | 16:5x | causal_discovery 任务预算 `llm_requests: 0` ⇒ **它的 campaign 不调 LLM**;GLM 在数据管线中的角色:(a) LLM-proposal 类任务(nanogpt 等)的 campaign 本体 (b) 全部 IR 的 reasoning 增强(augment);real 模式需 `--upstream-root`(MLS-Bench 钉版) | ✅ 定性 |
 
+| 17:0x | 构建 5/6 轮同点失败:CUTLASS 头在 CUDA 目标上报 `std::is_signed_v` 缺失/折叠表达式报废——`-std=c++20` 在但 **`-ccbin` 缺失,宿主编译器落到系统 gcc-7**;升 nvcc 12.9 无效(病根不在 nvcc) | ❌ 定性 |
+| 17:1x | **弃源码构建,转官方镜像**:Docker Hub 有 `vllm/vllm-openai:glm53-flash-arm64-cu129`(NVIDIA/arm64/cu129,正对本机);集群有 apptainer(+brics 多节点模块)。apptainer pull 转 SIF 中(单文件落 Lustre,inode 友好) | 🔄 |
+| 17:1x | LDM 线:causal real campaign 在 nid011132 跑(pgmpy 评测机已转);MLS-Bench 钉版 cfd57a7e 核验✅;causal 任务 uv 环境✅;augment 接口核对✅(--base-url/--model 即 GLM 服务) | 🔄 |
+
 注:flashinfer 解析为 0.6.16.post3(vllm 0.28.0 钉版),低于部署页写的 0.6.17;
 第一轮不带 MTP 先点亮,若 KDA/稀疏 MLA 核函数报错再单独升 flashinfer。
 另:nid010815 已被另一条线的评测重新占用(每卡 20.5G)——起服时 attach_serve.sh
