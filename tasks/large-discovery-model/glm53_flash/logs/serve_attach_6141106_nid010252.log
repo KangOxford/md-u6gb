@@ -1,0 +1,8 @@
+[attach] nid010252 4 卡验空通过,启动 vLLM (job 6141106)
+mkdir: cannot create directory ‘/local/scratch’: Permission denied
+mkdir: cannot create directory ‘/local/scratch’: Permission denied
+[serve] host=nid010252 port=8383 maxlen=65536 tp=4
+0, 47 MiB
+1, 71 MiB
+2, 234 MiB
+3, 81 MiB

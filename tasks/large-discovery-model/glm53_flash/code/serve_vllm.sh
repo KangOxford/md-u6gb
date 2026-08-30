@@ -11,10 +11,15 @@ MODEL=/lus/lfs1aip2/projects/public/u6gb/tasks/large-discovery-model/models/GLM-
 PORT=${PORT:-8383}
 MAXLEN=${MAXLEN:-65536}
 
-# 编译缓存放节点本地盘,不打 Lustre(/local/scratch 计算节点不可写,沿 dsv4 用 TMPDIR)
-export TRITON_CACHE_DIR=${TMPDIR:-/tmp}/glm53_triton_${USER}
-export VLLM_CACHE_ROOT=${TMPDIR:-/tmp}/glm53_vllm_cache_${USER}
-mkdir -p "$TRITON_CACHE_DIR" "$VLLM_CACHE_ROOT"
+# 编译缓存放节点本地盘,不打 Lustre。attach 环境里 TMPDIR 可能指向 batch 宿主节点
+# 才有的 /local/scratch 作业目录(本节点建不了),所以「试建失败就落 /tmp」,
+# ${TMPDIR:-/tmp} 只兜未设置、兜不住设置了但不可用。
+CACHE_BASE=${TMPDIR:-/tmp}
+mkdir -p "$CACHE_BASE" 2>/dev/null || CACHE_BASE=/tmp
+export TRITON_CACHE_DIR=$CACHE_BASE/glm53_triton_${USER}
+export VLLM_CACHE_ROOT=$CACHE_BASE/glm53_vllm_cache_${USER}
+mkdir -p "$TRITON_CACHE_DIR" "$VLLM_CACHE_ROOT" || { echo "FATAL: 缓存目录建不出来: $CACHE_BASE" >&2; exit 8; }
+echo "[serve] cache_base=$CACHE_BASE"
 
 echo "[serve] host=$(hostname) port=$PORT maxlen=$MAXLEN tp=4"
 nvidia-smi --query-gpu=index,memory.used --format=csv,noheader
