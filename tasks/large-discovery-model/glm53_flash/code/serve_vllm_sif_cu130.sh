@@ -15,7 +15,7 @@ MODEL=/lus/lfs1aip2/projects/public/u6gb/tasks/large-discovery-model/models/GLM-
 SIF=${SIF:-$T/images/vllm-glm53-arm64-cu130.sif}
 HOST_COMPAT=/home/u6gb/kangli.u6gb/envs/cuda13-compat/usr/local/cuda-13.0/compat
 PORT=${PORT:-8384}          # 与 cu129 版(8383)错开,可并存对比
-MAXLEN=${MAXLEN:-65536}
+MAXLEN=${MAXLEN:-32768}
 [ -f "$SIF" ] || { echo "FATAL: SIF 不存在: $SIF" >&2; exit 6; }
 
 # 容器里有没有自带 compat
@@ -48,7 +48,7 @@ exec apptainer exec --nv \
       --tensor-parallel-size 4 \
       --max-model-len "$MAXLEN" \
       --gpu-memory-utilization 0.88 \
-      --max-num-seqs 256 \
+      --max-num-seqs 64 \
       --tool-call-parser glm47 \
       --reasoning-parser glm45 \
       --enable-auto-tool-choice \
