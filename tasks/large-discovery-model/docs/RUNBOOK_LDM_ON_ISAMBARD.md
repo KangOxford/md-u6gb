@@ -422,3 +422,63 @@ tasks/large-discovery-model/
 
 有问题直接问,或者看 `glm53_flash/results/RUNLOG.md`——那里面是逐条的时间线,
 每个坑什么时候踩的、怎么定性的、怎么修的都在。
+
+---
+
+## 11. 在 565 驱动上跑 CUDA 13（已实测打通，2026-08-31）
+
+节点驱动是 **565.57.01 = CUDA 12.7**，而 CUDA 13 的应用要求驱动 ≥580。驱动是内核模块，
+没有 root 改不了。但 NVIDIA 对**数据中心卡**（GH200/H100 符合）提供
+**forward compatibility**：装一份用户态的 `libcuda.so`，让应用加载它而不是系统那份。
+
+### 裸机（自己的 venv）
+
+```bash
+# 一次性:取 compat 库解到 HOME,系统一个字节不动
+cd ~/envs && mkdir -p cuda13-compat && cd cuda13-compat
+curl -sL -o compat.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/sbsa/cuda-compat-13-0_580.95.05-0ubuntu1_arm64.deb
+ar x compat.deb && tar xf data.tar.*
+
+# 用时挂在最前面
+export LD_LIBRARY_PATH=~/envs/cuda13-compat/usr/local/cuda-13.0/compat:$LD_LIBRARY_PATH
+```
+
+实测 `torch 2.13.0+cu130`：不挂 `cuda_available=False`，挂上 `True` + 4 卡认到 +
+2048² 矩阵乘结果正确。现成环境在 `~/envs/cu13-test`。
+
+### 容器（apptainer）—— 这里有个坑
+
+**vLLM 官方 cu130 镜像自带 `/usr/local/cuda/compat/libcuda.so.580.82.07`，
+但开箱即用仍然是 `cuda_available=False`。** 因为 `apptainer --nv` 注入的是宿主 565 的
+驱动库，容器自己的 compat 目录不在 `LD_LIBRARY_PATH` 上。必须显式指定：
+
+```bash
+apptainer exec --nv --env LD_LIBRARY_PATH=/usr/local/cuda/compat:/usr/local/cuda/lib64 ...
+```
+
+不写这一行，任何人拿到这个镜像都会得出「CUDA 13 在这台机器上用不了」的错误结论。
+落地脚本见 `glm53_flash/code/serve_vllm_sif_cu130.sh`（会自动探测容器有没有自带
+compat，没有就把宿主那份绑进去）。
+
+### 实测结果（vLLM cu130 镜像 + GLM-5.3-Flash）
+
+| 项 | 结果 |
+|---|---|
+| 服务启动 | ✅ 570–590 秒就绪 |
+| 对话 | ✅ 答案正确 |
+| tool calling | ✅ 正确产出 `set_numeric(...)` —— LDM 的 `operation_tool` 走这条路 |
+| LDM campaign 端到端 | ✅ `best_score 0.990808`（真实 bpb，优于基线 1.0193） |
+
+### 版本对应与注意
+
+`cuda-compat-13-N` 的包版本号是它提供的**用户态驱动版本**：13-0→580、13-2→595、13-3→610。
+装 13-0 最保守。
+
+**还没验证的**：多机 NCCL 在 compat 下的行为；Flash-Attention 等自定义扩展的编译对齐。
+遇到诡异的底层报错时，先把 compat 摘掉对照跑一次，能很快分辨是不是它引起的。
+
+### 一个布局教训
+
+cu130 的第一次 LDM 测试四次评测全是哨位值，`stderr` 里是 `CUDA out of memory`——
+**服务和评测训练放在了同一个节点**，服务 TP4 吃满 82 GiB/卡，训练申请不到显存。
+服务与评测必须分节点，这和 §5 「定时评测必须独占 GPU」是同一件事的两个面。
