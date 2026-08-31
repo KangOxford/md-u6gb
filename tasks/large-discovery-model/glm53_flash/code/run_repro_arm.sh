@@ -29,7 +29,11 @@ export LDM_DATA_COLLECTION_DIR=$L/data/generated/repro_arm${ARM}_s${SEED}
 
 echo "[arm$ARM] host=$(hostname) seed=$SEED glm=$GLM_HOST gpu=${CUDA_VISIBLE_DEVICES:-all}"
 nvidia-smi --query-gpu=index,memory.used --format=csv,noheader | head -4
-curl -s --max-time 10 -o /dev/null -w "[arm$ARM] glm_health=%{http_code}\n" http://${GLM_HOST}:8383/health
+# 服务不健康就拒跑:6204550 那次 6 条 campaign 在 glm_health=000 下空转了一小时,
+# 因为脚本只是打印健康码、不据此停下。
+HEALTH=$(curl -s --max-time 10 -o /dev/null -w "%{http_code}" "http://${GLM_HOST}:8383/health")
+echo "[arm$ARM] glm_health=$HEALTH"
+[ "$HEALTH" = "200" ] || { echo "[arm$ARM] FATAL: GLM 服务不可用($HEALTH),拒绝起跑" >&2; exit 9; }
 
 cd $L
 exec /home/u6gb/kangli.u6gb/envs/ldm-nanogpt/bin/python scripts/run_ldm_tts.py "$CFG" \

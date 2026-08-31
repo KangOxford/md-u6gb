@@ -1,22 +1,25 @@
-# B 组:LLM-only 反思基准(单候选,代理无从选择 ⇒ 退化为 propose→evaluate→reflect)
-# 与 A 组逐项对齐,只有 breadth/depth=1 —— 论文里 LLM-only 的本质就是
-# 「没有经验代理来排序候选」,而不是「换一个模型」或「少跑几轮」。
+# B 组:LLM-only 反思基准 —— 同模型、同预算、同起点,只是没有 GP 引导。
+# 真评测次数与 A 组逐次相同(breadth=1 depth=1,每轮 1 次真训练),
+# 每轮恰好 1 次真训练,与论文提交的 real_operation_tool_best_of_n 形状一致
+# (论文实测「100 次迭代中 99 个外层候选进入真训练」)。
 name: ng_B_llmonly_glm53
 task: nanogpt
 algorithm: best_of_n
 mode: real
 contract_profile: repro_llmonly_arm
-description: LLM-only reflection arm - same model/budget/start, no surrogate selection.
+description: LLM-only reflection arm - identical budget, no GP acquisition feedback.
 args:
   train-file: resources/train/real_train.py
   operation-schema: resources/schemas/real_operations.json
   generator: operation_tool
-  method: single_turn        # 单候选;无候选池即无代理选择
+  method: best_of_n
   breadth: 1
   depth: 1
-  iterations: 20             # 与 A 组同为 20 次真评测
+  iterations: 40
   warmup: 5
-  seed-policy: best          # 反思式:每轮从当前最好的代码继续改
+  seed-policy: best
+  acquisition-feedback: none       # ← 唯一差别:GP 引导关
+  acquisition-feedback-probes: 96
   initial-expansion-parameters: 5
   max-expansion-parameters: 0
   disable-expansion-schema-updates: false

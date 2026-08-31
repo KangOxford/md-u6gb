@@ -1,22 +1,25 @@
-# A 组:LDM 完整回路(LLM 提案 + GP 代理 + LCB 采集选择)
-# 与 B 组唯一的差别是 breadth/depth —— 即「有没有一个候选池交给代理去挑」。
-# 其余(模型、预算、起点、评测、种子策略)逐项对齐。
+# A 组:LDM 完整回路 —— GP 代理把预测与不确定性喂回提案(acquisition-feedback)
+# 与 B 组的差别**只有这一项**。真评测预算逐次对齐:breadth=1 depth=1 ⇒
+# 每轮恰好 1 次真训练,与论文提交的 real_operation_tool_best_of_n 形状一致
+# (论文实测「100 次迭代中 99 个外层候选进入真训练」)。
 name: ng_A_ldm_glm53
 task: nanogpt
 algorithm: best_of_n
 mode: real
 contract_profile: repro_ldm_arm
-description: LDM arm - GLM-5.3-Flash proposals scored by GP/LCB before real training.
+description: LDM arm - GP acquisition feedback steers GLM-5.3-Flash proposals.
 args:
   train-file: resources/train/real_train.py
   operation-schema: resources/schemas/real_operations.json
   generator: operation_tool
   method: best_of_n
-  breadth: 4                # 每轮 4x4=16 个候选进代理打分,选 1 个真评测
-  depth: 4
-  iterations: 20
+  breadth: 1
+  depth: 1
+  iterations: 40
   warmup: 5
   seed-policy: best
+  acquisition-feedback: brief      # ← 唯一差别:GP 引导开
+  acquisition-feedback-probes: 96
   initial-expansion-parameters: 5
   max-expansion-parameters: 0
   disable-expansion-schema-updates: false
