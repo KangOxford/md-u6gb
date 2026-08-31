@@ -31,13 +31,19 @@ val_bpb 0.986220 → 0.981844)的场景。
 **要复现的量不是"某个 BPB 值",而是一个比值**:LDM 相对 LLM-only 反思的
 绝对改善倍数(论文 2.4×)。所以必须成对跑两组,同起点、同预算、同评测:
 
-| 组 | 配置 | 说明 |
+| 组 | `acquisition-feedback` | 说明 |
 |---|---|---|
-| **A. LDM** | `real_operation_tool_best_of_n.yaml` + GP 代理 + LCB 采集 | 完整 generate→select→evaluate→update 回路 |
-| **B. LLM-only** | 同一提案模型、同预算,去掉代理与采集(反思式迭代) | 论文的对比基准 |
+| **A. LDM** | `brief` | GP 把预测与不确定性喂回提案,即论文说的"代理把外部观测变成预测与认知不确定性,再由采集函数决定下一步" |
+| **B. LLM-only** | `none` | 同模型同预算,只反思实际评测结果,没有代理信号 |
 
-共同参数:提案模型 = **GLM-5.3-Flash**(本机 TP4 服务),起点 = 同一份
-`real_train.py`,每候选评测 = 300 秒真训练,迭代数按预算定(论文用 100)。
+**其余逐项相同**:提案模型 = GLM-5.3-Flash(本机 TP4 服务)、起点 = 同一份
+`real_train.py`、`breadth=1 depth=1`(每轮恰好 1 次真评测)、`warmup=5`、
+`iterations=40`、`seed-policy=best`、`surrogate-mode=lcb`、评测 = 300 秒真训练。
+
+**为什么落在这一项**:读代码确认 `breadth x depth` 决定的是**真评测次数**,
+不是 GP 打分的候选数 —— 用它做区分会让 A 组多跑 7.7 倍评测。真正把代理接进
+回路的开关是 `--acquisition-feedback`(默认 `none`),它决定 GP 的后验要不要
+进提案提示。这才是"有没有经验代理"这一条区别的机械实现。
 
 **判定**:`Δ_A / Δ_B` 与论文 2.4× 比较;`Δ` 取从共同起点算起的 val_bpb 绝对下降。
 单条轨迹不构成因果估计(论文自己也这么说),所以多种子是必需项而非可选项。
@@ -54,12 +60,15 @@ mfu 33.31% | 50.3M params | 799 steps | 418.9M tokens | peak 45.1 GiB
 
 **每组必须独占一张 GPU**:评测是 300 秒定时训练,被抢卡 ⇒ 同样 300 秒跑更少
 token ⇒ bpb 变差。GPU 争抢会直接伪造出「这组更差」的结论。A 组落 nid011131、
-B 组落 nid011132,各一张卡。
+B 组落 nid011132,各一张卡 —— 靠 `srun --gres=gpu:1 --exclusive` 分卡,
+**不自设 `CUDA_VISIBLE_DEVICES`**(见下方缺陷表第三行)。
 
 **契约扩展**:仓库契约把 `iterations=100 / warmup=20 / method=best_of_n` 锁死,
 只覆盖 LDM 一组的满预算。没有绕过校验,而是按它的 schema **正式登记两个新
-profile**:`repro_ldm_arm`(best_of_n 20+5)与 `repro_llmonly_arm`(single_turn 20+5)。
-预算 25 次真评测 ≈ 2.5 小时/组,按 18 小时窗口反推,留出多种子余量。
+profile**:`repro_ldm_arm` 与 `repro_llmonly_arm`,两者的 `locked_args` **完全相同**
+(`best_of_n` / `iterations=40` / `warmup=5`)—— 契约锁的是"花了多少真评测",
+而那正是必须对齐的量;区别项 `acquisition-feedback` 不是预算项,不进 locked_args。
+每组 85 次真评测(5 预热 + 40 轮 x 2),按 12 小时作业窗口反推。
 契约摘要随每次运行快照落盘,改动可追溯。
 
 ## 共卡会伪造结论(实测,已据此改方案)
