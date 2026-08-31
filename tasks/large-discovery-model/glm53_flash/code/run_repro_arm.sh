@@ -28,7 +28,8 @@ export LDM_DATA_COLLECTION_ENABLED=1
 export LDM_DATA_COLLECTION_DIR=$L/data/generated/repro_arm${ARM}_s${SEED}
 
 echo "[arm$ARM] host=$(hostname) seed=$SEED glm=$GLM_HOST gpu=${CUDA_VISIBLE_DEVICES:-all}"
-nvidia-smi --query-gpu=index,memory.used --format=csv,noheader | head -4
+# 打 UUID 而不是 index:step 内部 index 恒为 0,UUID 才能证明几条落在不同物理卡上
+nvidia-smi --query-gpu=uuid,memory.used --format=csv,noheader | head -4
 # 服务不健康就拒跑:6204550 那次 6 条 campaign 在 glm_health=000 下空转了一小时,
 # 因为脚本只是打印健康码、不据此停下。
 HEALTH=$(curl -s --max-time 10 -o /dev/null -w "%{http_code}" "http://${GLM_HOST}:8383/health")
