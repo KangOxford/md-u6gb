@@ -8,6 +8,9 @@ MODEL=/lus/lfs1aip2/projects/public/u6gb/tasks/large-discovery-model/models/GLM-
 SIF=$T/images/vllm-glm53-arm64-cu129.sif
 PORT=${PORT:-8383}
 MAXLEN=${MAXLEN:-32768}   # 64k 的 KV 预留挤掉了 cuBLAS 工作区;LDM 的 prompt 远小于 32k
+# KDA 每个并发序列占一块定长状态,可用块数随分配波动(实测 512 与 136 两种),
+# 256 在 136 那次直接启动失败。复现只有 6 个客户端各 1 个在飞请求,32 已是 5 倍余量。
+MAXSEQS=${MAXSEQS:-32}
 [ -f "$SIF" ] || { echo "FATAL: SIF 不存在: $SIF" >&2; exit 6; }
 
 echo "[serve-sif] host=$(hostname) port=$PORT maxlen=$MAXLEN tp=4"
@@ -28,7 +31,7 @@ exec apptainer exec --nv \
       --tensor-parallel-size 4 \
       --max-model-len "$MAXLEN" \
       --gpu-memory-utilization 0.92 \
-      --max-num-seqs 256 \
+      --max-num-seqs "$MAXSEQS" \
       --tool-call-parser glm47 \
       --reasoning-parser glm45 \
       --enable-auto-tool-choice \
