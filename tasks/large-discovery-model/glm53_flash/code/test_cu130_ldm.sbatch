@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=cu130-ldm-test
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=288
 #SBATCH --gres=gpu:4
@@ -15,10 +15,14 @@
 set -u
 T=/lus/lfs1aip2/projects/public/u6gb/tasks/large-discovery-model/glm53_flash
 L=/lus/lfs1aip2/projects/public/u6gb/tasks/large-discovery-model/Large-Discovery-Models
-NODE=$(hostname)
-echo "[cu130] job=$SLURM_JOB_ID node=$NODE"
+# 服务与训练必须分节点:单节点时服务 TP4 吃满 82 GiB/卡,评测训练直接 OOM
+# (6221413 四次评测全是哨位值,stderr 里是 CUDA out of memory)。
+NODES=($(scontrol show hostnames "$SLURM_JOB_NODELIST"))
+NODE=${NODES[0]}; EVAL_NODE=${NODES[1]}
+echo "[cu130] job=$SLURM_JOB_ID svc=$NODE eval=$EVAL_NODE"
 
-bash $T/code/serve_vllm_sif_cu130.sh > "$T/logs/cu130_serve_${SLURM_JOB_ID}.log" 2>&1 &
+srun --exclusive --nodes=1 --ntasks=1 -w "$NODE" --gres=gpu:4 --cpus-per-task=64 \
+    --job-name=glm53-cu130 --cpu-bind=none bash $T/code/serve_vllm_sif_cu130.sh > "$T/logs/cu130_serve_${SLURM_JOB_ID}.log" 2>&1 &
 SVC=$!
 
 READY=0
@@ -59,7 +63,9 @@ export LLM_BASE_URL=http://${NODE}:8384/v1 LLM_MODEL_NAME=GLM-5.3-Flash LLM_API_
 export TTS_LLM_URL=$LLM_BASE_URL TTS_LLM_MODEL=$LLM_MODEL_NAME TTS_LLM_API_KEY=$LLM_API_KEY
 cd $L
 set -o pipefail   # 上一版 rc=0 是假的:契约拒绝后退出码被 tail 吃掉了
-timeout 4500 /home/u6gb/kangli.u6gb/envs/ldm-nanogpt/bin/python scripts/run_ldm_tts.py \
+timeout 4500 srun --exclusive --nodes=1 --ntasks=1 -w "$EVAL_NODE" --gres=gpu:1 \
+    --cpus-per-task=64 --job-name=cu130-campaign --cpu-bind=none \
+    /home/u6gb/kangli.u6gb/envs/ldm-nanogpt/bin/python scripts/run_ldm_tts.py \
     $T/code/ng_smoke_cu130.yaml \
     --set "args.run-name=cu130_smoke_${SLURM_JOB_ID}" 2>&1 | tail -25
 echo "[cu130] campaign rc=${PIPESTATUS[0]:-$?}"

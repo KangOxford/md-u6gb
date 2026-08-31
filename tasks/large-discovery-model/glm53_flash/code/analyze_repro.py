@@ -14,6 +14,13 @@ RUNS = Path("/lus/lfs1aip2/projects/public/u6gb/tasks/large-discovery-model/"
 BPB = re.compile(rb"val_bpb=([0-9.]+(?:e[+-]?\d+)?)")
 SENTINEL = 1e9
 
+# 共同基线:未修改的 resources/train/real_train.py 实测 val_bpb。
+# 运行配置里 evaluate_root=False、warmup_include_root=False —— 原始代码不进评测,
+# 两组的第一次评测已经是 LLM 改过的候选,起点各不相同(A ~0.994 vs B ~1.05)。
+# 拿各自的第一次评测当起点会让起得高的那组天然有更大下降空间,
+# 论文比的是「从共同起点的改善」,所以两组都以这个固定基线为准。
+BASELINE = 1.019308
+
 def pick_dir(arm, seed):
     """按数字后缀选最新的 run 目录(mtime 不可靠:旧目录可能被后写)。"""
     cands = list(RUNS.glob(f"repro_arm{arm}_s{seed}")) + \
@@ -48,17 +55,18 @@ def main():
             done = (d / "summary.json").exists()
             rows[(arm, seed)] = (d.name, vals, done)
 
-    print(f"{'组':<3} {'种子':<4} {'有效评测':>8} {'起点':>10} {'最好':>10} {'Δ下降':>10} {'状态':<6} 目录")
+    print(f"共同基线(未修改 real_train.py 实测): val_bpb = {BASELINE:.6f}\n")
+    print(f"{'组':<3} {'种子':<4} {'有效评测':>8} {'首评':>10} {'最好':>10} {'Δ下降':>10} {'状态':<6} 目录")
     print("-" * 84)
     for (arm, seed), (name, vals, done) in sorted(rows.items()):
         st = "完成" if done else "跑中"
         if not vals:
             print(f"{arm:<3} {seed:<4} {0:>8} {'—':>10} {'—':>10} {'—':>10} {st:<6} {name}")
             continue
-        start, best = vals[0], min(vals)
-        deltas[(arm, seed)] = start - best
-        print(f"{arm:<3} {seed:<4} {len(vals):>8} {start:>10.6f} {best:>10.6f} "
-              f"{start-best:>10.6f} {st:<6} {name}")
+        first, best = vals[0], min(vals)
+        deltas[(arm, seed)] = BASELINE - best
+        print(f"{arm:<3} {seed:<4} {len(vals):>8} {first:>10.6f} {best:>10.6f} "
+              f"{BASELINE-best:>10.6f} {st:<6} {name}")
 
     print()
     ratios = []
