@@ -41,19 +41,22 @@ done
 echo "[repro] GLM 就绪于 ${GLM_NODE}:8383,用时 $((i*10))s"
 
 # ---- 3. 起 6 条 campaign,每条独占一张 GPU ----
-launch() {  # $1=node $2=gpu $3=arm $4=seed
+# 不要自己设 CUDA_VISIBLE_DEVICES:`srun --gres=gpu:1 --exclusive` 已经把一张卡
+# 隔离给这个 step,step 内部看到的永远是设备 0。6216995 那次给 GPU 1/2/3 的四条
+# 因此指向不存在的设备,每次评测 11 秒返回哨兵值 1e+09。
+launch() {  # $1=node $2=arm $3=seed
     srun --exclusive --nodes=1 --ntasks=1 -w "$1" --gres=gpu:1 \
-        --cpus-per-task=64 --job-name="repro-$3$4" --cpu-bind=none \
-        bash -c "CUDA_VISIBLE_DEVICES=$2 ARM=$3 SEED=$4 GLM_HOST=$GLM_NODE bash $T/code/run_repro_arm.sh" \
-        > "$T/logs/sh_arm$3_s$4_${SLURM_JOB_ID}.log" 2>&1 &
-    echo "[repro] launched arm$3 seed$4 -> $1 gpu$2"
+        --cpus-per-task=64 --job-name="repro-$2$3" --cpu-bind=none \
+        bash -c "ARM=$2 SEED=$3 GLM_HOST=$GLM_NODE bash $T/code/run_repro_arm.sh" \
+        > "$T/logs/sh_arm$2_s$3_${SLURM_JOB_ID}.log" 2>&1 &
+    echo "[repro] launched arm$2 seed$3 -> $1"
 }
-launch "${NODES[1]}" 0 A 1
-launch "${NODES[1]}" 1 B 1
-launch "${NODES[1]}" 2 A 2
-launch "${NODES[1]}" 3 B 2
-launch "${NODES[2]}" 0 A 3
-launch "${NODES[2]}" 1 B 3
+launch "${NODES[1]}" A 1
+launch "${NODES[1]}" B 1
+launch "${NODES[1]}" A 2
+launch "${NODES[1]}" B 2
+launch "${NODES[2]}" A 3
+launch "${NODES[2]}" B 3
 
 # ---- 4. 等全部 campaign 结束(不等服务:它会一直挂着) ----
 wait -n $(jobs -p | grep -v "^${GLM_PID}$") 2>/dev/null

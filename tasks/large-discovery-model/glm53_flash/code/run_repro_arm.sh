@@ -35,6 +35,20 @@ HEALTH=$(curl -s --max-time 10 -o /dev/null -w "%{http_code}" "http://${GLM_HOST
 echo "[arm$ARM] glm_health=$HEALTH"
 [ "$HEALTH" = "200" ] || { echo "[arm$ARM] FATAL: GLM 服务不可用($HEALTH),拒绝起跑" >&2; exit 9; }
 
+# 健康 200 不等于能用:operation_tool 生成器走 tool calling,而 6216995 那次服务
+# 没带 --enable-auto-tool-choice,每个候选的 LLM 调用都吃 400,整轮 generation_error。
+# 所以起跑前先真发一次带 tools 的请求。
+TOOLPROBE=$(curl -s --max-time 120 "http://${GLM_HOST}:8383/v1/chat/completions" \
+    -H 'Content-Type: application/json' -d '{"model":"GLM-5.3-Flash","max_tokens":32,
+    "messages":[{"role":"user","content":"set lr to 0.001"}],
+    "tools":[{"type":"function","function":{"name":"set_numeric","parameters":{"type":"object",
+    "properties":{"name":{"type":"string"},"value":{"type":"number"}},"required":["name","value"]}}}],
+    "tool_choice":"auto"}' 2>/dev/null)
+case "$TOOLPROBE" in
+    *'"error"'*) echo "[arm$ARM] FATAL: 工具调用不可用: $(echo "$TOOLPROBE" | head -c 200)" >&2; exit 10 ;;
+    *) echo "[arm$ARM] tool_calling=ok" ;;
+esac
+
 cd $L
 exec /home/u6gb/kangli.u6gb/envs/ldm-nanogpt/bin/python scripts/run_ldm_tts.py "$CFG" \
     --set "args.run-name=repro_arm${ARM}_s${SEED}"

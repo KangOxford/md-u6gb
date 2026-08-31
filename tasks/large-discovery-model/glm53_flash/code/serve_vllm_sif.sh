@@ -29,5 +29,8 @@ exec apptainer exec --nv \
       --max-model-len "$MAXLEN" \
       --gpu-memory-utilization 0.92 \
       --max-num-seqs 256 \
+      --tool-call-parser glm47 \
+      --reasoning-parser glm45 \
+      --enable-auto-tool-choice \
       --host 0.0.0.0 \
       --port "$PORT"
