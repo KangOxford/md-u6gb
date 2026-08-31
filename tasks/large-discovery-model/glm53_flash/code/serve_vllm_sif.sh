@@ -7,7 +7,7 @@ T=/lus/lfs1aip2/projects/public/u6gb/tasks/large-discovery-model/glm53_flash
 MODEL=/lus/lfs1aip2/projects/public/u6gb/tasks/large-discovery-model/models/GLM-5.3-Flash
 SIF=$T/images/vllm-glm53-arm64-cu129.sif
 PORT=${PORT:-8383}
-MAXLEN=${MAXLEN:-65536}
+MAXLEN=${MAXLEN:-32768}   # 64k 的 KV 预留挤掉了 cuBLAS 工作区;LDM 的 prompt 远小于 32k
 [ -f "$SIF" ] || { echo "FATAL: SIF 不存在: $SIF" >&2; exit 6; }
 
 echo "[serve-sif] host=$(hostname) port=$PORT maxlen=$MAXLEN tp=4"
