@@ -79,6 +79,18 @@ profile**:`repro_ldm_arm`(best_of_n 20+5)与 `repro_llmonly_arm`(single_turn 20+
 多种子是相对论文的增量:论文 nanoGPT 只报了单条轨迹,自己也写明
 "not a controlled causal estimate";3 种子成对能给出方向一致性。
 
+## 三轮起跑暴露的缺陷(全部已修,记录以免重犯)
+
+| 轮次 | 缺陷 | 表现 | 修法 |
+|---|---|---|---|
+| 6204550 | 服务与实验分在两个作业 | 托管 GLM 的分配先到期,6 条 campaign 在 `glm_health=000` 下空跑 1 小时 | 服务改为**与实验同作业**,健康不通过就不起跑(exit 9) |
+| 6216995 | `breadth x depth` 是**真评测次数**,不是 GP 打分的候选数 | A 组 345 次 vs B 组 45 次,预算差 7.7 倍 —— 这样比是把"多跑评测"算到代理头上 | 两组同为 `breadth=1 depth=1`,唯一差别改为 `acquisition-feedback`(GP 引导开/关) |
+| 6216995 | 自设 `CUDA_VISIBLE_DEVICES=1/2/3` | `srun --gres=gpu:1` 已隔离好卡,step 内部永远是设备 0;那四条指向不存在的卡,每次评测 11 秒返回 1e+09 | 删掉,靠 `--gres=gpu:1 --exclusive` 分卡 |
+| 6216995 | 起服省掉了 `--tool-call-parser/--enable-auto-tool-choice` | `/health` 返回 200,但 `operation_tool` 生成器走 tool calling,每个候选吃 **400 Bad Request**,30/30 外层候选 `generation_error` | 加回官方标志;起跑前**真发一次带 tools 的请求**,失败 exit 10 |
+
+**这四条的共性**:前置检查查的是"进程在不在",而真正会坏的是"这条具体路径通不通"。
+现在 `run_repro_arm.sh` 的两道检查(健康 + 工具调用探针)都是**发真实形状的请求**。
+
 ## 执行状态
 
 见 `RUNLOG.md`。GLM 服务形态与坑见记忆 `glm53-flash-serving-on-gh200`。
