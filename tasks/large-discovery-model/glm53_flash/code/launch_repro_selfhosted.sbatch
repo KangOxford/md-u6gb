@@ -24,21 +24,26 @@ NODES=($(scontrol show hostnames "$SLURM_JOB_NODELIST"))
 GLM_NODE=${NODES[0]}
 echo "[repro] job=$SLURM_JOB_ID nodes=${NODES[*]} glm_node=$GLM_NODE"
 
-# ---- 1. 起 GLM 服务 ----
-srun --exclusive --nodes=1 --ntasks=1 -w "$GLM_NODE" --gres=gpu:4 --cpus-per-task=64 \
-    --job-name=glm53-vllm --cpu-bind=none bash "$T/code/serve_vllm_sif.sh" \
-    > "$T/logs/selfhosted_glm_${SLURM_JOB_ID}.log" 2>&1 &
-GLM_PID=$!
-
-# ---- 2. 等服务健康(最多 30 分钟:装载 306G + DeepGEMM 预热) ----
+# ---- 1-2. 起 GLM 服务并等健康;起不来就降参重试 ----
+# KDA 可用状态块随分配波动(实测 512 / 136 两种),max-num-seqs 太高会直接
+# 启动失败。6218011 就是这样让一个 3 节点作业在 7 分钟内报废的,所以这里
+# 不一次定死参数,而是逐档降。
 READY=0
-for i in $(seq 1 180); do
-    if curl -s --max-time 5 -o /dev/null "http://${GLM_NODE}:8383/health"; then READY=1; break; fi
-    kill -0 $GLM_PID 2>/dev/null || { echo "[repro] FATAL: 服务进程已退出"; exit 3; }
-    sleep 10
+for MAXSEQS in 32 16 8; do
+    export MAXSEQS
+    echo "[repro] 起服尝试 max-num-seqs=$MAXSEQS"
+    srun --exclusive --nodes=1 --ntasks=1 -w "$GLM_NODE" --gres=gpu:4 --cpus-per-task=64 \
+        --job-name=glm53-vllm --cpu-bind=none bash "$T/code/serve_vllm_sif.sh" \
+        > "$T/logs/selfhosted_glm_${SLURM_JOB_ID}_ms${MAXSEQS}.log" 2>&1 &
+    GLM_PID=$!
+    for i in $(seq 1 180); do
+        if curl -s --max-time 5 -o /dev/null "http://${GLM_NODE}:8383/health"; then READY=1; break; fi
+        kill -0 $GLM_PID 2>/dev/null || { echo "[repro] 服务进程退出(max-num-seqs=$MAXSEQS),降档重试"; break; }
+        sleep 10
+    done
+    [ "$READY" = "1" ] && { echo "[repro] GLM 就绪于 ${GLM_NODE}:8383,max-num-seqs=$MAXSEQS,用时 $((i*10))s"; break; }
 done
-[ "$READY" = "1" ] || { echo "[repro] FATAL: 服务 30 分钟未就绪,不起跑(空跑无意义)"; exit 4; }
-echo "[repro] GLM 就绪于 ${GLM_NODE}:8383,用时 $((i*10))s"
+[ "$READY" = "1" ] || { echo "[repro] FATAL: 三档都起不来,不起跑(空跑无意义)"; exit 4; }
 
 # ---- 3. 起 6 条 campaign,每条独占一张 GPU ----
 # 不要自己设 CUDA_VISIBLE_DEVICES:`srun --gres=gpu:1 --exclusive` 已经把一张卡
