@@ -425,6 +425,23 @@ Error: Custom { kind: NotFound, error: "Could not find `protoc`. ..." }
 已加进 env 段，并在 router 段开头加了一句显式检查 + 打印版本，
 免得再等 cargo 编到一半才发现。
 
+### 坑 7b：router 的 Rust 依赖要 `protoc`，而 conda 的 `protobuf` 不含编译器
+
+子目录修好之后 maturin 真的开始编了，卡在下一处：
+
+```
+Error: Custom { kind: NotFound, error: "Could not find `protoc`.
+       If `protoc` is installed, try setting the `PROTOC` environment variable..." }
+cargo:rerun-if-changed=src/proto/gossip.proto
+```
+
+`smg-mesh` crate 要 Protocol Buffers 编译器来编 `gossip.proto`。
+**注意 conda-forge 的 `protobuf` 是 Python 绑定，不含编译器**——
+`protoc` 二进制在 `libprotobuf` 里。已加进 env 段（`libprotoc 35.1`）。
+
+同族的提醒：环境里已经有 `protobuf 7.36.1`（pip，Python 运行时），
+它与 `protoc` 是两回事；只看 `pip list` 会以为已经装了。
+
 ### 坑 8：一个"检查"若不改变控制流，它就只是一行日志
 
 `tms` 段的断言失败了，链条却照样跑到下一段——脚本没有 `set -e`，heredoc 的非零
