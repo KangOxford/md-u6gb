@@ -71,6 +71,27 @@ if [ -x /opt/cray/pe/gcc-native/12/bin/gcc ]; then
     export NVCC_PREPEND_FLAGS="${NVCC_PREPEND_FLAGS:-} -ccbin /opt/cray/pe/gcc-native/12/bin/g++"
 fi
 
+# colocate 模式下 sglang 也要能暂停显存,而它的 CUDA Graph 暂停要求
+# torch_memory_saver 跑在 **preload** 钩子模式:
+#   AssertionError: Only hook_mode=preload supports pauseable CUDA Graph currently
+# LD_PRELOAD 必须在**进程启动前**设好 —— 运行时 import 改不了已加载的符号表。
+# slime 只对 actor 注入(actor_group.py:73-94,经 Ray 的 runtime_env),
+# 而 sglang 引擎是另一批 Ray actor,那条路径上没有对应的注入;
+# sglang 自己也不注入,它假设整个进程启动时就预加载好了。
+# 在这里 export,让整个进程树(含 Ray worker)都继承,与 slime 给 actor 的注入不冲突。
+_TMS_SO=""
+for _c in torch_memory_saver_hook_mode_preload_cu12.abi3.so \
+          torch_memory_saver_hook_mode_preload_cu13.abi3.so \
+          torch_memory_saver_hook_mode_preload.abi3.so; do
+    _p="$CONDA_PREFIX/lib/python3.12/site-packages/$_c"
+    [ -f "$_p" ] && { _TMS_SO="$_p"; break; }
+done
+if [ -n "$_TMS_SO" ]; then
+    export LD_PRELOAD="$_TMS_SO${LD_PRELOAD:+:$LD_PRELOAD}"
+    export TMS_INIT_ENABLE=1
+    export TMS_INIT_ENABLE_CPU_BACKUP=1
+fi
+
 export PYTHONPATH=$MEGATRON_ROOT:$REPO_ROOT/rl:$REPO_ROOT:${PYTHONPATH:-}
 set +a
 
