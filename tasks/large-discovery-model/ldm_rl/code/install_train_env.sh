@@ -152,8 +152,14 @@ if run_stage sglang; then
       --extra-index-url https://download.pytorch.org/whl/cu129 || exit 1
   # sglang 元数据要 torch==2.11.0(PyPI 默认 cu13) + flashinfer[cu13];驱动 565=CUDA12.7
   # 装上 cu13 会让 torch.cuda.is_available()=False。按作者的办法强制换回 cu129。
+  # torchvision 必须一起钉版本。原来这行只钉了 torch 与 torchaudio,torchvision
+  # 不带约束 —— 而 --no-deps 同时关掉了对它的检查,于是 pip 挑了索引上最新的
+  # 0.28.0+cu129,它的 C++ 扩展是按另一个 torch ABI 编的,注册不上,表现为
+  #   RuntimeError: operator torchvision::nms does not exist
+  # 而 `import sglang` 会踩到它,整个 sglang 用不了。症状里完全不提版本。
+  # 配套关系见 torchvision 0.26.0 的元数据:Requires-Dist: torch (==2.11.0)。
   $PIP install --no-cache-dir --force-reinstall --no-deps \
-      torch==2.11.0+cu129 torchvision torchaudio==2.11.0+cu129 \
+      torch==2.11.0+cu129 torchvision==0.26.0+cu129 torchaudio==2.11.0+cu129 \
       --index-url https://download.pytorch.org/whl/cu129 || exit 1
   # sgl-deep-gemm 作者钉 0.1.4,但 cu129 索引里 aarch64 最低是 0.1.5rc3
   $PIP install --no-cache-dir --force-reinstall --no-deps \
