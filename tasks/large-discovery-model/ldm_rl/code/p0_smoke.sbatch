@@ -32,6 +32,38 @@ nvidia-smi --query-gpu=index,memory.used --format=csv,noheader
 echo "[p0] EPISODES=$EPISODES"
 echo "[p0] SAVE=$SAVE"
 
+# 看门狗:训练卡住时自动 dump Python 栈。
+# 2026-09-01 P0 在 "Creating placement group with 3 GPUs..." 之后停了 16 分钟,
+# CPU 负载 0.02、GPU 全空、Ray 集群健康且无 pending demand、驱动的 core-worker
+# 日志在 ray.init 之后一行都没有 —— 一个没有任何输出的死锁。而**别的 srun step
+# 看不到 batch step 的进程**(PID 命名空间隔离),事后没法 attach 上去看栈。
+# 所以把 py-spy 放进同一个 step 里,由它在同一个命名空间中定期取栈。
+watchdog() {
+    local logdir="$1" last_size=0 stall=0
+    sleep 240
+    while :; do
+        local sz; sz=$(stat -c %s "$logdir" 2>/dev/null || echo 0)
+        if [ "$sz" = "$last_size" ]; then
+            stall=$((stall+1))
+            if [ "$stall" -ge 2 ]; then     # 日志 4 分钟没长
+                echo "=== [watchdog] 日志 $((stall*120))s 没有增长,dump 所有 python 栈 ==="
+                for pid in $(pgrep -u "$USER" -f "train\.py" 2>/dev/null); do
+                    echo "--- py-spy dump pid $pid ---"
+                    "$CONDA_PREFIX/bin/py-spy" dump --pid "$pid" --nonblocking 2>&1 | head -60
+                done
+                stall=0
+            fi
+        else
+            stall=0
+        fi
+        last_size=$sz
+        sleep 120
+    done
+}
+watchdog "/lus/lfs1aip2/projects/public/u6gb/tasks/large-discovery-model/ldm_rl/logs/p0_${SLURM_JOB_ID}.out" &
+_WD=$!
+trap 'kill $_WD 2>/dev/null' EXIT
+
 srun --ntasks=1 --gres=gpu:4 --cpus-per-task=128 --cpu-bind=none \
      --job-name=ldmrl-p0-train \
      bash -lc "module load gcc-native/12.3 2>/dev/null || true
