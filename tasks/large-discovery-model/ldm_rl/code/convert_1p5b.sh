@@ -50,6 +50,14 @@ for k, v in [("num_hidden_layers",28),("hidden_size",1536),("intermediate_size",
 print("[convert-1.5B] 结构参数与 MODEL_ARGS 逐项一致")
 PY
 
+# 转换器按 `WORLD_SIZE or SLURM_NTASKS or 1` 定并行度
+# (tools/convert_hf_to_torch_dist.py:92)。SLURM_NTASKS 会从外层分配/step 继承下来,
+# 如果它是 4 而实际只起 1 个进程,分布式初始化会挂住等不到的 rank。显式钉成 1。
+export WORLD_SIZE=1
+export LOCAL_RANK=0
+unset SLURM_NTASKS SLURM_NTASKS_PER_NODE SLURM_STEP_NUM_TASKS 2>/dev/null || true
+echo "[convert-1.5B] WORLD_SIZE=$WORLD_SIZE (单进程单卡)"
+
 cd "$SLIME_ROOT"
 python tools/convert_hf_to_torch_dist.py \
    "${MODEL_ARGS[@]}" \
