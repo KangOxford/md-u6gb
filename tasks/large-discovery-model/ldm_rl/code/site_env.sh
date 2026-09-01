@@ -39,6 +39,11 @@ mkdir -p "$CUDART_BLOCK"
 export VINA_BIN=/home/u6gb/kangli.u6gb/envs/ldm-rl/bin/vina
 export NN_MODEL=$REPO_ROOT/tasks/small_molecule/resources/models/best_g12d_model.joblib
 
+# 本机走 direct:GH200 上 ray job submit 两次都以 504 结束(创建作业的 POST 在
+# dashboard 的 JobHead 子进程模块那里超时)。单节点本地集群不需要 job server,
+# 直接 ray.init 连已起的集群即可。上游默认仍是 jobsubmit,不受影响。
+export SLIME_LAUNCH_MODE=direct
+
 export PYTHONPATH=$MEGATRON_ROOT:$REPO_ROOT/rl:$REPO_ROOT:${PYTHONPATH:-}
 set +a
 
