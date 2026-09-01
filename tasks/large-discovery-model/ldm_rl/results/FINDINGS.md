@@ -411,6 +411,20 @@ ERROR: git+https://github.com/zhuzilin/sgl-router.git@v0.3.2-9daabcd
 分发名 `sglang-router`、模块 `sglang_router`）。URL 要加
 `#subdirectory=bindings/python`。
 
+### 坑 7b：`sgl-router` 还要 `protoc`，而 conda 的 `protobuf` 不含编译器
+
+子目录修好之后 maturin 真的开始编了，卡在下一处：
+
+```
+Error: Custom { kind: NotFound, error: "Could not find `protoc`. ..." }
+   （smg-mesh crate 要编 src/proto/gossip.proto）
+```
+
+**`conda install -c conda-forge protobuf` 装了不管用**——那是 Python 绑定，
+`protoc` 二进制在 **`libprotobuf`** 包里（装上后 `libprotoc 35.1`）。
+已加进 env 段，并在 router 段开头加了一句显式检查 + 打印版本，
+免得再等 cargo 编到一半才发现。
+
 ### 坑 8：一个"检查"若不改变控制流，它就只是一行日志
 
 `tms` 段的断言失败了，链条却照样跑到下一段——脚本没有 `set -e`，heredoc 的非零

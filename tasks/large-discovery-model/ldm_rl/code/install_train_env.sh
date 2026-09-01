@@ -48,8 +48,10 @@ if run_stage env; then
   $CONDA install -p "$ENV_PREFIX" -y \
       cuda=12.9.1 cuda-nvtx=12.9.79 cuda-nvtx-dev=12.9.79 nccl \
       -c nvidia/label/cuda-12.9.1 -c nvidia -c conda-forge || exit 1
-  # sgl-router 要 Rust
-  $CONDA install -p "$ENV_PREFIX" -y -c conda-forge rust cmake ninja || exit 1
+  # sgl-router 要 Rust;它的 smg-mesh crate 还要 protoc 编 src/proto/gossip.proto,
+  # 缺了会报 "Could not find `protoc`"。注意 conda-forge 的 `protobuf` 是 Python
+  # 绑定,**不含编译器**;protoc 二进制在 `libprotobuf` 里。
+  $CONDA install -p "$ENV_PREFIX" -y -c conda-forge rust cmake ninja libprotobuf || exit 1
 fi
 
 export CUDA_HOME="$ENV_PREFIX"
@@ -265,6 +267,8 @@ fi
 # ---------------------------------------------------------------- 6. sglang_router(Rust 编)
 if run_stage router; then
   say "=== [router] slime 的 sgl-router fork(release 只有 x86,源码编) ==="
+  command -v protoc >/dev/null 2>&1 || { echo "FATAL: 没有 protoc,sgl-router 的 smg-mesh crate 编不了(conda install -c conda-forge libprotobuf)"; exit 2; }
+  echo "[router] protoc: $(protoc --version)"
   # 这个仓库的**根目录是 Rust crate**,Python 绑定在 bindings/python(maturin 项目,
   # 产出分发名 sglang-router、模块 sglang_router)。直接指仓库根会报
   # "does not appear to be a Python project: neither setup.py nor pyproject.toml found"。
