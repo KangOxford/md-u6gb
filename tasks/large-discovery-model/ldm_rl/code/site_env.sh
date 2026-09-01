@@ -44,6 +44,26 @@ export NN_MODEL=$REPO_ROOT/tasks/small_molecule/resources/models/best_g12d_model
 # 直接 ray.init 连已起的集群即可。上游默认仍是 jobsubmit,不受影响。
 export SLIME_LAUNCH_MODE=direct
 
+# flashinfer 在**运行时**用 ninja+nvcc JIT 编内核(RMSNorm 等)。那个子进程不继承
+# 安装脚本里做过的两件事,于是:
+#   1. 退回系统的 gcc 7(/usr/lib64/gcc/aarch64-suse-linux/7/.../ld)
+#   2. 报 `ld: cannot find -lcudart`
+# 第 2 条不是缺文件 —— $CUDA_HOME/lib 下裸名 libcudart.so 就在那里(实测)。
+# 是链接器不知道去那里找:**LD_LIBRARY_PATH 管运行时加载,LIBRARY_PATH 才管链接**,
+# 而启动脚本只设了前者。两个变量名只差三个字母,极易混。
+export CUDA_HOME=${CUDA_HOME:-/home/u6gb/kangli.u6gb/envs/ldm-rl-train}
+export LIBRARY_PATH="$CUDA_HOME/lib:$CUDA_HOME/targets/sbsa-linux/lib:${LIBRARY_PATH:-}"
+export CPATH="$CUDA_HOME/include:${CPATH:-}"
+# 让 JIT 用 gcc 12:系统默认 7,而 torch 的头文件直接 #error 要求 >= 9
+if [ -x /opt/cray/pe/gcc-native/12/bin/gcc ]; then
+    export CC=${CC:-/opt/cray/pe/gcc-native/12/bin/gcc}
+    export CXX=${CXX:-/opt/cray/pe/gcc-native/12/bin/g++}
+    # 不要把 gcc 目录放到 PATH 首位:那会顺带改变同名命令的解析
+    # (实测把 `python` 解析到了别的解释器)。CC/CXX 指对就够了,
+    # 编译器是靠这两个变量被调用的,不是靠 PATH 顺序。
+    export PATH="$PATH:/opt/cray/pe/gcc-native/12/bin"
+fi
+
 export PYTHONPATH=$MEGATRON_ROOT:$REPO_ROOT/rl:$REPO_ROOT:${PYTHONPATH:-}
 set +a
 
