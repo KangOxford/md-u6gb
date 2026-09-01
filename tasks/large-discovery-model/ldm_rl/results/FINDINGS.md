@@ -592,6 +592,75 @@ sglang.srt.entrypoints.openai.protocol → openai.types.responses`。
 
 ---
 
+## 4e. `ray start` 返回之后还要 66 秒驱动才连得上（P0 与 E7 都死在这里）
+
+这是今天**同一个根因的第二次**，换了组件。第一次是 dashboard 的 job server
+（报 504，见 §4c）；这次是 **raylet 的 worker 注册**。
+
+### 现象
+
+P0 与暖机 GP 两次独立运行，**停在完全相同的一行**：
+
+```
+[08:13:55] placement_group.py:125 - Creating placement group with 2 GPUs...
+           worker.py:1833 -- Connecting to existing Ray cluster at 10.242.21.141:6379...
+           worker.py:2015 -- Connected to Ray cluster.
+（之后无限期无输出）
+```
+
+同期：CPU 负载 **0.02**、GPU 全空 1–3 MiB、`ray status` 显示集群健康且**无 pending demand**、
+驱动的 `python-core-driver` 日志在 `ray.init` 之后一行都没有。
+**看起来完全像死锁，不像竞态。**
+
+### 定位（六个实验）
+
+py-spy 给出 Python 层位置：
+
+```
+connect (ray/_private/worker.py:2722)      ← ray._raylet.CoreWorker(...) 构造
+init (ray/_private/worker.py:2026)
+auto_init_ray (ray/_private/auto_init_hook.py:15)
+_create_placement_group (slime/ray/placement_group.py:48)
+```
+
+`/proc/<pid>/task/*/wchan` 给出内核层等待点：主线程停在
+**`unix_stream_read_generic`** —— 在等 raylet 经 Unix socket 的回复，
+**不是在算**。这一条把「慢」和「等」区分开了。
+
+逐个排除（每个都是从另一个 srun step 起一个最小驱动去测）：
+
+| 假设 | 实测 |
+|---|---|
+| 环境变量（`LD_LIBRARY_PATH`/`CUDA_VISIBLE_DEVICES`/`CUDA_DEVICE_MAX_CONNECTIONS`） | ray.init **0.4s** |
+| 先建 CUDA 上下文 | ray.init **0.4s** |
+| 先导入整个 slime 栈（sglang+megatron，59s，32 线程） | ray.init **0.4s** |
+| **`ray start` 返回后立刻连** | **挂满 120s 被超时杀掉** |
+
+### 量出来的数
+
+```
+ray start 返回于 t=0
+  t=23s 第 1 次仍连不上
+  t=43s 第 2 次仍连不上
+  t=63s 第 3 次仍连不上
+驱动可连:t=66s (第 4 次尝试)
+```
+
+**约 66 秒。** 真实驱动在返回后几秒内就连，正好落在窗口里，然后**无限期阻塞**
+（不是超时报错）。
+
+### 修法
+
+就绪判据必须是**真的用驱动连一次**。
+
+**`ray status` 不能当判据**——实测它在驱动还连不上的时候就已经能通了（它只经 GCS）。
+我之前加的 `/api/version` 轮询同理，它守的是 dashboard 那扇门。
+
+已把八个启动脚本的就绪等待改成循环执行
+`python3 -c "import ray; ray.init(address='auto'); ray.shutdown()"` 直到成功。
+
+---
+
 ## 5. 启动脚本的配置到不了它要控制的路径
 
 `slime_launch/*.sh` 里 `REPO_ROOT` / `MEGATRON_ROOT` / `CONDA_PREFIX` / `MODEL_HF` / `CONFIG`
