@@ -692,13 +692,50 @@ perf 2:     {'perf/update_weights_time': 0.180, ...}
 Timer train end (elapsed: 0.3s)  ·  Timer update_weights end (elapsed: 0.3s)
 ```
 
-计数：**3 次训练步、4 次权重同步、19 次生成请求**，作业持续运行。
+**跑完了配置的全部 16 个 rollout**（`--num-rollout 16`），最终计数：
+
+| | |
+|---|---:|
+| 训练步（`Timer train end`） | **16** |
+| 权重同步（`Timer update_weights end`） | **17** |
+| 生成请求（`POST /generate`） | **103** |
+| 分布式权重推送（`POST /update_weights_from_distributed`） | 9 |
+| 保存的检查点 | iter 9、iter 15，共 **41 G** |
+
 `Timer train end` 意味着 **backward 真的执行了**——HANDOFF §7 的头号风险
 到此在**全链路场景**下也被证伪（此前是用 `probe_te_backward.py` 单独验的）。
+
+16 步的 loss 轨迹：
+
+```
+0.00252 0.00085 0.00279 0.00243 0.00315 0.00227 0.00330 0.00324
+0.00247 0.00367 0.00165 0.00194 0.00272 0.00200 0.00218 0.00186
+```
+
+**无趋势地波动，这正是应该的**：`pg_loss` 恒为 0，所以这条曲线只是 KL 项的噪声。
+如果它反而单调下降，才说明有问题。**冒烟验证的是管道，不是结果**——
+真正的训练要等暖机把 GP 填满之后。
+
+同期 GP 历史从 13 条涨到 **33 条**：P0 的每一步都在真实 dock 新分子，
+reward 路径全程在工作。
 
 **`train/pg_loss: 0.0` 不是 bug。** 它与 §2 的推论完全吻合：acquisition reward
 在 GP 冷启动时为 0 ⇒ 优势全零 ⇒ 没有策略梯度。`train/loss: 0.0028` 非零来自 KL 项。
 **所以 P0 同时验证了两件事**：机制通了，以及"暖机是前提不是优化"这个推论是对的。
+
+### 一处我自己犯的同型错误：`--save` 也是写死的
+
+P0 起跑时我 `export SAVE=...smoke`，而 41 G 的检查点存到了
+`qwen2.5-1.5B_slime_train_real`——脚本默认的那个目录。
+
+原因是 `run_train_real_slime.sh` 的 `CKPT_ARGS` 里
+`--save $REPO_ROOT/rl/qwen2.5-1.5B_slime_train_real` 是**命令行里的字面路径**，
+不读 `$SAVE`。我上午给 10 个脚本做参数化时处理的是**变量赋值**那一批
+（`REPO_ROOT`/`CONFIG`/`MODEL_HF`），这一处不在那次的处理范围内。
+`run_train_real_9b.sh` 本来就用 `$SAVE`，三个 1.5B 脚本没有。已补齐并逐项求值验证。
+
+**这正是我今天修了十几处的同一个毛病**，只不过这次犯错的是我自己：
+一次参数化改造若只覆盖某一种语法形态，另一种形态里的同类问题就会留下来。
 
 ### 一个已知的无害报错
 
