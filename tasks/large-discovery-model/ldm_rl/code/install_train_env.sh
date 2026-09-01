@@ -21,8 +21,18 @@ MEGATRON_COMMIT="1dcf0dafa884ad52ffb243625717a3471643e087"
 TMS_COMMIT="8d30c59ca12a68d9deccbc9c6599076a1218cbc5"
 SGLROUTER_TAG="v0.3.2-9daabcd"
 
-export CONDA_PKGS_DIRS=/home/u6gb/kangli.u6gb/.conda/pkgs
-export PIP_CACHE_DIR=/home/u6gb/kangli.u6gb/.cache/pip
+# 包缓存放节点本地,不占 /home 配额(101G 硬顶)。
+# conda 的 pkgs_dirs 是一条**回退链而不是强制指定**:首选目录建不出来时它不报错,
+# 静默滑到下一个可写目录 ~/.conda/pkgs —— 那正好在配额里面。2026-08-31 那次安装
+# 就是这样撞的顶(报错路径是 /home/.../.conda/pkgs/cmake-4.4.3...),配置一次都没生效。
+# 所以这里必须先建目录并验证可写,建不出来就停,不让它悄悄回退。
+export CONDA_PKGS_DIRS=${TMPDIR:-/tmp}/conda_pkgs_$USER
+mkdir -p "$CONDA_PKGS_DIRS" || { echo "FATAL: 建不出 $CONDA_PKGS_DIRS"; exit 2; }
+[ -w "$CONDA_PKGS_DIRS" ] || { echo "FATAL: $CONDA_PKGS_DIRS 不可写"; exit 2; }
+echo "[pkgs] conda 包缓存 -> $CONDA_PKGS_DIRS ($(df -h "$CONDA_PKGS_DIRS" | tail -1 | awk '{print $4}') 可用)"
+export PIP_NO_CACHE_DIR=1
+export PIP_CACHE_DIR="$CONDA_PKGS_DIRS/pip"      # 同理:pip 的缓存也别落 /home
+export TMPDIR=${TMPDIR:-/tmp}                    # 源码编译的中间产物同样不落 /home
 CONDA=/home/u6gb/kangli.u6gb/miniforge3/bin/conda
 PY=$ENV_PREFIX/bin/python
 PIP=$ENV_PREFIX/bin/pip
@@ -43,6 +53,22 @@ if run_stage env; then
 fi
 
 export CUDA_HOME="$ENV_PREFIX"
+
+# aarch64 特有:conda 的 CUDA 包把头文件放在 $PREFIX/targets/sbsa-linux/include
+# (sbsa = NVIDIA 给 ARM64 服务器架构的目标名),**但只把 lib 链回了 $PREFIX/lib,
+# include 那一侧没链**。而 flash-attn / torch_memory_saver / TE 的 setup.py 都按
+# $CUDA_HOME/include 找 cuda_runtime.h,于是编译报 "No such file or directory"。
+# 这种不对称最容易漏:lib 在,看起来工具链是完整的。
+_TGT=$(ls -d "$ENV_PREFIX"/targets/*-linux 2>/dev/null | head -1)
+if [ -n "$_TGT" ] && [ ! -e "$ENV_PREFIX/include/cuda_runtime.h" ]; then
+  _n=0
+  for _h in "$_TGT"/include/*; do
+      _b=$(basename "$_h"); [ -e "$ENV_PREFIX/include/$_b" ] && continue
+      ln -s "$_h" "$ENV_PREFIX/include/$_b" && _n=$((_n+1))
+  done
+  echo "[cuda] 从 $_TGT/include 补了 $_n 个头文件软链到 \$CUDA_HOME/include"
+fi
+[ -e "$ENV_PREFIX/include/cuda_runtime.h" ] || { echo "FATAL: \$CUDA_HOME/include 下没有 cuda_runtime.h,后面的源码编译必挂"; exit 2; }
 # GH200 是 Hopper sm90。显式给出,让 flash-attn/TMS 编译不必探测在用的 GPU。
 export TORCH_CUDA_ARCH_LIST="9.0"
 export PATH="$ENV_PREFIX/bin:$PATH"
