@@ -661,6 +661,58 @@ ray start 返回于 t=0
 
 ---
 
+## 4f. P0 与 E7 通过：整条 acquisition-RL 链路在 GH200/aarch64 上跑通
+
+### E7 暖机 GP：真分子 → 真 docking → 真活性 → GP 历史
+
+`results/gp/sm_rl_gp_history.jsonl` 由 1.5B 模型现场生成并逐个打分：
+
+| # | vina (kcal·mol⁻¹) | pIC50 | SMILES |
+|---:|---:|---:|---|
+| 0 | −3.395 | 5.9705 | `CCCCN` |
+| 1 | −3.898 | 5.9003 | `CCCCCN` |
+| 2 | **−8.384** | 4.9884 | `O=C(Nc1ccccc1C(=O)N(C(=O)Nc1ccccc1)C(=O)N1C=CC…` |
+| 8 | −6.279 | **6.3298** | `C[C@@H](Cl)CC1=C(C(=O)O)NC=NC1` |
+| 11 | −2.842 | 5.4569 | `CCO` |
+| 12 | −7.206 | 6.1764 | `CCC(O)C1=C([C@@H]2CC[C@@H](C)[C@@H]2O)C=C1` |
+
+**这批数是"真"的三重证据**：
+
+1. 前两条与 §1 的 E2 纯 CPU 冒烟**逐位一致**（−3.395/−3.898、5.9705/5.9003）——
+   说明 reward 路径在**训练场景**与**离线场景**下算的是同一件事。
+2. 后 11 条是模型现场生成的新分子，vina 跨越 −2.8 到 −8.4，符合真实 docking 的分布。
+3. 出现了 `CCO`（乙醇）这种"模型乱写"的候选并拿到合理的低分——打分器没有被绕过。
+
+### P0：GRPO 训练循环稳定运转
+
+```
+rollout 2:  {'rollout/partition': 0.5, 'rollout/response_lengths': 384...}
+step 2:     {'train/loss': 0.002786, 'train/pg_loss': 0.0, ...}
+perf 2:     {'perf/update_weights_time': 0.180, ...}
+Timer train end (elapsed: 0.3s)  ·  Timer update_weights end (elapsed: 0.3s)
+```
+
+计数：**3 次训练步、4 次权重同步、19 次生成请求**，作业持续运行。
+`Timer train end` 意味着 **backward 真的执行了**——HANDOFF §7 的头号风险
+到此在**全链路场景**下也被证伪（此前是用 `probe_te_backward.py` 单独验的）。
+
+**`train/pg_loss: 0.0` 不是 bug。** 它与 §2 的推论完全吻合：acquisition reward
+在 GP 冷启动时为 0 ⇒ 优势全零 ⇒ 没有策略梯度。`train/loss: 0.0028` 非零来自 KL 项。
+**所以 P0 同时验证了两件事**：机制通了，以及"暖机是前提不是优化"这个推论是对的。
+
+### 一个已知的无害报错
+
+sglang 的 `/v1/loads` 返 500：
+
+```
+AttributeError: '_IncludedRouter' object has no attribute 'path'
+  （sglang/srt/utils/common.py:2385，HTTP 中间件与 FastAPI 版本不兼容）
+```
+
+只影响 slime 的负载查询接口；`/generate` 全程 200 OK，训练路径不受影响。
+
+---
+
 ## 5. 启动脚本的配置到不了它要控制的路径
 
 `slime_launch/*.sh` 里 `REPO_ROOT` / `MEGATRON_ROOT` / `CONDA_PREFIX` / `MODEL_HF` / `CONFIG`
