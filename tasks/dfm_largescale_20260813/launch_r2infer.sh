@@ -11,12 +11,12 @@ W=$S0/post_training/dfm/eval/run_eval_node.sh
 STATE=${STATE:?}; TAG=${TAG:?}; NODE=${NODE:?}
 JOB=${JOB:-6217606}; MO=${MO:-2026-01}
 TKL=${TKL:-$T/logs/tkb7b_feb_s42.txt}
-NCH=${NCH:-4}; GPU0=${GPU0:-0}
+NCH=${NCH:-4}; GPU0=${GPU0:-0}; LOBTREE=${LOBTREE:-}
 
 [ -f "$STATE" ] || { echo "FATAL: 缺 $STATE" >&2; exit 5; }
 _st=$(python3 -c "import json;print(json.load(open('$STATE.meta')).get('step','?'))" 2>/dev/null)
 [ "$_st" = "8000" ] || { echo "FATAL: $TAG state step=$_st != 8000" >&2; exit 5; }
-_live=$(squeue -u "$(whoami)" -h -s -o "%j" 2>/dev/null | grep -c "^dfm-${TAG}-")
+_live=$(squeue -u "$(whoami)" -h -s -o "%j" 2>/dev/null | grep -c "^dfm-${TAG}-${MO}-")
 [ "${_live:-0}" -gt 0 ] && { echo "FATAL: $TAG 已有 step 在跑" >&2; exit 7; }
 
 mkdir -p $T/rollouts_anc $T/logs
@@ -26,9 +26,9 @@ i=0
 for CH in $(seq 0 $((NCH-1))); do
   env -u SLURM_NNODES -u SLURM_NTASKS -u SLURM_JOB_ID -u SLURMD_NODENAME \
   setsid nohup srun --jobid=$JOB --overlap --exact --cpus-per-task=8 -w $NODE -N1 -n1 \
-    --cpu-bind=none --job-name=dfm-${TAG}-$CH \
+    --cpu-bind=none --job-name=dfm-${TAG}-${MO}-$CH \
     --export=ALL,DFM_GPU=$((GPU0+i)),DFM_SCRIPT=dfm_correct_runner.py,\
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.30,XLA_FLAGS=--xla_gpu_enable_triton_gemm=false \
+DFM_LOB_TREE=$LOBTREE,DFM_SRC=$LOBTREE,DFM_S0=$S0,XLA_PYTHON_CLIENT_MEM_FRACTION=0.30,XLA_FLAGS=--xla_gpu_enable_triton_gemm=false \
     bash $W --month $MO --n-cond 500 --n-gen 500 \
       --stocks ${CHPFX}$CH --index-dir $A/idx --group-size 8 \
       --validate-first 8 --gate-batches 2 --state "$STATE" \

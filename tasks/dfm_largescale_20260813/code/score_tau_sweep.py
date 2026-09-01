@@ -23,6 +23,7 @@ MO = os.environ.get('SCORE_MONTH', '2026-01')
 CFGS = [('rollouts_anc', 'p0bidir_s42'), ('rollouts_anc', 'p0bidir_s43'),
         ('rollouts_anc', 'r2d1_s42'), ('rollouts_anc', 'r2d1_s43'),
         ('rollouts_anc', 'r2d0_s42'), ('rollouts_anc', 'r2d0_s43'),
+        ('rollouts_anc', 'r2g1_s42'), ('rollouts_anc', 'r2g1_s43'),
         ('rollouts_tau', 'tau_t0'), ('rollouts_tau', 'tau_t001'),
         ('rollouts_tau', 'tau_t01'),
         ('rollouts_tau2', 'tau2_t01'), ('rollouts_tau2', 'tau2_t03'),
