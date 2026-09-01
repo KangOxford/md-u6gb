@@ -548,6 +548,50 @@ JobHead 自身启动也无报错——**集群是好的，只有提交这条路�
 
 ---
 
+## 4d. 一次 OOM 把 openai 包弄成半装，几小时后才显形
+
+P0 走通 direct 路径、真正进入 `train.py` 之后，死在
+
+```
+ModuleNotFoundError: No module named 'openai._models'
+```
+
+调用链是 `train.py → slime.utils.arguments → sglang.srt.server_args →
+sglang.srt.entrypoints.openai.protocol → openai.types.responses`。
+
+查下去：`site-packages/openai/` **只剩子目录**
+（`auth` `_extras` `helpers` `lib` `providers` `resources` `types` `_utils` `_vendor`），
+顶层 `.py` 一个都没有，包括 `_models.py` 与 `__init__.py`。
+多半是 flash-attn 那次 OOM 把 pip 打断在写文件的中途。
+
+**为什么这类损伤特别难自查**：
+
+| 检查手段 | 结果 |
+|---|---|
+| `pip list` | `openai 2.6.1` —— 完全正常 |
+| `import openai` | 不报错 |
+| `pip check` | 通过（它只查依赖关系） |
+| 实际使用 | 踩到 `openai._models` 才炸，而那已经是训练启动到一半 |
+
+**一次 OOM 的损伤可以延迟几小时才显形，并且看起来像一个完全无关的模块错误。**
+
+已强制重装修好。另写 `code/verify_env_integrity.py`：按每个包的
+`dist-info/RECORD`（安装时写下的文件清单）逐个核对文件是否真的在。
+**扫了 302 个有安装记录的包，openai 是唯一损伤，其余全部完整。**
+已接进 P0 起跑前检查。
+
+这与 §4b 坑 8 的 `tms` 是同一条原则的两个方向——**以包管理器的安装记录为准**：
+那次是别去文件系统的猜测位置找 `.so`，这次是拿记录去验文件在不在。
+
+至此 P0 的起跑前检查有四层，每一层都是被一次真实失败逼出来的：
+
+```
+文件在不在  →  包真装上了没有  →  文件与安装记录一致吗  →  TE 的 backward 真跑得动吗
+   (缺件)        (命名空间包假阳性)      (半装的包)              (装得上 ≠ ABI 对得上)
+```
+
+---
+
 ## 5. 启动脚本的配置到不了它要控制的路径
 
 `slime_launch/*.sh` 里 `REPO_ROOT` / `MEGATRON_ROOT` / `CONDA_PREFIX` / `MODEL_HF` / `CONFIG`
