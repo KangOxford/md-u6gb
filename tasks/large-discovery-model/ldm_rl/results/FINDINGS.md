@@ -114,6 +114,93 @@ task_python = str(spec.real.get("task_python")
 
 ---
 
+## 3c. 现成的 G12D 活性模型是旧版流程的产物，E9 需要一对流程匹配的评测器
+
+E9 要「训 G12D → 评 **G12C（迁移）** + **G12D（同分布）**」。两侧各用一个活性模型打分，
+所以两个模型必须由同一套流程产出，否则性能差里同时含**真实的迁移难度**与
+**两个评测器自身的精度差**，分不开。
+
+按 `best_g12d_model_metadata.json` 逐项对齐参数（IC50 / 只留精确关系 / 直接测定 /
+seed 714 / test 0.2）跑出 G12C 之后，对不上的地方暴露出来了：
+
+| | 仓库自带的 G12D | 当前脚本跑出的 G12C |
+|---|---|---|
+| splits | random · scaffold · **source_assay** · **assay_family** | random · scaffold · **assay** · **document** |
+| 选中的 split | `scaffold` | `document` |
+| 选中的模型 | `ensemble_nn_ridge_rf` | `ensemble_nn_ridge_lgbm` |
+| 候选模型数 | 9 (`cpu_models`) | 28 |
+
+选模型的规则是固定优先级 `(document, scaffold, assay, random)` 取第一个可用的
+（`train_g12c_qsar.py:1311-1319`）。自带的 G12D **没有 document split**，所以落在 scaffold；
+我们跑出来的有，所以落在 document。**这不是参数没对齐，是两份流程不同**——
+split 定义与模型名册都变了，靠调 flag 对不齐。
+
+**做法**：用**当前这份脚本**把 G12D 也重训一遍（`code/train_g12d_matched.sh`），
+E9 用这一对流程匹配的评测器做主结果；仓库自带的那个保留，用于与作者的数对账。
+代价很小——G12C 那次约 7 分钟。
+
+G12C 结果（`results/g12c_qsar_20260901T010923Z/`）：
+
+| 模型 | split | n_train | n_test | RMSE | MAE | R² | Spearman |
+|---|---|---:|---:|---:|---:|---:|---:|
+| **ensemble_nn_ridge_lgbm** | document | 1364 | 482 | **0.6848** | 0.5259 | 0.2282 | 0.6248 |
+| char_tfidf_ridge | document | 1364 | 482 | 0.6905 | 0.5349 | 0.2153 | 0.5826 |
+| morgan_lightgbm | document | 1364 | 482 | 0.7021 | 0.5341 | 0.1887 | 0.6037 |
+
+### 3c-1 选模型的规则会在一个只有 1 个测试分子的 split 上选（已修）
+
+跑匹配版 G12D 时暴露的。各 split 的留出规模：
+
+| split | G12C n_test | G12D n_test |
+|---|---:|---:|
+| assay | 406 | 376 |
+| **document** | 482 | **1** ← 退化，占 0.1% |
+| random | 370 | 141 |
+| scaffold | 373 | 144 |
+
+`select_best_model`（`train_g12c_qsar.py:1311`）按固定优先级
+`(document, scaffold, assay, random)` 取**第一个存在**的 split，**不看它有没有足够的
+测试点**。于是 G12D 在只有 1 个测试分子的 document split 上选模型——每个模型的 RMSE
+就是那一个残差，赢家是"碰巧离那一个点最近"的那个。而运行照样打印
+`Best model: morgan_hist_gradient_boosting selected on document split` 并把产物存下来，
+**失败在下游完全不可见**。
+
+已修：优先级顺序保留，但先跳过留出行数少于 30 的 split，跳过时明确打印原因；
+全都不达标时退到留出集最大的那个并警告"选出的模型未经排序"。
+验证（直接用两次已有的 metrics 重跑选择）：G12C 不变（document，482 行）；
+G12D 打印 `NOTE: skipping 'document' split (n_test=1 < 30)` 后落到 scaffold（144 行），
+选中 `rdkit_desc_ridge`。
+
+### 3c-2 但结论反过来了：**不要**用当前流程替换自带的 G12D 模型
+
+在两者都支持的 scaffold split 上做统一标尺：
+
+| | n_test | RMSE | 标签 SD | RMSE/SD | R² | Spearman |
+|---|---:|---:|---:|---:|---:|---:|
+| G12C（当前流程） | 373 | 0.6112 | 0.930 | **0.657** | **0.547** | **0.729** |
+| G12D（当前流程） | 144 | 0.5040 | 0.670 | 0.752 | **0.028** | **0.226** |
+| G12D（**仓库自带**） | 609 | 0.8850 | — | — | **0.739** | **0.865** |
+
+G12D 当前流程的 RMSE 看起来更小（0.504 < 0.611），但那只是因为它的标签散布更窄
+（SD 0.670 vs 0.930）；**除以各自的 SD 之后 G12C 反而更好**。而 R² 与 Spearman 说得更
+直接：**当前流程做出的 G12D 评测器几乎不能给分子排序**（R²≈0.03，Spearman 0.23）。
+
+原因是数据量：自带的 G12D 用了 **3044 行**，当前流程的 G12D 只拉到 **702 行**（4.3 倍差距）。
+所以自带的那个不是"旧版遗留"，而是**更强的评测器**，训练也正是用它。
+
+**修正后的做法**：
+- G12D 评测**继续用仓库自带的** `best_g12d_model.joblib`（训练用的也是它）。
+- G12C 只能用当前流程（没有自带产物），Spearman 0.729，尚可。
+- 我训的匹配版 G12D **不作评测器**，只作诊断：它给出"同一套流程在 G12D 上能做到多好"
+  的下界，用来判断 E9 里 G12C 与 G12D 的差距有多少可能来自评测器质量而非迁移本身。
+
+**留给陈奕杭的一个问题**：当前脚本对 G12D 只拉到 702 行，而自带产物的输入是 3044 行
+（`g12d_public_ic50_exact_relation_dedup_train_direct_assays.csv`）。是 ChEMBL 查询口径
+变窄了，还是当时用了别的取数路径？**如果 G12C 也受同样的口径影响，那 G12C 评测器
+（现在 1846 行）同样有变强的空间**，而它是 E9 迁移那一侧的唯一标尺。
+
+---
+
 ## 4. 两个文件系统的约束是互补的（决定了环境该建在哪）
 
 | | 空间 | inode |
