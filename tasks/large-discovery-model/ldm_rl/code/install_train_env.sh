@@ -163,6 +163,17 @@ if run_stage sglang; then
       nvidia-curand nvidia-cusolver nvidia-cusparse nvidia-cusparselt-cu13 \
       nvidia-nccl-cu13 nvidia-nvjitlink nvidia-nvshmem-cu13 nvidia-nvtx \
       nvidia-cutlass-dsl-libs-cu13 || true
+  # flash-attn-4 也要卸。它是 sglang 的依赖,提供 flash_attn/cute/(CuTe DSL 版,
+  # 面向 Blackwell sm100),而它需要的 `cutlass` 模块**只由 nvidia-cutlass-dsl 的
+  # cu13 extra 提供**(4.5.2 没有 cu12 extra) —— 上面那句刚把 cu13 卸掉。
+  # 留着它的后果是 `import transformer_engine.pytorch` 直接炸:
+  #   TE backends.py:161 只有在分发包 flash-attn-4 **存在**时才 import
+  #   flash_attn.cute.interface,于是 ModuleNotFoundError: No module named 'cutlass'
+  #   把整个 TE 挡住,slime/Megatron 全部不能用。
+  # GH200 是 sm90,FA4 本来就用不上;TE 与 sglang 两侧对它缺失都有优雅分支
+  # (TE: except PackageNotFoundError;sglang: try/except 后置空)。
+  # 注意它与我们源码编的 flash_attn 2.8.3 共用 flash_attn 顶层,卸载后要复验 2.8.3 还在。
+  $PIP uninstall -y flash-attn-4 || true
   $PIP install --no-cache-dir --force-reinstall --no-deps \
       nvidia-cublas-cu12 nvidia-cuda-cupti-cu12 nvidia-cuda-nvrtc-cu12 \
       nvidia-cuda-runtime-cu12 nvidia-cudnn-cu12==9.16.0.29 nvidia-cufft-cu12 \
@@ -225,21 +236,42 @@ if run_stage tms; then
   export TMS_CUDA_MAJOR
   $PIP install -v --no-cache-dir --force-reinstall --no-build-isolation \
       "git+https://github.com/zhuzilin/torch_memory_saver.git@${TMS_COMMIT}" 2>&1 | tail -20
-  # 判据:装出来的包里必须有编译好的 .so,纯 python(~46KB)说明编译被跳过了
+  # 判据:安装记录里必须有编译好的 .so;纯 python 轮子说明编译被跳过了,
+  # sglang 会报 "Only hook_mode=preload supports pauseable CUDA Graph"。
+  #
+  # 注意别按目录找:这个包的扩展模块装成 site-packages 的**同级模块**
+  # (torch_memory_saver_hook_mode_preload_cu12.abi3.so),不在包目录里。
+  # 2026-09-01 原来的检查用 Path(t.__file__).parent.rglob('*.so'),对一次
+  # **成功**的安装报了 FATAL。问包管理器要安装记录才与文件落点无关。
   $PY - <<'PYEOF'
-import pathlib, torch_memory_saver as t
-d = pathlib.Path(t.__file__).parent
-so = list(d.rglob('*.so'))
-print('torch_memory_saver at', d, '  .so 数量 =', len(so))
-assert so, 'FATAL: 没有编译产物,sglang 会报 Only hook_mode=preload supports pauseable CUDA Graph'
+import sys
+from importlib.metadata import files, version
+fs = files('torch-memory-saver') or []
+so = [f for f in fs if str(f).endswith('.so')]
+print(f'torch_memory_saver {version("torch-memory-saver")}  安装记录里的 .so:')
+for f in so:
+    print('   ', f)
+if not so:
+    print('FATAL: 安装记录里没有 .so —— 出的是纯 python 轮子,编译被跳过了')
+    sys.exit(1)
+import torch_memory_saver  # 再确认真的能 import
 PYEOF
+  # 上面那个断言原本失败了也不停 —— 脚本没有 set -e,heredoc 的非零退出被吞掉,
+  # 于是 2026-09-01 这次 tms 明明出的是纯 python 包(.so 数量 = 0),链条却照样
+  # 往下跑到 router。一个"检查"若不改变控制流,它就只是一行日志。
+  [ $? -eq 0 ] || { echo "FATAL: torch_memory_saver 没编出 .so,停在这一段"; exit 1; }
 fi
 
 # ---------------------------------------------------------------- 6. sglang_router(Rust 编)
 if run_stage router; then
   say "=== [router] slime 的 sgl-router fork(release 只有 x86,源码编) ==="
+  # 这个仓库的**根目录是 Rust crate**,Python 绑定在 bindings/python(maturin 项目,
+  # 产出分发名 sglang-router、模块 sglang_router)。直接指仓库根会报
+  # "does not appear to be a Python project: neither setup.py nor pyproject.toml found"。
+  # 所以 URL 必须带 #subdirectory=bindings/python。
   $PIP install --no-cache-dir --force-reinstall \
-      "git+https://github.com/zhuzilin/sgl-router.git@${SGLROUTER_TAG}" 2>&1 | tail -20
+      "git+https://github.com/zhuzilin/sgl-router.git@${SGLROUTER_TAG}#subdirectory=bindings/python" \
+      2>&1 | tail -20
   $PY -c "import sglang_router;print('router',sglang_router.__version__)" || exit 1
 fi
 

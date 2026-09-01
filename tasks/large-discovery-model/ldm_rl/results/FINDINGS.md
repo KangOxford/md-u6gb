@@ -350,6 +350,108 @@ Python 的加载器知道那些路径，编译器只看 `-I`。
 **判断法**：报 `fatal error: X.h: No such file` 时先问「X 是谁装的」，
 如果是 pip 包而不是 conda 的 CUDA 包，它一定不在 `$CUDA_HOME` 下。
 
+### 坑 6：卸掉 cu13 会连带拿走 `cutlass`，把整个 TE 挡住
+
+TE 装完之后 `import transformer_engine.pytorch` 直接炸：
+
+```
+File ".../transformer_engine/pytorch/attention/dot_product_attention/backends.py", line 167
+  from flash_attn.cute.interface import (...)
+File ".../flash_attn/cute/interface.py", line 29
+  import cutlass
+ModuleNotFoundError: No module named 'cutlass'
+```
+
+顺着依赖链查下去：
+
+```
+sglang ──依赖──> flash-attn-4 (4.0.0b15) ──依赖──> nvidia-cutlass-dsl[cu13]
+                                                          │
+                                            提供顶层模块 cutlass
+                                                          ↑
+                        安装脚本为了让 torch 认得卡,卸掉 nvidia-cutlass-dsl-libs-cu13
+```
+
+`nvidia-cutlass-dsl` **4.5.2 只有 cu13 这一个 extra，没有 cu12**
+（`Requires-Dist: nvidia-cutlass-dsl-libs-cu13==4.5.2; extra == "cu13"`），
+所以「把 cu13 换成 cu12」这条路对它不成立——cu12 的 libs 轮子里只有共享库，
+没有 `cutlass` 模块（实测解压 20 个文件，`python_packages/` 是空的）。
+
+而 TE 的那处 import 是**条件式**的：
+
+```python
+try:
+    fa_utils.fa4_version = PkgVersion(get_pkg_version("flash-attn-4"))
+except PackageNotFoundError:
+    flash_attn_func_v4 = None          # ← 优雅分支
+else:
+    from flash_attn.cute.interface import ...   # ← 需要 cutlass
+```
+
+即**只要分发包 `flash-attn-4` 存在就会走进去**。
+
+**做法：卸掉 `flash-attn-4`**，而不是把 cu13 库装回来。理由是三条，不是一条：
+1. FA4 是 CuTe DSL 版，面向 **Blackwell sm100**；GH200 实测 `cap=(9,0)`，用不上。
+2. TE 与 sglang 两侧对它缺失**都有优雅分支**（TE 见上；sglang
+   `jit_kernel/flash_attention_v4.py:9-12` 是 `try/except` 后置空，只在真正调用
+   v4 kernel 时才抛）。
+3. 装回 cu13 库正是作者的流程要消除的东西——那会让 `torch.cuda.is_available()` 变假。
+
+卸载后复验了两件事（它与我们源码编的 flash_attn 2.8.3 **共用 `flash_attn` 顶层**）：
+`flash_attn 2.8.3` 仍在，`TE 2.16.0 import OK`。
+
+### 坑 7：`sgl-router` 的 Python 包在子目录
+
+```
+ERROR: git+https://github.com/zhuzilin/sgl-router.git@v0.3.2-9daabcd
+       does not appear to be a Python project: neither 'setup.py' nor 'pyproject.toml' found.
+```
+
+那个仓库的**根是 Rust crate**，Python 绑定在 `bindings/python/`（maturin 项目，
+分发名 `sglang-router`、模块 `sglang_router`）。URL 要加
+`#subdirectory=bindings/python`。
+
+### 坑 8：一个"检查"若不改变控制流，它就只是一行日志
+
+`tms` 段的断言失败了，链条却照样跑到下一段——脚本没有 `set -e`，heredoc 的非零
+退出被吞掉。已改成显式 `[ $? -eq 0 ] || exit 1`。
+
+**但更值得记的是：那次断言本身是错的。** 它写作
+
+```python
+d = pathlib.Path(torch_memory_saver.__file__).parent
+so = list(d.rglob('*.so'))     # ← 在包目录里找
+```
+
+而这个包的扩展模块装成 **site-packages 的同级模块**
+（`torch_memory_saver_hook_mode_preload_cu12.abi3.so`），不在包目录里。
+于是它对一次**成功**的安装报了 FATAL——构建日志明明写着
+`torch_memory_saver-0.0.9.post1+slime-cp312-cp312-linux_aarch64.whl`（平台轮子），
+`_cu12` 后缀还说明 `TMS_CUDA_MAJOR` 也生效了。
+
+改成问包管理器要安装记录（`importlib.metadata.files()`），与文件落在哪无关。
+这与 §5 的「import 成功不等于装上了」是同一枚硬币的两面：
+**检查要问包管理器，不要问文件系统的某个猜测位置。**
+
+### TE 的 backward 在 aarch64 上不 SIGSEGV（HANDOFF §7 的头号风险）
+
+交接文档要求用 1.5B 冒烟来验这件事，但那要先转检查点、起 ray、起 sglang，
+一次十几分钟，而且真挂掉时症状混在一堆分布式错误里。
+`code/probe_te_backward.py` 用几秒钟的最小实验直接回答——构造 TE 的
+`Linear` + `LayerNormMLP`，bf16 前向、反向、看梯度：
+
+```
+device: NVIDIA GH200 120GB  cap=(9, 0)
+transformer_engine 2.16.0
+前向 OK  out=(256, 512)  loss=0.099190
+反向 OK  有梯度的参数张量 8 个  |grad| 求和 86.5874  输入梯度 0.2116
+TE_BACKWARD_OK
+```
+
+**不 SIGSEGV，梯度有限且非零。** 这不替代 P0 的全链冒烟（那还要验 GRPO、
+rollout、reward 的接线），但它把「TE 装错了」从待验清单里划掉了。
+已接进 `run_p0_smoke.sh` 的起跑前检查。
+
 ### 顺带：`--gres=gpu:4` 下 step 内看到的设备号（实测，不是推理）
 
 ```
