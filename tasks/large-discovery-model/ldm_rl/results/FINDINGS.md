@@ -77,6 +77,43 @@ PLAN §5 第 4 条要求「先量一个分子的真实耗时再定并发」。�
 
 ---
 
+## 3b. 训练栈 → 评测栈的进程边界已端到端验通（并补上一个会让 P0 白跑的缺件）
+
+训练时 reward **不在训练进程里算**：`bridge.py` 起一个子进程
+`task_python -m ldm_rl.real_env_worker`，走 JSON-lines stdio，并显式剥掉
+`LD_LIBRARY_PATH` / `CUDA_HOME` / `CUDA_VISIBLE_DEVICES`。这个边界是代码写死的。
+
+**缺件**：`bridge.py:87-89` 是
+
+```python
+task_python = str(spec.real.get("task_python")
+                  or "/mnt/data0/ys/LDM/tasks/small_molecule/.venv/bin/python")
+```
+
+而 `gen_episodes_runs.sh` 把 `config.real_kwargs` 整块烤进 episode，**站点 config 里
+原本没有 `task_python`**。于是四个 run 的 episode 全都缺这一项，训练时会回退到作者机器
+的路径。已补进 `config_real.isambard.json` 并重新生成四个 episodes 文件。
+
+**危害形态**：那个回退值在别的机器上依然是一个"合法"的字符串，所以它不报「配置缺失」，
+而是在 reward 那一步报下游错误。加上 `remote_env.py:41` 把 worker 的 `stderr` 设成
+`DEVNULL`，父进程只能看到一句 `task-venv worker exited unexpectedly`——**真实死因被丢掉了**。
+（我自己第一次跑探针就撞上这个：忘了 export `PYTHONPATH`，worker 起来就
+`ModuleNotFoundError` 退出，而父进程什么都不说。手动跑一次 worker 才看到原因。）
+
+**端到端验证结果**——子进程起得来、协议往返通、reward 真的在另一个解释器里算出来：
+
+| | round 0 | round 1 |
+|---|---|---|
+| 进程内（§1 的 E2） | vina −3.395 / act 5.9705 | vina −3.898 / act 5.9003 |
+| **经子进程边界** | **vina −3.395 / act 5.9705** | **vina −3.898 / act 5.9003** |
+
+两条路径**逐位一致**，所以远程路径不只是"能跑"，而是"算的是同一件事"。
+
+**建议回馈上游**：`remote_env.py` 的 `stderr=subprocess.DEVNULL` 改成捕获并在
+`RuntimeError` 里带出最后若干行。训练跑几小时后 worker 挂掉时，这是唯一的线索。
+
+---
+
 ## 4. 两个文件系统的约束是互补的（决定了环境该建在哪）
 
 | | 空间 | inode |
