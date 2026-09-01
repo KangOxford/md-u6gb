@@ -47,7 +47,7 @@ _chk_node=${NODE:-}
 [ -n "$_chk_node" ] || _chk_node=$(squeue -h -j "$JOB" -o "%N" | sed 's/[][]//g' | cut -d, -f1 | sed 's/-.*//')
 srun --overlap --jobid="$JOB" --nodes=1 --ntasks=1 -w "$_chk_node" \
      --gres=gpu:1 --cpus-per-task=8 --cpu-bind=none --job-name=ldmrl-envchk \
-     env PYTHONPATH= "$CONDA_PREFIX/bin/python" - <<'PY' || fail=1
+     /usr/bin/env PYTHONPATH= "$CONDA_PREFIX/bin/python" - <<'PY' || fail=1
 import importlib, sys
 from importlib.metadata import version, PackageNotFoundError
 
@@ -115,7 +115,9 @@ fi
 say "起跑于 $NODE,日志 $LOG"
 echo "$LOG" > "$T/logs/LATEST_P0_LOG"
 
-setsid nohup srun --overlap --jobid="$JOB" --nodes=1 --ntasks=1 -w "$NODE" \
+# 前台跑,不用 setsid nohup —— 实测那样起的 step 在会话结束时会被连带杀掉
+# (2026-09-01 06:23 转换那次就是这么没的)。由调用方决定放不放后台。
+srun --overlap --jobid="$JOB" --nodes=1 --ntasks=1 -w "$NODE" \
     --gres=gpu:4 --cpus-per-task=128 --cpu-bind=none --job-name=ldmrl-p0 \
     bash -c "
       source $T/code/site_env.sh >/dev/null 2>&1
@@ -124,5 +126,7 @@ setsid nohup srun --overlap --jobid="$JOB" --nodes=1 --ntasks=1 -w "$NODE" \
       echo '[p0] 节点 \$(hostname)  CUDA_VISIBLE_DEVICES=\${CUDA_VISIBLE_DEVICES:-<未设>}'
       nvidia-smi --query-gpu=index,memory.used --format=csv,noheader
       bash \$LAUNCH/run_train_real_slime.sh
-    " > "$LOG" 2>&1 &
-say "已提交(pid $!)。用 tail -f $LOG 看"
+    " > "$LOG" 2>&1
+_p0_rc=$?
+say "P0 结束 rc=$_p0_rc,日志 $LOG"
+exit $_p0_rc
