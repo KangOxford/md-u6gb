@@ -496,6 +496,58 @@ sglang 2 卡）在 `--gres=gpu:4` 下**有效**；若只申请 3 张卡，设备
 
 ---
 
+## 4c. Ray 这一层的两个问题（P0 卡在这里，与 TE 无关）
+
+### 一、`ray start` 返回 ≠ job 提交服务能收请求
+
+第一次 P0 起跑后 6 分钟就结束，死在
+
+```
+RuntimeError: Request failed with status code 504: .
+```
+
+时间线是决定性的：
+
+| 时刻 | 事件 |
+|---|---|
+| 07:30:31 | `ray start --head` 开始 |
+| 07:30:48 | 报 `Ray runtime started`（用了 17 秒） |
+| 07:30:54 | `ray job submit` 发出，**6 秒后**拿到 504 |
+
+端口在听，后面的 dashboard agent 还没起。**作者机器上启动快，这 6 秒够用；
+换台机器就是每次必挂**，而症状看起来像 Ray 的 bug 而不是竞态。
+
+已给八个启动脚本加就绪等待——轮询 `/api/version` 直到 200，超时 120s 报明确原因。
+实测这一步「等了 2s」就通过，与上面那 6 秒并不矛盾：**关键不是等多久，
+而是等到确认为止，而不是等一个猜的秒数。**
+
+### 二、就绪之后 `POST /api/jobs/` 本身超时
+
+加了就绪等待之后仍然 504，这次等了 **5 分钟**（07:38:53 → 07:43:55）。
+dashboard 的访问日志给出了确切位置：
+
+```
+07:38:53  'GET /api/version HTTP/1.1' 200      ← ray job submit 的版本检查
+（之后没有任何完成的 POST /api/jobs/）
+07:41:32  'GET /api/jobs/ HTTP/1.1' 200 160 bytes   ← 我手工跑的 ray job list，返回 []
+```
+
+即**创建作业的那个请求在 JobHead 子进程模块里超时了**。而同期
+`gcs_server` 与 `raylet` 的日志一直在正常更新（07:42:38 仍有心跳），
+JobHead 自身启动也无报错——**集群是好的，只有提交这条路不通**。
+
+**做法：去掉这一层，而不是绕过它。** 在**单节点本地集群**上，job server
+买不到任何东西：同一个进程 `ray.init` 连上已起的集群就能跑，而
+`runtime_env` 里那三个变量（`PYTHONPATH` / `LD_LIBRARY_PATH` /
+`CUDA_DEVICE_MAX_CONNECTIONS`）本来就已经在当前 shell 里 export 过，
+本地起的 worker 直接继承。
+
+加了 `SLIME_LAUNCH_MODE` 开关：不设或 `jobsubmit` 是作者原样，
+`direct` 走 `RAY_ADDRESS=auto python3 train.py`。站点配置选 `direct`，
+**上游默认不受影响**。
+
+---
+
 ## 5. 启动脚本的配置到不了它要控制的路径
 
 `slime_launch/*.sh` 里 `REPO_ROOT` / `MEGATRON_ROOT` / `CONDA_PREFIX` / `MODEL_HF` / `CONFIG`
