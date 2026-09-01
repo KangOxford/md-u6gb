@@ -233,6 +233,78 @@ G12D 当前流程的 RMSE 看起来更小（0.504 < 0.611），但那只是因�
 
 ---
 
+## 4b. 训练栈安装:CUDA 红线已过,编译段的三个坑
+
+**CUDA 红线过了**（HANDOFF §1 的头号风险）：
+
+```
+torch 2.11.0+cu129  cuda 12.9  avail True
+```
+
+装 `sglang[all]` 会拖进 cu13 的 torch 与运行库（驱动 565 只到 CUDA 12.7，装上去
+`torch.cuda.is_available()` 直接 False）。按作者的办法强制回退——`--force-reinstall
+--no-deps` 换 `+cu129`，再把 `nvidia-*-cu13` 卸掉换 `-cu12`——在 aarch64 上一次成功。
+`sglang-0.5.15.post1-cp312-cp312-manylinux_2_34_aarch64.whl` 确实存在，PLAN §2 的
+预判成立，**交接文档列的头号风险有一半被预编译轮子消掉了**。
+
+### 坑 1：节点默认 gcc 是 7.5.0，torch 要求 ≥ 9
+
+flash-attn 第一次编译失败，真实错误是
+
+```
+torch/include/c10/util/C++17.h:14:2: error: #error
+    "You're trying to build PyTorch with a too old version of GCC. We need GCC 9 or later."
+```
+
+`gcc --version` → **7.5.0 (SUSE)**。这会让 **flash-attn / TE / torch_memory_saver
+三段全挂**。集群有 `gcc-native/{12.3,13.2,14.2}`；取 **12.3**（CUDA 12.9 的 nvcc 对宿主
+编译器支持到 GCC 13）。已写进脚本并加了版本硬检查。
+
+### 坑 2：`module` 在非交互 shell 里根本没定义，`module load` 静默无效
+
+第一次修的时候直接在 `srun bash -c` 里写 `module load gcc-native/12.3`，**加载"成功"
+后 gcc 仍是 7**——`module` 是一个 shell 函数，只有登录 shell 才会定义它，非交互 shell 里
+这条命令什么都没做，也不报错。实测：
+
+| 起法 | `module load` 后的 gcc |
+|---|---|
+| `srun bash -c '...'` | **7** ← 静默无效 |
+| `srun bash -lc '...'` | **12**（`/opt/cray/pe/gcc-native/12/bin/gcc`） |
+
+修法：脚本内部显式 source lmod 初始化再 load，路径是
+`$MODULESHOME/init/bash` = `/opt/cray/pe/lmod/lmod/init/bash`
+（**不是**常见的 `/usr/share/lmod/lmod/init/bash`，我第一次就猜错了）。
+
+### 坑 3：`| tail -30` 把真正的编译错误扔了
+
+脚本原本是 `pip install -v ... flash-attn 2>&1 | tail -30`。编译失败时真实的
+nvcc/g++ 错误在前面几百行，tail 只留下 Python 的包装 traceback
+（`RuntimeError: Error compiling objects for extension`），**等于把病因丢掉**，
+只能重跑一遍才看到 "GCC too old"。已改成全量写进单独文件，失败时自动 grep 出前 5 条
+真实错误并打印日志路径。
+
+与 §3b 的 `stderr=DEVNULL` 是同一类：**为了让输出好看而截断，代价是失败时无法诊断。**
+
+### 顺带：sm80 那一半是白编的
+
+日志里出现 `flash_bwd_hdim192_bf16_causal_**sm80**`——即便设了
+`TORCH_CUDA_ARCH_LIST=9.0`，flash-attn 的 setup.py 仍按自己的名册编 sm80 核。
+GH200 是 sm90，那一半用不到却占掉约一半编译时间。已加
+`FLASH_ATTENTION_DISABLE_SM80=TRUE`。
+
+### 顺带：`--gres=gpu:4` 下 step 内看到的设备号（实测，不是推理）
+
+```
+step 内 CUDA_VISIBLE_DEVICES=0,1,2,3   SLURM_STEP_GPUS=0,1,2,3
+0..3 各 1-2 MiB(真空)
+```
+
+所以 `run_train_real_slime.sh` 写死的 `CUDA_VISIBLE_DEVICES=1,2,3`（actor 1 卡 +
+sglang 2 卡）在 `--gres=gpu:4` 下**有效**；若只申请 3 张卡，设备 3 不存在，
+而这类错误不会报错、只会让那一路指向不存在的卡。P0 因此申请 4 张。
+
+---
+
 ## 5. 启动脚本的配置到不了它要控制的路径
 
 `slime_launch/*.sh` 里 `REPO_ROOT` / `MEGATRON_ROOT` / `CONDA_PREFIX` / `MODEL_HF` / `CONFIG`

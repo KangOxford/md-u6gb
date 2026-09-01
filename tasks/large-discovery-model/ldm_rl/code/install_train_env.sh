@@ -54,6 +54,35 @@ fi
 
 export CUDA_HOME="$ENV_PREFIX"
 
+# 节点默认是 gcc 7.5.0(SUSE),而 torch 的 c10/util/C++17.h 直接 #error
+# "We need GCC 9 or later" —— flash-attn / TE / torch_memory_saver 三段全会挂。
+# 集群有 gcc-native/{12.3,13.2,14.2};取 12.3:CUDA 12.9 的 nvcc 对宿主编译器
+# 支持到 GCC 13,12.3 在安全区内。
+if [ -z "${LDMRL_SKIP_GCC_MODULE:-}" ]; then
+  _gccver=$(gcc -dumpversion 2>/dev/null | cut -d. -f1)
+  if [ -z "$_gccver" ] || [ "$_gccver" -lt 9 ] 2>/dev/null; then
+    # 非交互 shell(srun bash -c)里 `module` 这个函数根本没定义,module load 会静默
+    # 什么都不做 —— 实测加载"成功"后 gcc 仍是 7。所以先显式把 lmod 初始化进来。
+    # 本机路径是 $MODULESHOME/init/bash = /opt/cray/pe/lmod/lmod/init/bash。
+    if ! command -v module >/dev/null 2>&1; then
+      for _init in "${MODULESHOME:-/opt/cray/pe/lmod/lmod}/init/bash" \
+                   /opt/cray/pe/lmod/lmod/init/bash /usr/share/lmod/lmod/init/bash; do
+        [ -f "$_init" ] && { . "$_init"; break; }
+      done
+    fi
+    module load gcc-native/12.3 2>/dev/null || module load gcc/12.3 2>/dev/null || true
+  fi
+fi
+export CC=${CC:-$(command -v gcc)}
+export CXX=${CXX:-$(command -v g++)}
+echo "[gcc] CC=$CC ($($CC -dumpversion 2>/dev/null))  CXX=$CXX"
+_gccmajor=$($CC -dumpversion 2>/dev/null | cut -d. -f1)
+if [ -z "$_gccmajor" ] || [ "$_gccmajor" -lt 9 ] 2>/dev/null; then
+    echo "FATAL: gcc 版本 $($CC -dumpversion 2>/dev/null) < 9,torch 扩展编不了。"
+    echo "       在计算节点上先 'module load gcc-native/12.3' 再跑本脚本。"
+    exit 2
+fi
+
 # aarch64 特有:conda 的 CUDA 包把头文件放在 $PREFIX/targets/sbsa-linux/include
 # (sbsa = NVIDIA 给 ARM64 服务器架构的目标名),**但只把 lib 链回了 $PREFIX/lib,
 # include 那一侧没链**。而 flash-attn / torch_memory_saver / TE 的 setup.py 都按
@@ -111,9 +140,26 @@ fi
 # ---------------------------------------------------------------- 3. flash-attn(源码编)
 if run_stage flashattn; then
   say "=== [flashattn] flash-attn 2.8.3 源码编(社区轮子只有 x86) ==="
+  # 不要 `| tail -30`:编译失败时真正的 nvcc/g++ 错误在前面几百行,tail 只留下
+  # Python 的包装 traceback("Error compiling objects for extension"),等于把病因扔了。
+  # 2026-09-01 第一次编挂就是这样,只能重跑一遍才看到原因。全量写进单独的文件。
+  FA_LOG="$LOGDIR/flashattn_build_$(date -u +%Y%m%dT%H%M%SZ).log"
+  echo "[flashattn] 完整编译日志 -> $FA_LOG"
+  # flash-attn 的 setup.py 有自己的 arch 名册,不完全听 TORCH_CUDA_ARCH_LIST ——
+  # 第一次编时日志里出现了 flash_bwd_hdim192_bf16_causal_**sm80**,那一半在 GH200
+  # (sm90)上用不到,却占掉约一半编译时间。用它自己的开关关掉。
   MAX_JOBS=${MAX_JOBS:-64} NVCC_APPEND_FLAGS="--threads 4" \
+    FLASH_ATTENTION_DISABLE_SM80=${FLASH_ATTENTION_DISABLE_SM80:-TRUE} \
     $PIP install -v --no-cache-dir --no-build-isolation flash-attn==2.8.3 \
-    2>&1 | tail -30
+    > "$FA_LOG" 2>&1
+  _fa_rc=$?
+  if [ $_fa_rc -ne 0 ]; then
+      echo "[flashattn] 失败(rc=$_fa_rc)。日志里第一条真实错误:"
+      grep -m5 -nE "error:|fatal error|Killed|cannot find|undefined reference|No such file" "$FA_LOG" | sed 's/^/    /'
+      echo "[flashattn] 全文见 $FA_LOG"
+      exit 1
+  fi
+  # import 成功不等于装好:namespace package 残留也能 import。要求拿得到 __version__。
   $PY -c "import flash_attn;print('flash_attn', flash_attn.__version__)" || exit 1
 fi
 
