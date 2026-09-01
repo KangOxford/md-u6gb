@@ -59,8 +59,14 @@ unset SLURM_NTASKS SLURM_NTASKS_PER_NODE SLURM_STEP_NUM_TASKS 2>/dev/null || tru
 echo "[convert-1.5B] WORLD_SIZE=$WORLD_SIZE (单进程单卡)"
 
 cd "$SLIME_ROOT"
+# --no-gradient-accumulation-fusion:APEX 按 PLAN §2 跳过了(源码编,且训练脚本
+# 本来就带这个标志)。但**转换脚本没带** —— Megatron 的 ColumnParallelLinear 默认
+# gradient_accumulation_fusion=True,找不到 fused_weight_gradient_mlp_cuda 就直接
+#   RuntimeError: ... you must install APEX with --cpp_ext and --cuda_ext
+# 训练那边有 APEX_ARGS 挡着,转换这边没有,所以要在这里补。convert_9b.sh 同样缺。
 python tools/convert_hf_to_torch_dist.py \
    "${MODEL_ARGS[@]}" \
+   --no-gradient-accumulation-fusion \
    --hf-checkpoint "$MODEL_HF" \
    --save "$SAVE"
 echo "[convert-1.5B] 完成 -> $SAVE/"

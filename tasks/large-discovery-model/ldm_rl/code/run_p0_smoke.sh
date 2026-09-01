@@ -39,8 +39,15 @@ chk "评测栈 python"          "$TASK_PYTHON"
 # `import slime` 会命中 rl/slime/ 这个源码目录(命名空间包)而成功,哪怕它
 # 根本没被 pip install -e 装过。所以对 slime 与 megatron 额外要求能查到
 # 安装记录(importlib.metadata),而不是只看 import。
-say "--- 训练栈自检 ---"
-PYTHONPATH= "$CONDA_PREFIX/bin/python" - <<'PY' || fail=1
+# 这段必须在**计算节点**上跑。在登录节点跑的话 torch.cuda.is_available() 必然是
+# False(那里根本没有卡),而下面那句提示会把它误报成「装成了 cu13」——
+# 一个只在错误环境里才成立的判断,比没有判断更坏。
+say "--- 训练栈自检(在计算节点上跑) ---"
+_chk_node=${NODE:-}
+[ -n "$_chk_node" ] || _chk_node=$(squeue -h -j "$JOB" -o "%N" | sed 's/[][]//g' | cut -d, -f1 | sed 's/-.*//')
+srun --overlap --jobid="$JOB" --nodes=1 --ntasks=1 -w "$_chk_node" \
+     --gres=gpu:1 --cpus-per-task=8 --cpu-bind=none --job-name=ldmrl-envchk \
+     env PYTHONPATH= "$CONDA_PREFIX/bin/python" - <<'PY' || fail=1
 import importlib, sys
 from importlib.metadata import version, PackageNotFoundError
 
