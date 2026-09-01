@@ -285,12 +285,40 @@ nvcc/g++ 错误在前面几百行，tail 只留下 Python 的包装 traceback
 
 与 §3b 的 `stderr=DEVNULL` 是同一类：**为了让输出好看而截断，代价是失败时无法诊断。**
 
-### 顺带：sm80 那一半是白编的
+### 坑 4：编译被 OOM 杀掉，因为它在给**四个**架构编
 
-日志里出现 `flash_bwd_hdim192_bf16_causal_**sm80**`——即便设了
-`TORCH_CUDA_ARCH_LIST=9.0`，flash-attn 的 setup.py 仍按自己的名册编 sm80 核。
-GH200 是 sm90，那一半用不到却占掉约一半编译时间。已加
-`FLASH_ATTENTION_DISABLE_SM80=TRUE`。
+第二次编译（gcc 12 已就位）跑到一半被杀：
+
+```
+slurmstepd: error: Detected 1 oom_kill event in StepId=6217606.119
+sacct: State=OUT_OF_MEMORY   MaxRSS=316758912K  (302 GB)
+```
+
+nvcc 的中间文件名给出了线索：`flash_bwd_hdim192_bf16_sm80.compute_100.cudafe1.gpu`、
+`.compute_120.` —— **sm80、sm100、sm120 都在编**，而 GH200 实测 `compute_cap = 9.0`。
+读 setup.py 才看到它认的变量：
+
+```python
+# flash-attn 2.8.3  setup.py:69-70
+@functools.lru_cache(maxsize=None)
+def cuda_archs() -> str:
+    return os.getenv("FLASH_ATTN_CUDA_ARCHS", "80;90;100;120").split(";")
+```
+
+**是 `FLASH_ATTN_CUDA_ARCHS`。** 它不读 `TORCH_CUDA_ARCH_LIST`（脚本里设了 9.0，没用），
+也没有 `FLASH_ATTENTION_DISABLE_SM80` 这个开关——那是我凭一般印象设的，**属于同一类
+「配置到不了它要控制的路径」的错误，只是这次犯错的是我自己**。教训：给第三方构建加
+环境变量之前，先在它的 setup.py 里 grep 一遍那个名字，两分钟的事。
+
+设 `FLASH_ATTN_CUDA_ARCHS=90` 之后编译量与峰值内存都降到 1/4。并发也从
+`MAX_JOBS=32 + --threads 4`（最多 128 路并发编译）降到 `16 + --threads 2`，
+srun 侧另加 `--mem=380G`。
+
+**一个被我读错又纠正过来的推断**：一度以为节点上的 `/tmp` 与 `$TMPDIR` 是 tmpfs
+（确实是，RAM 支撑）且已经快满，因而怀疑是我把 conda/pip 缓存指过去才吃光内存。
+实际是我把 `df` 的列读错了——`172G 7.5G 164G 5%` 是「总量 已用 可用 使用率」，
+只用了 7.5G，根本没满。**OOM 与缓存位置无关，纯粹是编译本身。**
+（顺手清掉上次被杀留下的 1112 个 pip/nvcc 瞬时目录，7.5G → 1.7G。）
 
 ### 顺带：`--gres=gpu:4` 下 step 内看到的设备号（实测，不是推理）
 

@@ -145,11 +145,18 @@ if run_stage flashattn; then
   # 2026-09-01 第一次编挂就是这样,只能重跑一遍才看到原因。全量写进单独的文件。
   FA_LOG="$LOGDIR/flashattn_build_$(date -u +%Y%m%dT%H%M%SZ).log"
   echo "[flashattn] 完整编译日志 -> $FA_LOG"
-  # flash-attn 的 setup.py 有自己的 arch 名册,不完全听 TORCH_CUDA_ARCH_LIST ——
-  # 第一次编时日志里出现了 flash_bwd_hdim192_bf16_causal_**sm80**,那一半在 GH200
-  # (sm90)上用不到,却占掉约一半编译时间。用它自己的开关关掉。
-  MAX_JOBS=${MAX_JOBS:-64} NVCC_APPEND_FLAGS="--threads 4" \
-    FLASH_ATTENTION_DISABLE_SM80=${FLASH_ATTENTION_DISABLE_SM80:-TRUE} \
+  # 架构名册:flash-attn 2.8.3 的 setup.py 读的是 **FLASH_ATTN_CUDA_ARCHS**,默认
+  # "80;90;100;120" —— 四个架构,每个编译单元编四遍。它既不读 TORCH_CUDA_ARCH_LIST,
+  # 也没有 FLASH_ATTENTION_DISABLE_SM80 这个开关(我第一次凭印象设的,没有生效)。
+  # GH200 实测 compute_cap = 9.0,所以只留 90,编译量与峰值内存都降到 1/4。
+  #   setup.py:69-70  return os.getenv("FLASH_ATTN_CUDA_ARCHS", "80;90;100;120").split(";")
+  #
+  # 并发:2026-09-01 用 MAX_JOBS=32 + --threads 4 编到 MaxRSS 302GB 被 OOM 杀掉
+  # (sacct 记 OUT_OF_MEMORY)。四个架构那一版每个 TU 都很贵;现在只剩一个架构,
+  # 但仍把默认并发压到 16 × 2 线程,并让调用方能覆盖。
+  MAX_JOBS=${MAX_JOBS:-16} \
+    NVCC_APPEND_FLAGS="${NVCC_APPEND_FLAGS:---threads 2}" \
+    FLASH_ATTN_CUDA_ARCHS="${FLASH_ATTN_CUDA_ARCHS:-90}" \
     $PIP install -v --no-cache-dir --no-build-isolation flash-attn==2.8.3 \
     > "$FA_LOG" 2>&1
   _fa_rc=$?

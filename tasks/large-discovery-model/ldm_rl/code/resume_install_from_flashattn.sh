@@ -14,13 +14,13 @@ echo "$LOG" > $T/logs/LATEST_INSTALL_LOG
 echo "日志 $LOG"
 
 setsid nohup srun --overlap --jobid="$JOB" --nodes=1 --ntasks=1 -w "$NODE" \
-  --gres=gpu:1 --cpus-per-task=96 --cpu-bind=none --job-name=ldmrl-install \
+  --gres=gpu:1 --cpus-per-task=96 --mem=380G --cpu-bind=none --job-name=ldmrl-install \
   bash -lc "
     module load gcc-native/12.3 2>/dev/null || true
     echo \"[resume] 节点 \$(hostname)  gcc=\$(gcc -dumpversion)\"
     for s in flashattn te tms router megatron slime patch verify; do
         echo \"########## 段 \$s ##########\"
-        STAGE=\$s MAX_JOBS=32 bash $T/code/install_train_env.sh || {
+        STAGE=\$s MAX_JOBS=${MAX_JOBS:-16} bash $T/code/install_train_env.sh || {
             echo \"!! 段 \$s 失败,停在这里\"; exit 1; }
     done
     echo '########## 全部段完成 ##########'
