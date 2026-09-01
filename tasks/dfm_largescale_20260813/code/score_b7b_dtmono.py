@@ -13,6 +13,10 @@ R = '/lus/lfs1aip2/projects/public/u6gb/tasks/dfm_largescale_20260813'
 MO = os.environ.get('SCORE_MONTH', '2026-01')
 PAIRS = [('s42', 'b7bON_s42', 'b7bOFF_s42'),
          ('s43', 'b7bON_s43', 'b7bOFF_s43')]
+# SCORE_PAIRS="s42:r2d1_s42:r2d0_s42,s43:r2d1_s43:r2d0_s43" 覆盖默认配对
+# （seed:开格tag:关格tag）——r2 四格与 b7b 四格共用同一套评分。
+if os.environ.get('SCORE_PAIRS'):
+    PAIRS = [tuple(p.split(':')) for p in os.environ['SCORE_PAIRS'].split(',')]
 
 
 def mono(path, key):

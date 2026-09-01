@@ -1,0 +1,13 @@
+PR#22 R2 成因+修复 comment（三色：橙=问题，黑=Plan，蓝=结果）
+comment_id: 5471553146
+url: https://github.com/KangOxford/sigma-0/pull/22#issuecomment-5471553146
+posted: 2026-08-30
+补结果用: gh api -X PATCH repos/KangOxford/sigma-0/issues/comments/5471553146 -F body=@<新正文文件>
+（编辑 = 整体替换正文，补蓝色结果时带上原有橙/黑部分重发全文；
+ 底稿在会话 scratchpad/pr22_r2_comment.md，仓库里以本文件为准记录 id）
+已发蓝色（partial）: tau 扫描 9 配置 0/5 终值、P=0 消融 interim（62.6% 改动/一致率
+0.513→0.335）、R2 语料管线端到端验证 + 分支 19c74b9。
+待补蓝色:
+  1. P=0 消融终值（27 ticker level/slope vs b7bOFF_s42 vs draft 的分解表）
+  2. R2 第一格训练结果（held-out、生成侧 level/slope、dt>0、位间 z）
+  3. 若跑了 R2+架构修正第二格（LN 门控/t 条件/双向校准层），其对照

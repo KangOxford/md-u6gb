@@ -29,6 +29,14 @@ NPERM = 200
 TOL = 0.05 * 999.0          # 与原版一致：位值域 span 的 5%
 PAIRS = [('s42', 'b7bON_s42', 'b7bOFF_s42'),
          ('s43', 'b7bON_s43', 'b7bOFF_s43')]
+# SCORE_PAIRS="s42:r2d1_s42:r2d0_s42,..." 覆盖默认配对（seed:开格:关格），
+# r2 四格与 b7b 四格共用同一套评分。输出 JSON 名随 SCORE_TAG 区分。
+if os.environ.get('SCORE_PAIRS'):
+    PAIRS = [tuple(p.split(':')) for p in os.environ['SCORE_PAIRS'].split(',')]
+# SCORE_PAIRS="s42:r2d1_s42:r2d0_s42,s43:r2d1_s43:r2d0_s43" 覆盖默认配对
+# （seed:开格tag:关格tag）——r2 四格与 b7b 四格共用同一套评分。
+if os.environ.get('SCORE_PAIRS'):
+    PAIRS = [tuple(p.split(':')) for p in os.environ['SCORE_PAIRS'].split(',')]
 DIGIT_PAIRS = [('hi', 'mid'), ('mid', 'lo'), ('hi', 'lo')]   # (hi,mid)≙原1→0，(mid,lo)≙原2→1
 
 
@@ -123,7 +131,8 @@ def main():
         out[seed] = rows
         print()
     os.makedirs(f'{R}/figs', exist_ok=True)
-    sfx = '_eqn' if os.environ.get('EQN', '0') == '1' else ''
+    sfx = ('_' + os.environ['SCORE_TAG'] if os.environ.get('SCORE_TAG') else '') \
+        + ('_eqn' if os.environ.get('EQN', '0') == '1' else '')
     with open(f'{R}/figs/confusion_{MO}{sfx}.json', 'w') as f:
         json.dump(out, f, indent=1)
     print(f"wrote {R}/figs/confusion_{MO}{sfx}.json")
