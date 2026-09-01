@@ -82,6 +82,16 @@ except Exception as e:
 sys.exit(1 if bad else 0)
 PY
 
+# 环境完整性:按每个包的 dist-info/RECORD 核对文件是否真的在。
+# 2026-09-01 一次 OOM 打断 pip,留下的 openai 包只剩子目录、顶层 .py 全没了 ——
+# pip list 里版本号完全正常,import openai 也不报错,直到 train.py 启动踩到
+# openai._models 才炸。pip check 只查依赖关系,查不出文件缺失。
+if [ "$fail" = 0 ]; then
+    say "--- 环境完整性(按安装记录核对文件) ---"
+    /usr/bin/env PYTHONPATH= "$CONDA_PREFIX/bin/python" "$T/code/verify_env_integrity.py" 2>&1 | tail -12 | sed 's/^/    /'
+    [ "${PIPESTATUS[0]}" = 0 ] || { say "有包的文件与安装记录对不上,先修再跑"; fail=1; }
+fi
+
 # TE 的 backward 探针:装得上 != ABI 对得上。HANDOFF §7 的头号风险是
 # 「aarch64 上 TE 的 backward 会 SIGSEGV」,而那个问题**不需要**先转检查点、
 # 起 ray、起 sglang 才能回答。几秒钟的最小实验先给出答案,失败时的栈也干净。
