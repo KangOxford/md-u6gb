@@ -331,6 +331,25 @@ srun 侧另加 `--mem=380G`。
 只用了 7.5G，根本没满。**OOM 与缓存位置无关，纯粹是编译本身。**
 （顺手清掉上次被杀留下的 1112 个 pip/nvcc 瞬时目录，7.5G → 1.7G。）
 
+### 坑 5：cuDNN 的头文件与库也不在 `$CUDA_HOME` 下（同一个结构的第三次）
+
+TE 段挂在 `fatal error: cudnn.h: No such file or directory`。
+
+cuDNN **不来自 conda 的 CUDA 包**，而是 pip 包 `nvidia-cudnn-cu12`，头文件在
+`site-packages/nvidia/cudnn/include/`，库在 `.../cudnn/lib/`；`cudnn_frontend`
+是另一个 pip 包，头文件直接在 `site-packages/include/`。而
+`transformer_engine_torch` 的编译按 `$CUDA_HOME` 找。
+
+**还有一层**：pip 的 cuDNN 只发**版本化的 `libcudnn.so.9`，没有裸的 `.so`**——
+那个包是给运行时 `dlopen` 用的，而链接器要的是 `-lcudnn` 能解析到的 `libcudnn.so`。
+所以除了软链，还要补出裸名。已建：头 14 个、库 16 个（含裸 `.so`）、frontend 28 个。
+
+**这是同一个结构的第三次**（CUDA 头在 `targets/sbsa-linux/include`；cuDNN 在
+`site-packages/nvidia/cudnn/include`）。共同点是**运行时能用、编译时找不到**——
+Python 的加载器知道那些路径，编译器只看 `-I`。
+**判断法**：报 `fatal error: X.h: No such file` 时先问「X 是谁装的」，
+如果是 pip 包而不是 conda 的 CUDA 包，它一定不在 `$CUDA_HOME` 下。
+
 ### 顺带：`--gres=gpu:4` 下 step 内看到的设备号（实测，不是推理）
 
 ```

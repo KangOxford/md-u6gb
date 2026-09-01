@@ -75,6 +75,23 @@ except Exception as e:
 sys.exit(1 if bad else 0)
 PY
 
+# TE 的 backward 探针:装得上 != ABI 对得上。HANDOFF §7 的头号风险是
+# 「aarch64 上 TE 的 backward 会 SIGSEGV」,而那个问题**不需要**先转检查点、
+# 起 ray、起 sglang 才能回答。几秒钟的最小实验先给出答案,失败时的栈也干净。
+# 注意它要在计算节点上跑(要卡),所以走 srun,不在这里直接执行。
+if [ "$fail" = 0 ]; then
+    say "--- TE backward 探针(在计算节点上跑) ---"
+    _probe_node=${NODE:-}
+    if [ -z "$_probe_node" ]; then
+        _probe_node=$(squeue -h -j "$JOB" -o "%N" | sed 's/[][]//g' | cut -d, -f1 | sed 's/-.*//')
+    fi
+    srun --overlap --jobid="$JOB" --nodes=1 --ntasks=1 -w "$_probe_node" \
+         --gres=gpu:1 --cpus-per-task=8 --cpu-bind=none --job-name=ldmrl-teprobe \
+         "$CONDA_PREFIX/bin/python" "$T/code/probe_te_backward.py" 2>&1 | sed 's/^/    /'
+    _te_rc=${PIPESTATUS[0]}
+    [ "$_te_rc" = 0 ] || { say "TE backward 探针失败(rc=$_te_rc) —— 这正是 P0 要验的那件事,先修它"; fail=1; }
+fi
+
 [ "$fail" = 0 ] || { say "前提不全,不起跑(空跑无意义)"; exit 3; }
 
 # 挑一个 4/4 全空的节点:4 卡作业落在部分空的节点上会在启动窗口之后 SIGABRT,

@@ -98,6 +98,44 @@ if [ -n "$_TGT" ] && [ ! -e "$ENV_PREFIX/include/cuda_runtime.h" ]; then
   echo "[cuda] 从 $_TGT/include 补了 $_n 个头文件软链到 \$CUDA_HOME/include"
 fi
 [ -e "$ENV_PREFIX/include/cuda_runtime.h" ] || { echo "FATAL: \$CUDA_HOME/include 下没有 cuda_runtime.h,后面的源码编译必挂"; exit 2; }
+
+# 同一个毛病的第二处:cuDNN。它不来自 conda 的 CUDA 包,而是 pip 包
+# nvidia-cudnn-cu12,头文件落在 site-packages/nvidia/cudnn/include/,
+# 库落在 .../cudnn/lib/。而 transformer_engine_torch 的编译按 $CUDA_HOME 找,
+# 于是报 "fatal error: cudnn.h: No such file or directory"(2026-09-01 te 段挂在这)。
+#
+# 还有一层:pip 的 cuDNN **只发版本化的 libcudnn.so.9,没有裸的 .so** ——
+# 那个包是给运行时 dlopen 用的,而链接器要的是 -lcudnn 能解析到的 libcudnn.so。
+# 所以除了软链,还要补出裸名。
+#
+# cudnn_frontend 是另一个 pip 包(nvidia-cudnn-frontend),头文件直接在
+# site-packages/include/ 下,TE 也要它。
+_SP=$($PY -c "import site;print(site.getsitepackages()[0])" 2>/dev/null)
+if [ -n "$_SP" ] && [ -d "$_SP/nvidia/cudnn/include" ]; then
+  _n=0
+  for _h in "$_SP"/nvidia/cudnn/include/*; do
+      _b=$(basename "$_h"); [ -e "$ENV_PREFIX/include/$_b" ] && continue
+      ln -s "$_h" "$ENV_PREFIX/include/$_b" && _n=$((_n+1))
+  done
+  _m=0
+  for _l in "$_SP"/nvidia/cudnn/lib/*.so.*; do
+      _b=$(basename "$_l")
+      [ -e "$ENV_PREFIX/lib/$_b" ] || { ln -s "$_l" "$ENV_PREFIX/lib/$_b" && _m=$((_m+1)); }
+      # libcudnn_graph.so.9 -> libcudnn_graph.so  (链接器要的裸名)
+      _bare=${_b%%.so.*}.so
+      [ -e "$ENV_PREFIX/lib/$_bare" ] || { ln -s "$_l" "$ENV_PREFIX/lib/$_bare" && _m=$((_m+1)); }
+  done
+  echo "[cudnn] 头文件软链 $_n 个,库软链 $_m 个(含裸 .so) -> \$CUDA_HOME"
+fi
+# cudnn_frontend(header-only)的头直接在 site-packages/include/ 下
+if [ -n "$_SP" ] && [ -e "$_SP/include/cudnn_frontend.h" ]; then
+  _n=0
+  for _h in "$_SP"/include/cudnn_frontend*; do
+      _b=$(basename "$_h"); [ -e "$ENV_PREFIX/include/$_b" ] && continue
+      ln -s "$_h" "$ENV_PREFIX/include/$_b" && _n=$((_n+1))
+  done
+  echo "[cudnn] cudnn_frontend 头文件软链 $_n 个"
+fi
 # GH200 是 Hopper sm90。显式给出,让 flash-attn/TMS 编译不必探测在用的 GPU。
 export TORCH_CUDA_ARCH_LIST="9.0"
 export PATH="$ENV_PREFIX/bin:$PATH"
