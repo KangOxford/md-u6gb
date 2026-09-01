@@ -62,6 +62,13 @@ if [ -x /opt/cray/pe/gcc-native/12/bin/gcc ]; then
     # (实测把 `python` 解析到了别的解释器)。CC/CXX 指对就够了,
     # 编译器是靠这两个变量被调用的,不是靠 PATH 顺序。
     export PATH="$PATH:/opt/cray/pe/gcc-native/12/bin"
+    # nvcc **不读 CC/CXX** —— 那是 make/setuptools 的约定。nvcc 用 -ccbin 指定
+    # 宿主编译器,不指定就用系统默认(这里是 gcc 7)。于是运行时 JIT 编 .cu 时
+    # 仍在用 gcc 7 的标准库,报
+    #   sgl_kernel/source_location.h:8:10: fatal error: version: No such file
+    # <version> 是 C++20 才有的头,gcc 7 没有;g++ 12.3 有(/usr/include/c++/12)。
+    # NVCC_PREPEND_FLAGS 会被加到**每一次** nvcc 调用前,包括我们管不到的 JIT。
+    export NVCC_PREPEND_FLAGS="${NVCC_PREPEND_FLAGS:-} -ccbin /opt/cray/pe/gcc-native/12/bin/g++"
 fi
 
 export PYTHONPATH=$MEGATRON_ROOT:$REPO_ROOT/rl:$REPO_ROOT:${PYTHONPATH:-}
