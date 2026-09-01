@@ -35,7 +35,27 @@ unset SLURM_NTASKS SLURM_NTASKS_PER_NODE SLURM_STEP_NUM_TASKS 2>/dev/null || tru
 echo "[convert-9B:$WHICH] HF   = $MODEL_HF"
 echo "[convert-9B:$WHICH] SAVE = $SAVE"
 [ -f "$MODEL_HF/config.json" ] || { echo "FATAL: $MODEL_HF 下没有 config.json"; exit 2; }
-if [ -d "$SAVE" ]; then echo "[convert-9B:$WHICH] $SAVE 已存在,跳过"; exit 0; fi
+# 跳过判断要看**完成标记**,不能只看目录存在:一次失败会留下几 KB 的残目录
+# (实测 sft 那次失败后留了 8.5K),只看存在就会把重跑误判成"已完成"。
+# 转换器成功时会写 latest_checkpointed_iteration.txt。
+if [ -f "$SAVE/latest_checkpointed_iteration.txt" ]; then
+    echo "[convert-9B:$WHICH] $SAVE 已完成(有 latest_checkpointed_iteration.txt),跳过"; exit 0
+fi
+if [ -d "$SAVE" ]; then
+    _old="${SAVE}_partial_$(date -u +%Y%m%dT%H%M%SZ)"
+    echo "[convert-9B:$WHICH] $SAVE 存在但没有完成标记 —— 是上次失败的残留,改名到 $(basename $_old)"
+    mv "$SAVE" "$_old"
+fi
+
+# torch.distributed 的 TCPStore 端口:转换器用 os.environ.setdefault("MASTER_PORT","12355")
+# (convert_hf_to_torch_dist.py:101)。同一节点上两个转换并行、或上一次被打断留下的
+# 进程还占着,就会 EADDRINUSE。按 base/sft 各给一个端口,并允许外部覆盖。
+case "$WHICH" in
+  base) export MASTER_PORT=${MASTER_PORT:-12361} ;;
+  sft)  export MASTER_PORT=${MASTER_PORT:-12362} ;;
+esac
+export MASTER_ADDR=${MASTER_ADDR:-localhost}
+echo "[convert-9B:$WHICH] MASTER_ADDR=$MASTER_ADDR MASTER_PORT=$MASTER_PORT"
 
 # 对账:注释会过期,检查不会
 python - "$MODEL_HF" <<'PY'
