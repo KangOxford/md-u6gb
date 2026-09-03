@@ -22,6 +22,16 @@
   attachment has been preserved locally.
 </critical-local-rules>
 
+<sigma-0-git-identity>
+# sigma-0 Git Identity
+
+- For every `sigma-0` repository and worktree, always use the repository-local
+  Git commit identity `junming <anjunming0819@outlook.com>`.
+- Before committing in a `sigma-0` repository or worktree, verify both
+  `git config user.name` and `git config user.email`; do not create the commit
+  under a different author or committer identity.
+</sigma-0-git-identity>
+
 <codex-output-preferences>
 # Codex Output Preferences
 
