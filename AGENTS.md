@@ -35,6 +35,10 @@
 <codex-output-preferences>
 # Codex Output Preferences
 
+- A Jupyter notebook is not considered delivered until its `.ipynb` file has
+  been committed and pushed to the appropriate remote branch. Verify the
+  remote object after pushing and always give the user a direct, clickable
+  remote URL to the notebook; never report a local-only notebook as delivered.
 
 - If a user message contains content inside `[]`, treat that bracketed content as mandatory Notion update instructions:
   - preserve the original bracketed line on Notion and render it with strikethrough (`~~...~~`);
