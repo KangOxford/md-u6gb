@@ -302,6 +302,31 @@ echo "[bsz] 有效批量 $EFFECTIVE_BSZ = ${PER_GPU_BSZ} × ${GPUS_PER_NODE}GPU 
 # 注意 train.py:413 的 curtail_epochs 数的是 micro-batch，K>1 时必须乘 K，
 # 否则会在 32000/K 步静默早停；COSINE_STEPS 数的是优化器步，不乘。
 export HIERARCHICAL=True
+# ── REMAT：不用。（2026-09-04 用户令「do not remat」）────────────────────────
+#
+# 这条令不改变本脚本的任何行为——REMAT 本来就是 0，而且对 mamba3 递归主干
+# **本来就是空操作**：
+#
+#   init_Mamba3SSM(H, d_state, expand, headdim, chunk_size, rope_fraction,
+#                  use_triton, use_cuda, tp_size)          <- 签名里没有 remat
+#
+#   build_backbone 只在三处传 remat，全是注意力类 factory：
+#     registry.py:310  hybrid 的 TransformerBlock
+#     registry.py:421  纯 transformer
+#     registry.py:441  NSA
+#   递归主干一处也没有。
+#
+# 2026-08-12 实测（results/CTX_4K_FEASIBILITY.md）：REMAT=1 与 REMAT=0 的峰值
+# **逐字节相同**（18.02 / 35.71 GB，时间 0.276 vs 0.280），同一个点 OOM。
+# 完全相同的数字是「开关没接上」的标识，不是「开关没用」。
+#
+# 后果，写清楚免得以后有人再去试：
+#   · 上下文上限就是显存拟合给的那个数。peak(n) = 0.42 + 0.03524·n GB，
+#     MEM_FRACTION=0.85（≈72.7 GB）下墙在 **2,050 条消息**；
+#     本脚本的 MSG_SEQ_LEN=2000（52,000 token）已经贴着它。
+#   · 4,000 条消息要 134–142 GB = 一张 GH200 的 1.66 倍。**这条路按用户令关闭**，
+#     不再考虑「接上 nn.remat 再冲 4k」。要更长上下文只剩序列并行那条路，
+#     那是另一件事、要另外测。
 export REMAT=0
 # profiling 指标。梯度范数按参数组分开（global/muon/ssm/regular/in_proj/out_proj）
 # 外加 clip_ratio——后者直接回答「裁剪是不是一直在饱和」，那是发散诊断的第一问。

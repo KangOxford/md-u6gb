@@ -228,17 +228,20 @@ memory, tokens per step, or step count** — the cleanest controlled comparison 
 
 **Answer: 2,000 messages / 52,000 tokens is the longest context this model can train at
 today.** The fit puts the wall at 2,050 messages under the `MEM_FRACTION=0.85` in use,
-and at 2,410 if the whole card were given to XLA. Going to 4,000 is not a setting, it is one of three
-engineering changes:
+and at 2,410 if the whole card were given to XLA.
 
-| Route to 4,000 messages | What it costs | Risk |
-|---|---|---|
-| Wire `nn.remat` into the Mamba-3 layer | a few lines, plus a `remat` argument on `init_Mamba3SSM` | `REMAT=1` is **silently a no-op today** — it is only passed to attention-class factories, never to the recurrent trunk. Re-measure before believing any number |
-| Sequence parallelism across the 4 GPUs | new collective in the scan | ~4× headroom, largest win, largest amount of new code |
-| `d_state` 128 → 64, or bf16 activations | env-level | both change the model or its numerics, so the result stops being comparable to every existing checkpoint |
+**Decided 2026-09-04: no remat.** Activation checkpointing is off the table, so the
+memory curve above is the memory curve and 2,000 messages is the context length, full stop.
 
-Recommendation: **train at 2,000 now**, and treat 4,000 as a separate follow-on that
-starts with the remat wiring plus a fresh memory sweep.
+| Route to 4,000 messages | Status |
+|---|---|
+| Wire `nn.remat` into the Mamba-3 layer | **ruled out by decision, 2026-09-04.** It would have been a few lines plus a `remat` argument on `init_Mamba3SSM`. Note also that `REMAT=1` is **silently a no-op today**: it reaches only attention-class factories (`registry.py:310 / :421 / :441`), never the recurrent trunk, and `REMAT=1` vs `REMAT=0` measured byte-identical peaks |
+| Sequence parallelism across the 4 GPUs | the only remaining route: about 4x headroom, a new collective inside the scan, and its own measurement campaign. A separate piece of work, not part of this run |
+| `d_state` 128 to 64, or bf16 activations | would change the model or its numerics, so the result stops being comparable to every existing checkpoint |
+
+Both launch scripts already carry `export REMAT=0`, now with the decision and its
+reasoning written directly above that line, so this costs nothing to honour and cannot be
+flipped back by accident.
 """)
 
 # ─────────────────────────────────────────────────── 3. the corpus ────
@@ -742,6 +745,7 @@ card = f'''
 | steps | {r['cosine_steps']:,} optimiser steps = {r['cosine_steps']*r['effective_batch_sequences']*2000*26/1e9:,.0f}B tokens = 17.0% of one epoch |
 | micro-batch | 1 sequence per GPU (forced: 70.9 GB peak at 52,000 tokens) |
 | MEM_FRACTION | 0.85 |
+| `REMAT` | **0** — decided 2026-09-04, and a no-op on the recurrent trunk in any case |
 | checkpoint / logging | `CHECKPOINT_EVERY=auto` (15 min), wandb every 1 min, `LOG_GRAD_NORMS=1`, `LOG_EVERY=250` |
 | efficiency | `MAMBA3_CONTRACTION_PRECISION=default`; MFU reported against the TF32 peak with the convention stated |
 | validation | `valset_fast` (512 windows) every 500 steps; `valset_full` (15,017) every 4,000 steps and at the end |
@@ -779,10 +783,11 @@ kernel together, and two of those change the model. Doing them would produce a f
 that cannot be compared to any existing checkpoint. The efficiency work here is the free
 part: fix the accounting, turn on TF32, state the convention.
 
-**It does not go to 4,000 messages.** The memory arithmetic says 134–142 GB against an
-85.5 GB card, and the one lever that would fix it — activation checkpointing — is
-currently a no-op that does not touch the recurrent trunk at all. That is a separate
-piece of work with its own measurement, not a flag to flip in this run.
+**It does not go to 4,000 messages.** The memory arithmetic says 134-142 GB against an
+85.5 GB card, and remat, the one cheap lever that would have fixed it, is ruled out by
+decision (2026-09-04) on top of being a no-op on the recurrent trunk today. The only
+remaining route is sequence parallelism, which is a separate piece of work with its own
+measurement campaign.
 """)
 
 # ───────────────────────────────────────────── 7. HF repo layout ────
@@ -827,7 +832,7 @@ md(r"""
 
 | # | decision | recommendation |
 |---|---|---|
-| 1 | context length: 2,000 now, or spend a day wiring remat first and aim at 4,000? | **2,000 now.** 4,000 is 1.66× the card and the enabling lever is currently a no-op |
+| 1 | ~~context length: 2,000 now, or wire remat first and aim at 4,000?~~ | **settled 2026-09-04: 2,000 messages, no remat.** Both launch scripts annotated at the `REMAT=0` line |
 | 2 | holdout unit: 96 ticker-days (1.2% withheld) vs 8 ticker-days (0.1% withheld, but only 8 days of diversity) | **96.** 1.2% of a corpus we consume 17% of is not a cost |
 | 3 | run the baseline arm as well, doubling the compute? | **yes.** Figure 1 is a paired claim; an unpaired hybrid number cannot be read |
 | 4 | efficiency: free levers only, or also `headdim` 128 (+41%)? | **free levers only** in this run; `headdim` 128 as a separate, explicitly-labelled architecture experiment |

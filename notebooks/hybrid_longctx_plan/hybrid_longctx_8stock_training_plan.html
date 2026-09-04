@@ -7796,7 +7796,7 @@ a.anchor-link {
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
 <main>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=207d1dba">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=072d0ea8">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7811,7 +7811,7 @@ projections.</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=8132a239">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5649a8c5">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7879,7 +7879,7 @@ corpus files: 7,967  messages: 30,058,681,968
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=56169098">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=7aa13876">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7893,7 +7893,7 @@ fluctuation, a monotone curve across 21 points of spread cannot.</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=917c1ee0">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b15152b5">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7962,7 +7962,7 @@ fluctuation, a monotone curve across 21 points of spread cannot.</p>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=0eba4da2">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=c616c9cd">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7974,7 +7974,7 @@ project produces a monotone 21-point spread from a single architectural change.<
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=6513f986">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=c5c5c26f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7988,7 +7988,7 @@ quarter of one GH200. <strong>Training is.</strong> Backward memory grows linear
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=022d8098">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3522332c">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8094,7 +8094,7 @@ projected peak at 4,000 messages     : 141.4 GB linear, 134 GB with the measured
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=347e6780">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=4e27139b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8107,41 +8107,39 @@ from <code>bsz 4 × 500</code> to <code>bsz 1 × 2000</code> changes the context
 memory, tokens per step, or step count</strong> — the cleanest controlled comparison available.</p>
 <p><strong>Answer: 2,000 messages / 52,000 tokens is the longest context this model can train at
 today.</strong> The fit puts the wall at 2,050 messages under the <code>MEM_FRACTION=0.85</code> in use,
-and at 2,410 if the whole card were given to XLA. Going to 4,000 is not a setting, it is one of three
-engineering changes:</p>
+and at 2,410 if the whole card were given to XLA.</p>
+<p><strong>Decided 2026-09-04: no remat.</strong> Activation checkpointing is off the table, so the
+memory curve above is the memory curve and 2,000 messages is the context length, full stop.</p>
 <table>
 <thead>
 <tr>
 <th>Route to 4,000 messages</th>
-<th>What it costs</th>
-<th>Risk</th>
+<th>Status</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Wire <code>nn.remat</code> into the Mamba-3 layer</td>
-<td>a few lines, plus a <code>remat</code> argument on <code>init_Mamba3SSM</code></td>
-<td><code>REMAT=1</code> is <strong>silently a no-op today</strong> — it is only passed to attention-class factories, never to the recurrent trunk. Re-measure before believing any number</td>
+<td><strong>ruled out by decision, 2026-09-04.</strong> It would have been a few lines plus a <code>remat</code> argument on <code>init_Mamba3SSM</code>. Note also that <code>REMAT=1</code> is <strong>silently a no-op today</strong>: it reaches only attention-class factories (<code>registry.py:310 / :421 / :441</code>), never the recurrent trunk, and <code>REMAT=1</code> vs <code>REMAT=0</code> measured byte-identical peaks</td>
 </tr>
 <tr>
 <td>Sequence parallelism across the 4 GPUs</td>
-<td>new collective in the scan</td>
-<td>~4× headroom, largest win, largest amount of new code</td>
+<td>the only remaining route: about 4x headroom, a new collective inside the scan, and its own measurement campaign. A separate piece of work, not part of this run</td>
 </tr>
 <tr>
-<td><code>d_state</code> 128 → 64, or bf16 activations</td>
-<td>env-level</td>
-<td>both change the model or its numerics, so the result stops being comparable to every existing checkpoint</td>
+<td><code>d_state</code> 128 to 64, or bf16 activations</td>
+<td>would change the model or its numerics, so the result stops being comparable to every existing checkpoint</td>
 </tr>
 </tbody>
 </table>
-<p>Recommendation: <strong>train at 2,000 now</strong>, and treat 4,000 as a separate follow-on that
-starts with the remat wiring plus a fresh memory sweep.</p>
+<p>Both launch scripts already carry <code>export REMAT=0</code>, now with the decision and its
+reasoning written directly above that line, so this costs nothing to honour and cannot be
+flipped back by accident.</p>
 </div>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=3f49130e">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=101f7051">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8158,7 +8156,7 @@ baseline log, and the 2,000-message total divided by the 2-node micro-batch of 8
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=845b92d7">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d4157d33">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8238,7 +8236,7 @@ baseline log, and the 2,000-message total divided by the 2-node micro-batch of 8
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=bab42c18">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=f27bcc5a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8378,7 +8376,7 @@ baseline log, and the 2,000-message total divided by the 2-node micro-batch of 8
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=3f60279c">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=2c150092">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8399,7 +8397,7 @@ was taken out.</p>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=14ba0f14">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=809bb852">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8413,7 +8411,7 @@ training loss.</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9f4dc9f5">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=250ed61c">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8517,7 +8515,7 @@ full pass over 15,017 windows on 16 GPUs ≈ 5.9 min
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=dc1b41f1">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1c2cd4f1">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8574,7 +8572,7 @@ full pass over 15,017 windows on 16 GPUs ≈ 5.9 min
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=b82dd9a8">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=0e86278e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8588,7 +8586,7 @@ is not a result — it is the <em>same</em> 9.4% run divided by a different deno
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=23b9c135">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9746d15c">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8676,7 +8674,7 @@ is not a result — it is the <em>same</em> 9.4% run divided by a different deno
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=b8d24e60">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=822bbf88">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8706,7 +8704,7 @@ wrong side of it.</strong></p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e9a8775d">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=eeaf1c29">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8788,7 +8786,7 @@ hybrid mamba3 + 1 attention        logged  1.36%   corrected/bf16  5.49%   corre
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=acc0bddd">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=31359ded">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8850,7 +8848,7 @@ is quoting a target.</p>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1438b327">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=6595772b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8860,7 +8858,7 @@ is quoting a target.</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=08481344">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d572dd59">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8959,7 +8957,7 @@ hybrid    5 nodes  K= 4  opt step  3.28s  32,000 steps =  29.2 h
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=4cfb8d93">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b3609d0c">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8986,6 +8984,7 @@ hybrid    5 nodes  K= 4  opt step  3.28s  32,000 steps =  29.2 h
 <span class="s1">| steps | </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'cosine_steps'</span><span class="p">]</span><span class="si">:</span><span class="s1">,</span><span class="si">}</span><span class="s1"> optimiser steps = </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'cosine_steps'</span><span class="p">]</span><span class="o">*</span><span class="n">r</span><span class="p">[</span><span class="s1">'effective_batch_sequences'</span><span class="p">]</span><span class="o">*</span><span class="mi">2000</span><span class="o">*</span><span class="mi">26</span><span class="o">/</span><span class="mf">1e9</span><span class="si">:</span><span class="s1">,.0f</span><span class="si">}</span><span class="s1">B tokens = 17.0% of one epoch |</span>
 <span class="s1">| micro-batch | 1 sequence per GPU (forced: 70.9 GB peak at 52,000 tokens) |</span>
 <span class="s1">| MEM_FRACTION | 0.85 |</span>
+<span class="s1">| `REMAT` | **0** — decided 2026-09-04, and a no-op on the recurrent trunk in any case |</span>
 <span class="s1">| checkpoint / logging | `CHECKPOINT_EVERY=auto` (15 min), wandb every 1 min, `LOG_GRAD_NORMS=1`, `LOG_EVERY=250` |</span>
 <span class="s1">| efficiency | `MAMBA3_CONTRACTION_PRECISION=default`; MFU reported against the TF32 peak with the convention stated |</span>
 <span class="s1">| validation | `valset_fast` (512 windows) every 500 steps; `valset_full` (15,017) every 4,000 steps and at the end |</span>
@@ -9066,6 +9065,10 @@ hybrid    5 nodes  K= 4  opt step  3.28s  32,000 steps =  29.2 h
 <td>0.85</td>
 </tr>
 <tr>
+<td><code>REMAT</code></td>
+<td><strong>0</strong> — decided 2026-09-04, and a no-op on the recurrent trunk in any case</td>
+</tr>
+<tr>
 <td>checkpoint / logging</td>
 <td><code>CHECKPOINT_EVERY=auto</code> (15 min), wandb every 1 min, <code>LOG_GRAD_NORMS=1</code>, <code>LOG_EVERY=250</code></td>
 </tr>
@@ -9088,7 +9091,7 @@ hybrid    5 nodes  K= 4  opt step  3.28s  32,000 steps =  29.2 h
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=41d7f854">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=ff4263a9">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9118,15 +9121,16 @@ reference-recall by age.</li>
 kernel together, and two of those change the model. Doing them would produce a fast run
 that cannot be compared to any existing checkpoint. The efficiency work here is the free
 part: fix the accounting, turn on TF32, state the convention.</p>
-<p><strong>It does not go to 4,000 messages.</strong> The memory arithmetic says 134–142 GB against an
-85.5 GB card, and the one lever that would fix it — activation checkpointing — is
-currently a no-op that does not touch the recurrent trunk at all. That is a separate
-piece of work with its own measurement, not a flag to flip in this run.</p>
+<p><strong>It does not go to 4,000 messages.</strong> The memory arithmetic says 134-142 GB against an
+85.5 GB card, and remat, the one cheap lever that would have fixed it, is ruled out by
+decision (2026-09-04) on top of being a no-op on the recurrent trunk today. The only
+remaining route is sequence parallelism, which is a separate piece of work with its own
+measurement campaign.</p>
 </div>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=e95cc17a">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=10f28594">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9161,7 +9165,7 @@ single <code>upload-large-folder</code> call rather than a loop.</p>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=17c55dec">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=f50e99c0">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9179,8 +9183,8 @@ single <code>upload-large-folder</code> call rather than a loop.</p>
 <tbody>
 <tr>
 <td>1</td>
-<td>context length: 2,000 now, or spend a day wiring remat first and aim at 4,000?</td>
-<td><strong>2,000 now.</strong> 4,000 is 1.66× the card and the enabling lever is currently a no-op</td>
+<td><del>context length: 2,000 now, or wire remat first and aim at 4,000?</del></td>
+<td><strong>settled 2026-09-04: 2,000 messages, no remat.</strong> Both launch scripts annotated at the <code>REMAT=0</code> line</td>
 </tr>
 <tr>
 <td>2</td>
