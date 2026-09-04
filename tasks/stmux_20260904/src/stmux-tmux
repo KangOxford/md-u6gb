@@ -1,0 +1,245 @@
+#!/bin/bash
+# stmux-tmux — 回答"这台机器上该用哪个 tmux 二进制",作为单一事实来源。
+#
+# 2026-09-03。起因:login44 上 `stmux` 报 "server exited unexpectedly"。
+#
+# 机制:tmux 的 socket 是 per-uid 的(/tmp/tmux-<uid>/default),一台登录节点上你所有
+# 的 tmux 共用它 —— 谁先建 server,谁就定死了这个 socket 的协议版本。当时机器上同时
+# 存在两个 tmux:
+#     3.6  miniforge base(conda 包 tmux-3.6-h2fb902b_0),默认在 PATH 上
+#     3.4  /tools/brics/...(module brics/tmux/3.4),root 所有,全站 1000+ 用户共享
+#
+# 实测(2026-09-03,login45,真实 socket):
+#     3.6 client → 3.4 server   rc=0   能连
+#     3.4 client → 3.6 server   rc=1   "server exited unexpectedly"
+# 兼容单向:新客户端认旧 server,旧客户端不认新 server。那句报错是谎话 —— server 一直
+# 活着,换 3.6 的客户端当场就能列出 session。危害在于它把"协议不兼容"说成"对方死了",
+# 于是人会去重建 session,把里面在跑的东西一起带走。
+#
+# 已按用户令删掉 3.6(二进制 + conda 包记录一起清 —— 只删文件的话下次 conda 操作会
+# 把它装回来,而那时已经没人记得为什么)。现在整台机器上只有 3.4,冲突从源头消失。
+#
+# 那这个脚本还有什么用?三件事,"只留一个"保证不了:
+#   1. 3.4 只活在 module 树里。非交互 shell(hook、cron、srun)没有 Lmod 注入的
+#      module function,`command -v tmux` 会是空 —— 用绝对路径才稳。
+#   2. 哪天再冒出第二个 tmux(conda 装回来、系统换了 module、别人给你 source 了
+#      什么),--diagnose 能当场说清"谁连得上这个 socket"。
+#   3. 记账。"这个 socket 上的 server 当初是谁建的"只存在于那个跑着的进程里,
+#      ls / cat / 读脚本都看不到 —— 所以建完就写进 ~/.tmux-servers/<节点>.tsv。
+#      当所有已知客户端都连不上时,探测只能说"都连不上",而记录能说出那个二进制
+#      是什么。这是 breadcrumb 原则的第二次应用(第一次是 .tmux-sessions.tsv 解决
+#      "session 在哪台节点")。
+#
+# 用法:
+#     stmux-tmux                打印该用的 tmux 绝对路径(拿不到则 rc=1,无输出)
+#     stmux-tmux --diagnose     socket 现状、候选连通性、本节点的建立记录
+#     stmux-tmux --record <谁>  刚建完 server 时调用,记一行账
+#     stmux-tmux --kill-stale   socket 被一个谁都连不上的 server 占着时,清掉它
+#                               (加 --yes 跳过确认)
+
+_PRIMARY=(
+    /tools/brics/apps/linux-sles15-neoverse_v2/gcc-12.3.0/tmux-3.4-5vcftkte724cekyuashr2ex65c5fpfxj/bin/tmux
+)
+
+_LOGDIR="${HOME}/.tmux-servers"
+_LOG="${_LOGDIR}/$(hostname).tsv"
+
+_socket() { echo "${TMUX_TMPDIR:-/tmp}/tmux-$(id -u)/default"; }
+_ver()    { local v; v=$("$1" -V 2>/dev/null) || return 1; echo "${v#tmux }"; }
+
+# 当前 socket 上 server 的 pid(用能连上的客户端问它自己)
+_server_pid() { "$1" display-message -p '#{pid}' 2>/dev/null; }
+
+# 记录里对应"当前这个 server"的那一行 -> 打印它记的二进制路径。
+# 判断依据是 server_pid 还活着且确实是个 tmux —— pid 会被复用,所以两条都要查。
+_binary_from_log() {
+    [ -r "$_LOG" ] || return 1
+    local ts pid ver bin who exe
+    while IFS=$'\t' read -r ts pid ver bin who; do
+        case "$ts" in ''|'#'*) continue ;; esac
+        [ -n "$pid" ] && [ -d "/proc/$pid" ] || continue
+        exe=$(readlink -f "/proc/$pid/exe" 2>/dev/null) || continue
+        case "$exe" in *tmux*) ;; *) continue ;; esac
+        echo "$bin"
+    done < "$_LOG" | tail -1     # 同一 pid 可能记过多次,取最后一行
+}
+
+# 占着这个 socket 的 server 进程。ss 把 unix socket 路径直接关联到 pid,
+# 比"exe 含 tmux + ppid==1"准 —— 后者会把别的 socket(tmux -L xxx)的 server
+# 一起捞进来,误杀。
+_server_procs() {
+    ss -xlp 2>/dev/null | grep -F "$(_socket) " \
+        | grep -oE 'pid=[0-9]+' | cut -d= -f2 | sort -u
+}
+
+# ── --sweep-deleted ────────────────────────────────────────────────────────────
+# 2026-09-03(下午,用户令"kill 3.6 keep 3.4") 无条件清掉**二进制已被删除**的 tmux server。
+#
+# 为什么这条规则安全,而"杀掉连不上的 server"不安全:
+#   连不上有两种成因 —— 协议版本对不上(客户端还在,换个客户端就能无损接回)、
+#   以及二进制被删了(没有任何客户端能被造出来)。前者杀了是浪费,后者不杀只是让
+#   socket 一直被占着。readlink /proc/<pid>/exe 结尾的 " (deleted)" 精确区分这两者。
+#
+# 本环境的实例:miniforge 的 tmux 3.6 于 2026-09-03 16:46 被删,而它 16:07 在多个
+#   登录节点上建的 server 还活着。只剩 3.4 客户端,而 3.4 连 3.6 是单向不兼容的
+#   ("server exited unexpectedly")。恢复那个二进制的路全断了 ——
+#   /proc/<pid>/exe 在 Lustre 上取回是 ESTALE(删了就没了,不像本地盘)、
+#   conda pkgs 缓存已清、/usr/bin/tmux 不存在。所以杀是唯一出路。
+#
+# 登录节点之间 port 22 不通(2026-09-03 实测 5 个节点全 timeout),没法从一台扫全部,
+# 所以这件事必须在**每次落到一个节点时自动发生** —— stmux() 和 SessionStart hook
+# 都会调它。不问 y/N:被删掉的二进制没有"再想想"的余地。
+if [ "${1-}" = "--sweep-deleted" ]; then
+    _dir=$(dirname "$(_socket)")
+    [ -d "$_dir" ] || exit 0
+    _n=0
+    for _s in "$_dir"/*; do
+        [ -S "$_s" ] || continue
+        for _p in $(ss -xlp 2>/dev/null | grep -F "$_s " | grep -oE 'pid=[0-9]+' | cut -d= -f2 | sort -u); do
+            _exe=$(readlink "/proc/$_p/exe" 2>/dev/null) || continue
+            case "$_exe" in *tmux*) ;; *) continue ;; esac
+            case "$_exe" in *"(deleted)") ;; *) continue ;; esac
+            echo "stmux: 清掉一个二进制已被删除的 tmux server(没有任何客户端能连它):" >&2
+            echo "       socket=$_s  pid=$_p" >&2
+            echo "       exe=$_exe" >&2
+            kill "$_p" 2>/dev/null && _n=$((_n+1))
+        done
+    done
+    if [ "$_n" -gt 0 ]; then
+        sleep 1
+        echo "stmux: 已清掉 $_n 个。socket 变成陈旧文件,下个客户端会自己重建。" >&2
+    fi
+    exit 0
+fi
+
+if [ "${1-}" = "--kill-stale" ]; then
+    _sock=$(_socket)
+    [ -S "$_sock" ] || { echo "socket 不存在,无事可做。"; exit 0; }
+
+    # 连得上就不是 stale
+    for p in "${_PRIMARY[@]}"; do
+        [ -x "$p" ] && "$p" ls >/dev/null 2>&1 && {
+            echo "连得上,不是 stale。要停它: $p kill-server"; exit 1; }
+    done
+
+    # 记录里的二进制还能连的话,接回比杀掉强(无损)
+    _logged=$(_binary_from_log)
+    if [ -n "$_logged" ] && [ -x "$_logged" ] && "$_logged" ls >/dev/null 2>&1; then
+        echo "别杀 —— 这个二进制还连得上,接回是无损的:"
+        echo "  _STMUX_TMUX=$_logged stmux <name>"
+        "$_logged" ls 2>&1 | sed 's/^/  /'
+        exit 1
+    fi
+
+    _pids=$(_server_procs)
+    [ -n "$_pids" ] || { echo "socket 在但没有 server 占用 —— 陈旧文件,下个客户端会自己重建。"; exit 0; }
+
+    for pid in $_pids; do
+        echo "  pid=$pid  $(readlink -f /proc/$pid/exe 2>/dev/null)"
+    done
+    echo "连不上就看不到里面在跑什么。"
+    if [ "${2-}" != "--yes" ]; then
+        printf "kill?[y/N] "
+        read -r _ans </dev/tty 2>/dev/null || { echo; echo "非交互,要清加 --yes"; exit 1; }
+        case "$_ans" in y|Y|yes) ;; *) echo "取消。"; exit 1 ;; esac
+    fi
+    for pid in $_pids; do kill "$pid" 2>/dev/null && echo "  killed $pid"; done
+    sleep 1
+    for pid in $_pids; do [ -d "/proc/$pid" ] && echo "  ⚠ $pid 没退,要 kill -9 自己来"; done
+    exit 0
+fi
+
+if [ "${1-}" = "--record" ]; then
+    _who="${2:-unknown}"
+    _sock=$(_socket)
+    [ -S "$_sock" ] || exit 0
+    for p in "${_PRIMARY[@]}"; do
+        [ -x "$p" ] || continue
+        "$p" ls >/dev/null 2>&1 || continue
+        _pid=$(_server_pid "$p")
+        [ -n "$_pid" ] || continue
+        # 同一个 server 已经记过就不重复记(每次 attach 都记会把文件撑爆)
+        if [ -r "$_LOG" ] && cut -f2 "$_LOG" 2>/dev/null | grep -qx "$_pid"; then exit 0; fi
+        mkdir -p "$_LOGDIR" 2>/dev/null
+        # 单行 append 小于 PIPE_BUF,在同一节点上是原子的;跨节点写的是不同文件
+        printf '%s\t%s\t%s\t%s\t%s\n' \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$_pid" "$(_ver "$p")" "$p" "$_who" >> "$_LOG"
+        exit 0
+    done
+    exit 0
+fi
+
+if [ "${1-}" = "--diagnose" ]; then
+    _sock=$(_socket)
+    echo "node        : $(hostname)"
+    echo "socket      : $_sock"
+    if [ -S "$_sock" ]; then echo "socket 状态 : 存在"; else echo "socket 状态 : 不存在(还没有 server)"; fi
+    echo
+    _pick=$("$0" 2>/dev/null)
+    printf '%-8s %-8s %-10s %s\n' VERSION 连通 选中 PATH
+    for p in "${_PRIMARY[@]}"; do
+        [ -x "$p" ] || continue
+        if [ -S "$_sock" ]; then "$p" ls >/dev/null 2>&1 && _c="OK" || _c="连不上"; else _c="-"; fi
+        [ "$p" = "$_pick" ] && _s="<= 用这个" || _s=""
+        printf '%-8s %-8s %-10s %s\n' "$(_ver "$p")" "$_c" "$_s" "$p"
+    done
+    echo
+    echo "建立记录 ($_LOG):"
+    if [ -r "$_LOG" ]; then
+        printf '  %-21s %-8s %-6s %-10s %s\n' UTC PID 版本 谁建的 状态
+        while IFS=$'\t' read -r ts pid ver bin who; do
+            case "$ts" in ''|'#'*) continue ;; esac
+            if [ -d "/proc/$pid" ] && case "$(readlink -f /proc/$pid/exe 2>/dev/null)" in *tmux*) true;; *) false;; esac; then
+                st="当前 server"
+            else
+                st="已退出"
+            fi
+            printf '  %-21s %-8s %-6s %-10s %s\n' "$ts" "$pid" "$ver" "$who" "$st"
+            [ "$st" = "当前 server" ] && printf '  %-21s -> %s\n' "" "$bin"
+        done < "$_LOG"
+    else
+        echo "  (还没有记录 — 下次建 server 时写入)"
+    fi
+    # socket 上有 server 但没人连得上 = 又冒出了第二个 tmux。这正是记录派上用场的时候。
+    if [ -S "$_sock" ] && [ -z "$_pick" ]; then
+        echo
+        echo "⚠ socket 上有 server,列出的客户端一个都连不上。"
+        _logged=$(_binary_from_log)
+        if [ -n "$_logged" ]; then
+            echo "  记录说它是这个二进制建的: $_logged"
+            [ -x "$_logged" ] && echo "  它还在,用它接回:  _STMUX_TMUX=$_logged stmux <name>" \
+                              || echo "  但它已经不存在了(被删/改名)。只能 kill 掉那个 server 进程重来。"
+        else
+            echo "  记录里没有对应的行。找出建它的进程:"
+            echo "    for p in /proc/[0-9]*; do [ -O \"\$p\" ] && tr '\\0' ' ' < \$p/cmdline 2>/dev/null | grep -q tmux && echo \"\$p -> \$(readlink -f \$p/exe)\"; done"
+        fi
+        echo
+        echo "  清掉它:  $0 --kill-stale"
+        echo "  连不上就看不到里面在跑什么 —— 这个风险没法消除,先自己判断。"
+    fi
+    exit 0
+fi
+
+_sock=$(_socket)
+# 2026-09-03(下午) 加 _server_procs 这一半。原来只判 [ -S "$_sock" ],那测的是
+#   "这个 inode 是不是 socket 类型",不是"有没有进程在 listen"。unix socket 文件在
+#   server 死后不会自动消失,于是陈旧 socket 恒为真 -> 走进"有 server 但都连不上"
+#   -> exit 1 且不输出。调用方拿到空串再赋值给 $_STMUX_TMUX,此后整个 shell 就废了
+#   (当日实测: 空串当命令跑 rc=127,被读成"连不上 server",而诊断表同时显示 OK)。
+#   同一个脚本里 --kill-stale 早就用 ss 判过存活 —— 两处判"有没有 server"用了不同
+#   依据,必然在陈旧 socket 上分叉。现在统一成 ss。
+if [ -S "$_sock" ] && [ -n "$(_server_procs)" ]; then
+    # 有 server。先信记录:它直接说出这个 server 是谁建的,省掉逐个试连,
+    # 而且在"候选表里根本没有那个二进制"时,探测给不出答案而记录能。
+    _logged=$(_binary_from_log)
+    if [ -n "$_logged" ] && [ -x "$_logged" ] && "$_logged" ls >/dev/null 2>&1; then
+        echo "$_logged"; exit 0
+    fi
+    # 记录不可用(没记过 / 二进制没了 / 记错了)就退回探测:以"谁连得上"为准
+    for p in "${_PRIMARY[@]}"; do
+        [ -x "$p" ] && "$p" ls >/dev/null 2>&1 && { echo "$p"; exit 0; }
+    done
+    exit 1   # 连不上就不给路径,让调用方走诊断,别硬连出那句谎话
+fi
+for p in "${_PRIMARY[@]}"; do [ -x "$p" ] && { echo "$p"; exit 0; }; done
+exit 1
