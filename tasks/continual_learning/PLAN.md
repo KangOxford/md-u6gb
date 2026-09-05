@@ -33,8 +33,8 @@ adaptation budget.
 | S2 | Export a seed per member in the adaptation launcher | **CPU** | — | not done; blocks M6's seed replication |
 | S3 | Pre-register M6's same-age null pair | CPU | S8 | $\color{green}{\textsf{written}}$ — RESULTS addendum 10: entry traced, budget 78.0M tokens/member, decision rule fixed. **Not proposed for execution**: S8 is upstream |
 | S4 | R3–R5 adversarial reviews, one at a time | CPU (agent) | — | R1, R2 done |
-| S8 | **Decide which ladder M6 probes** — selftrain chain (3.608B tokens, 1.69% of onset) or the `wm_ft_multi3` ft ladder (250M tokens, on the rollouts' lineage) | CPU decision | X4 (closed) | **blocking S3's execution and S5** |
-| S5 | M6 fixed-budget adaptation, early vs late | **GPU, 2 devices** | S2 ✓, S3 ✓ written, **S8** | launcher unblocked; `RESTORE_PATH` still pinned to the selftrain chain, and "early" should be 33575 not the pre-warmup 275 |
+| S8 | Decide which ladder M6 probes | CPU | X4 | $\color{green}{\textsf{RESOLVED on evidence}}$ — **the selftrain chain**, ~~not the ft ladder~~. Every ft rung carries the base's metadata byte-for-byte (md5 `028879b3…`), so its `train_date_range`, tickers and seed describe the **base**, and the fine-tuning's data, objective, LR, seed and commit are recorded **nowhere**. Lineage is not enough when the intervening training is unrecorded. RESULTS addendum 11 |
+| S5 | M6 fixed-budget adaptation, early vs late | **GPU, 2 devices** | S2 ✓, S3 ✓ written, **S8** | launcher unblocked; `RESTORE_PATH` still pinned to the selftrain chain, and the usage line still names the **pre-warmup** 275; the early member is **33575** (48× the derived warmup end of ~694; weight probes already exist at that age) |
 | S6 | G2 rollout regeneration with `data_cond` | **GPU** | S1 (for k), gate returning 0 | gate CLOSED on P1 for the historical archive |
 | S7 | Training arms for issue #73 | **GPU** | S6, C5 | not started |
 
@@ -72,8 +72,9 @@ on one node**, reported from a sample taken immediately before launch. `nid01029
 
 ## 7. Next action
 
-**S8, the ladder scope decision** — a CPU decision, not a measurement, and now the only thing
-between here and a concrete GPU request. S2 and S3 are done (RESULTS addendum 10).
+**Repoint `attach_adaptation.sh` from 275 to 33575 and re-verify the entry** — CPU. S8 is
+resolved (selftrain chain), S2 and S3 are done. After that the pair is specifiable; **no GPU
+run is proposed while the coordinator's hold stands.**
 
 **Blocking everything that writes a file**: the project is at its inode hard cap
 (**51,200,000 / 51,200,000**) and `$HOME` is at its space cap (**101G / 101G**). New files
