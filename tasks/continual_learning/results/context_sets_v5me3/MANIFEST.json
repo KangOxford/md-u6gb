@@ -1,0 +1,72 @@
+{
+ "schema": "context-set/1",
+ "config": "v5me3",
+ "written_at_utc": "2026-09-05T08:15:21+00:00",
+ "source": "promoted from the per-member sample_indices_rank0.json, verified byte-identical across all 10 seeds of each ticker before promotion",
+ "tickers": {
+  "AMD": {
+   "file": "/lus/lfs1aip2/projects/public/u6gb/tasks/continual_learning/results/context_sets_v5me3/AMD.json",
+   "sha256": "5936f31497bb1c5b96f00b2676a80bae78dec4cab3f81249eb486ad60d01fdc6",
+   "n_contexts": 500,
+   "all_indices_sha256": "291aeec1a38d6d59003096f0e82eb100562e0ae55b715e6aea8088f258a56de0",
+   "dataset_length": 126853,
+   "n_members_verified": 10
+  },
+  "AMZN": {
+   "file": "/lus/lfs1aip2/projects/public/u6gb/tasks/continual_learning/results/context_sets_v5me3/AMZN.json",
+   "sha256": "e34464ad866a640f7ae0f996c52d676d6f9d2bf0ff3ae310f6ea5941ccdb0c12",
+   "n_contexts": 500,
+   "all_indices_sha256": "a074835f030ca0ad0e28ae6dd058157f6087274a1d34dcdddb7981469cfebb88",
+   "dataset_length": 168564,
+   "n_members_verified": 10
+  },
+  "GOOG": {
+   "file": "/lus/lfs1aip2/projects/public/u6gb/tasks/continual_learning/results/context_sets_v5me3/GOOG.json",
+   "sha256": "1ae627ddcf5550d75095c4a3e50ceb275d39ec524d05b76a0f62267f9e7b147b",
+   "n_contexts": 500,
+   "all_indices_sha256": "29a1e20f0a36baf9d54289e0d9df5aa6a7788ab12f201ea27f220606b2135791",
+   "dataset_length": 226002,
+   "n_members_verified": 10
+  },
+  "INTC": {
+   "file": "/lus/lfs1aip2/projects/public/u6gb/tasks/continual_learning/results/context_sets_v5me3/INTC.json",
+   "sha256": "fcc11425a5bc665546ac53258bff54a7612f77ce9daa7adb309d3040e180f677",
+   "n_contexts": 500,
+   "all_indices_sha256": "4baef4f0b13833f4b7fa32d9ac093dafdc61f19be65a93ee5ed5bb15aeddbceb",
+   "dataset_length": 118650,
+   "n_members_verified": 10
+  },
+  "JPM": {
+   "file": "/lus/lfs1aip2/projects/public/u6gb/tasks/continual_learning/results/context_sets_v5me3/JPM.json",
+   "sha256": "0bd37ad9a66457d08d9c0f70b16736c5e96c46816a39a6ab8fc92daf98aa0e5c",
+   "n_contexts": 500,
+   "all_indices_sha256": "95d072be45e82cdc88a27856376088ad14c709ad0589afb46b0a7c0d34cd596d",
+   "dataset_length": 25018,
+   "n_members_verified": 10
+  },
+  "META": {
+   "file": "/lus/lfs1aip2/projects/public/u6gb/tasks/continual_learning/results/context_sets_v5me3/META.json",
+   "sha256": "67f911b6b10b5a36cb0211bbb1414491dace8f2af8419d0666a79e3649293f68",
+   "n_contexts": 500,
+   "all_indices_sha256": "1eef5a71cb58cf4f16f96afda623e22621f10d36d5b98639bf62997124d86e8c",
+   "dataset_length": 35304,
+   "n_members_verified": 10
+  },
+  "MSFT": {
+   "file": "/lus/lfs1aip2/projects/public/u6gb/tasks/continual_learning/results/context_sets_v5me3/MSFT.json",
+   "sha256": "02effd8f644c69f608169cce5069969c6602db60ce1ad26a9e70e00541b26049",
+   "n_contexts": 500,
+   "all_indices_sha256": "c22504a5bb2dc43b12360e7c993c26fd1f88ff5cd6698dc77873016472e37914",
+   "dataset_length": 100872,
+   "n_members_verified": 10
+  },
+  "NFLX": {
+   "file": "/lus/lfs1aip2/projects/public/u6gb/tasks/continual_learning/results/context_sets_v5me3/NFLX.json",
+   "sha256": "50941fdac485f90f73e09ddadd6072b250de92976369f4e4f0c4df100a0d3423",
+   "n_contexts": 500,
+   "all_indices_sha256": "5a6ae793414c8aa762788ae7c1ebd164985e930109fe7fcfbda3bde2d725573e",
+   "dataset_length": 81163,
+   "n_members_verified": 10
+  }
+ }
+}

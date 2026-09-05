@@ -199,6 +199,24 @@ does not show that no plasticity change is present.
 an interval is one estimator throughout. Mixed 17–41 median 21 → uniform 17–41 median 22.
 Neither is used as a budget. **R1-F8 fixed**: the notebook is rebuilt, 6 figures, 0 errors.
 
+**Two attribution errors of mine, retracted** (addendum 3). ~~`nbconvert --execute` returns 0
+on a failing notebook~~ — it returns **1**; my `rc=0` was `$?` read after a pipe, the third
+time this session. What holds is that `--inplace` leaves a zero-output notebook on disk, so
+counting outputs is still the check. ~~The archive was rewritten~~ — the supported claim is
+narrower: same code, same input *set* (10 seeds, 500 contexts, matching the historical JSON),
+deterministic function, different values, so **something in the unrecorded dependency set
+changed**; which member is not establishable, because the historical record carries no input
+hash. That gap is why the fingerprint file and the P1 hash requirement now exist.
+
+**P1/P2/P6 are now one executable gate**, `code/generation_gate.py`, exit 0 only if all three
+pass. **P2 PASSES**: the per-ticker context indices are promoted into
+`results/context_sets_v5me3/` with a hashed manifest, so the shared set is a checked reference
+rather than a coincidence. **P6 PASSES** against a live `lfs quota` reading (495,918 free,
+plan 144,672 = 29%); free inodes fell 741,511 → 495,918 during this round, which is why the
+gate reads at run time. **P1 FAILS and must**: a manifest written before the first member
+cannot be retrofitted. The gate found a defect in itself on first run — `check_p2` pooled
+every config in the archive — which a checklist would not have surfaced.
+
 #### P1 / P2 / P6 — what is actually done
 
 | | done | outstanding |
