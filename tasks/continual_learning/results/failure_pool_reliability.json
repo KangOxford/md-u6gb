@@ -93,9 +93,9 @@
         "two_param_slope": 0.6932312419280279,
         "two_param_intercept": 0.3037906349317634,
         "two_param_max_abs_resid": 0.05427738685601946,
-        "rejected_reason": "one-parameter fit residual 0.185 exceeds 10% of the y-range 0.586; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say.",
         "k_for_rho_0.80_largest_k_only": 7.76318992922699,
-        "k_for_rho_0.90_largest_k_only": 17.46717734076072
+        "k_for_rho_0.90_largest_k_only": 17.46717734076072,
+        "rejected_reason": "one-parameter fit residual 0.185 exceeds 10% of the y-range 0.586; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say."
       },
       "k_needed_stratified": {
         "noise_over_signal": 4.691496603516953,
@@ -112,6 +112,8 @@
         "two_param_slope": 4.296552044736038,
         "two_param_intercept": 0.27214485717089093,
         "two_param_max_abs_resid": 0.023272266808031183,
+        "k_for_rho_0.80_largest_k_only": 22.163659986201345,
+        "k_for_rho_0.90_largest_k_only": 49.868234968953004,
         "k_for_rho_0.80": 18.76598641406781,
         "k_for_rho_0.90": 42.22346943165255
       },
@@ -301,9 +303,9 @@
         "two_param_slope": 1.179344543695223,
         "two_param_intercept": 0.45327669846030305,
         "two_param_max_abs_resid": 0.16874094340929302,
-        "rejected_reason": "one-parameter fit residual 0.293 exceeds 10% of the y-range 0.991; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say.",
         "k_for_rho_0.80_largest_k_only": 11.538561763516544,
-        "k_for_rho_0.90_largest_k_only": 25.961763967912212
+        "k_for_rho_0.90_largest_k_only": 25.961763967912212,
+        "rejected_reason": "one-parameter fit residual 0.293 exceeds 10% of the y-range 0.991; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say."
       },
       "k_needed_stratified": {
         "noise_over_signal": 5.393159378126929,
@@ -320,6 +322,8 @@
         "two_param_slope": 5.090453935383192,
         "two_param_intercept": 0.20858555371576726,
         "two_param_max_abs_resid": 0.018667368189176248,
+        "k_for_rho_0.80_largest_k_only": 24.695170386378777,
+        "k_for_rho_0.90_largest_k_only": 55.56413336935223,
         "k_for_rho_0.80": 21.572637512507715,
         "k_for_rho_0.90": 48.53843440314234
       },
@@ -509,9 +513,9 @@
         "two_param_slope": 0.7409715903227808,
         "two_param_intercept": 0.4965101983924063,
         "two_param_max_abs_resid": 0.07526963331480285,
-        "rejected_reason": "one-parameter fit residual 0.293 exceeds 10% of the y-range 0.622; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say.",
         "k_for_rho_0.80_largest_k_only": 11.698097832612344,
-        "k_for_rho_0.90_largest_k_only": 26.32072012337776
+        "k_for_rho_0.90_largest_k_only": 26.32072012337776,
+        "rejected_reason": "one-parameter fit residual 0.293 exceeds 10% of the y-range 0.622; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say."
       },
       "k_needed_stratified": {
         "noise_over_signal": 6.635751918390744,
@@ -528,9 +532,9 @@
         "two_param_slope": 4.703312401822343,
         "two_param_intercept": 1.3315881040397575,
         "two_param_max_abs_resid": 0.23986578987359986,
-        "rejected_reason": "one-parameter fit residual 0.812 exceeds 10% of the y-range 3.900; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say.",
         "k_for_rho_0.80_largest_k_only": 40.647695890612525,
-        "k_for_rho_0.90_largest_k_only": 91.45731575387813
+        "k_for_rho_0.90_largest_k_only": 91.45731575387813,
+        "rejected_reason": "one-parameter fit residual 0.812 exceeds 10% of the y-range 3.900; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say."
       },
       "nulls_raw": {
         "k": 5,
@@ -718,6 +722,8 @@
         "two_param_slope": 1.2271715058377546,
         "two_param_intercept": 0.14203690945791209,
         "two_param_max_abs_resid": 0.03157006742315005,
+        "k_for_rho_0.80_largest_k_only": 7.204462549938602,
+        "k_for_rho_0.90_largest_k_only": 16.210040737361847,
         "k_for_rho_0.80": 5.733198455731604,
         "k_for_rho_0.90": 12.899696525396104
       },
@@ -736,9 +742,9 @@
         "two_param_slope": 2.719951937859855,
         "two_param_intercept": 0.6195192310056684,
         "two_param_max_abs_resid": 0.1959516772405303,
-        "rejected_reason": "one-parameter fit residual 0.366 exceeds 10% of the y-range 2.253; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say.",
         "k_for_rho_0.80_largest_k_only": 20.126382684197086,
-        "k_for_rho_0.90_largest_k_only": 45.284361039443425
+        "k_for_rho_0.90_largest_k_only": 45.284361039443425,
+        "rejected_reason": "one-parameter fit residual 0.366 exceeds 10% of the y-range 2.253; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say."
       },
       "nulls_raw": {
         "k": 5,
@@ -926,6 +932,8 @@
         "two_param_slope": 1.3104182767883366,
         "two_param_intercept": 0.07806088267234672,
         "two_param_max_abs_resid": 0.013205889591692443,
+        "k_for_rho_0.80_largest_k_only": 6.733307385306815,
+        "k_for_rho_0.90_largest_k_only": 15.149941616940326,
         "k_for_rho_0.80": 5.694810031151425,
         "k_for_rho_0.90": 12.813322570090701
       },
@@ -944,6 +952,8 @@
         "two_param_slope": 5.463017888390512,
         "two_param_intercept": -0.18918493866678085,
         "two_param_max_abs_resid": 0.044011502353052734,
+        "k_for_rho_0.80_largest_k_only": 18.736337485316557,
+        "k_for_rho_0.90_largest_k_only": 42.156759341962236,
         "k_for_rho_0.80": 20.753868737510633,
         "k_for_rho_0.90": 46.6962046593989
       },
@@ -1133,9 +1143,9 @@
         "two_param_slope": 0.6918667852383433,
         "two_param_intercept": 0.29641951583020193,
         "two_param_max_abs_resid": 0.03341380648012404,
-        "rejected_reason": "one-parameter fit residual 0.180 exceeds 10% of the y-range 0.576; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say.",
         "k_for_rho_0.80_largest_k_only": 8.02758132795493,
-        "k_for_rho_0.90_largest_k_only": 18.062057987898584
+        "k_for_rho_0.90_largest_k_only": 18.062057987898584,
+        "rejected_reason": "one-parameter fit residual 0.180 exceeds 10% of the y-range 0.576; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say."
       },
       "k_needed_stratified": {
         "noise_over_signal": 4.2657091814277805,
@@ -1152,9 +1162,9 @@
         "two_param_slope": 3.51525944881613,
         "two_param_intercept": 0.5171131764061708,
         "two_param_max_abs_resid": 0.1346289331297177,
-        "rejected_reason": "one-parameter fit residual 0.286 exceeds 10% of the y-range 2.855; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say.",
         "k_for_rho_0.80_largest_k_only": 22.50324039357972,
-        "k_for_rho_0.90_largest_k_only": 50.63229088555435
+        "k_for_rho_0.90_largest_k_only": 50.63229088555435,
+        "rejected_reason": "one-parameter fit residual 0.286 exceeds 10% of the y-range 2.855; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say."
       },
       "nulls_raw": {
         "k": 5,
@@ -1342,9 +1352,9 @@
         "two_param_slope": 0.9310525205262747,
         "two_param_intercept": 0.364844572009213,
         "two_param_max_abs_resid": 0.04819464865929057,
-        "rejected_reason": "one-parameter fit residual 0.224 exceeds 10% of the y-range 0.776; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say.",
         "k_for_rho_0.80_largest_k_only": 10.057208549103546,
-        "k_for_rho_0.90_largest_k_only": 22.62871923548297
+        "k_for_rho_0.90_largest_k_only": 22.62871923548297,
+        "rejected_reason": "one-parameter fit residual 0.224 exceeds 10% of the y-range 0.776; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say."
       },
       "k_needed_stratified": {
         "noise_over_signal": 4.626588157505966,
@@ -1361,9 +1371,9 @@
         "two_param_slope": 3.2881260449789367,
         "two_param_intercept": 0.922295477539117,
         "two_param_max_abs_resid": 0.14730156047750587,
-        "rejected_reason": "one-parameter fit residual 0.565 exceeds 10% of the y-range 2.719; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say.",
         "k_for_rho_0.80_largest_k_only": 28.65238252114797,
-        "k_for_rho_0.90_largest_k_only": 64.4678606725829
+        "k_for_rho_0.90_largest_k_only": 64.4678606725829,
+        "rejected_reason": "one-parameter fit residual 0.565 exceeds 10% of the y-range 2.719; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say."
       },
       "nulls_raw": {
         "k": 5,
@@ -1551,9 +1561,9 @@
         "two_param_slope": 1.4984033400096013,
         "two_param_intercept": 0.19250272185576642,
         "two_param_max_abs_resid": 0.036673574693871225,
-        "rejected_reason": "one-parameter fit residual 0.123 exceeds 10% of the y-range 1.221; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say.",
         "k_for_rho_0.80_largest_k_only": 9.110196303276311,
-        "k_for_rho_0.90_largest_k_only": 20.49794168237169
+        "k_for_rho_0.90_largest_k_only": 20.49794168237169,
+        "rejected_reason": "one-parameter fit residual 0.123 exceeds 10% of the y-range 1.221; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say."
       },
       "k_needed_stratified": {
         "noise_over_signal": 3.2277140251517995,
@@ -1570,9 +1580,9 @@
         "two_param_slope": 2.6262410606205258,
         "two_param_intercept": 0.4144576001496914,
         "two_param_max_abs_resid": 0.10652090267314951,
-        "rejected_reason": "one-parameter fit residual 0.269 exceeds 10% of the y-range 2.162; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say.",
         "k_for_rho_0.80_largest_k_only": 16.663698192012944,
-        "k_for_rho_0.90_largest_k_only": 37.49332093202911
+        "k_for_rho_0.90_largest_k_only": 37.49332093202911,
+        "rejected_reason": "one-parameter fit residual 0.269 exceeds 10% of the y-range 2.162; the linear law does not describe this regime, so no extrapolation from these k is supported. The direction of the error is that k is LARGER than a one-parameter fit would say."
       },
       "nulls_raw": {
         "k": 5,

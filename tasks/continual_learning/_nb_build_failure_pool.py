@@ -236,11 +236,14 @@ print("pairing is what carries the comparison):")
 for h, n, dm in n_lower:
     print(f"    horizon {h:>3}: lower in {n}/8 tickers, mean difference {dm:+.3f}")''')
 
-M("""Dispersion is 37-45 percent of the total error over all contexts and 26-34 percent
-inside the top decile. The min-max bands overlap, so the comparison is made within
-ticker, where the top decile is the lower of the two in 8/8 tickers at every horizon
-except 50, where it is 7/8. The pool is therefore bias-dominated rather than
-variance-dominated. That is milder than the usual worry that the biggest divergences in
+M("""Two corrections to what this figure originally carried. The share plotted uses the
+population variance (ddof = 0) against a denominator that is unbiased for
+bias$^2 + \sigma^2$, so it **understates** the irreducible part by $k/(k-1)$, about 11
+percent at $k=10$; and quoting a cross-ticker mean per horizon hid the spread. Per ticker
+at horizon 50 the unbiased share runs **0.20-0.61 as measured today**, so one ticker's
+ceiling on any training gain is near 32 percent while another's is near 77. The paired
+within-ticker comparison (top decile lower than overall) does hold, 8/8 at every horizon
+but one. The pool is bias-dominated on average, and on the worst ticker only barely. That is milder than the usual worry that the biggest divergences in
 market data are all irreducible, but it is not negligible, and it rests on the model's
 own spread being a fair stand-in for the conditional spread. The reliability slope of
 this model family is 0.46-0.59, meaning it is under-dispersed, so this figure understates
@@ -304,12 +307,13 @@ for ax, key, title in zip(axes, ["split_half_raw", "split_half_stratified"],
     ax.set_xscale("log"); ax.set_xlabel("rollouts per context, k")
     ax.set_ylim(0, 1); ax.set_title(title, fontsize=8.5)
 axes[0].set_ylabel(r"predicted reliability $\rho_k$")
-def _need(t, mask_from):
-    rows = R["tickers"][t]["split_half_stratified"]
-    ks = np.array([r["k"] for r in rows], float); rh = np.array([r["rho_mean"] for r in rows])
-    m = ks >= mask_from; x, y = 1 / ks[m], 1 / rh[m] - 1
-    return float((x * y).sum() / (x * x).sum()) / (1 / 0.80 - 1)
-n_all = [_need(t, 1) for t in TK]; n_big = [_need(t, 3) for t in TK]
+# One estimator for every ticker. `k_for_rho_0.80` is emitted only when the
+# one-parameter fit survives its own residual, so reading it per ticker builds an
+# interval whose members were computed two different ways.
+n_all = [R["tickers"][t]["k_needed_stratified"]["noise_over_signal"] / (1 / 0.80 - 1)
+         for t in TK]
+n_big = [R["tickers"][t]["k_needed_stratified"]["k_for_rho_0.80_largest_k_only"] for t in TK]
+n_rej = sum("rejected_reason" in R["tickers"][t]["k_needed_stratified"] for t in TK)
 axes[1].text(0.95, 0.97, "k for $\\rho$=0.80, stratified\n"
              f"solid (all k):   median {np.median(n_all):.0f}  [{min(n_all):.0f}, {max(n_all):.0f}]\n"
              f"dashed (k>=3):  median {np.median(n_big):.0f}  [{min(n_big):.0f}, {max(n_big):.0f}]",
@@ -323,8 +327,10 @@ show(fig)''')
 
 M("""## Table 1 — Per ticker""")
 
-C(r'''hdr = f"{'ticker':>7} | {'k=1':>6} {'k=5':>6} | {'k=1':>6} {'k=5':>6} | {'n/s':>5} {'k@.80':>6} {'k@.90':>6} | {'overlap':>7}"
-print(f"{'':>7} | {'raw rho':^13} | {'stratified rho':^13} | {'stratified fit':^20} |")
+C(r'''hdr = f"{'ticker':>7} | {'k=1':>6} {'k=5':>6} | {'k=1':>6} {'k=5':>6} | {'n/s':>5} {'k@.80':>6} {'k@.90':>6} {'fit':>4} | {'overlap':>7}"
+print(f"{'':>7} | {'raw rho':^13} | {'stratified rho':^13} | {'k from the largest-k point':^26} |")
+print("REJ marks a ticker whose one-parameter fit its own residual rejects; k is the")
+print("largest-k estimator for EVERY ticker, so the interval is one estimator throughout.")
 print(hdr); print("-" * len(hdr))
 for t in TK:
     v = R["tickers"][t]
@@ -332,7 +338,8 @@ for t in TK:
     kn = v["k_needed_stratified"]
     print(f"{t:>7} | {g('split_half_raw',1):>6.3f} {g('split_half_raw',5):>6.3f} | "
           f"{g('split_half_stratified',1):>6.3f} {g('split_half_stratified',5):>6.3f} | "
-          f"{kn['noise_over_signal']:>5.2f} {kn['k_for_rho_0.80']:>6.0f} {kn['k_for_rho_0.90']:>6.0f} | "
+          f"{kn['noise_over_signal']:>5.2f} {kn['k_for_rho_0.80_largest_k_only']:>6.0f} "
+          f"{kn['k_for_rho_0.90_largest_k_only']:>6.0f} {'REJ' if 'rejected_reason' in kn else '   ':>4} | "
           f"{v['pool_overlap_raw_vs_stratified']:>6.0%}")''')
 
 M("""## Table 2 — Two complete regenerations of the same configuration
@@ -358,9 +365,11 @@ M(r"""## What this settles
 
 1. **One rollout per context is not enough to build a pool.** Split-half reliability of the
    raw score at $k=1$ is 0.36-0.48; of the corrected score, 0.15-0.25. The one-parameter fit
-   puts $k \approx 18$ at reliability 0.80 on the corrected score fitting all four points,
-   and $k \approx 21$ (range 16-35) refitting on $k \geq 3$ alone, which is the fit that
-   should govern an extrapolation to large $k$. Call it 20 or more.
+   is **rejected by its own residuals**: the implied noise/signal ratio $(1/\rho_k-1)\,k$
+   rises with $k$ in 7 of 8 tickers, and least squares through the origin on $1/k$ is
+   dominated by the $k=1$ point, so it extrapolates $k$ **low**. Reading the largest-$k$
+   point uniformly for every ticker gives **17-41, median 22**, still rising. No
+   extrapolation from $k \leq 5$ is supported, and this figure is **not used as a budget**.
    Rollouts per context is the first budget decision, ahead of any mix ratio.
 
 2. **The obvious score is mostly not about the model.** Raw squared error correlates 0.65

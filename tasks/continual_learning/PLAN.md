@@ -1,7 +1,7 @@
 # Continual Learning for sigma-0: Plasticity Measurement and Continual Pre-Training Plan
 
 > Task dir: `tasks/continual_learning/` · Source research: `deep-reseach.md` (two-pass deep research, 2026-08-26)
-> **Status: MERGED PLAN, revision 5 (2026-09-05).** Five facet drafts under `plan_drafts/`
+> **Status: MERGED PLAN, revision 6 (2026-09-05).** Five facet drafts under `plan_drafts/`
 > are the detail; this file is the spine and the decision record. Green marks what is done,
 > ~~strikethrough~~ marks what measurement has overturned. Not yet adversarially reviewed —
 > see §0.4.
@@ -166,8 +166,8 @@ before acceptance; full detail and commands in `results/RESULTS_20260905.md` add
 | finding | verdict | what it overturns |
 |---|---|---|
 | ~~"A-to-B is impossible"~~ | **REFUTED** | `wm_ft_multi3` has a **32-rung sibling ladder** `_step150…_step4800` that `01` never searched (it looked only *inside* the directory), Muon state **is** on disk (282 mentions, 835 entries, identical on both roots), and the two `_ROOT_METADATA` are **byte-identical** (md5 `028879b3…`) so step 69378 is inherited, not coincident. **F10, X4 and §0.6's "same regeneration" argument are struck** pending redo |
-| Archive rewritten mid-round | **CONFIRMED** | Every `.returns_multih_*.npz` has mtime **2026-09-05 02:36–02:37Z**, between the audited commit and the corrected run. `06`'s "reproduces the audit" comparisons are across **two datasets**. No number here is anchored until the archive is pinned by content hash — which is exactly what P2 requires |
-| Onset law vs run length | **CONFIRMED** | `deep-reseach.md:2315`: `T = 1.3e-5·P^0.8269` in 5B-token instances. At P = 76M that is **214B tokens**; this run is 3.608B = **1.69%**. ~~M6 as scoped~~ will read ABSENT for reasons unrelated to plasticity. Reframe onto the 32-rung ladder, or defer the plasticity thread on evidence |
+| Archive changed mid-round | **CONFIRMED, by content** | ~~Argued from mtimes~~ — mtime moves on a touch and cannot carry the claim. Established instead by running the code **recovered from `e8425cb1`** on today's data: it reproduces none of the four values it committed (AMD 0.2954→0.2661, GOOG 0.6359→0.6133, NFLX 0.3960→0.3948, JPM 0.2050→0.2029), and `dispersion_share` has no RNG. `06`'s "reproduces the audit" comparisons are across **two datasets**. No number here is anchored until the archive is pinned by content hash — which is exactly what P2 requires |
+| Onset law vs run length | **PARTLY — the strong form is retracted** | `deep-reseach.md:2315`: `T = 1.3e-5·P^0.8269` in 5B-token instances. At P = 76M that is **214B tokens**; this run is 3.608B = **1.69%**. ~~M6 will read ABSENT for reasons unrelated to plasticity~~ — that overstates an extrapolation carried across architecture (pre-norm transformer → SSM), data (multilingual text → LOB flow) and task structure (cyclic 8-task with optimizer resets → none) at once. What holds: **an ABSENT reading here would say nothing about the law**, and the "first onset law for state-space models" framing is not reachable from this run. It does **not** show that no plasticity change exists at 3.6B |
 | Step 2 never ran | **CONFIRMED** | `node_wrapper.sh:342` blanks `SQUASHFS_MULTI_MOUNT_ROOT` unconditionally, so line 370's `:-` default always fires and `attach_adaptation.sh`'s unique mount root never applies (`Transport endpoint is not connected` in both probe logs). It also makes both M6 members share one mount root. **A knob that never reaches the code** — this project's own documented failure shape |
 | My A1 guard could not fire | **FIXED** | It compared two sets built from the same variable in the same function body. Now derives its expectation from the data; verified red. `regeneration_null` also still averaged 7 horizons on the raw score — at H=50 stratified it reads **0.726–0.875, mean 0.808**, not 0.846 |
 
@@ -176,6 +176,38 @@ line and `Peak BF16 (1 GPUs)`), so §0.7's token table stands.
 
 **The lesson on my side**: `01` reported an absence found by a narrow search. An absence
 found by a narrow search is a statement about the search, not about the world.
+
+---
+
+### 0.12 Revision 6 (2026-09-05) — acceptance, retractions, and P1/P2/P6 as actually stands
+
+Detail in `results/RESULTS_20260905.md` addendum 2 and `results/worktree_incident_20260905.md`.
+
+**The shared-worktree incident I caused is accepted and recorded.** All 75 stashed entries
+reconciled by sha256: 56 modifications restored byte-for-byte, 1 (a live log) moved on after
+the restore, **0 lost**; 18 uncommitted deletions belonging to another line were reverted by
+the rebase and are **not** re-deleted. Stash kept, never dropped; no `reset`, no `clean`, no
+further stash of the shared tree.
+
+**Two retractions.** ~~mtime proves the archive was rewritten~~ — replaced by a content test
+using the code recovered from `e8425cb1`, which reproduces none of the four values it
+committed. ~~The 214B figure shows the probe cannot succeed~~ — it shows the run is 1.69% of
+where that law places onset, which makes an ABSENT reading uninformative about the law; it
+does not show that no plasticity change is present.
+
+**R1-F6/F9 fixed**: `rollouts_needed` now emits the largest-k estimator for every ticker, so
+an interval is one estimator throughout. Mixed 17–41 median 21 → uniform 17–41 median 22.
+Neither is used as a budget. **R1-F8 fixed**: the notebook is rebuilt, 6 figures, 0 errors.
+
+#### P1 / P2 / P6 — what is actually done
+
+| | done | outstanding |
+|---|---|---|
+| **P1** rollout manifest | The schema is written (`plan_drafts/03` §2) and the existing archive is fingerprinted: `results/archive_fingerprint_20260905.json` records sha256, bytes and mtime for `.returns_multih_{gen,real}.npz` and `sample_indices_rank0.json` across **80** member dirs | A manifest **written before the first member** cannot be retrofitted. P1 is satisfiable only by the next generation run |
+| **P2** shared hashed context set | $\color{green}{\textsf{Condition 2 verified}}$ — the context index is **byte-identical across all 10 seeds within each ticker** (1 distinct sha256 per ticker; 8 distinct across tickers, as expected) | (1) a single index file *outside* the member dirs does not exist; (3) the join to `inference.log` is unestablished (528 slots vs 500 contexts); (4) regeneration reproducibility untested |
+| **P6** inode write plan | The conditions are written and both anchors measured (3,007 inodes/member unpacked, 1,507 deduped) | The `lfs quota` read-and-record step, and the `inodes_planned < 0.5 × free_at_start` check, are not implemented as an executable gate |
+
+**P1 partial, P2 partial (one of four conditions verified), P6 partial. No generation.**
 
 ---
 

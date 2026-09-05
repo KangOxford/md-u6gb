@@ -289,6 +289,13 @@ def rollouts_needed(ks: Sequence[int], rhos: Sequence[float],
         out["two_param_slope"], out["two_param_intercept"] = float(coef[0]), float(coef[1])
         out["two_param_max_abs_resid"] = float(np.abs(y - A @ coef).max())
 
+    # Always emit the largest-k estimator, for every ticker, rejected or not. Emitting it
+    # only on rejection is what produced a published interval that mixed the one-parameter
+    # fit (on tickers that passed) with the estimator meant to replace it (on those that
+    # failed) -- an interval whose members were not computed the same way.
+    for t in targets:
+        out[f"k_for_rho_{t:.2f}_largest_k_only"] = out["noise_over_signal_largest_k"] / (1.0 / t - 1.0)
+
     if y_range > 0 and resid / y_range > max_resid_frac:
         out["rejected_reason"] = (
             f"one-parameter fit residual {resid:.3f} exceeds {max_resid_frac:.0%} of the "
@@ -296,8 +303,6 @@ def rollouts_needed(ks: Sequence[int], rhos: Sequence[float],
             f"extrapolation from these k is supported. The direction of the error is that "
             f"k is LARGER than a one-parameter fit would say."
         )
-        for t in targets:
-            out[f"k_for_rho_{t:.2f}_largest_k_only"] = out["noise_over_signal_largest_k"] / (1.0 / t - 1.0)
     else:
         for t in targets:
             out[f"k_for_rho_{t:.2f}"] = slope / (1.0 / t - 1.0)

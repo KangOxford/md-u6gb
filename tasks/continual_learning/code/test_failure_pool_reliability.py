@@ -265,3 +265,18 @@ def test_partial_out_removes_a_planted_monotone_nuisance():
     # a nuisance that explains only part of the target leaves a real residual
     partial = F.partial_out(np.exp(nuis) + 3.0 * rng.normal(size=800), nuis)
     assert abs(F.spearman(partial, nuis)) < 0.10
+
+
+def test_the_largest_k_estimator_is_always_available():
+    """So a report can use ONE estimator across every ticker.
+
+    Emitting it only when the one-parameter fit is rejected produced a published interval
+    whose members were computed two different ways -- the passing tickers contributed the
+    fit that the failing ones had just discredited.
+    """
+    ks = [1, 2, 3, 5]
+    for rhos in ([1.0 / (1.0 + 3.0 / k) for k in ks],                       # law holds
+                 [1.0 / (1.0 + r / k) for k, r in zip(ks, [4.68, 6.79, 8.37, 9.87])]):  # rejected
+        out = F.rollouts_needed(ks, rhos)
+        assert "k_for_rho_0.80_largest_k_only" in out
+        assert out["k_for_rho_0.80_largest_k_only"] > 0

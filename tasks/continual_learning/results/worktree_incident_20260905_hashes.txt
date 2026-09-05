@@ -1,0 +1,85 @@
+st            stash             HEAD         worktree  path
+ M 2d1eaee8675ce2a3 5bde30b75526d107 2d1eaee8675ce2a3  .config/sgpur/quota.json
+ M 56a3e452fcc365b5 3098e98de7d5b6c3 56a3e452fcc365b5  .local/bin/sgpur
+ M 8bf17499b6a54918 373f3684a185f735 8bf17499b6a54918  CLAUDE.md
+ M 1c987534a848c773 aa18b792ef6558c0 1c987534a848c773  tasks/continual_learning/code/attach_adaptation.sh
+ M 60e63185044df4c6 e868d2487bdde423 60e63185044df4c6  tasks/dfm_largescale_20260813/CAUSE_AND_FIX_20260830.md
+ M d2d2d97c155d8795 021a592be5b7688f d2d2d97c155d8795  tasks/dfm_largescale_20260813/code/check_tau_reached.py
+ M 6af854f81458fb3b a99890eb40394991 6af854f81458fb3b  tasks/dfm_largescale_20260813/code/make_notebook.py
+ M 714137601c7c2dab 8aa6a83ad1320010 714137601c7c2dab  tasks/dfm_largescale_20260813/code/plot_frontier.py
+ M 173d6bc03e45e8e7 0c3b2b2e5bbae217 173d6bc03e45e8e7  tasks/dfm_largescale_20260813/code/plot_goalbox.py
+ M 87f786b1a8797844 0ea9252a25792eff 87f786b1a8797844  tasks/dfm_largescale_20260813/code/resolution_vs_t.py
+ M 1b094079ae96a05d 9c9148b1f7f0fa72 1b094079ae96a05d  tasks/dfm_largescale_20260813/code/score_keepfield.py
+ M 952da4bdd6bb3180 9d7056a76cbc7df6 952da4bdd6bb3180  tasks/dfm_largescale_20260813/code/score_metric_ab.sh
+ M 61ec294a2d746906 fbd7d6400d1aca8a 61ec294a2d746906  tasks/dfm_largescale_20260813/code/score_tau.py
+ M 486afec6290ce0ed c2674d110d989b67 486afec6290ce0ed  tasks/dfm_largescale_20260813/code/snap_ladder.sh
+ M 926755a229692fc3 a3db3095b2e37de1 926755a229692fc3  tasks/dfm_largescale_20260813/code/test_keep_tau.py
+ M eb1bee72b1df83ca f384103710b36e00 eb1bee72b1df83ca  tasks/dfm_largescale_20260813/code/test_value_metric_ref.py
+ M 076024c8ca910b40 882a5d808e0b9ae4 076024c8ca910b40  tasks/dfm_largescale_20260813/code/watch_dv.sh
+ M 6ff60334492397d7 a819d37d0a00185b 6ff60334492397d7  tasks/dfm_largescale_20260813/launch_p0bidir.sh
+ M 176304168009917b aa7b1e8ffe3aa144 176304168009917b  tasks/dfm_largescale_20260813/launch_r2infer.sh
+ M a6570581f8f20e22 36a977cc518b0934 a6570581f8f20e22  tasks/dfm_largescale_20260813/launch_r2train.sh
+ M 9bc150783ef62a5c acc82eddcdcee770 9bc150783ef62a5c  tasks/dfm_largescale_20260813/pr22_r2_body.md
+ M 7a3fdbaffc5ed49b 15d522a3259c982a 7a3fdbaffc5ed49b  tasks/dfm_largescale_20260813/run_metric_ab.sh
+ M 9ed158dc0f69e208 1bbf35de36cc3519 9ed158dc0f69e208  tasks/dfm_largescale_20260813/run_tau_sweep.sh
+ M ff0b18b981e3b237 51792368f119fea4 ff0b18b981e3b237  tasks/dfm_largescale_20260813/run_value_arm.sh
+ M 9c97ad80d2614d7c d17b8654ef6c8d60 9c97ad80d2614d7c  tasks/gtop_20260810T182343Z/README.md
+ D             None ee18ff610d864b3b ee18ff610d864b3b  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T200741Z_j5992007_base2kval_s2026_268976/refer_success_base2kval_32001_s2026.json
+ D             None c6a63564a8b736e6 c6a63564a8b736e6  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T200741Z_j5992007_base2kval_s2026_268976/return_bench_base2kval_32001_s2026.csv
+ D             None 31e0bf852343248e 31e0bf852343248e  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T200741Z_j5992007_base2kval_s2026_268976/summary.json
+ D             None 7f261b6b6929b785 7f261b6b6929b785  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T202007Z_j5992007_hyb2kval_s2026_287738/refer_success_hyb2kval_32001_s2026.json
+ D             None 0c11972e12534e59 0c11972e12534e59  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T202007Z_j5992007_hyb2kval_s2026_287738/return_bench_hyb2kval_32001_s2026.csv
+ D             None 160712a8d81ef02b 160712a8d81ef02b  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T202007Z_j5992007_hyb2kval_s2026_287738/summary.json
+ D             None f5d1130da219b123 f5d1130da219b123  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T205732Z_j5992007_hyb2kcachefix_s2026_184319/refer_success_hyb2kcachefix_32001_s2026.json
+ D             None 4dc1eee13a2af290 4dc1eee13a2af290  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T205732Z_j5992007_hyb2kcachefix_s2026_184319/return_bench_hyb2kcachefix_32001_s2026.csv
+ D             None 805df6f5f8fec0c9 805df6f5f8fec0c9  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T205732Z_j5992007_hyb2kcachefix_s2026_184319/summary.json
+ D             None 5a4204c2d2f5b103 5a4204c2d2f5b103  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T211019Z_j5992007_hybctrl500_s2026_199139/refer_success_hybctrl500_32001_s2026.json
+ D             None 546e6416848a9534 546e6416848a9534  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T211019Z_j5992007_hybctrl500_s2026_199139/return_bench_hybctrl500_32001_s2026.csv
+ D             None 86394cea60d8372f 86394cea60d8372f  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260812T211019Z_j5992007_hybctrl500_s2026_199139/summary.json
+ D             None 523f883e6106fee8 523f883e6106fee8  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260813T092700Z_j6000409_base2ki_s2026_51813/refer_success_base2ki_1895_s2026.json
+ D             None 1d07876fc18298f9 1d07876fc18298f9  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260813T092700Z_j6000409_base2ki_s2026_51813/return_bench_base2ki_1895_s2026.csv
+ D             None 5a15935b94a28e57 5a15935b94a28e57  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260813T092700Z_j6000409_base2ki_s2026_51813/summary.json
+ D             None 332470f37c6c924d 332470f37c6c924d  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260813T092719Z_j6000409_hyb2ki_s2026_73626/refer_success_hyb2ki_2536_s2026.json
+ D             None 73adcf78a7f20315 73adcf78a7f20315  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260813T092719Z_j6000409_hyb2ki_s2026_73626/return_bench_hyb2ki_2536_s2026.csv
+ D             None 23680774e8f693b1 23680774e8f693b1  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/bench2k_20260813T092719Z_j6000409_hyb2ki_s2026_73626/summary.json
+ M b41b4d5807f1eb4c 1c34502f9f4fa332 b41b4d5807f1eb4c  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/code/chain_manager.sh
+ M 8ec0ac7cd68282be 9ddcafb3e2fbfd6a 8ec0ac7cd68282be  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/code/claim_gate.sh
+ M 59dc3023e450ca8b 76165615b431b0d7 59dc3023e450ca8b  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/code/launch_attach_hybrid.sh
+ M 6171868912900313 c8e8ed22a6ffbb0f 6171868912900313  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/code/refer_success.py
+ M f6d35fb69a93f6d0 6aecae5e2fedd207 f6d35fb69a93f6d0  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/code/startgate
+ M 56e1ce35e6638547 98ef4c126a6264cf 56e1ce35e6638547  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/code/watch_2k_then_bench.sh
+ M a326494842fb77d9 5afd8f2c5562e8c7 a326494842fb77d9  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/pr21_review_fix/findings.md
+ M 990eee6ff8c84543 f3e4675f7686e07c 990eee6ff8c84543  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/BASELINE.md
+ M 6242b41da69325f7 1145d104d5c18c8a 6242b41da69325f7  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/CKPT_DEADLOCK_ROOT_CAUSE.md
+ M 49eee66bc7b11405 d5f2a561c4b8ce2c 49eee66bc7b11405  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/CTX2K_EXPERIMENT.md
+ M 29481166c1341e1c 788df253f8dc2f70 29481166c1341e1c  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/CTX2K_LENGTH_GENERALIZATION.md
+ M 8d0ce044dd821036 084009d194aada1a 8d0ce044dd821036  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/CTX2K_RUN_LOG.md
+ M 51c32c6e36c9328a b8d8f35c265e8e0e 51c32c6e36c9328a  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/CTX2K_STATUS.md
+ M 8ec9fc865b2dc0b6 18a2824f033a6a36 8ec9fc865b2dc0b6  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/CTX_4K_FEASIBILITY.md
+ M b94006ed8afa3d20 9f11c8c5ed346409 b94006ed8afa3d20  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/NOTE_gpu_reclaim.md
+ M 757ead5d00457930 2349d5814c2d2f67 757ead5d00457930  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/PLAN_26TOK.md
+ M 8185ed358d0eb538 f31252f7c66a01d2 8185ed358d0eb538  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/STAGE_1_BUILD.md
+ M c148c003da1d93f9 dd7b9075f11b9623 c148c003da1d93f9  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/STAGE_2_BASELINE_RECALL.md
+ M 8bc00ef41df8c310 7af346f4cf29569c 8bc00ef41df8c310  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/STAGE_3_FIRST_COMPARISON.md
+ M d553993eb3069b21 3388978b9bf86bea d553993eb3069b21  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/STAGE_5_SEED_REPLICATION.md
+ M d9466ee584bb11d7 c3c7a8ed769684ea d9466ee584bb11d7  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/STAGE_6_STEP32001_REVERSAL.md
+ M bcfed8d208e2069a 4ff1bf03bd2bb9d0 bcfed8d208e2069a  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/STAGE_7_ROOT_CAUSE_NOPE_LEAK.md
+ M 697c93d1762f1680 57ef6d1fc1c466f3 697c93d1762f1680  tasks/hybrid_system_20260811/05_hybrid_mamba3_lob/results/STAGE_8_FINAL_32001.md
+ M 5396530d4232bdb1 9ef4a2fd0dd8c8fc 5396530d4232bdb1  tasks/large-discovery-model/glm53_flash/logs/build_vllm_glm.log
+ M 453cee55f9418861 86ebe4c7d3459001 453cee55f9418861  tasks/large-discovery-model/glm53_flash/results/server_host
+ M cc4642ae4e92369e 1e671cfbe37ca87f cc4642ae4e92369e  tasks/large-discovery-model/ldm_rl/PLAN.md
+ M b7f4c263b8382494 9894e57229be4fbb b7f4c263b8382494  tasks/large-discovery-model/ldm_rl/code/config_real.isambard.json
+ M 26549531073c8235 a2ab4f4023e02ab3 26549531073c8235  tasks/large-discovery-model/ldm_rl/code/site_env.sh
+ M 9dca816f80502a8a 100f54150d9c02ae 9dca816f80502a8a  tasks/large-discovery-model/ldm_rl/results/FINDINGS.md
+ M 50a1945d76b87aaf 6d9db7b2b590b4b9 50a1945d76b87aaf  tasks/stmux_20260904/stmux_source.ipynb
+ M ec21000335e9dec1 54d55ae08b18e9dd 99da2145e62f80b1  tasks/u6gb_16_nodes_daily_log/events.jsonl
+ M 64eec3f6a59b587d 101877b9bb240965 64eec3f6a59b587d  tasks/u6gb_16_nodes_daily_log/submissions.jsonl
+
+--- SUMMARY ---
+M entries: 57
+  worktree == stash (restore landed exactly)      : 56
+  worktree != stash (changed AFTER my restore)    : 1
+  worktree == HEAD (modification lost)            : 0
+D entries: 18
+  absent from worktree (deletion preserved)       : 0
+  present in worktree (deletion undone by me)     : 18
