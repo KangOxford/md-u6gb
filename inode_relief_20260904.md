@@ -9,10 +9,16 @@
 出路是把目录移到**另一个文件系统**——`/home` 是 NFS（`data1.vastp2.isambard.ac.uk:/p2/home`，
 15 PB、226 亿空闲 inode），跨文件系统的 `mv` 是「逐文件复制后删除」，因此确实释放 Lustre 这边的 inode。
 
-本次我移走 1 个目录（54,159 个 inode），另一个会话同时在做同一件事、移走了另 1 个（56,814 个）。
-**峰值 51,200,000 → 50,980,729**，空出约 219,000 个。**但到 2026-09-04T17:40Z 已回到 51,199,888——
-释放是临时的**，其他活动很快把腾出来的重新占满。剩下三个归档共约 424,000 个 inode 仍在 Lustre 上，
-最大的一块 `s5e_archive`（13,925,267 个，占配额 27%）没有动。
+本次我移走 1 个目录（54,159 个 inode），另一个会话同时在做同一件事、移走了另 1 个（56,814 个），
+**但后者当天下午被移回了 Lustre**（见正文）。峰值 51,200,000 → 50,980,729，空出约 219,000 个，
+到 17:40Z 又回到 51,199,888。
+
+**最新一次实测：2026-09-05T03:46Z 为 50,461,324 / 51,200,000，空余约 739,000——配额当前并不告急。**
+这个好转来自别处的清理，不是本文记录的这两次移动。别处若还写着「inode 只剩 0」，那是 09-04 的状态。
+
+最大的一块 `s5e_archive`（13,925,267 个，占配额 27%）没有动，它仍是唯一能单独改变全局的一步。
+另有一项待查：`_s5e_inference_archive_20260902` 在 09-05 的复核中已从原路径消失，且在几处有界搜索里
+都没找到，只剩一个 7 项的半成品副本——**本文所记的操作没有删除过它**，需要知情者确认它的去向。
 
 ---
 
@@ -54,15 +60,23 @@ Chosen because it is a pure download cache for Rust crates and regenerates with
 `cargo fetch`. Confirmed complete: the source path no longer exists on Lustre and the
 destination is present on `/home`.
 
-### Moved by a concurrent session
+### Moved by a concurrent session, then moved back
 
-| from | to | inodes |
-|---|---|---|
-| `/lus/lfs1aip2/projects/public/u6gb/_s5e_inference_archive_20260904` | `/home/u6gb/kangli.u6gb/_lustre_offload_20260904/_s5e_inference_archive_20260904` | 56,814 |
+| from | to (2026-09-04T15:50Z) | then to (verified 2026-09-05T03:46Z) | inodes |
+|---|---|---|---|
+| `/lus/lfs1aip2/projects/public/u6gb/_s5e_inference_archive_20260904` | `/home/u6gb/kangli.u6gb/_lustre_offload_20260904/_s5e_inference_archive_20260904` | `/lus/lfs1aip2/projects/public/u6gb/_home_space_relief_20260904T163000Z/_lustre_offload_20260904/_s5e_inference_archive_20260904` | 56,814 |
 
-That session also left two helper scripts in its home,
-`/home/u6gb/kangli.u6gb/archive_scored_inference.sh` and
-`/home/u6gb/kangli.u6gb/archive_superseded_bench.sh`.
+The offload was **reversed** later the same day: the whole
+`/home/u6gb/kangli.u6gb/_lustre_offload_20260904` directory was moved back onto Lustre and
+now sits inside `_home_space_relief_20260904T163000Z`, a name suggesting the concurrent
+session hit a space constraint on `/home` and undid the offload to relieve it. The inodes
+that move had freed therefore returned to the Lustre project.
+
+That session also left helper scripts in its home:
+`/home/u6gb/kangli.u6gb/archive_scored_inference.sh`,
+`/home/u6gb/kangli.u6gb/archive_superseded_bench.sh`,
+`/home/u6gb/kangli.u6gb/archive_arm.sh` and
+`/home/u6gb/kangli.u6gb/archive_arm_v2.sh`.
 
 ### Started, interrupted, and left as partial copies
 
@@ -71,37 +85,55 @@ A session teardown killed a four-directory move mid-flight. Because a cross-file
 Two partial copies exist. **Neither cost any Lustre inodes** — they sit on `/home` — and
 in both cases a complete copy of the data exists elsewhere, so nothing was lost:
 
-| partial copy on `/home` | the complete copy |
+| partial copy, located 2026-09-05T03:46Z | the complete copy |
 |---|---|
-| `/home/u6gb/kangli.u6gb/lustre_inode_relief_20260904/PARTIAL_of__s5e_inference_archive_20260902__source_still_on_lustre__20260904T155050Z` | the original, still on Lustre |
-| `/home/u6gb/kangli.u6gb/_lustre_offload_20260904/PARTIAL_duplicate_of__s5e_inference_archive_20260904__complete_copy_is_sibling__20260904T155050Z` | its sibling directory, moved successfully |
+| `/home/u6gb/kangli.u6gb/lustre_inode_relief_20260904/PARTIAL_of__s5e_inference_archive_20260902__source_still_on_lustre__20260904T155050Z` (7 entries) | **could no longer be located, see below** |
+| `/lus/lfs1aip2/projects/public/u6gb/_home_space_relief_20260904T163000Z/_lustre_offload_20260904/PARTIAL_duplicate_of__s5e_inference_archive_20260904__complete_copy_is_sibling__20260904T155050Z` | its sibling in the same directory, intact |
 
 Those two names were written by the concurrent session, which found the fragments and
-labelled where the good copy was. They can be deleted once someone confirms them, which
-this session cannot do.
+labelled where the good copy was. The second fragment travelled back to Lustre with the
+rest of the offload. Neither can be deleted by this session.
+
+> **Open item, raised 2026-09-05T03:46Z.** The first row's "complete copy" no longer
+> resolves. `_s5e_inference_archive_20260902` is absent from
+> `/lus/lfs1aip2/projects/public/u6gb/_s5e_inference_archive_20260902`, absent from both
+> relief directories, and absent from `/home/u6gb/kangli.u6gb` apart from the 7-entry
+> fragment above. Either a session removed it after judging it disposable, or it sits
+> somewhere these bounded checks did not reach; a deep filesystem search was not run,
+> because that is the metadata load pattern the site rules prohibit. **Nothing here was
+> deleted by the session writing this note.** Someone who knows the archive's fate should
+> confirm which it is before the fragment is discarded, since the fragment is currently
+> the only copy this note can point to.
 
 ### Not moved
 
 | path | inodes | why it stayed |
 |---|---|---|
 | `/lus/lfs1aip2/projects/public/u6gb/s5e_archive` | 13,925,267 | 27% of the whole quota in one directory, untouched since 2026-08-15. Moving 13.9M files across filesystems is hours of sustained metadata traffic, which is the load pattern that had group jobs suspended on 2026-05-08. It needs batching and pacing, and a decision from someone who knows whether the archive is dead. |
-| `/lus/lfs1aip2/projects/public/u6gb/_s5e_inference_archive_20260902` | 313,719 | move interrupted; source intact |
-| `/lus/lfs1aip2/projects/public/u6gb/_s5e_deprecated_20260902` | 64,146 | move never reached it |
-| `/lus/lfs1aip2/projects/public/u6gb/_s5e_scored_archive_20260904` | 46,269 | move never reached it |
+| `/lus/lfs1aip2/projects/public/u6gb/_s5e_inference_archive_20260902` | 313,719 | move interrupted, source intact **at the time of writing**; by 2026-09-05T03:46Z the path no longer existed, see the open item above |
+| `/lus/lfs1aip2/projects/public/u6gb/_s5e_deprecated_20260902` | 64,146 | move never reached it; still present 2026-09-05T03:46Z |
+| `/lus/lfs1aip2/projects/public/u6gb/_s5e_scored_archive_20260904` | 46,269 | move never reached it; still present 2026-09-05T03:46Z |
 | `/lus/lfs1aip2/projects/public/u6gb/.conda/envs` (11 environments) | 350,576 | in use. `latex_env` is the LaTeX toolchain documented in `CLAUDE.md`; the others belong to work this session cannot vouch for. Directory mtime is **not** evidence of disuse: running a program out of an environment does not update it. |
 
 ## What it achieved, and for how long
 
 ```
 51,200,000   peak, quota exhausted, new files failing
-50,980,729   after the two completed moves   (about 219,000 free)
-51,199,888   2026-09-04T17:40Z               (about 112 free)
+50,980,729   after the two completed moves        (about 219,000 free)
+51,199,888   2026-09-04T17:40Z                    (about 112 free)
+50,461,324   2026-09-05T03:46Z                    (about 739,000 free)
 ```
 
-**The relief lasted a few hours.** Roughly 219,000 inodes were freed and other activity
-consumed them again within the same afternoon. Moving one cache and one archive is not a
-fix at this rate of consumption; either the large archive goes, or something is producing
-inodes faster than incremental cleanup can recover them.
+**Read the last line before acting on this note.** The first three lines describe a few
+hours on 2026-09-04, during which roughly 219,000 inodes were freed and consumed again. By
+the following morning the project had about 739,000 free, from cleanup elsewhere rather
+than from anything recorded here. **The quota is not currently exhausted**, so notes
+elsewhere still saying "Lustre inode quota ~0 free" are describing 2026-09-04, not today.
+
+The structural point survives the recovery: two directories moved by hand, one of which
+was later moved back, do not add up to a fix at the rate this project creates files. The
+largest single object, `s5e_archive` at 13,925,267 inodes, is untouched and remains the
+only move that would change the picture by itself.
 
 ## The concurrent-session collision
 
