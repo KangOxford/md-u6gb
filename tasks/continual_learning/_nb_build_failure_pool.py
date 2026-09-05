@@ -325,6 +325,50 @@ fig.suptitle("Points are measured; curves are the one-parameter fit extrapolated
              y=1.03, fontsize=9)
 show(fig)''')
 
+
+M(r"""## Figure 7 — the confound on contexts the selection never saw
+
+Contexts are split by content (sorted by id, even positions to FIT, odd to HELD), so the split
+depends on no seed and no score. Every rule then selects and is scored **only on HELD**, which
+the earlier figures did not do: they held out rollouts, and every context appeared on both
+sides. Left: how much of the population's realised move each pool carries. Right: the cost of
+freezing the stratum edges on FIT and applying them unchanged to HELD.""")
+
+C(r'''ch = json.loads((RES / "context_holdout_20260905.json").read_text())
+fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.7))
+arms = ["T_global", "T_transfer", "T_oracle"]
+lab = {"T_global": "global top-q,\nraw score", "T_transfer": "within stratum,\nFIT edges",
+       "T_oracle": "within stratum,\nHELD edges"}
+x = np.arange(len(arms))
+for j, (an, c) in enumerate([("primary_exclude28", CB[0]), ("sensitivity_include28", CB[2])]):
+    r = ch["analyses"][an]
+    axes[0].bar(x + (j - 0.5) * 0.36, [np.mean([r[t][a]["bal"] for t in TK]) for a in arms],
+                0.36, color=c, label=an.split("_")[0])
+axes[0].axhline(1.0, color="k", ls="--", lw=0.8)
+axes[0].text(2.4, 1.06, "no confound", fontsize=6, ha="right")
+axes[0].set_xticks(x); axes[0].set_xticklabels([lab[a] for a in arms], fontsize=6.5)
+axes[0].set_ylabel("pool |realised move| / population")
+axes[0].set_title("held-out contexts", fontsize=8.5); axes[0].legend(fontsize=6.5)
+
+for j, (an, c) in enumerate([("primary_exclude28", CB[0]), ("sensitivity_include28", CB[2])]):
+    r = ch["analyses"][an]
+    d = np.array([r[t]["T_oracle"]["Y_v2"] - r[t]["T_transfer"]["Y_v2"] for t in TK])
+    axes[1].errorbar([j], [d.mean()], yerr=[d.std(ddof=1)], fmt="o", color=c, capsize=4, ms=5)
+axes[1].axhline(0, color="k", lw=0.8)
+axes[1].set_xlim(-0.6, 1.6); axes[1].set_xticks([0, 1])
+axes[1].set_xticklabels(["primary\n(exclude 28)", "sensitivity\n(include 28)"], fontsize=6.5)
+axes[1].set_ylabel("transfer cost, oracle - transfer")
+axes[1].set_title("cost of freezing the edges on FIT", fontsize=8.5)
+fig.suptitle("Held-out CONTEXTS, not held-out rollouts", y=1.03, fontsize=9)
+show(fig)''')
+
+M("""The literal issue-#73 rule carries **2.88-2.98x** the population's realised move on
+contexts it never saw, against 1.21-1.25 for the stratified rules. The held-out-rollout
+comparison put the same gap at 1.42 against 1.29, so **that test understates the confound by
+about a factor of four** -- which is why the two are not interchangeable. The transfer cost
+brackets zero under both analyses (|mean|/sd 0.16 and 0.04, direction a coin flip in both),
+so the edges may be fitted once and reused. Neither panel says anything about training.""")
+
 M("""## Table 1 — Per ticker""")
 
 C(r'''hdr = f"{'ticker':>7} | {'k=1':>6} {'k=5':>6} | {'k=1':>6} {'k=5':>6} | {'n/s':>5} {'k@.80':>6} {'k@.90':>6} {'fit':>4} | {'overlap':>7}"
