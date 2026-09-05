@@ -348,3 +348,37 @@ Fixed by construction, not by assumption:
 
 Nothing is judged until that set is complete. A green CI and a synchronised artifact are
 housekeeping; neither is evidence about round 3.
+
+### 2026-09-05 08:2x -- the drainer's probe was failing silently for eleven rounds
+
+Eleven consecutive rounds logged `free cards: 0` while the cluster had 19-26 idle cards. The probe
+was not fluctuating; it was returning nothing.
+
+**Cause: terminal width.** `gtop` lays out to the terminal and emits **no GH200 lines at all** below
+roughly 200 columns. The drainer ran in an 80-column tmux window; my own checks ran through a
+tool with no TTY and therefore a wide default. Measured:
+
+| COLUMNS | idle cards parsed |
+|---|---|
+| 80 | 0 |
+| 100 | 0 |
+| 120 | 0 |
+| 200 | **25** |
+
+Ruled out along the way: `gtop` missing from the drainer's `PATH` (it resolves), and the 50
+inherited `SLURM_*` variables (gtop returns 25-26 with them set, unset, or partially set).
+
+**This violates a rule already written down.** CLAUDE.md 4.-0.5 requirement 1 says a failed probe
+must not be reported as zero idle cards, because `grep -c` on a crashed `gtop` returns 0 and hides
+exactly the waste it is meant to surface. I wrote the drainer knowing that rule and still logged the
+failure as a measurement.
+
+Fixed in `drain_cells_v2.sh` (a **new file** -- editing a running shell script in place is what
+corrupted the eight training wrappers earlier today):
+
+- `export COLUMNS=200 LINES=200` before any probe;
+- the raw `gtop` output is kept, and a round with no `GH200` line at all logs
+  `PROBE FAILED: gtop emitted no GH200 lines (N bytes)` and skips rather than reporting zero.
+
+The old drainer was stopped by exact PID -- not by `cmdline` substring, which also matches the
+wrapping shell. v2's first round read 25 free cards and launched 11 cells.
