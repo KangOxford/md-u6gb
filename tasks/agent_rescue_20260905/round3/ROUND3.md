@@ -97,8 +97,23 @@ The **four builder scripts were not edited.** What was done is the verification 
   rows `{arm,step,ticker,seed,sd_ratio,qL1}` and **48 pooled rows** `{arm,step,ticker,node,crps,…}`
   with **no `seed`**. Keying both by `(ticker,seed)` cannot work. Skipping the seedless rows —
   the obvious fix — would silently discard exactly the 48 rows that carry `crps`.
-  The patch partitions them and prints both counts:
-  `round3/verify_sweep_partition.patch`. **It could not be applied — see §5.**
+  The patch partitions them and prints both counts (`round3/verify_sweep_partition.patch`).
+  It was blocked by the quota stop (§5) and **applied at 07:41:52Z once headroom returned**;
+  `verify_sweep.py` now runs to completion: 322 per-seed rows, 48 pooled rows, kept separate.
+
+  **Running it surfaced a finding the crash had been hiding.** The published sweep values are
+  computed on **n = 2 seeds**, and the unpublished steps on **n = 1**:
+
+  | arm/step | seeds used | R (this re-measurement) | published |
+  |---|---|---|---|
+  | multi4 300 / 600 / 900 | 2 | 0.7686 / 0.8513 / 0.8466 | same, n=2 |
+  | **multi4 1200** | **4** | **0.9578** | **0.9610 (n=2)** |
+  | multi4 1050 | **1** | 0.8059 | not published |
+  | multi4 1350 | **1** | 0.8193 | not published |
+
+  So the headline step is the only one scored on four seeds, its four-seed value differs from
+  the published two-seed value by 0.0032, and the two neighbours that reverse the peak rest on
+  a single seed each. The seed count belongs next to every one of these numbers.
 - `verify_prov.py` surfaces a live provenance discrepancy worth its own follow-up:
   `unifw step 1200` has `stored abs_dev 0.10756`, `mean|R_t−1| 0.09238` and `|mean R − 1| 0.02438`
   — three different numbers for one nominal quantity — and `multi4 step 4200` stores
@@ -118,9 +133,11 @@ by 20,748 in the same hour, so other writers are active.
 
 Three consequences, all recorded rather than worked around:
 
-1. **The `verify_sweep.py` patch could not be applied.** It is delivered as a patch file.
-   The target file was verified **intact** — `open(path,"w")` failed before truncating, and a
-   re-run reproduced the original `KeyError` at the original line number.
+1. **The `verify_sweep.py` patch could not be applied while the quota held.** The target file
+   was verified **intact** — `open(path,"w")` failed before truncating, and a re-run reproduced
+   the original `KeyError` at the original line number. The block turned out to be transient:
+   another writer freed space, `quota` dropped back under the limit at 07:41Z (no `*`), and the
+   patch was applied then. **Nothing was deleted by this session to achieve that.**
 2. **The ledger itself stopped.** `registry.jsonl` lives on `/home`, so `agent_reg.sh stage`
    raised Errno 122. The bookkeeping that exists to survive failures is on the filesystem that
    failed — the same shape as the 2026-09-04T18:30Z incident, where `prompt.txt` writes failed
