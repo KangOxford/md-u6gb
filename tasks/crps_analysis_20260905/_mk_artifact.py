@@ -24,7 +24,10 @@ LEDGER = [
  ("Round-3 paired &Delta;R vs multi3", "not reported",        "&minus;0.0679, t &minus;4.60, 5/5", "Training seed as unit, ticker as pairing basis", True),
  ("&hellip; its sign-flip p",          "not reported",        "0.0625 = the floor at n = 5", "2/2<sup>5</sup> lies <em>above</em> &alpha; = 0.05", True),
  ("K in every scored record",          "assumed variable",    "2, uniformly (239/239)",     "No K ladder exists, so K-dependence is unmeasurable", False),
- ("Run independence",                  "assumed",             "coupled by common seeds",    "Cross-run r +0.389 shared seed vs +0.139 not", False),
+ ("Cross-run coupling",                "assumed absent",      "present",                    "Same-seed and different-seed &Delta; intervals are disjoint", False),
+ ("&hellip; my argument for it",       "&ldquo;impossible under independence&rdquo;", "withdrawn", "It happens in about half of independent designs", True),
+ ("&hellip; and its effect on scoring","&ldquo;invalidates fair CRPS&rdquo;", "withdrawn",  "Within a cell the K=2 members stay exchangeable", True),
+ ("Fair-CRPS bias flat in K",          "reported as measured","algebra only",               "239/239 at K=2; the magnitude&rsquo;s CI includes zero", True),
 ]
 
 SECTIONS = [
@@ -249,7 +252,7 @@ footer {{ margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--rule
   <div class="provenance">
     <div><b>Repository</b><span>KangOxford/sigma-0 (private)</span></div>
     <div><b>Branch</b><span>audit/crps-return-alignment-20260905</span></div>
-    <div><b>Commit</b><span>ab7a38205f630496115cf9b305d146e6f7957771</span></div>
+    <div><b>Commit</b><span>54cb58467c83babab7bb46aee6909fdc80586740</span></div>
     <div><b>Pull request</b><span>#76</span></div>
     <div><b>Notebook</b><span>10 code cells, 0 errors, 7 figures</span></div>
     <div><b>Replicates measured</b><span>18 fine-tuning runs</span></div>
@@ -285,6 +288,16 @@ footer {{ margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--rule
   <p>One save interval moves R by up to 0.165, against a round-to-round effect of 0.090. Any comparison
   between arms at a single hand-picked step is reading a quantity whose largest source of variation is which
   step was picked.</p>
+  <h3>Three of my own claims did not survive their own check.</h3>
+  <p>I wrote that a coupled <em>D&#772;</em> below <em>W&#772;</em> was impossible for independent draws. It
+  is not: when runs share a distribution the two expectations are equal, so the difference is a coin
+  flip, and a simulation of independent designs of this shape lands below zero about half the time. The
+  coupling is real, but the evidence is the gap between same-seed and different-seed pairings, not the
+  sign. I also wrote that shared generation seeds invalidate the scoring; they do not touch the
+  within-cell estimator, whose two members are exchangeable given the checkpoint, and the variance
+  reduction they are supposed to buy on paired comparisons measures 0.4% here. And &ldquo;the bias is
+  flat in K&rdquo; is algebra about which estimand you are aiming at, reported as though it had been
+  measured &mdash; every one of the 239 records is at K = 2, so no K-dependence is estimable at all.</p>
   <h3>The verdict at the sample size in hand: underpowered, and confounded.</h3>
   <p>Neither supported nor refuted, for three reasons each sufficient alone. At n<sub>3</sub> = 5 the
   permutation test bottoms out above &alpha;. The contrast reads replicates at step 1200 against multi3 at

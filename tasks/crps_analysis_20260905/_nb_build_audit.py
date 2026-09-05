@@ -604,6 +604,141 @@ is flat in `K`, and every run reuses generation seeds 97901/97902, which couples
 """)
 
 md(r"""
+## 9. Three claims from section 2 that did not survive their own check
+
+Written after a reader pushed back on them. Each is re-derived here rather than repaired in
+place, because the way each one failed is more useful than the corrected number.
+""")
+
+code(r"""
+import sys
+sys.path.insert(0, "/home/u6gb/kangli.u6gb/crps_runspread_20260905")
+from measure_real import load_cells, build, day_boot, ci, HARV
+
+daymap = json.load(open(HARV/"daymap_META.json"))
+runs, real = load_cells(r"wm_ft_traj_s\d+")
+ids, y, days, X, labels = build(runs, real, daymap)
+nctx, R, S = X.shape
+
+W_ctx = np.abs(X[:,:,0] - X[:,:,1]).mean(1)
+pairs = list(itertools.combinations(range(R), 2))
+D_same = np.mean([np.abs(X[:,a,k]-X[:,b,k])     for a,b in pairs for k in (0,1)], 0)
+D_diff = np.mean([np.abs(X[:,a,k]-X[:,b,1-k])   for a,b in pairs for k in (0,1)], 0)
+D_all  = (D_same + D_diff)/2
+
+rows = []
+for tag, arr in [("different generation seeds", D_diff), ("all cross pairs", D_all),
+                 ("same generation seed only", D_same)]:
+    g = arr - W_ctx
+    lo, hi = ci(day_boot(days, lambda s_: g[s_].mean()))
+    rows.append((tag, g.mean()*1e5, lo*1e5, hi*1e5))
+
+# How often do genuinely independent draws of this shape give Dbar_all < Wbar?
+rng = np.random.default_rng(20260905)
+sd_ctx = X.reshape(nctx,-1).std(1, ddof=1)
+hits, NSIM = 0, 2000
+for _ in range(NSIM):
+    Z = rng.normal(0,1,size=(nctx,R,S)) * sd_ctx[:,None,None]
+    w  = np.abs(Z[:,:,0]-Z[:,:,1]).mean(1)
+    ds = np.mean([np.abs(Z[:,a,k]-Z[:,b,k])   for a,b in pairs for k in (0,1)], 0)
+    dd = np.mean([np.abs(Z[:,a,k]-Z[:,b,1-k]) for a,b in pairs for k in (0,1)], 0)
+    hits += ((ds+dd)/2).mean() < w.mean()
+p_indep = hits/NSIM
+
+fig, ax = plt.subplots(1, 2, figsize=(7.4, 2.8))
+
+a = ax[0]
+yy = np.arange(len(rows))
+for i,(tag,m,lo,hi) in enumerate(rows):
+    a.plot([lo,hi],[i,i], color=INK, lw=1.4, solid_capstyle="butt")
+    a.plot([m],[i], "o", color=HL if m < 0 else CTRL, ms=6, zorder=5)
+    a.text(m, i+0.28, f"{m:+.3f}", ha="center", fontsize=6.5, color=INK)
+a.axvline(0, color=CTRL, ls="--", lw=1.0)
+a.set_yticks(yy); a.set_yticklabels([r[0] for r in rows], fontsize=7)
+a.invert_yaxis()
+a.set_xlabel(r"$\bar D - \bar W$  ($10^{-5}$), day-bootstrap 95% CI")
+a.set_title("Coupling shows in the seed contrast, not in the sign", fontsize=8.5)
+
+b = ax[1]
+b.bar(["independent draws\ngive $\\bar D<\\bar W$", "what I claimed"],
+      [100*p_indep, 0.0], color=[CTRL, HL], width=.5, alpha=.9)
+b.axhline(50, color=INK, ls=":", lw=.9)
+b.text(0, 100*p_indep+2, f"{100*p_indep:.1f}%", ha="center", fontsize=8)
+b.text(1, 3, '"impossible"', ha="center", fontsize=7.5, color=HL)
+b.set_ylim(0, 68); b.set_ylabel("per cent of simulated designs")
+b.set_title("Equal-distribution runs make it a coin flip", fontsize=8.5)
+
+show(fig, "f8_corrections")
+for tag,m,lo,hi in rows:
+    print(f"  Dbar-Wbar, {tag:28s} {m:+.4f}e-5  95% CI [{lo:+.4f},{hi:+.4f}]")
+print(f"\n  independent-draw simulation ({NSIM} designs): Dbar_all < Wbar in {100*p_indep:.1f}% of them")
+r_same = np.mean([np.corrcoef(X[:,a,0], X[:,b,0])[0,1] for a,b in pairs])
+r_diff = np.mean([np.corrcoef(X[:,a,0], X[:,b,1])[0,1] for a,b in pairs])
+d_m = [np.abs(X[:,a,0]-y).mean() - np.abs(X[:,b,0]-y).mean() for a,b in pairs]
+d_c = [np.abs(X[:,a,0]-y).mean() - np.abs(X[:,b,1]-y).mean() for a,b in pairs]
+cW = ci(day_boot(days, lambda s_: W_ctx[s_].mean()))
+print(f"  cross-run correlation: same seed {r_same:+.4f}, different seed {r_diff:+.4f}")
+print(f"  sd of a paired run difference: matched seed {np.std(d_m,ddof=1)*1e5:.4f}e-5 "
+      f"vs crossed {np.std(d_c,ddof=1)*1e5:.4f}e-5  -> CRN buys "
+      f"{100*(1-np.std(d_m,ddof=1)/np.std(d_c,ddof=1)):+.1f}%")
+print(f"  evaluation Monte Carlo error on Wbar: +/-{(cW[1]-cW[0])/2/W_ctx.mean()*100:.1f}% "
+      f"({nctx} contexts, {S} members, day-clustered)")
+""")
+
+md(r"""
+**What was wrong, and what replaces it.**
+
+**(1) "The coupled `D̄ < W̄` is impossible for independent draws."** It is not. When the runs share
+a distribution, `E|X_i - X_j|` *equals* `E|X_i - X_i'|`, so the difference has expectation zero and
+falls below it half the time — the simulation above puts it at about 50%. The coupling is still
+there, but the evidence for it is the **contrast between the seed pairings**, not the sign: same-seed
+cross pairs sit far below different-seed ones, and the two intervals do not come close to meeting.
+
+**(2) "Shared generation seeds invalidate the scoring."** They do not touch the within-cell
+estimator. The `K = 2` members of one cell are two generation seeds of one checkpoint, exchangeable
+given that checkpoint, so fair CRPS is unbiased for that run. Common random numbers matter only for
+estimators that assume cross-run independence, such as a pooled `D̄`. And the variance reduction they
+are supposed to buy on paired comparisons is, here, `0.4%` — the run-to-run difference is dominated
+by the training term, not by generation noise, so the coupling neither helps nor hurts that contrast
+much. Three dependencies, three different consequences: **within-ensemble** (benign),
+**cross-run** (biases pooled estimators only), **evaluation Monte Carlo** (`±7.5%` on `W̄`).
+
+**(3) "The fair-CRPS bias is flat in `K`."** That is algebra, not a measurement, and it must be
+labelled as such: `E[fair_K] − CRPS(mixture) = (W̄ − D̄)/(2K)` shrinks with `K`, while
+`E[fair_K] − mean single-run CRPS = (W̄ − D̄)/2` carries no `K`. Which one applies depends on the
+estimand you want, not on the data. Every one of the 239 scored records is at `K = 2`, so **no**
+`K`-dependence of anything is measurable here — and the magnitude estimated from those records,
+`−0.85%`, has a confidence interval that includes zero.
+""")
+
+md(r"""
+## 10. Is `n_3 = 13` thirteen comparable units?
+
+Pooling requires that the eight replicates trained on 2026-09-05 be exchangeable with the five
+already scored, not merely similar. Checked before any pooling:
+
+| Property | Five existing (`traj3_s*`) | Eight new (`r3rep_s4*`) |
+|---|---|---|
+| Parent checkpoint | `wm_ft_multi2` step 69378 | `wm_ft_multi2` step 69378 |
+| Weights / prefix | `v5m3_weights.npz` / `v5m3` | `v5m3_weights.npz` / `v5m3` |
+| Training item set (`seed0_sha1`) | `0f14669f2a4d` | `0f14669f2a4d` |
+| Items per epoch | 4800 | 4800 |
+| Budget (`max_step`) | 1500 | 1500 |
+| Trainable parameters | 78,539,423 | 78,539,423 |
+| Optimizer | scalar LR, `inject_hyperparams` | scalar LR, `inject_hyperparams` |
+| What differs | `order_sha1` only | `order_sha1` only |
+
+The item-set hash is identical and only the data-order permutation differs, which is the intended
+replication unit. Two limits survive that check and must travel with any `n_3 = 13` result:
+
+- `jax_seed` is pinned at 42 in every checkpoint, so all thirteen share one initialisation. They
+  estimate the **data-order** component of trajectory variance, a lower bound on the whole of it.
+- The comparison must be read at step 1200 on both sides. Mixing a replicate at 1200 against a
+  reference at its endpoint imports the checkpoint-position term, which section 4 showed is the
+  largest one here. That is why `multi3` is being scored at step 1200 rather than reused at `final`.
+""")
+
+md(r"""
 ## 9. The corrected ledger
 """)
 
@@ -633,7 +768,74 @@ for row in ledger:
 """)
 
 md(r"""
-## 10. What this leaves standing
+## 11. Verdict, claim by claim
+
+Three labels only: **supported** by evidence that survives the audit, **refuted** by it, or
+**underpowered** — the design cannot answer it at the sample size in hand.
+""")
+
+code(r"""
+V = [
+ ("Round 4 is worse than round 3 (panel CRPS)", "UNDERPOWERED",
+  "effect +2.92%, run-to-run sd 4.46% [2.57,5.57]; corrected p = 0.594"),
+ ("...and the p = 0.0078 that carried it",      "REFUTED as a measurement",
+  "2/2^8 is the floor of the test; it reports unanimity, not magnitude"),
+ ("A cosine LR confound separates the groups",  "REFUTED",
+  "optax.adamw(args.lr) is a scalar; travel late/early = 1.011"),
+ ("The step-1200 peak survives selection",      "REFUTED",
+  "exact Grubbs P 0.0970 (multi4) and 0.0053 (unifw control), not 0.19 / 0.1385"),
+ ("Checkpoint position is a minor term",        "REFUTED",
+  "one save interval moves R by 0.165 vs a 0.090 round effect"),
+ ("The variance ladder rungs are comparable",   "REFUTED",
+  "rung 2 is a contrast sd; like-for-like the ratio is 4.08x not 2.89x"),
+ ("Round-3 replicates differ from multi3",      "UNDERPOWERED",
+  "dR -0.0679, t -4.60, 5/5 agree, yet p floor at n=5 is 0.0625 > 0.05"),
+ ("Cross-run coupling exists",                  "SUPPORTED",
+  "same-seed vs different-seed Dbar-Wbar intervals are disjoint"),
+ ("...and it invalidates the within-cell CRPS", "REFUTED",
+  "K=2 members are exchangeable given the checkpoint; the estimator is unbiased for that run"),
+ ("Dbar < Wbar is impossible under independence","REFUTED",
+  f"simulation: it happens in about half of independent designs"),
+ ("The fair-CRPS bias is flat in K",            "ALGEBRA, NOT MEASURED",
+  "no K ladder exists (239/239 at K=2); the magnitude's CI includes 0"),
+ ("Round 3 vs round 1 and vs the parent",       "NOT ESTIMABLE YET",
+  "parent_multi2 scored on 1 ticker, wm_ft_multi on none"),
+]
+w = [44, 26, 62]
+print("  ".join(h.ljust(x) for h,x in zip(("claim","verdict","the evidence that decides it"), w)))
+print("-"*(sum(w)+4))
+for c,v,e in V:
+    print("  ".join(str(z).ljust(x) for z,x in zip((c,v,e), w)))
+print()
+print("counts:", {k: sum(1 for _,v,_ in V if v==k) for k in dict.fromkeys(v for _,v,_ in V)})
+""")
+
+md(r"""
+## 12. The experiment table, reproducible
+
+Every row is a command that reproduces the unit it names. Roots:
+`W = /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/crps-return-alignment-20260808`,
+`T = /lus/lfs1aip2/projects/public/u6gb/tasks/crps_return_alignment_20260808T025024Z`,
+`O = /lus/lfs1aip2/projects/public/u6gb/tasks/crps_analysis_20260905`.
+
+| # | Unit | Status | How to reproduce it |
+|---|---|---|---|
+| 1 | Round-3 replicate, one training seed | **13 done** | `TSEED=<n> WANT=<card> MAXSTEP=1500 bash $O/r3_replicate.sh` — restores `T/ckpt/wm_ft_multi2` at 69378, `v5m3_weights.npz`, 64 train / 16 hold seeds from 99000-99079 |
+| 2 | Checkpoint integrity | **13 verified** | `python $O/_verify_ckpts.py` — restore must give 386 arrays, 159,374,987 finite elements |
+| 3 | One scored cell, `K = 2` | **1 of 72 done** | `LABEL=<arm> CKPT=<...>_step1200 TICKER=<tk> WANT=<card> bash $O/score_cell.sh` — two `collect_rollouts.sh` passes at seeds 97901/97902, then `score_v5_primary.py --assert-k 2 --assert-ckpt-step 69378 --assert-seeds 97901,97902` |
+| 4 | `multi3` at step 1200, 8 tickers | **queued (8)** | rows 1-8 of `$O/cell_queue.txt`; removes the checkpoint-position term from the main contrast |
+| 5 | 8 new replicates at step 1200, 8 tickers | **queued (64)** | rows 9-72 of `$O/cell_queue.txt`; takes `n_3` from 5 to 13 |
+| 6 | Queue drain onto free cards | running | `bash $O/drain_cells.sh` — re-reads `gtop` each round, skips any cell whose `score.json` exists, so it is idempotent |
+| 7 | The three withdrawn claims | done | `python $O/_corrections.py` — reuses `measure_real.load_cells` |
+| 8 | This notebook | done | `python $O/_nb_build_audit.py && jupyter nbconvert --execute --inplace crps_audit.ipynb` |
+
+Not queued, and why: `parent_multi2` on its seven missing tickers and `wm_ft_multi` on all eight
+would be needed for the round-1 and parent comparisons, but neither can change the verdict on the
+claims above, so they wait behind the units that can.
+""")
+
+md(r"""
+## 13. What this leaves standing
 
 **The measurement is fine; the inference was scoped to the wrong replicate.** The point estimate
 of the round-4 minus round-3 contrast is stable across every re-pairing of the data. What was

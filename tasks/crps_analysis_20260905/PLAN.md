@@ -277,3 +277,32 @@ the seven tickers they lack. **0 idle cards at 05:0x**, so this waits on GPUs ra
 decision. When cards free: score those cells with K = 2 and generation seeds 97901/97902 to stay
 commensurable with the existing 39, then recompute at n3 = 13 where the floor is 2/2^13 = 0.00024.
 Also worth scoring `multi3` at step 1200 so the contrast stops carrying the checkpoint-position term.
+
+### 2026-09-05 07:xx -- three of my own claims withdrawn; verdict table; 72 cells queued
+
+**Withdrawn, with what replaces each.**
+
+| Claim I made | Status | What is true instead |
+|---|---|---|
+| Coupled `Dbar < Wbar` is impossible for independent draws | **wrong** | Equal-distribution runs give `E|Xi-Xj| = E|Xi-Xi'|`, so the difference has expectation zero. A 2000-design simulation of this exact shape lands below zero in ~50% of them. The coupling is real; the evidence is the seed-pairing contrast: same-seed `-2.63e-5` against different-seed `+0.16e-5`, intervals far apart |
+| Shared generation seeds invalidate the scoring | **conflated three things** | Within a cell the `K=2` members are two generation seeds of one checkpoint, exchangeable given it, so fair CRPS is unbiased **for that run**. Common random numbers bias only estimators assuming cross-run independence (a pooled `Dbar`). Their variance reduction on paired comparisons measures **0.4%** here. Evaluation Monte Carlo error is separate: **+/-7.5%** on `Wbar` |
+| The fair-CRPS bias is flat in `K` | **algebra, reported as measurement** | `E[fair_K] - CRPS(mixture) = (Wbar-Dbar)/(2K)`; `E[fair_K] - mean single-run CRPS = (Wbar-Dbar)/2`. Which applies depends on the estimand. All 239 records are at `K=2`, so no `K`-dependence is estimable, and the magnitude's CI includes zero |
+
+**Exchangeability, checked before pooling to n3 = 13.** Same parent (`wm_ft_multi2` at 69378), same
+weights/prefix (`v5m3`), same training item set (`seed0_sha1 0f14669f2a4d`), same 4800 items, same
+`max_step` 1500, same 78,539,423 parameters, same optimizer banner. **Only `order_sha1` differs**,
+which is the replication unit. Two limits travel with any `n3 = 13` result: `jax_seed` is pinned at
+42 so all thirteen share one initialisation (data-order component only, a lower bound), and both
+sides must be read at step 1200 -- which is why `multi3` is being scored at 1200 rather than reused
+at `final`.
+
+**Verdict counts** (notebook section 11): 1 supported, 7 refuted, 2 underpowered, 1 algebra-only,
+1 not yet estimable.
+
+**Scoring queue**: 72 cells in `cell_queue.txt`, highest value first -- `multi3` at step 1200 on 8
+tickers (removes the checkpoint-position term), then the 8 replicates on 8 tickers (n3 5 -> 13).
+`drain_cells.sh` re-reads gtop each round, skips any cell whose `score.json` exists, so it is
+idempotent and restartable. `score_cell.sh` passes `--assert-k 2 --assert-ckpt-step 69378
+--assert-seeds 97901,97902`, so K comes from the estimator rather than a shell directory count.
+Not queued: `parent_multi2` on its seven missing tickers and `wm_ft_multi` on all eight -- needed
+for the round-1 and parent comparisons, but neither can change the verdicts above.
