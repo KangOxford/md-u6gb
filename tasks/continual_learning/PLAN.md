@@ -1,16 +1,62 @@
 # Continual Learning for sigma-0: Plasticity Measurement and Continual Pre-Training Plan
 
 > Task dir: `tasks/continual_learning/` · Source research: `deep-reseach.md` (two-pass deep research, 2026-08-26)
-> Status: PLAN — experiments not yet started. This file is the single source of truth for this line of work.
+> **Status: MERGED PLAN, revision 2 (2026-09-05).** Five facet drafts under `plan_drafts/`
+> are the detail; this file is the spine and the decision record. Green marks what is done,
+> ~~strikethrough~~ marks what measurement has overturned. Not yet adversarially reviewed —
+> see §0.4.
 
-## 中文速览
+---
 
-- 研究背景：σ0（LOB 基础模型）要服役多年，必须回答两个问题——模型会不会「变僵」（可塑性丧失），以及无标注的市场漂移下何时、如何继续训练。
-- 深研结论（论文级，两轮）：可塑性丧失在 LLM 上成立（Zyphra：5M–314M 全部中招，onset ∝ P^0.83，**平稳**数据混合也发生，规模只推迟不免疫）；「没有机制理论」已过时一半（不变流形定理 + optimization readiness 预测器 + CPT 闭式损失律）；SSM/GDN 架构与 LOB 数据上**均无先例**——σ0 补这两格就是第一。
-- 关键设计修正：可塑性比较必须用**同一模型的早 vs 晚检查点**（同探针预算比 AUC），不用 fresh-vs-continued——预训练模型赢 scratch 只证明表征迁移，判「可塑性完好」几乎必然假报。scratch 只作下界参考。
-- 双坐标汇报纪律：旧窗 NLL（稳定性/遗忘）与探针 AUC（可塑性）必须同时报，只报一个会重演「单一坐标说谎」的教训。
-- 工作序（五步，成本递增）：① 盘点现有检查点与数据窗口 → ② 诊断仪表落地（本 PR 附代码）→ ③ 早 vs 晚检查点探针实验 → ④ CPT 试点拟合 replay 比例 × rewarm 学习率 → ⑤ 多规模 onset 律（34M–617M）。
-- 本 PR 先落地：本 PLAN + `code/plasticity_probes.py`（五个诊断量：dormant 比例、有效秩、权重/梯度范数、optimization readiness、top Hessian 特征值，纯 numpy、框架无关、带测试）。
+## 0. Revision 2 — what changed on 2026-09-04/05 and why
+
+Five facets were drafted (`plan_drafts/01`–`05`). Three were written by parallel agents,
+two (`01_measurements.md`, `03_infrastructure.md`) by the main session after the agents for
+those facets were killed by a session limit. Everything below is traceable to a measurement.
+
+### 0.1 New measured facts
+
+| # | fact | where |
+|---|---|---|
+| F1 | A single rollout per context cannot rank contexts: split-half rank correlation 0.36–0.48 raw, 0.15–0.25 corrected | `failure_pool_reliability.ipynb` |
+| F2 | The obvious failure score is mostly not about the model: it correlates 0.65 with \|realised move\|, keeps 0.46 after the rollout-to-context pairing is destroyed, and two independently permuted halves still agree at 0.43. Stratifying within \|realised move\| bins drops these to 0.03 and 0.10. The naive and corrected top-decile pools overlap 40% | same |
+| F3 | Split-half reliability certifies nothing on its own — a consistently mis-paired score scored 0.49 against the correct score's 0.46 | same |
+| F4 | Error partitions exactly into systematic and dispersion terms; dispersion is 26–34% inside the top decile and the model is under-dispersed, so that is a floor | same |
+| F5 | ~~Generation nondeterminism sets a ~15% ceiling on rank agreement~~ **Wrong in sign.** Two whole regenerations agree *more* than two disjoint seed sets, because a fraction φ of members never fork (0.976 at h=10, 0.191 at h=250). It behaves like a partial redraw, which 1/k averaging removes | `plan_drafts/02` §2.2 |
+| F6 | On the corrected score the regeneration figure is 0.583–0.972, grand mean 0.742 — not the raw score's 0.846 | `plan_drafts/02` §2.2 |
+| F7 | Doing nothing moves an arm-level endpoint by up to 28%; training-seed variance has **never been measured on this project** | `plan_drafts/02` §2.3 |
+| F8 | `k >= 20` is a *selection* requirement for a per-context ranked list. For a **training pool**, false positives dilute rather than contaminate, and cost-per-power favours small k by 2.4× | `plan_drafts/02` §3.2 |
+| F9 | For a paired arm comparison only `R = N·k` matters; the 1/sqrt(R) law holds to 1% | `plan_drafts/02` §3.3 |
+| F10 | `wm_ft_multi3` holds **one** checkpoint (69378) with **no Muon optimizer state** (418.6 MB vs the selftrain chain's 499.5 MB); the selftrain chain holds 17 (275…69378) | measured 2026-09-05, `plan_drafts/01` §1.1 |
+| F11 | One rollout member costs **3,007 inodes / 67 MB**; the analysis reads only 112 KB of `.npz` from it | `plan_drafts/03` §3.2 |
+| F12 | The project sat **118 inodes** from its hard cap at 2026-09-04 17:54Z; the 741,511 now free were released by cleanup over nine hours, and are borrowed headroom rather than a baseline | `plan_drafts/03` §3.3 |
+| F13 | The real arm is byte-identical across seeds (md5-verified), so writing it once per ticker halves the per-member inode cost | `plan_drafts/05` §5.3 |
+
+### 0.2 The four cross-draft contradictions, and how they resolve
+
+| # | contradiction | resolution |
+|---|---|---|
+| X1 | `04` builds the pool at `k = 20`; `02` §3.2 measures that small `k` is 2.4× better cost-per-power **for a training pool** | **Split by purpose.** `k = 20` only on the subsample reported as a ranked list; `k = 3` for the pool that feeds training, with the dilution assumption pre-registered and tested (it is untested — `02` open question) |
+| X2 | `04` §8 E-3 wants 320,000 rollouts; `03` §3.4 measures that this is 130% of the free inode budget even after dedupe | X1 dissolves it: at `k = 3` the same 16,000 scored contexts cost **48,000 rollouts = 96 members = 20% of free inodes** |
+| X3 | `05` §5.3 assumes the real-arm dedupe; `04`'s sizing does not | **The dedupe is a precondition, not an optimisation.** Without it the era gate alone is 130% over |
+| X4 | `05` §2.6: the two threads operate on different weights at the same step number | **Settled by F10.** `wm_ft_multi3` has no early/late pair and no optimizer state, so it cannot be adapted. Either Thread B regenerates from the selftrain chain, or the threads stay separate |
+
+### 0.3 The budget, after X1 and X3
+
+| item | rollouts | members | inodes (deduped) | % of free |
+|---|---:|---:|---:|---:|
+| Era gate, 8,000 contexts at `k = 3` | 24,000 | 48 | 72,336 | 10% |
+| Cycle-1 pool, 16,000 contexts at `k = 3` | 48,000 | 96 | 144,672 | 20% |
+| Ranked-list subsample at `k = 20` | as needed | — | — | — |
+| ~~Era gate at k = 20~~ | ~~160,000~~ | ~~320~~ | ~~482,240~~ | ~~65%~~ |
+| ~~Cycle-1 pool at k = 20~~ | ~~320,000~~ | ~~640~~ | ~~964,480~~ | ~~130%, does not fit~~ |
+
+### 0.4 What has **not** been done
+
+**No adversarial review has run.** `plan_drafts/_REVIEW_BRIEF.md` specifies five reviewers;
+none were launched — the session limit hit first. Facets `01` and `03` were additionally
+written by the same session that produced the measurements they rest on, which is exactly
+the arrangement the standing order exists to prevent. **Treat revision 2 as unreviewed.**
 
 ---
 
@@ -54,11 +100,11 @@ Every CPT or adaptation stage reports **both coordinates**: old-window validatio
 
 Ordered by cost; each step gates the next. No step assumes hardware or checkpoints that have not been inventoried in step 0.
 
-### Step 0 — Inventory (no GPU)
+### Step 0 — Inventory (no GPU) $\color{green}{\textsf{done, four open items remain}}$
 
 List which sigma-0 checkpoints exist (run, size, step range, data window covered), which NASDAQ windows are tokenized and ready, and measured tokens/sec for the current model size. Output: a short table in `results/INVENTORY.md`. Everything below is parameterized by it.
 
-### Step 1 — Diagnostics instrumentation (this PR, no GPU)
+### Step 1 — Diagnostics instrumentation $\color{green}{\textsf{done, not yet wired into training}}$
 
 Land `code/plasticity_probes.py`: framework-agnostic implementations of
 
@@ -72,7 +118,7 @@ Land `code/plasticity_probes.py`: framework-agnostic implementations of
 
 plus unit tests runnable on CPU. Wiring into the sigma-0 training loop is a follow-up commit; the target is that **every future long run logs these by default**, so plasticity evidence accumulates for free.
 
-### Step 2 — Early-vs-late checkpoint probe (first GPU experiment)
+### Step 2 — Early-vs-late checkpoint probe $\color{green}{\textsf{weight probes done}}$ / **rest mis-specified, see `plan_drafts/01` §4**
 
 - Take one existing long sigma-0 run; pick θ_early and θ_late checkpoints separated by as many tokens as the run allows.
 - Fixed-budget adaptation of copies of both (identical tokens, batch, schedule, seeds) on a held-out later time slice; log validation NLL every fixed interval plus all Step-1 diagnostics.
@@ -80,7 +126,7 @@ plus unit tests runnable on CPU. Wiring into the sigma-0 training loop is a foll
 - Stress slices when data allows: the COVID window (2020-02..04) and the 2024-08 volatility spike (probe from a checkpoint trained through 2024-07 only — no leakage). **Superseded by Step 0**: tokenized data starts 2022-01 (`results/INVENTORY.md` §2), so the primary slice is 2024-08, the secondary 2025-04, and the base window 2022-01..2024-07.
 - Decision: PRESENT / ABSENT / inconclusive per §2.3. If inconclusive, extend token budget before adding mechanisms.
 
-### Step 3 — CPT pilot: fit replay × rewarm before committing a big run
+### Step 3 — CPT pilot **superseded by `plan_drafts/04` §2–§3**
 
 - D_cpt = (1−ρ)·D_new + ρ·D_old, old data stratified over time (not just the last month).
 - Grid: peak LR ∈ {0.3, 0.5} × pre-training peak, ρ ∈ {0.05, 0.10, 0.25}; short pilots of 1–2B tokens.
@@ -96,7 +142,7 @@ plus unit tests runnable on CPU. Wiring into the sigma-0 training loop is a foll
 3. Local ReDo-style resets only where dormant fraction climbs; never periodic whole-network resets on a pre-trained model.
 4. AltNet-style dual-network swaps and continual backprop reserved for a genuinely online setting.
 
-### Step 5 — Multi-size onset law (the publishable first)
+### ~~Step 5 — Multi-size onset law~~ **excluded this round on evidence (`plan_drafts/01` §4)**
 
 Cyclic year/regime schedule over 34M / 100M / 300M-class sigma-0 models, probe slice held out (a distinctive shock window), fit T = c · P^k for the LOB/SSM setting. This would be the first plasticity onset law for state-space / linear-attention models — the cell the verification table marks NOT FOUND. Only started after Step 2 produces a verdict-grade readout at one size.
 
@@ -120,5 +166,12 @@ Cyclic year/regime schedule over 34M / 100M / 300M-class sigma-0 models, probe s
 - [x] PLAN.md (this file)
 - [x] `code/plasticity_probes.py` + `code/test_plasticity_probes.py` (Step 1, this PR; 13 CPU tests pass)
 - [x] `results/INVENTORY.md` (Step 0; partial — 4 open items listed there, checkpoint roots need the user)
+- [x] $\color{green}{\textsf{Failure-pool prerequisites measured}}$ — `code/failure_pool_reliability.py`, 12 tests, `results/failure_pool_reliability.json`, `failure_pool_reliability.ipynb` (F1–F4)
+- [x] $\color{green}{\textsf{Five facet drafts}}$ — `plan_drafts/01`–`05`
+- [x] $\color{green}{\textsf{M0 checkpoint inventory}}$ — F10, which settles X4
+- [ ] **Adversarial review of the five drafts** (`plan_drafts/_REVIEW_BRIEF.md`) — blocked on session limit, §0.4
+- [ ] The three P-blockers before any generation: rollout manifest (P1), frozen hashed context set (P2), inode write plan (P6) — `plan_drafts/03` §1
+- [ ] M1: `fidelity.py` gen-arm replay per context — CPU, and it can invalidate the issue #73 premise
+- [ ] M4: arm-level repeat with several training seeds — the decisive rung (F7)
 - [ ] Probe wiring into the sigma-0 training loop (follow-up)
-- [ ] Step 2 readout: AUC(θ_late) vs AUC(θ_early), CI, diagnostics — reported on the PR as commits + comment updates
+- [ ] Step 2 readout: AUC(θ_late) vs AUC(θ_early), CI, diagnostics — needs the same-age null pair `plan_drafts/01` §2.6
