@@ -200,6 +200,16 @@ def stratify(score: np.ndarray, realised: np.ndarray, n_bins: int = 10) -> np.nd
     return out
 
 
+def stratification_leak(n_bins: int = 10) -> float:
+    """The residual |y| correlation that stratification cannot remove, = 1 / n_bins.
+
+    Analytic, and confirmed to four decimals against a synthetic pure-|y| score. Any null
+    measured on a stratified score has this as its floor; 0.095 measured at n_bins = 10 is
+    the floor reached, not noise.
+    """
+    return 1.0 / n_bins
+
+
 def pairing_nulls(real: np.ndarray, gen: np.ndarray, k: int, horizon_idx: int,
                   rng: np.random.Generator, stratified: bool) -> Dict[str, float]:
     """Four readings that separate "reliable" from "measuring what we meant".
@@ -236,24 +246,61 @@ def pairing_nulls(real: np.ndarray, gen: np.ndarray, k: int, horizon_idx: int,
 
 
 def rollouts_needed(ks: Sequence[int], rhos: Sequence[float],
-                    targets: Sequence[float] = (0.80, 0.90)) -> Dict[str, float]:
-    """Turn a measured reliability curve into a required-k prediction.
+                    targets: Sequence[float] = (0.80, 0.90),
+                    max_resid_frac: float = 0.10) -> Dict[str, object]:
+    """Turn a measured reliability curve into a required-k prediction, or refuse to.
 
     Two independent k-member estimates of one context's score correlate as
-    rho_k = s2 / (s2 + n2/k), so 1/rho_k - 1 is linear in 1/k through the
-    origin with slope n2/s2. One free parameter, fitted on the measured points,
-    and the residual is reported so the linearity is checkable rather than
-    assumed.
+    rho_k = s2 / (s2 + n2/k), so ``(1/rho_k - 1) * k`` is the constant ``n2/s2`` if the
+    model holds. It does not hold here: that quantity **rises with k in 7 of 8 tickers**
+    (e.g. GOOG 4.68 -> 9.87 from k=1 to k=5). Least squares through the origin on x = 1/k
+    is dominated by the k=1 point, so the fitted slope tracks the *smallest* observed
+    ratio and the extrapolated k comes out **too low**.
+
+    So this returns three things and lets the caller see the disagreement: the
+    one-parameter fit, the fit through the largest-k point alone, and a two-parameter fit
+    whose intercept measures the curvature. ``k_for_rho_*`` is emitted only when the
+    one-parameter residual is small relative to the y-range; otherwise the key is absent
+    and ``rejected_reason`` says why. A point estimate the data rejects is worse than no
+    point estimate, because it gets quoted.
     """
     ks = np.asarray(ks, dtype=float)
     rhos = np.asarray(rhos, dtype=float)
     ok = np.isfinite(rhos) & (rhos > 0)
-    x, y = 1.0 / ks[ok], 1.0 / rhos[ok] - 1.0
+    ks, rhos = ks[ok], rhos[ok]
+    x, y = 1.0 / ks, 1.0 / rhos - 1.0
+
     slope = float((x * y).sum() / (x * x).sum())
-    out = {"noise_over_signal": slope,
-           "max_abs_resid": float(np.abs(y - slope * x).max())}
-    for t in targets:
-        out[f"k_for_rho_{t:.2f}"] = slope / (1.0 / t - 1.0)
+    resid = float(np.abs(y - slope * x).max())
+    y_range = float(y.max() - y.min()) if y.size > 1 else float("inf")
+
+    out: Dict[str, object] = {
+        "noise_over_signal": slope,
+        "max_abs_resid": resid,
+        "y_range": y_range,
+        "implied_ratio_by_k": {int(k): float((1.0 / r - 1.0) * k) for k, r in zip(ks, rhos)},
+        "ratio_rises_with_k": bool(((1.0 / rhos[-1] - 1.0) * ks[-1]) > ((1.0 / rhos[0] - 1.0) * ks[0])),
+    }
+    # the largest-k point alone: the honest slope for extrapolating to large k
+    out["noise_over_signal_largest_k"] = float((1.0 / rhos[-1] - 1.0) * ks[-1])
+    if ks.size >= 3:                       # two-parameter fit; intercept measures curvature
+        A = np.vstack([x, np.ones_like(x)]).T
+        coef, *_ = np.linalg.lstsq(A, y, rcond=None)
+        out["two_param_slope"], out["two_param_intercept"] = float(coef[0]), float(coef[1])
+        out["two_param_max_abs_resid"] = float(np.abs(y - A @ coef).max())
+
+    if y_range > 0 and resid / y_range > max_resid_frac:
+        out["rejected_reason"] = (
+            f"one-parameter fit residual {resid:.3f} exceeds {max_resid_frac:.0%} of the "
+            f"y-range {y_range:.3f}; the linear law does not describe this regime, so no "
+            f"extrapolation from these k is supported. The direction of the error is that "
+            f"k is LARGER than a one-parameter fit would say."
+        )
+        for t in targets:
+            out[f"k_for_rho_{t:.2f}_largest_k_only"] = out["noise_over_signal_largest_k"] / (1.0 / t - 1.0)
+    else:
+        for t in targets:
+            out[f"k_for_rho_{t:.2f}"] = slope / (1.0 / t - 1.0)
     return out
 
 
@@ -352,10 +399,20 @@ def dispersion_share(real: np.ndarray, gen: np.ndarray) -> Dict[str, object]:
         tot, spr, b2 = sc["total"][:, h], sc["spread_pop"][:, h], sc["bias2"][:, h]
         n_top = max(1, round(0.10 * tot.size))
         top = np.argsort(-tot)[:n_top]
+        k = gen.shape[0]
+        # spread_pop (ddof=0) underestimates sigma^2 by (k-1)/k while `total` is unbiased
+        # for bias^2 + sigma^2, so the raw share understates the irreducible part by ~11%
+        # at k=10. Report both; the unbiased one is the ceiling-on-gain number.
+        share_all = float(spr.sum() / tot.sum()) if tot.sum() > 0 else float("nan")
+        share_top = float(spr[top].sum() / tot[top].sum()) if tot[top].sum() > 0 else float("nan")
+        corr = k / (k - 1) if k > 1 else float("nan")
         out["per_horizon"].append({
             "horizon": H,
-            "spread_share_all": float(spr.sum() / tot.sum()) if tot.sum() > 0 else float("nan"),
-            "spread_share_top_decile": float(spr[top].sum() / tot[top].sum()) if tot[top].sum() > 0 else float("nan"),
+            "spread_share_all": share_all,
+            "spread_share_top_decile": share_top,
+            "spread_share_all_unbiased": share_all * corr,
+            "spread_share_top_decile_unbiased": share_top * corr,
+            "max_removable_share_top_decile": 1.0 - share_top * corr,
             "frac_top_decile_bias2_nonpositive": float((b2[top] <= 0).mean()),
             "rho_total_vs_bias2": spearman(tot, b2),
         })
@@ -407,8 +464,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         except (FileNotFoundError, ValueError) as e:
             report["tickers"][tk] = {"error": str(e)}
             continue
+        # Both reporting paths take the same horizon. Before this, the raw path passed
+        # horizon_idx=None and averaged all seven horizons while the stratified path used
+        # one, so the headline compared a 7-horizon average against a single horizon
+        # (n_pairs 140 vs 20 in the emitted JSON). The numeric effect was small, which is
+        # exactly why it survived.
         sh_raw = [r for k in a.ks
-                  if (r := split_half(real, gen, k, a.draws, rng, a.key))]
+                  if (r := split_half(real, gen, k, a.draws, rng, a.key,
+                                      horizon_idx=a.horizon_idx))]
         sh_str = [r for k in a.ks
                   if (r := split_half(real, gen, k, a.draws, rng, a.key,
                                       horizon_idx=a.horizon_idx, stratified=True))]
@@ -423,8 +486,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "nulls_raw": pairing_nulls(real, gen, a.null_k, a.horizon_idx, rng, False),
             "nulls_stratified": pairing_nulls(real, gen, a.null_k, a.horizon_idx, rng, True),
             "dispersion": dispersion_share(real, gen),
+            "horizon_idx": a.horizon_idx, "horizon": HORIZONS[a.horizon_idx],
             "pool_overlap_raw_vs_stratified": pool_overlap(real, gen, a.horizon_idx),
         }
+        n_raw = {r["n_pairs"] for r in sh_raw}
+        n_str = {r["n_pairs"] for r in sh_str}
+        assert n_raw == n_str, (
+            f"reporting paths disagree on the horizon set: raw n_pairs={n_raw}, "
+            f"stratified n_pairs={n_str}. A reliability quoted from one path against the "
+            f"other is not a comparison.")
+        entry["stratification_leak"] = stratification_leak()
         report["tickers"][tk] = entry
         print(f"[{tk}] n={real.shape[0]} S={len(seeds)}", flush=True)
         for lab, rows in (("raw", sh_raw), ("strat", sh_str)):

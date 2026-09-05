@@ -144,3 +144,72 @@ def test_pool_overlap_is_total_when_the_correction_changes_nothing():
     real = np.full((300, 1), 0.01)
     gen = rng.normal(size=(6, 300, 1))
     assert F.pool_overlap(real, gen, horizon_idx=0) == pytest.approx(1.0)
+
+
+# --- guards added 2026-09-05 after an adversarial audit of commit e8425cb1 -------------
+#
+# Each of these goes red on a defect that was actually shipped, not on a hypothetical one.
+# The audit is at
+# /lus/lfs1aip2/projects/public/u6gb/tasks/continual_learning/plan_20260904/drafts/D5_premortem.md
+
+def test_stratification_leak_is_exactly_one_over_n_bins():
+    """The published "zero line" of 0.095 was this leak, not noise.
+
+    A score that is a pure monotone function of |y| still correlates 1/n_bins with |y|
+    after stratification: within-bin ranking cannot undo the between-bin ordering. The
+    original leak test ran at n_bins=20 (leak 0.05) while production ran at n_bins=10
+    (leak 0.10), so it passed at twice the production tolerance and the floor went
+    unnoticed. Pin the identity itself.
+    """
+    rng = np.random.default_rng(4)
+    y = rng.normal(size=40_000)
+    score = np.abs(y) ** 2
+    for n_bins in (5, 10, 20, 40):
+        got = abs(F.spearman(F.stratify(score, y, n_bins=n_bins), np.abs(y)))
+        assert got == pytest.approx(F.stratification_leak(n_bins), abs=0.005), n_bins
+
+
+def test_stratify_at_production_bins_leaves_the_leak_not_zero():
+    """At the parameter production actually uses, the floor is 0.10, not 0."""
+    rng = np.random.default_rng(5)
+    y = rng.normal(size=40_000)
+    got = abs(F.spearman(F.stratify(np.abs(y) ** 2, y, n_bins=10), np.abs(y)))
+    assert got > 0.05, "a leak this small would mean the identity above is wrong"
+    assert got == pytest.approx(0.10, abs=0.005)
+
+
+def test_rollouts_needed_refuses_to_extrapolate_a_curve_that_is_not_linear():
+    """The planted-linear test could never fail on real data.
+
+    The implied noise/signal ratio (1/rho_k - 1)*k rises with k in 7 of 8 tickers, so the
+    one-parameter law is rejected by the data it was fitted to, and least squares through
+    the origin on x=1/k is dominated by k=1 and extrapolates k too low. A point estimate
+    the data rejects is worse than none, because it gets quoted.
+    """
+    ks = [1, 2, 3, 5]
+    rising = [1.0 / (1.0 + r / k) for k, r in zip(ks, [4.68, 6.79, 8.37, 9.87])]  # GOOG
+    out = F.rollouts_needed(ks, rising)
+    assert out["ratio_rises_with_k"] is True
+    assert "rejected_reason" in out
+    assert "k_for_rho_0.80" not in out, "emitted a point estimate its own residual rejects"
+    assert out["k_for_rho_0.80_largest_k_only"] > out["noise_over_signal"] / (1 / 0.80 - 1)
+
+
+def test_rollouts_needed_still_answers_when_the_law_does_hold():
+    ratio, ks = 3.0, [1, 2, 3, 5, 8]
+    out = F.rollouts_needed(ks, [1.0 / (1.0 + ratio / k) for k in ks])
+    assert "rejected_reason" not in out
+    assert out["k_for_rho_0.80"] == pytest.approx(ratio / 0.25, rel=1e-6)
+
+
+def test_dispersion_share_reports_the_unbiased_value():
+    """spread_pop is ddof=0 and understates sigma^2 by (k-1)/k while `total` is unbiased,
+    so the published share understated the irreducible part by ~11% at k=10."""
+    rng = np.random.default_rng(6)
+    real = rng.normal(size=(400, 1))
+    gen = real[None] + rng.normal(size=(10, 400, 1))
+    d = F.dispersion_share(real, gen)["per_horizon"][0]
+    assert d["spread_share_top_decile_unbiased"] == pytest.approx(
+        d["spread_share_top_decile"] * 10 / 9, rel=1e-9)
+    assert d["max_removable_share_top_decile"] == pytest.approx(
+        1.0 - d["spread_share_top_decile_unbiased"], rel=1e-9)

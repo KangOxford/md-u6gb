@@ -1,7 +1,7 @@
 # Continual Learning for sigma-0: Plasticity Measurement and Continual Pre-Training Plan
 
 > Task dir: `tasks/continual_learning/` · Source research: `deep-reseach.md` (two-pass deep research, 2026-08-26)
-> **Status: MERGED PLAN, revision 2 (2026-09-05).** Five facet drafts under `plan_drafts/`
+> **Status: MERGED PLAN, revision 3 (2026-09-05).** Five facet drafts under `plan_drafts/`
 > are the detail; this file is the spine and the decision record. Green marks what is done,
 > ~~strikethrough~~ marks what measurement has overturned. Not yet adversarially reviewed —
 > see §0.4.
@@ -57,6 +57,71 @@ those facets were killed by a session limit. Everything below is traceable to a 
 none were launched — the session limit hit first. Facets `01` and `03` were additionally
 written by the same session that produced the measurements they rest on, which is exactly
 the arrangement the standing order exists to prevent. **Treat revision 2 as unreviewed.**
+
+### 0.5 Revision 3 (2026-09-05) — the audit, and what it corrected
+
+`plan_20260904/reviews/` is **empty**: the five independent reviewers of
+`plan_drafts/_REVIEW_BRIEF.md` were never executed, all ten agents of that round having hit
+`You've hit your session limit · resets 2am (UTC)`. One adversarial artefact does exist —
+`plan_20260904/drafts/D5_premortem.md` §6, a 333-line audit of commit `e8425cb1` — and it
+found four real defects in the published measurements. **All four were re-derived
+independently before being accepted**; details and reproduction in `plan_drafts/06`.
+
+| # | defect | corrected reading |
+|---|---|---|
+| A1 | The raw and stratified reliabilities were computed on **different horizon sets** (`n_pairs` 140 vs 20: seven horizons averaged against one) | Both now at H = 50. raw k=1 **0.374–0.507**, stratified k=1 **0.144–0.250**, stratified k=5 **0.330–0.545** |
+| A2 | ~~"a one-parameter fit puts k at roughly 20"~~ The implied noise/signal ratio **rises with k in 7 of 8 tickers**, so the law is rejected by its own data and least squares through the origin extrapolates k **low** | From the largest-k point: **k for ρ=0.80 is 17–41, median 21, and still rising.** No extrapolation from k ≤ 5 is supported. `rollouts_needed` now refuses to emit a point estimate its residual rejects |
+| A3 | ~~"independent = 0.095, the real zero line"~~ That is the **analytic leak of the 10-bin stratification**, `1/n_bins`, confirmed to four decimals (0.2000/0.1000/0.0500/0.0250 at 5/10/20/40 bins) | The floor is 0.10 by construction. Signal still survives above it (true 0.46), but the floor is not noise and must be quoted beside every stratified null |
+| A4 | ~~"dispersion is 26–34 percent inside the top decile"~~ That is a cross-ticker mean per horizon of a **downward-biased** estimator (ddof = 0 numerator, unbiased denominator) | Per ticker at H = 50, unbiased: **0.225–0.681**. GOOG's ceiling on any training gain is **32%**, not ~70% |
+
+Accepted and not yet acted on: every published null is a **single permutation draw** (with 60
+draws `shared` exceeds `true` in 8/8 tickers, so the point is stronger than published); the
+discriminating null is a partial against the rollouts' own dispersion (85–92% of reliability
+survives it); `num_errors` in `inference.log` is **not an error count** but the number of
+generated messages that leave the L2 book unchanged (34.5–77.0% of every rollout, measured
+*more* reliably than the failure score, sign-flipping between tickers) and must become a
+pre-registered covariate.
+
+Tests: **12 → 17**, each new one red on a defect that actually shipped.
+
+### 0.6 M1 is blocked, with evidence
+
+`fidelity.py` cannot run on the existing 80 members: they hold `data_gen/` and `data_real/`
+and **no `data_cond/`**, which is the conditioning window that initialises the replay
+(`episode_builder.py:263-269`). The filename pattern matches, so this is not a layout
+mismatch — the initialisation input was never written. Worse, the tool **exits 0** having
+printed only a header row, so any wrapper checking the exit code would record M1 as done.
+
+Since M1 needs a regeneration and `plan_drafts/01` §1.1 established that the two threads can
+only be unified by regenerating from the selftrain chain, **those are the same regeneration**.
+
+### 0.7 The 17 selftrain steps in tokens
+
+`micro_bsz 4 × num_devices 1 × K 1 × msg_seq_len 500 × 26 tok/msg = 52,000 tokens/step`
+(from `checkpoints_selftrain/j5705912_b30675li_5705912/metadata/_ROOT_METADATA`).
+Step 69378 = **3.608B tokens**. Candidate M6 pairs: ~~275 → 69378~~ (**step 275 is
+pre-warmup** — untrained-vs-trained, not early-vs-late), **33575 → 69378 = 1.862B**,
+22495 → 69378 = 2.438B. **`num_devices = 1` is recorded but unverified**; if the run was
+multi-device every absolute figure scales, though the ratios do not. Do not quote the
+absolute counts until the wandb config is read.
+
+### 0.8 P1 / P2 / P6 acceptance — nothing generates until all three pass
+
+Written out as exit-code conditions in `plan_drafts/06` §5. In one line each: **P1** a
+manifest whose `written_at_utc` precedes the first member, every field present, `null` never
+`"unknown"`, and `data_cond` among the written streams; **P2** one shared context file whose
+sha256 matches every member's copy and which joins to `inference.log`; **P6** free inodes read
+and timestamped immediately before the run, `per_member` measured (3,007 unpacked / 1,507
+deduped), and `inodes_planned < 0.5 × free_at_start`.
+
+**Current status: P1 absent, P2 partial, P6 absent. No generation may start.**
+
+### 0.9 Still unverified, carried forward on purpose
+
+The **dilution assumption** — that a false positive in a training pool dilutes rather than
+contaminates — is what makes the `k = 3` budget of §0.3 affordable. `plan_drafts/02` §3.2
+states plainly that it is untested and that nothing should assume it. It is still untested.
+If it fails, §0.3 reverts to `k ≈ 21` and the cycle-1 pool stops fitting in the inode budget.
 
 ---
 
@@ -169,9 +234,12 @@ Cyclic year/regime schedule over 34M / 100M / 300M-class sigma-0 models, probe s
 - [x] $\color{green}{\textsf{Failure-pool prerequisites measured}}$ — `code/failure_pool_reliability.py`, 12 tests, `results/failure_pool_reliability.json`, `failure_pool_reliability.ipynb` (F1–F4)
 - [x] $\color{green}{\textsf{Five facet drafts}}$ — `plan_drafts/01`–`05`
 - [x] $\color{green}{\textsf{M0 checkpoint inventory}}$ — F10, which settles X4
-- [ ] **Adversarial review of the five drafts** (`plan_drafts/_REVIEW_BRIEF.md`) — blocked on session limit, §0.4
+- [x] $\color{green}{\textsf{Audit of commit e8425cb1 reused and answered}}$ — `plan_drafts/06`; four defects re-derived independently, all four fixed, tests 12 → 17 (§0.5)
+- [x] $\color{green}{\textsf{17 selftrain steps converted to tokens}}$ — §0.7
+- [x] $\color{green}{\textsf{P1/P2/P6 acceptance written as exit-code conditions}}$ — `plan_drafts/06` §5
+- [ ] **Five independent adversarial reviews** (`plan_drafts/_REVIEW_BRIEF.md`) — blocked on session quota; relaunch **one at a time**, reading list extended to `01`, `03`, `06`
+- [ ] ~~M1 on the existing archive~~ **impossible — no `data_cond/`** (§0.6); folded into the G2 regeneration
 - [ ] The three P-blockers before any generation: rollout manifest (P1), frozen hashed context set (P2), inode write plan (P6) — `plan_drafts/03` §1
-- [ ] M1: `fidelity.py` gen-arm replay per context — CPU, and it can invalidate the issue #73 premise
 - [ ] M4: arm-level repeat with several training seeds — the decisive rung (F7)
 - [ ] Probe wiring into the sigma-0 training loop (follow-up)
 - [ ] Step 2 readout: AUC(θ_late) vs AUC(θ_early), CI, diagnostics — needs the same-age null pair `plan_drafts/01` §2.6
