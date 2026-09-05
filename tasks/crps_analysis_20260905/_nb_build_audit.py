@@ -379,10 +379,14 @@ print(f"the round-4 minus round-3 effect on R:   {LADDER['the_claim']['on_R']['m
 md(r"""
 **Reading.** Correcting the statistic makes the peak *more* significant, not less -- by two-fold on
 the main arm and twenty-six-fold on the control arm. That is the opposite of a reassuring result:
-the peak now shows up in an arm it was not supposed to. And the left panel gives the reason to
-distrust all of it. Moving the checkpoint by one save interval changes R by up to `0.165`, which is
-`1.8x` the entire round-4 minus round-3 effect. Checkpoint position, not training round, is the
-dominant source of variation in this metric.
+the peak now shows up in an arm it was not supposed to.
+
+The left panel says why a single step licenses so little. Adjacent saves move `R` by up to `0.165`
+along one trajectory, larger than the `0.090` attributed to the round. Read carefully, that is a
+statement about **which step gets picked**, not a noise term for a contrast: once two arms are both
+read at the same step, checkpoint position is held fixed by the matching and drops out of the
+difference. What it limits is generalisation -- a number read at step 1200, a step chosen as the
+argmax, is a number about step 1200 until the steps are chosen without reference to the outcome.
 """)
 
 md(r"""
@@ -847,7 +851,7 @@ V = [
  ("The step-1200 peak survives selection",      "REFUTED",
   "exact Grubbs P 0.0970 (multi4) and 0.0053 (unifw control), not 0.19 / 0.1385"),
  ("Checkpoint position is a minor term",        "REFUTED",
-  "one save interval moves R by 0.165 vs a 0.090 round effect"),
+  "adjacent saves move R by up to 0.165 along a trajectory; bears on step SELECTION, not on a matched contrast"),
  ("The variance ladder rungs are comparable",   "REFUTED",
   "rung 2 is a contrast sd; like-for-like the ratio is 4.08x not 2.89x"),
  ("Round-3 replicates differ from multi3",      "UNDERPOWERED",
@@ -873,37 +877,70 @@ print("counts:", {k: sum(1 for _,v,_ in V if v==k) for k in dict.fromkeys(v for 
 """)
 
 md(r"""
-### The adjudication rule, frozen before the data is complete
+### The adjudication rule, and exactly when it was frozen
 
-Written now, with 35 of 72 cells scored, so that it cannot be tuned to the answer.
+**This is not a pre-registration.** It was frozen at **2026-09-05 09:41:31 UTC**, commit `85c72145`,
+with **35 of 72 cells already scored** — the whole `multi3` at step 1200 arm and two of the eight new
+replicates. Partial data was visible when it was written. It is a partial-data freeze, and it should
+be read with that discount: it constrains later tuning, it does not carry the guarantee a prospective
+registration would.
 
-**The unit.** One `--train-seed`. Thirteen of them on the round-3 side; the reference is `multi3`
-read at the same step.
+**The unit.** One `--train-seed`. Thirteen on the round-3 side; the reference is `multi3` read at the
+same step.
 
 **The matching, frozen.** A pair contributes only if both sides are read at **step 1200**, on the
 **same ticker**, over the **same 500 contexts** and **20 days**, with the **same generation seeds**
-97901 and 97902 and `k_actual = 2` asserted by the estimator. Any cell failing one of those is
-dropped and counted, not silently rebalanced.
+97901 and 97902 and `k_actual = 2` asserted by the estimator. Anything failing one of those is
+**dropped and counted**, never silently rebalanced.
 
-**The statistic.** Per training seed, the mean over tickers of the paired difference against
-`multi3` at step 1200. Thirteen numbers, one per unit.
+**The statistic.** Per training seed, the mean over tickers of the paired difference against `multi3`
+at step 1200. Thirteen numbers, one per unit.
 
-**The readout is an interval, not a p-value.** Report the mean, the bootstrap interval over training
-seeds, and the interval over tickers; a p-value is quoted only next to its attainable floor
-$2/2^{n}$, which at $n = 13$ is $0.00024$.
+**The readout is an interval.** Mean, bootstrap interval over training seeds, and the interval over
+tickers. A p-value appears only next to its attainable floor, `2/2^13 = 0.00024`.
 
-**Effect bounds decide the label**, against the two reference scales already measured:
+### Equivalence needs a margin, so here is the margin
+
+A confidence interval that contains zero and happens to be narrow does **not** establish equivalence.
+Equivalence is a claim against a declared margin `delta`, and it holds only when the **entire**
+interval lies inside `[-delta, +delta]` — the two one-sided-tests form. Declared now, before the
+remaining cells land:
+
+**`delta = 0.0904` on the `R` scale**, which is the effect this study originally claimed
+(`variance_ladder.json`, `the_claim.on_R.mean`). Equivalence at that margin says exactly one thing:
+*an effect as large as the one originally claimed is excluded.* It says nothing about smaller effects.
+
+A stricter margin would need a decision threshold — how much mis-calibration of `R` actually matters
+downstream — and nobody has supplied one. If one is supplied later it must be declared **before** the
+interval is recomputed against it.
 
 | Reading | Label |
 |---|---|
-| Interval excludes 0 **and** its lower edge exceeds the generation-realisation spread | the effect is larger than the noise it was confused with |
-| Interval excludes 0 but sits inside the checkpoint-position spread (adjacent-save moves of up to 0.165 on $R$) | present but not separable from which checkpoint was picked |
-| Interval contains 0 | not established |
-| Interval contains 0 **and** is narrower than the smallest effect worth acting on | ruled out at that resolution, which is a result, not a failure |
+| Interval excludes 0 | a difference at step 1200 is established, for the conditional estimand of section 10 |
+| Entire interval inside `[-0.0904, +0.0904]` | **equivalent at that margin**: an effect as large as the original claim is excluded |
+| Interval contains 0 and is **not** inside the margin | neither established nor ruled out — the design does not resolve it |
 
-**Scope.** Whatever comes out is conditional on $(\theta_0, \mathcal{D}, \mathcal{C}, \mathcal{G}, B)$
-as set out in section 10, and says nothing about the marginal training-run variance in either
-direction.
+### What the 0.165 checkpoint spread is, and what it is not
+
+It is the largest move in `R` between **adjacent saves along one trajectory** — a spread of levels
+along the step axis. It has two roles and they must not be merged.
+
+**It is not the error term of the matched contrast.** Once both sides are read at step 1200,
+checkpoint position is held fixed *by the matching*, so it contributes nothing to the noise of the
+paired difference. That error term comes from the thirteen training seeds and from nothing else. An
+earlier revision of this notebook used 0.165 as a scale to judge the matched effect against; that was
+wrong, and it is withdrawn.
+
+**It is a limit on generalisation, through the selection process.** Step 1200 was not picked at
+random: it is the argmax of the sweep, which is why a selection correction was needed at all
+(section 5). So any result here is a result *at a step chosen by looking at the data*, and 0.165
+measures how far `R` moves between neighbouring steps — that is, how little one step licenses a
+statement about "the round". This is a caveat on the **target** of the claim, not a term in its
+interval.
+
+Concretely: a difference established at step 1200 is a difference at step 1200. Extending it to "round
+4 is worse than round 3" requires either steps chosen without reference to the outcome, or an explicit
+correction for having chosen this one.
 """)
 
 md(r"""

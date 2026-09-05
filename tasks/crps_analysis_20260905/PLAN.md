@@ -461,3 +461,45 @@ Written before the data is complete so it cannot be tuned to the answer.
 35 of 72 scored, one drainer (v3), rollouts reused rather than regenerated. The drainer now logs the
 four causes distinctly; a live example: `free cards: 1 (busy 15, held 5)` -- held cards are resident
 memory at 0% util and are **not** counted as free.
+
+### 2026-09-05 10:xx -- three corrections to the adjudication rule
+
+**1. The freeze is dated, and it is not a pre-registration.** Frozen **2026-09-05 09:41:31 UTC**,
+commit `85c72145`, with **35 of 72 cells already scored** -- the whole `multi3`-at-1200 arm and two of
+the eight new replicates. Partial data was visible. It constrains later tuning; it does not carry a
+prospective registration's guarantee, and it is labelled that way everywhere it appears.
+
+**2. "Narrow interval containing zero" was not equivalence.** Equivalence is a claim against a
+declared margin, and it holds only when the **entire** interval lies inside `[-delta, +delta]` (the
+two one-sided-tests form). Margin declared before the remaining cells land:
+
+> **`delta = 0.0904` on the `R` scale** -- the effect this study originally claimed
+> (`variance_ladder.json` -> `the_claim.on_R.mean`).
+
+Equivalence at that margin says exactly one thing: *an effect as large as the original claim is
+excluded.* It says nothing about smaller effects. A stricter margin needs a downstream decision
+threshold nobody has supplied, and must be declared **before** the interval is recomputed against it.
+
+| Reading | Label |
+|---|---|
+| Interval excludes 0 | a difference at step 1200 is established, for the conditional estimand |
+| Entire interval inside `[-0.0904, +0.0904]` | equivalent at that margin |
+| Contains 0, not inside the margin | neither established nor ruled out |
+
+**3. The 0.165 adjacent-save spread had two roles merged.** Separated:
+
+- **Not the error term.** Once both sides are read at step 1200, checkpoint position is held fixed
+  *by the matching* and drops out of the paired difference. That error comes from the thirteen
+  training seeds and nothing else. Using 0.165 as a scale to judge the matched effect against is
+  **withdrawn**, in section 5's reading and in the verdict row that repeated it.
+- **A bound on generalisation, via selection.** Step 1200 is the **argmax of the sweep** -- which is
+  why a selection correction was needed at all. A result there is a result at a step chosen by looking
+  at the outcome, and 0.165 measures how far `R` moves between neighbouring saves. That is a caveat on
+  the **target** of the claim, not a term in its interval. Extending "different at step 1200" to
+  "round 4 is worse than round 3" needs either steps chosen without reference to the outcome, or an
+  explicit correction for having chosen this one.
+
+### Queue
+
+**65 of 72** scored, one drainer (v3), rollouts reused. **The matrix is unchanged at the original 72
+cells** -- nothing added.

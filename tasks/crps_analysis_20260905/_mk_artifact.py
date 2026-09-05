@@ -73,8 +73,12 @@ SECTIONS = [
   "f4_peak", "Checkpoint-position traces for both arms, and published against exact selection-corrected P",
   """Correcting the statistic makes the peak <em>more</em> significant, not less &mdash; two-fold on the
   main arm and twenty-six-fold on the control arm, which is the opposite of reassurance. The left panel
-  gives the reason to distrust all of it: moving the checkpoint by one save interval changes R by up to
-  0.165, which is 1.8&times; the entire round-to-round effect of 0.0904."""),
+  says why one step licenses so little: adjacent saves move R by up to 0.165 along a trajectory, larger
+  than the 0.0904 attributed to the round. Read carefully that is a statement about <em>which step gets
+  picked</em>, not a noise term for a contrast &mdash; once two arms are read at the same step,
+  checkpoint position is held fixed by the matching and drops out of the difference. What it limits is
+  generalisation: step 1200 is the argmax of the sweep, so a number read there is a number about step
+  1200 until steps are chosen without reference to the outcome."""),
 
  ("05", "The variance ladder mixes two scales",
   """<p>Rungs 1 and 3 are standard deviations of <em>levels</em>. Rung 2 is the standard deviation of a
@@ -252,7 +256,7 @@ footer {{ margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--rule
   <div class="provenance">
     <div><b>Repository</b><span>KangOxford/sigma-0 (private)</span></div>
     <div><b>Branch</b><span>audit/crps-return-alignment-20260905</span></div>
-    <div><b>Commit</b><span>0d7b0f0a468352c9c2cc7cc64411085ff6dca95c</span></div>
+    <div><b>Commit</b><span>24ec31cf9c630276b5105601ee49d07e162fb505</span></div>
     <div><b>Pull request</b><span>#76</span></div>
     <div><b>Notebook</b><span>12 code cells, 0 errors, 9 figures</span></div>
     <div><b>Replicates measured</b><span>18 fine-tuning runs</span></div>
@@ -317,6 +321,15 @@ footer {{ margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--rule
   reduction they are supposed to buy on paired comparisons measures 0.4% here. And &ldquo;the bias is
   flat in K&rdquo; is algebra about which estimand you are aiming at, reported as though it had been
   measured &mdash; every one of the 239 records is at K = 2, so no K-dependence is estimable at all.</p>
+  <h3>How the result will be judged, and when that rule was fixed.</h3>
+  <p>The adjudication rule is <strong>not a pre-registration</strong>: it was frozen at 2026-09-05
+  09:41:31&nbsp;UTC with 35 of 72 cells already scored, so it constrains later tuning without carrying a
+  prospective guarantee. The unit is one training seed; a pair counts only at step 1200, same ticker,
+  same contexts, same days, same generation seeds, with drops recorded. The readout is an interval, and
+  a p-value appears only beside its attainable floor. Equivalence, if it is claimed, needs a declared
+  margin and the <em>whole</em> interval inside it &mdash; declared in advance as
+  &delta;&nbsp;=&nbsp;0.0904 on R, the effect originally claimed, so equivalence there would mean only
+  that an effect that large is excluded.</p>
   <h3>The verdict at the sample size in hand: underpowered, and confounded.</h3>
   <p>Neither supported nor refuted, for three reasons each sufficient alone. At n<sub>3</sub> = 5 the
   permutation test bottoms out above &alpha;. The contrast reads replicates at step 1200 against multi3 at
