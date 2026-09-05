@@ -111,6 +111,85 @@ def check_p1(run_root: Path) -> Tuple[bool, List[str]]:
     return not bad, bad
 
 
+def attest_historical(archive: Path, config: str, out: Optional[Path]) -> Tuple[bool, List[str]]:
+    """What an archive that predates the manifest requirement can still be made to say.
+
+    This is **not** a manifest and does not become one. A manifest's value is that it
+    precedes the data; an attestation written now cannot have that property, and writing one
+    that pretends to would be worse than having none, because the next reader would trust it.
+    So the schema is `historical-attestation`, it carries `derived_after_the_fact: true`, and
+    every field that cannot be recovered from the archive is `null` with a reason beside it.
+
+    P1 stays FAILED for such an archive. The point of this function is that P1 failing on the
+    past should not stop the future: a new run writes its manifest first
+    (`write_run_manifest.py`) and passes.
+    """
+    bad: List[str] = []
+    members = sorted(d for d in archive.glob(f"hp_{config}_*_s*") if d.is_dir())
+    if not members:
+        return False, [f"no members for config {config!r}"]
+
+    rec: Dict[str, object] = {
+        "schema": "historical-attestation/1",
+        "derived_after_the_fact": True,
+        "not_a_manifest": "Written after the data existed. It cannot establish anything about "
+                          "the state of the world before the run, and must never be renamed, "
+                          "copied, or edited into a manifest.json.",
+        "attested_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+        "config": config, "archive": str(archive), "n_members": len(members),
+        "recoverable": {}, "unrecoverable": {},
+    }
+
+    # recoverable: file content, which is what a hash is for
+    per_member: Dict[str, Dict[str, str]] = {}
+    for d in members:
+        m0 = d / "member_0"
+        fs = {}
+        for name in (".returns_multih_gen.npz", ".returns_multih_real.npz",
+                     "sample_indices_rank0.json"):
+            f = m0 / name
+            if f.is_file():
+                fs[name] = sha256_file(f)
+        per_member[d.name] = fs
+    rec["recoverable"]["file_sha256"] = per_member
+
+    # recoverable from the generation log, if it is there
+    log = members[0] / "member_0" / "inference.log"
+    if log.is_file():
+        text = log.read_text(errors="ignore")[:40000]
+        for key, pat in (("token_mode", "Using "), ("checkpoint_line", "[Checkpoint] Loading ")):
+            hit = next((ln.strip() for ln in text.splitlines() if pat in ln), None)
+            rec["recoverable"][key] = hit
+    else:
+        rec["unrecoverable"]["generation_log"] = "no inference.log in the first member"
+
+    # unrecoverable, each with the reason rather than a guess
+    rec["unrecoverable"].update({
+        "written_at_utc": "no manifest preceded these members; the attestation time is not it",
+        "params_sha256": "the restored parameter tree was never hashed; a checkpoint path is "
+                         "not a substitute, since the same path can hold different weights",
+        "seed_stride": "seed directory names imply a stride but do not record one; an implied "
+                       "value is an inference, not a record",
+        "xla_flags": "not recorded, so it is not known whether generation was deterministic",
+        "jax_version": "not recorded",
+        "code_commit": "not recorded in the archive; the worktree that produced it may have "
+                       "moved since",
+        "data_cond": "absent from every member, so no replay can be initialised and "
+                     "fidelity.py cannot run on this archive at all",
+    })
+
+    print(f"historical attestation for config {config!r}: {len(members)} members, "
+          f"{len(rec['recoverable']['file_sha256'])} hashed, "
+          f"{len(rec['unrecoverable'])} fields unrecoverable")
+    if out:
+        out.write_text(json.dumps(rec, indent=1))
+        print(f"  wrote {out}")
+    _fail(bad, "P1 cannot pass on an archive written before the manifest requirement. "
+               "An attestation records what is recoverable; it does not backfill what is not. "
+               "A future run passes P1 by writing its manifest first (write_run_manifest.py).")
+    return False, bad
+
+
 # --------------------------------------------------------------------------------------
 # P2 — one shared, hashed context set
 # --------------------------------------------------------------------------------------
@@ -169,6 +248,15 @@ def check_p2(archive: Path, config: str, index_name: str = "sample_indices_rank0
                     _fail(bad, f"{ticker}: manifest points at a missing file {f}")
                 elif sha256_file(f) != want:
                     _fail(bad, f"{ticker}: the promoted index file no longer matches its hash")
+                else:
+                    # Compare bytes directly against one member, not just hash strings. Equal
+                    # hashes recorded in a file only prove the file is self-consistent; this
+                    # proves the promoted object is the same bytes the members actually carry.
+                    member = groups[want][0]
+                    src = archive / member / "member_0" / index_name
+                    if src.read_bytes() != f.read_bytes():
+                        _fail(bad, f"{ticker}: {member}'s index and the promoted file share a "
+                                   f"recorded hash but differ byte-for-byte")
 
     return not bad, bad
 
@@ -234,6 +322,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--archive", type=Path,
                     default=Path("/lus/lfs1aip2/projects/public/u6gb/tasks/"
                                  "crps_return_alignment_20260808T025024Z/data"))
+    ap.add_argument("--mode", choices=["prospective", "historical"], default="prospective",
+                    help="prospective: a run about to be written, whose manifest must already "
+                         "exist. historical: an archive that predates the requirement; P1 "
+                         "still fails, but an attestation records what is recoverable.")
+    ap.add_argument("--attest-out", type=Path, help="where to write the historical attestation")
     ap.add_argument("--config", default="v5me3", help="which config's members P2 checks")
     ap.add_argument("--shared-index", type=Path, help="the one context index file (P2)")
     ap.add_argument("--members", type=int, required=True, help="members this run will write")
@@ -242,11 +335,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     a = ap.parse_args(argv)
 
     results = []
-    if a.run_root:
+    if a.mode == "historical":
+        results.append(("P1", *attest_historical(a.archive, a.config, a.attest_out)))
+    elif a.run_root:
         results.append(("P1", *check_p1(a.run_root)))
     else:
-        results.append(("P1", False, ["--run-root not given: P1 cannot be evaluated, and an "
-                                      "unevaluated precondition is a failed one"]))
+        results.append(("P1", False, ["--run-root not given and --mode is prospective: P1 "
+                                      "cannot be evaluated, and an unevaluated precondition "
+                                      "is a failed one. Write the manifest first with "
+                                      "write_run_manifest.py, or pass --mode historical to "
+                                      "attest an archive that predates the requirement."]))
     results.append(("P2", *check_p2(a.archive, a.config, shared_index=a.shared_index)))
     ok6, bad6, rec = check_p6(a.members, a.deduped)
     results.append(("P6", ok6, bad6))

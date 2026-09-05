@@ -213,8 +213,18 @@ pass. **P2 PASSES**: the per-ticker context indices are promoted into
 `results/context_sets_v5me3/` with a hashed manifest, so the shared set is a checked reference
 rather than a coincidence. **P6 PASSES** against a live `lfs quota` reading (495,918 free,
 plan 144,672 = 29%); free inodes fell 741,511 → 495,918 during this round, which is why the
-gate reads at run time. **P1 FAILS and must**: a manifest written before the first member
-cannot be retrofitted. The gate found a defect in itself on first run — `check_p2` pooled
+gate reads at run time. **P1 is now two things, and neither substitutes for the other**: `code/write_run_manifest.py`
+writes a manifest into a run root **before** any member exists and refuses otherwise (verified:
+returncode 2 against the existing archive, which holds 2,403 member dirs), recording anything it
+cannot read as `null` with a reason rather than inventing it; and
+`generation_gate.py --mode historical` writes
+`results/historical_attestation_v5me3.json`, schema `historical-attestation/1`, carrying
+`derived_after_the_fact: true`, hashing all 81 `v5me3` members and listing **7 fields as
+unrecoverable with their reasons**. **P1 still fails for the historical archive and should** —
+but that no longer closes the gate forever: with a manifest written first the gate returns
+**0, GATE: OPEN**. That was a demonstration into a scratch directory and is **not** an
+authorisation to generate; nothing was generated. The next executable steps and the evidence
+each must produce are in `results/RESULTS_20260905.md` addendum 4 §F. The gate found a defect in itself on first run — `check_p2` pooled
 every config in the archive — which a checklist would not have surfaced.
 
 #### P1 / P2 / P6 — what is actually done
