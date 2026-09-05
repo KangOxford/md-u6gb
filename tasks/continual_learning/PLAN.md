@@ -1,3 +1,98 @@
+# Continual Learning for sigma-0 — task board
+
+> **This board is the operational head of the plan.** The revision log below it is the
+> evidence trail. A plan existing is not a task being done, and a pushed notebook is not a
+> scientific conclusion; both are tracked separately here.
+> Board last updated 2026-09-05T20:36Z.
+
+## 1. Original goal
+
+Answer GitHub issue KangOxford/sigma-0 **#73**: can a model be improved by mining rollouts
+that diverge from the true data into a pool and continuing training on a mix of that pool and
+historical replay — and if so, at what mix. Adjacent thread from `PLAN.md` §3: does the
+network lose plasticity as it trains, measured by early-vs-late checkpoints under a fixed
+adaptation budget.
+
+## 2. Claims to adjudicate, and where each stands
+
+| # | claim | state | evidence |
+|---|---|---|---|
+| C1 | A per-context failure score is reliable enough to build a pool | **partly** | k=1 unusable (0.144–0.250); k=5 gives 0.323–0.527. Required k not established — the only extrapolation is rejected by its own residuals |
+| C2 | The score measures the model, not the size of the realised move | **established for the corrected score** | raw keeps 0.46 after pairing is destroyed; stratified drops to the binning floor. On held-out **contexts** the literal issue-#73 rule carries **2.88–2.98×** the population move vs 1.21–1.25 stratified, CI [+1.17,+2.15] excluding 0, 8/8 |
+| C3 | The stratification is sound | **fixed, not free** | zero-move atom collapses 1–4 deciles; `stratify_v2` gives it its own stratum, leak 0.13 → 0.057 |
+| C4 | `stratify_v2` edges can be fitted once and reused | **NOT established** | CI [−0.148,+0.099] SD units, up to 18% of the effect; non-significance is not equivalence |
+| C5 | A false positive in a training pool dilutes rather than contaminates | **no departure detected at ~5% resolution** — nothing stronger | S1: deviations from linearity +0.0005…+0.0079 (primary), −0.0085…+0.0042 (sensitivity), every CI includes 0, widest bound ±0.037 SD units = **4.6% of the 0.81 effect**. That is the resolution of the test, not a property of the data. **Linearity is not shown**; a departure smaller than ~5% of the effect is invisible here, and no tolerance was pre-set. The `k=3` budget may be quoted only with this resolution attached |
+| C6 | Plasticity declines with training | **not started** | M6 never ran; launcher defect now routed around |
+| C7 | Training on the pool improves the model | **not started** | needs C5 and a training run |
+
+## 3. Necessary steps, dependencies, and what each needs
+
+| id | step | needs | depends on | state |
+|---|---|---|---|---|
+| S1 | Dilution test on the existing archive | CPU | — | $\color{green}{\textsf{DONE 2026-09-05}}$ — RESULTS addendum 9 |
+| S2 | Export a seed per member in the adaptation launcher | **CPU** | — | not done; blocks M6's seed replication |
+| S3 | Pre-register M6's same-age null pair | CPU | S8 | $\color{green}{\textsf{written}}$ — RESULTS addendum 10: entry traced, budget 78.0M tokens/member, decision rule fixed. **Not proposed for execution**: S8 is upstream |
+| S4 | R3–R5 adversarial reviews, one at a time | CPU (agent) | — | R1, R2 done |
+| S8 | **Decide which ladder M6 probes** — selftrain chain (3.608B tokens, 1.69% of onset) or the `wm_ft_multi3` ft ladder (250M tokens, on the rollouts' lineage) | CPU decision | X4 (closed) | **blocking S3's execution and S5** |
+| S5 | M6 fixed-budget adaptation, early vs late | **GPU, 2 devices** | S2 ✓, S3 ✓ written, **S8** | launcher unblocked; `RESTORE_PATH` still pinned to the selftrain chain, and "early" should be 33575 not the pre-warmup 275 |
+| S6 | G2 rollout regeneration with `data_cond` | **GPU** | S1 (for k), gate returning 0 | gate CLOSED on P1 for the historical archive |
+| S7 | Training arms for issue #73 | **GPU** | S6, C5 | not started |
+
+## 4. Cancelled or deferred, with the reason
+
+| item | state | why |
+|---|---|---|
+| ~~M1 on the existing archive~~ | **impossible** | no `data_cond/` in any of the 80 members; folded into S6 |
+| ~~PLAN Step 5, multi-size onset law~~ | **excluded on evidence** | the run is 1.69% of where the onset law places onset |
+| ~~"A-to-B is impossible" (X4)~~ | **closed by measurement** | `wm_ft_multi3` is a 32-rung fine-tune descended from selftrain/69378 |
+| ~~"edges may be fitted once and reused"~~ | **withdrawn** | non-significance read as equivalence |
+| ~~"`num_errors` is not better measured"~~ | **withdrawn** | k mismatch; at matched k the original audit holds 8/8 |
+
+## 5. Budget and stopping criteria
+
+- **No GPU is requested for a step whose inputs are not settled.** S5 and S6 both have open
+  inputs, so the current request is **0**.
+- Rollout generation stops before it starts unless `code/generation_gate.py` returns 0. P1
+  cannot pass on the historical archive and is satisfiable only by a new run writing its
+  manifest first.
+- Inode ceiling: a plan may use at most **half** the free inodes read at run time, never a
+  figure quoted from a document. Successive readings moved 741,511 → 311,685 in one session.
+- No number enters a title, is bolded, or is called "best" while n is still growing.
+- A rejected extrapolation sets no budget in either direction.
+
+## 6. Current GPU request
+
+**0 devices.** Evidence: S5's two blocking inputs (S2, S3) are CPU work not yet done, and S6
+is gated. Fresh `gtop` at **2026-09-05T20:35:53Z**: 64 cards, **50 truly free (0.0 MiB), 1
+held, 14 occupied**; 36 named steps of other tasks are running on the shared allocations
+`6324119/6324128/6324130/6324135`. Those cards should go to a task that can use them now.
+S2 and S3 have landed; **S8 is now the blocker**. When it resolves the request is **2 devices
+on one node**, reported from a sample taken immediately before launch. `nid010292` is excluded
+— it reads 4/4 idle but **GPU0/1 there are granted to LDM**, and an idle reading is not a grant.
+
+## 7. Next action
+
+**S8, the ladder scope decision** — a CPU decision, not a measurement, and now the only thing
+between here and a concrete GPU request. S2 and S3 are done (RESULTS addendum 10).
+
+**Blocking everything that writes a file**: the project is at its inode hard cap
+(**51,200,000 / 51,200,000**) and `$HOME` is at its space cap (**101G / 101G**). New files
+cannot be created on either; this round's results were appended to an existing file. Clearing
+one of the two is a prerequisite for S5/S6 artefacts and is not this line's to decide alone.
+
+## 8. Readable results
+
+| what | path |
+|---|---|
+| results, eight addenda | `results/RESULTS_20260905.md` |
+| notebook, 7 figures | `failure_pool_reliability.html` / `.ipynb` |
+| pre-registrations | `results/PREREG_selection_rules_20260905.md`, `results/PREREG_context_holdout_20260905.md` |
+| reviews | `plan_drafts/R1_review_of_01_03_06.md`, `plan_drafts/R2_review_statistics.md` |
+| the gate | `code/generation_gate.py`, `code/write_run_manifest.py` |
+| worktree incident | `results/worktree_incident_20260905.md` |
+
+---
+
 # Continual Learning for sigma-0: Plasticity Measurement and Continual Pre-Training Plan
 
 > Task dir: `tasks/continual_learning/` · Source research: `deep-reseach.md` (two-pass deep research, 2026-08-26)

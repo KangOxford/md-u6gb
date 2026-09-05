@@ -1,7 +1,7 @@
 #!/bin/bash
 # B (attach form): early-vs-late fixed-budget adaptation on the 2024-08 slice,
 # attached into an idle node of an existing allocation (no queueing).
-# Usage: attach_adaptation.sh <RESTORE_STEP> <SHORT> [ALLOC] [NODE]
+# Usage: attach_adaptation.sh <RESTORE_STEP> <SHORT> [JAX_SEED] [ALLOC] [NODE]
 #   attach_adaptation.sh 275   e275   6141106 nid010252
 #   attach_adaptation.sh 69378 l69378 6141106 nid010252
 # Gate first (memory <100MiB, 0 compute PIDs) before calling this.
@@ -9,14 +9,25 @@ set -euo pipefail
 
 STEP="${1:?RESTORE_STEP required}"
 SHORT="${2:?short name required}"
-ALLOC="${3:-6141106}"
-NODE="${4:-nid010252}"
+# S2: the seed is an ARGUMENT, not an assumption. Both this script and
+# submit_adaptation_pair.sh carried a header claiming the two members "share every setting
+# (data, seed, schedule, budget)" while exporting no seed at all -- so every run took the
+# batch default and the >=5-seed replication PLAN section 3 Step 2 requires was unreachable,
+# as was the same-age null pair (S3), which differs from a real pair ONLY in the seed.
+JAX_SEED="${3:-42}"
+export JAX_SEED
+ALLOC="${4:-}"
+NODE="${5:-}"
 
 SIGMA0=/lus/lfs1aip2/projects/public/u6gb/sigma-0
 YAML="$SIGMA0/configs/train/dfm_smoke_1gpu.yaml"
-RUNTAG="cl-adapt-$SHORT"
-LOGDIR="$SIGMA0/logs_cl_probe/$SHORT"
-mkdir -p "$LOGDIR"
+# the seed is in the run tag and the output path, so two seeds never share a directory
+RUNTAG="cl-adapt-${SHORT}-s${JAX_SEED}"
+# The project is at its inode hard cap (51,200,000/51,200,000), so a new directory on Lustre
+# cannot be created at all -- mkdir fails, and a launcher that ignores that writes nothing
+# while reporting success. Logs go node-local; retrieval is a separate, explicit step.
+LOGDIR="${CL_LOGDIR:-/tmp/${USER}/sigma0/cl_probe_logs/${RUNTAG}}"
+mkdir -p "$LOGDIR" || { echo "FATAL: cannot create $LOGDIR" >&2; exit 6; }
 
 export GPUS_PER_NODE=1
 export MODEL_PRESET=75m
@@ -37,7 +48,18 @@ export SQUASHFS_DIR=/lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp5
 export SQUASHFS_MONTHS=2024-08
 # Unique node-local mount root per run: avoids the stale dead mount left under
 # the default ${SLURM_JOB_ID}-derived path, and keeps the pair from colliding.
-export SQUASHFS_MULTI_MOUNT_ROOT=/tmp/kangli.u6gb/sigma0/cl_probe_${SHORT}/sp500_squashfs
+# node_wrapper.sh:342 blanks SQUASHFS_MULTI_MOUNT_ROOT unconditionally, so exporting it
+# here never reached the code and both members of a pair collided on one mount root -- the
+# defect that kept Step 2 from ever running (R1-F4). It cannot be fixed by editing
+# node_wrapper.sh: 45 named steps belonging to other sessions are running against that file
+# right now, and editing a script while it executes is how 14 workers once exited 127.
+#
+# The no-edit route: node_wrapper.sh:13 honours an inherited SIGMA0_JOB_TMPDIR and line 19
+# exports it as TMPDIR, and line 370's mount-root default is
+# "$TMPDIR/sp500_squashfs_${SLURM_JOB_ID}_${SLURM_PROCID}". A unique SIGMA0_JOB_TMPDIR
+# therefore yields a unique mount root, through a path the blanking does not touch.
+export SIGMA0_JOB_TMPDIR=/tmp/kangli.u6gb/sigma0/cl_probe_${SHORT}
+export SQUASHFS_MULTI_MOUNT_ROOT=${SIGMA0_JOB_TMPDIR}/sp500_squashfs
 export FORBID_RAW_NPYZST=1
 export DATA_ROOT=/lus/lfs1aip2/projects/s5e/lob_preproc_sp500
 TICKERS=$(grep '^env_TICKERS:' "$YAML" | sed 's/^env_TICKERS: //')

@@ -1,6 +1,6 @@
 #!/bin/bash
 # B: early-vs-late fixed-budget adaptation pair on the 2024-08 probe slice.
-# Usage: submit_adaptation_pair.sh <RESTORE_STEP> <SHORTNAME>
+# Usage: submit_adaptation_pair.sh <RESTORE_STEP> <SHORTNAME> [JAX_SEED]
 #   e.g. submit_adaptation_pair.sh 275 e275
 #        submit_adaptation_pair.sh 69378 l69378
 # Both members share every setting (data, seed, schedule, budget); the only
@@ -9,6 +9,10 @@
 set -euo pipefail
 
 STEP="${1:?RESTORE_STEP required (275 or 69378)}"
+# S2: see attach_adaptation.sh. The header's claim that both members share a seed was
+# unbacked by any export; it is an argument now.
+JAX_SEED="${3:-42}"
+export JAX_SEED
 SHORT="${2:?short name required (e.g. e275)}"
 
 SIGMA0=/lus/lfs1aip2/projects/public/u6gb/sigma-0
