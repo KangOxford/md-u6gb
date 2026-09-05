@@ -503,3 +503,45 @@ threshold nobody has supplied, and must be declared **before** the interval is r
 
 **65 of 72** scored, one drainer (v3), rollouts reused. **The matrix is unchanged at the original 72
 cells** -- nothing added.
+
+### 2026-09-05 10:3x -- 72 of 72 in, adjudicated $\color{green}{\textsf{complete}}$
+
+**Completion evidence.** 72 cells scored, **0 missing**, queue file still 72 rows. The drainer exited
+on its own: `[10:32:31Z] round 20 todo=0 running=0` then `queue drained`. It was not killed, which is
+why no drainer process remains. Every cell passed the frozen match on its **own recorded provenance** --
+`ckpt` ending `_step1200`, `k_actual = 2` from the estimator, seeds exactly `[97901, 97902]`, 500
+contexts, 20 days, and `indices_sha256_at_generation == indices_sha256_now`. **0 dropped.** All 72
+rows are shipped in `artifacts_crps_audit/cells_manifest.jsonl`.
+
+**The result.**
+
+| | |
+|---|---|
+| Units | 13 training seeds (8 new + 5 pre-existing), 8 tickers each (s2: 7) |
+| Mean `dR` vs `multi3` at step 1200 | **-0.0287** (sd 0.0395, se 0.0110) |
+| Bootstrap 95% CI over training seeds | **[-0.0499, -0.0090]** -- excludes 0 |
+| Sign agreement | **12 of 13** negative |
+| Sign-flip p | 0.018, against the attainable floor `2/2^13 = 0.00024` |
+| Whole CI inside `[-0.0904, +0.0904]` | **yes** |
+
+Both labels fire and do not conflict: **a difference at step 1200 is established**, and **an effect as
+large as the one originally claimed is excluded**. Unlike the study's original `0.0078`, this p is a
+measurement rather than the smallest value its test can return.
+
+**What it means.** Retrain round 3 changing only the data order and the result lands **below** the
+round-3 reference at the same step, twelve times in thirteen. The reference sits at the **92nd
+percentile of its own replicate population**, `+0.70` replicate sd above the replicate mean; the gap
+`-0.0277` on `R` is about **31% of the `+0.0904`** the study reported as its round-4 minus round-3
+effect. The anchor the headline was measured against is not typical of the population it represents,
+and about a third of the headline's magnitude is the size of that atypicality. It does **not** overturn
+the headline -- that was a different contrast and this cannot settle it -- but it names a term the
+original comparison never priced.
+
+**Three constraints travel with the number.** Conditional on `(theta_0, D, C, G, B)` from section 10.
+A statement about **step 1200**, a step chosen as the argmax of the sweep, so extending it across steps
+needs steps chosen without reference to the outcome. And the `0.165` adjacent-save spread plays **no
+part** in the interval -- the matching holds checkpoint position fixed -- appearing only as the reason
+one step generalises poorly.
+
+**The rule was frozen at 09:41:31 UTC with 35 of 72 already scored.** Partial-data freeze, not a
+pre-registration; the labels carry that discount.

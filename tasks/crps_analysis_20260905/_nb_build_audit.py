@@ -854,8 +854,12 @@ V = [
   "adjacent saves move R by up to 0.165 along a trajectory; bears on step SELECTION, not on a matched contrast"),
  ("The variance ladder rungs are comparable",   "REFUTED",
   "rung 2 is a contrast sd; like-for-like the ratio is 4.08x not 2.89x"),
- ("Round-3 replicates differ from multi3",      "UNDERPOWERED",
-  "dR -0.0679, t -4.60, 5/5 agree, yet p floor at n=5 is 0.0625 > 0.05"),
+ ("Round-3 replicates differ from multi3@1200", "ESTABLISHED (conditional)",
+  "n=13, dR -0.0287, CI [-0.0499,-0.0090] excludes 0, 12/13, p 0.018 vs floor 0.00024"),
+ ("...by as much as the headline effect",       "RULED OUT at delta=0.0904",
+  "whole CI inside the declared margin; says nothing about smaller effects"),
+ ("multi3@1200 is a typical round-3 checkpoint","REFUTED",
+  "it sits at the 92nd percentile of its own 13 replicates, +0.70 replicate sd"),
  ("Cross-run coupling exists",                  "SUPPORTED",
   "same-seed vs different-seed Dbar-Wbar intervals are disjoint"),
  ("...and it invalidates the within-cell CRPS", "REFUTED",
@@ -874,6 +878,8 @@ for c,v,e in V:
     print("  ".join(str(z).ljust(x) for z,x in zip((c,v,e), w)))
 print()
 print("counts:", {k: sum(1 for _,v,_ in V if v==k) for k in dict.fromkeys(v for _,v,_ in V)})
+print("\nThe last three rows are settled by the completed 72-cell matrix; the labels come from\n"
+      "the rule frozen at 09:41:31 UTC with 35 of 72 already scored, not from a pre-registration.")
 """)
 
 md(r"""
@@ -941,6 +947,139 @@ interval.
 Concretely: a difference established at step 1200 is a difference at step 1200. Extending it to "round
 4 is worse than round 3" requires either steps chosen without reference to the outcome, or an explicit
 correction for having chosen this one.
+""")
+
+md(r"""
+### Result: all 72 cells in, adjudicated under the rule above
+
+The matrix completed with **72 of 72 cells scored and none dropped** — every cell passed the frozen
+match on its own recorded provenance: checkpoint path ending `_step1200`, `k_actual = 2` from the
+estimator, generation seeds exactly `[97901, 97902]`, 500 contexts, 20 days, and an evaluation index
+file whose sha256 at generation still equals its sha256 now.
+""")
+
+code(r"""
+import glob, re
+TICKS = ["AMD","AMZN","GOOG","INTC","JPM","META","MSFT","NFLX"]
+DELTA = 0.0904                      # declared 2026-09-05, before these cells landed
+CELLDIR = Path("/lus/lfs1aip2/projects/public/u6gb/tasks/crps_analysis_20260905/cells")
+
+cells, drops = {}, []
+for f in sorted(CELLDIR.glob("*/score.json")):
+    lab, tk = f.parent.name.rsplit("_", 1)
+    d = json.loads(f.read_text()); a, pr = d["a"], d["provenance"]["a"]
+    fail = []
+    if not pr["ckpt"][0].endswith("_step1200"): fail.append("ckpt not step1200")
+    if a["k_actual"] != 2:                      fail.append(f"k_actual={a['k_actual']}")
+    if pr["seeds"] != [97901, 97902]:           fail.append("generation seeds")
+    if d["n_contexts"] != 500 or d["n_days"] != 20: fail.append("context/day count")
+    if pr["indices_sha256_at_generation"] != pr["indices_sha256_now"]: fail.append("index file changed")
+    (drops if fail else cells).append((f.parent.name, "; ".join(fail))) if fail else cells.update({(lab,tk): a["sd_ratio"]})
+print(f"cells scored {len(list(CELLDIR.glob('*/score.json')))}   passing the frozen match {len(cells)}   dropped {len(drops)}")
+for n_, why in drops: print(f"   DROPPED {n_}: {why}")
+
+ref = {t: cells[("multi3s1200", t)] for t in TICKS}
+TRAJ = [json.loads(l) for l in (HOME/"traj_scores.jsonl").read_text().splitlines() if l.strip()]
+old = {}
+for r in TRAJ:
+    a_ = str(r["traj"])
+    if a_.startswith("wm_ft_traj3_s") and str(r["step"]) == "1200":
+        old.setdefault(int(a_.split("_s")[-1]), {})[r["ticker"]] = float(r["sd_ratio"])
+
+units, cover = {}, {}
+for sd_ in range(40, 48):
+    ds = [cells[(f"r3rep_s{sd_}", t)] - ref[t] for t in TICKS]
+    units[f"r3rep_s{sd_}"] = float(np.mean(ds)); cover[f"r3rep_s{sd_}"] = len(ds)
+for sd_, m in sorted(old.items()):
+    ds = [m[t] - ref[t] for t in TICKS if t in m]
+    units[f"traj3_s{sd_}"] = float(np.mean(ds)); cover[f"traj3_s{sd_}"] = len(ds)
+
+x = np.array(list(units.values())); n = len(x)
+rng = np.random.default_rng(20260905)
+bs = np.array([rng.choice(x, n, replace=True).mean() for _ in range(20000)])
+lo, hi = np.percentile(bs, [2.5, 97.5])
+cnt = sum(1 for f_ in itertools.product([-1,1], repeat=n)
+          if abs((x*np.array(f_)).mean()) >= abs(x.mean()) - 1e-15)
+p_sf, floor_sf = cnt/2**n, 2/2**n
+
+# where the reference sits inside its own replicate population (levels, not differences)
+lev = {k: np.mean([cells[(k, t)] for t in TICKS]) for k in
+       [f"r3rep_s{i}" for i in range(40, 48)]}
+lev.update({f"traj3_s{k}": np.mean([m[t] for t in TICKS if t in m]) for k, m in old.items()})
+ref_lev = np.mean([ref[t] for t in TICKS]); v = np.array(list(lev.values()))
+above = int((v > ref_lev).sum())
+headline = LADDER["the_claim"]["on_R"]["mean"]
+
+fig, ax = plt.subplots(1, 2, figsize=(7.4, 2.9))
+a = ax[0]
+order_ = sorted(units, key=units.get)
+y = np.arange(n)
+a.barh(y, [units[k] for k in order_], color=[HL if units[k] < 0 else CTRL for k in order_],
+       height=.6, alpha=.9)
+a.axvline(0, color=INK, lw=.9)
+a.axvspan(lo, hi, color=INK, alpha=.12)
+a.axvline(x.mean(), color=INK, ls="--", lw=1.0)
+a.axvline(-DELTA, color=WARN, lw=1.0); a.axvline(DELTA, color=WARN, lw=1.0)
+a.set_yticks(y); a.set_yticklabels(order_, fontsize=5.8); a.invert_yaxis()
+a.set_xlabel(r"$\Delta R$ vs multi3 at step 1200, ticker-paired")
+a.set_title(f"13 units, CI [{lo:+.4f}, {hi:+.4f}], margin $\\pm${DELTA}", fontsize=8.5)
+
+b = ax[1]
+b.hist(v, bins=9, color=CTRL, alpha=.8, edgecolor="white", linewidth=.6)
+b.axvline(ref_lev, color=HL, lw=1.6, label=f"multi3 @1200 = {ref_lev:.4f}")
+b.axvline(v.mean(), color=INK, ls="--", lw=1.0, label=f"replicate mean = {v.mean():.4f}")
+b.set_xlabel("mean $R$ over tickers"); b.set_ylabel("training seeds")
+b.set_title(f"The reference is above {13-above} of its own 13 replicates", fontsize=8.5)
+b.legend(frameon=False, fontsize=6.3, loc="upper left")
+show(fig, "f10_result")
+
+print(f"\nn = {n} training seeds (tickers per unit: {sorted(set(cover.values()))})")
+print(f"  mean dR {x.mean():+.4f}   sd {x.std(ddof=1):.4f}   se {x.std(ddof=1)/math.sqrt(n):.4f}")
+print(f"  bootstrap 95% CI over training seeds  [{lo:+.4f}, {hi:+.4f}]")
+print(f"  sign-flip p {p_sf:.5f}  next to its attainable floor 2/2^{n} = {floor_sf:.5f}")
+print(f"  negative units {int((x<0).sum())}/{n}")
+print(f"\n  CI excludes 0                          : {lo*hi > 0}")
+print(f"  CI entirely inside [-{DELTA}, +{DELTA}]     : {lo > -DELTA and hi < DELTA}")
+print(f"\n  reference level {ref_lev:.4f} vs replicate mean {v.mean():.4f} (sd {v.std(ddof=1):.4f})")
+print(f"  replicates above the reference: {above}/{n}  -> reference at the "
+      f"{100*(1-above/n):.0f}th percentile of its own replicate set, {(ref_lev-v.mean())/v.std(ddof=1):+.2f} sd")
+print(f"  gap {v.mean()-ref_lev:+.4f} against the study's headline effect {headline:+.4f}"
+      f"  = {abs((v.mean()-ref_lev)/headline):.0%} of it")
+""")
+
+md(r"""
+**Both labels in the rule fire, and they are not in tension.**
+
+**A difference at step 1200 is established.** The interval over training seeds excludes zero and
+twelve of thirteen units fall the same way. The sign-flip p is `0.018`, well clear of the attainable
+floor `2/2^13 = 0.00024`, so unlike the study's original `0.0078` this one is a measurement rather
+than the smallest number the test can return.
+
+**And it is equivalent at the declared margin.** The whole interval lies inside
+`[-0.0904, +0.0904]`, so an effect as large as the one this study originally claimed is excluded —
+that, and nothing about smaller effects, is what the margin licenses.
+
+**What the two together say.** Retrain round 3 changing only the data order and the result lands
+**below** the round-3 reference checkpoint at the same step, in twelve of thirteen tries. The
+reference sits at roughly the **92nd percentile of its own replicate population**, `+0.70` replicate
+standard deviations above the replicate mean. The gap is `-0.0277` on `R`, which is about **31% of
+the `+0.0904` the study reported as the round-4 minus round-3 effect**.
+
+So the anchor the headline was measured against is not a typical member of the population it is
+supposed to represent, and roughly a third of the headline's magnitude is the size of that
+atypicality. This does not overturn the headline — it was measured on a different contrast, and this
+one cannot settle it — but it identifies a term the original comparison never priced.
+
+**Scope, restated because it constrains every number above.** All of it is conditional on
+$(\theta_0, \mathcal{D}, \mathcal{C}, \mathcal{G}, B)$ from section 10. It is a statement about step
+1200, a step chosen as the argmax of the sweep; extending it across steps needs steps chosen without
+reference to the outcome. The `0.165` adjacent-save spread plays no part in the interval above — the
+matching holds checkpoint position fixed — and appears only as the reason a single step generalises
+poorly.
+
+**And the rule these labels come from was frozen at 09:41:31 UTC with 35 of the 72 cells already
+scored.** It is a partial-data freeze, not a pre-registration, and the labels should be read with
+that discount.
 """)
 
 md(r"""

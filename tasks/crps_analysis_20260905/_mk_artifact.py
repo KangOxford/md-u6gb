@@ -252,15 +252,17 @@ footer {{ margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--rule
   sign-flip test at <em>p</em>&nbsp;=&nbsp;0.0078. Six adversarial agents and seven solution agents attacked it.
   <strong>The point estimate survived. The inference did not</strong> &mdash; every error bar in the study was
   measured on generation replicates, while the claim varies the training run, and that spread is larger than
-  the effect. Then three of this audit&rsquo;s own claims failed a second check, and are withdrawn below.</p>
+  the effect. Then three of this audit&rsquo;s own claims failed a second check, and are withdrawn below. And
+  a 72-cell replication finished: the round-3 reference the headline was measured against turns out to sit
+  at the <strong>92nd percentile of its own replicate population</strong>.</p>
   <div class="provenance">
     <div><b>Repository</b><span>KangOxford/sigma-0 (private)</span></div>
     <div><b>Branch</b><span>audit/crps-return-alignment-20260905</span></div>
-    <div><b>Commit</b><span>24ec31cf9c630276b5105601ee49d07e162fb505</span></div>
+    <div><b>Commit</b><span>aad0f6a268d34225bb34f6e61afa4bc6e7a3ed4b</span></div>
     <div><b>Pull request</b><span>#76</span></div>
-    <div><b>Notebook</b><span>12 code cells, 0 errors, 9 figures</span></div>
+    <div><b>Notebook</b><span>13 code cells, 0 errors, 10 figures</span></div>
     <div><b>Replicates measured</b><span>18 fine-tuning runs</span></div>
-    <div><b>Round-3 replicates</b><span>13 trained &middot; scoring in progress</span></div>
+    <div><b>Round-3 replicates</b><span>13 trained &middot; 72/72 cells scored</span></div>
   </div>
 </header>
 
@@ -321,7 +323,22 @@ footer {{ margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--rule
   reduction they are supposed to buy on paired comparisons measures 0.4% here. And &ldquo;the bias is
   flat in K&rdquo; is algebra about which estimand you are aiming at, reported as though it had been
   measured &mdash; every one of the 239 records is at K = 2, so no K-dependence is estimable at all.</p>
-  <h3>How the result will be judged, and when that rule was fixed.</h3>
+  <h3>The result: 72 of 72 cells, none dropped.</h3>
+  <p>Thirteen training seeds against <code>multi3</code> read at the same step 1200, ticker-paired.
+  Mean &Delta;R <strong>&minus;0.0287</strong>, bootstrap 95% interval over training seeds
+  <strong>[&minus;0.0499, &minus;0.0090]</strong>, twelve of thirteen units negative, sign-flip
+  <em>p</em>&nbsp;=&nbsp;0.018 against an attainable floor of 0.00024 &mdash; a measurement, not the
+  smallest number the test can return. The whole interval also lies inside the declared margin
+  &plusmn;0.0904, so an effect as large as the one originally claimed is excluded, and nothing is
+  claimed about smaller ones.</p>
+  <p>Retrain round 3 changing only the data order and the result lands <em>below</em> the round-3
+  reference at the same step, twelve times in thirteen. The reference is +0.70 replicate standard
+  deviations above the replicate mean, a gap of &minus;0.0277 on R &mdash; about <strong>31% of the
+  +0.0904</strong> the study reported as its round-4 minus round-3 effect. The anchor is not a typical
+  member of the population it stands for, and that is a term the original comparison never priced. It
+  does not overturn the headline, which was a different contrast; it names something the headline
+  omitted.</p>
+  <h3>How the result was judged, and when that rule was fixed.</h3>
   <p>The adjudication rule is <strong>not a pre-registration</strong>: it was frozen at 2026-09-05
   09:41:31&nbsp;UTC with 35 of 72 cells already scored, so it constrains later tuning without carrying a
   prospective guarantee. The unit is one training seed; a pair counts only at step 1200, same ticker,
