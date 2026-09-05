@@ -10,15 +10,20 @@ stages, recorded independently:
     submitted  the packet was handed to an executor (a replacement agent, or this session)
     processed  that executor ran to completion and said what it did
     artifact   the task's DECLARED output exists and is non-empty -- MEASURED, not asserted
+    content    the output CONTAINS what the task required -- a named check that can fail
 
-`artifact` is the only stage that is not a claim: it takes a path and stats it.  The other
-three are testimony, and the ledger keeps them apart from the measurement on purpose.
+`artifact` and `content` are the two stages that are not claims.  `artifact` stats a path;
+`content` runs a stated check against the bytes.  They are separate because a file that
+exists is routinely mistaken for a file that says something: nine agents were reported as
+having banked nothing while their transcripts sat on disk, and a 0-byte .done passes every
+`-f` test in the pipeline.  The first three stages are testimony, and the ledger keeps
+testimony apart from measurement on purpose.
 """
 import json, os, sys, datetime
 
 REGISTRY = "/lus/lfs1aip2/projects/public/u6gb/.claude/agent_registry"
 REG = os.path.join(REGISTRY, "registry.jsonl")
-STAGES = ["prepared", "submitted", "processed", "artifact"]
+STAGES = ["prepared", "submitted", "processed", "artifact", "content"]
 
 
 def now():
@@ -58,7 +63,25 @@ def record(key, stage, note="", path=None):
     aid = resolve(seen, key)
     row = {"ts": now(), "agent_id": aid, "slug": seen[aid].get("slug"), "stage": stage,
            "note": note}
-    if stage == "artifact":
+    if stage == "content":
+        # A content stage without a check is just an artifact stage with a nicer name.
+        if not path or len(sys.argv) < 6:
+            sys.exit("stage content needs <path> <required-regex> -- a check that can fail")
+        import re as _re
+        pat = sys.argv[5]
+        try:
+            body = open(path, encoding="utf-8", errors="replace").read()
+        except OSError as e:
+            body = ""
+            row.setdefault("note", "")
+        hits = _re.findall(pat, body)
+        row["evidence"] = {"path": os.path.realpath(path) if os.path.exists(path) else path,
+                           "check": pat, "matches": len(hits),
+                           "bytes": len(body.encode()), "lines": body.count("\n") + 1,
+                           "passed": bool(hits)}
+        if not hits:
+            row["note"] = (note + " | CONTENT CHECK FAILED").strip(" |")
+    elif stage == "artifact":
         if not path:
             sys.exit("stage artifact needs the declared output path -- it is measured, not asserted")
         ok = os.path.exists(path)
@@ -91,12 +114,15 @@ def table():
         for s in STAGES:
             if s not in st:
                 cells.append(f"{'-':<9}")
-            elif s == "artifact":
+            elif s in ("artifact", "content"):
                 # A stage row recording "I measured it and it was absent" is NOT the same
                 # as "the artifact is there".  Printing `yes` for both is the label saying
                 # what the measurement did not.
                 ev = st[s].get("evidence") or {}
-                cells.append(f"{('PRESENT' if ev.get('exists') and ev.get('bytes') else 'ABSENT'):<9}")
+                if s == "content":
+                    cells.append(f"{('PASS' if ev.get('passed') else 'FAIL'):<9}")
+                else:
+                    cells.append(f"{('PRESENT' if ev.get('exists') and ev.get('bytes') else 'ABSENT'):<9}")
             else:
                 cells.append(f"{'yes':<9}")
         ev = st.get("artifact", {}).get("evidence")

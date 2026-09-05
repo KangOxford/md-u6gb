@@ -1,0 +1,21 @@
+--- a/home/u6gb/kangli.u6gb/nbfix_20260904T174047Z/verify_sweep.py
++++ b/home/u6gb/kangli.u6gb/nbfix_20260904T174047Z/verify_sweep.py
+@@
+ print('total rows (jsonl + sweep dir)', len(rows))
++# sweep_results.jsonl holds TWO record shapes and they are different estimands:
++#   per-seed rows  {arm,step,ticker,seed,sd_ratio,qL1}          -- one member
++#   pooled rows    {arm,step,ticker,node,crps,sd_ratio,qL1}     -- K>=2, CRPS-scored, NO seed
++# Keying both by (ticker,seed) raised KeyError: 'seed'.  The crash was correct; the file
++# really does contain two things.  Dropping the seedless rows would silently discard
++# exactly the 48 rows that carry `crps`, so they are partitioned and both counts printed.
++per_seed = [r for r in rows if 'seed' in r]
++pooled   = [r for r in rows if 'seed' not in r]
++print(f'  per-seed rows {len(per_seed)}   pooled (K>=2, no seed) rows {len(pooled)}'
++      f'   -- kept separate, NOT merged')
++if pooled:
++    ps=collections.Counter((r['arm'], str(r['step'])) for r in pooled)
++    print('  pooled cells by (arm,step):', dict(sorted(ps.items())))
+ cells=collections.defaultdict(dict)
+-for r in rows:
++for r in per_seed:
+     cells[(r['arm'],int(r['step']))][(r['ticker'],r['seed'])]=(r['sd_ratio'],r['qL1'])

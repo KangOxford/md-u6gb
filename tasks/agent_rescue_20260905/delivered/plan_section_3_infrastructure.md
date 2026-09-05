@@ -50,18 +50,32 @@ run_v5w_dump.sh:25,37   supervise_round4_recheck.sh:22,23,24
 collect_highpower.sh:45  run_ce_control.sh:15  launch_e13b.sh:64  e13b_slot.sh:37
 ```
 
-A zero-byte `.done` passes all ten. That state has a specific and **reproducible** cause:
-under `set -u`, a redirection is performed before the command's word expansion fails, so the
-target file is created and truncated and the command never runs.
+A zero-byte `.done` passes all ten. That state has a specific and **reproducible** cause, and an earlier draft of this
+section got it wrong. Corrected by measurement on 2026-09-05:
 
 ```bash
-# reproduced 2026-09-05
-$ bash -c 'set -euo pipefail; printf "%s\n" "$NO_SUCH_VAR" > f'   # rc=1, f is 0 bytes
-$ bash -c 'set -euo pipefail; E=""; printf "%s\n" "$E" > f'       # rc=0, f is 1 byte
+# `set -u` aborts BEFORE the redirection: no file is created at all,
+# and an existing file is NOT truncated.
+$ rm -f a; bash -c 'set -euo pipefail; printf "%s\n" "$NOPE" > a'   # rc=1, a does not exist
+$ printf 'previous\n' > b
+$ bash -c 'set -euo pipefail; printf "%s\n" "$NOPE" > b'            # rc=1, b still 9 bytes
+
+# A 0-byte file comes from the OPPOSITE order: the redirection succeeds,
+# creating or truncating the target, and the writer then fails or is killed.
+$ printf 'y\n' > c; bash -c 'set -euo pipefail; cat /nonexistent > c'   # rc=1, c is 0 bytes
+$ bash -c 'printf "%s\n" "" > d'                                    # rc=0, d is 1 byte
 ```
 
-The two cases are distinguishable: **0 bytes means the variable was unset, 1 byte means it was
-set and empty.** That turns a puzzling artefact into a discriminating test.
+**The earlier draft's claim — that `set -u` leaves a 0-byte file — is withdrawn.** It came
+from a test whose target file had been created empty beforehand, so the 0 bytes were the
+setup, not the mechanism. The operational conclusion is unchanged and in fact stronger: a
+0-byte `.done` is produced by a *successful* redirect followed by a writer that dies, which
+is precisely what an allocation expiring mid-write looks like, so it is a state the pipeline
+will keep meeting.
+
+The discriminator survives: **0 bytes means the write began and did not finish; 1 byte means
+the manifest variable was set but empty.** The two are different bugs and the byte count
+tells them apart.
 
 `collect_rollouts.sh` writes `.done` at lines 194 and 203, both `printf '%s\n' "$MANIFEST" >
 …`, and `MANIFEST` is built at line 142.
