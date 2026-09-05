@@ -213,3 +213,55 @@ def test_dispersion_share_reports_the_unbiased_value():
         d["spread_share_top_decile"] * 10 / 9, rel=1e-9)
     assert d["max_removable_share_top_decile"] == pytest.approx(
         1.0 - d["spread_share_top_decile_unbiased"], rel=1e-9)
+
+
+# --- guards for the repeated nulls and the discriminating null (items 2 and 3) ---------
+
+def test_repeated_nulls_report_a_spread_not_a_single_draw():
+    """One draw cannot order `shared` against `true`; the published 0.49-vs-0.46 was one."""
+    rng = np.random.default_rng(20)
+    real = np.zeros((400, 1))
+    gen = 1.5 * rng.normal(size=(1, 400, 1)) + rng.normal(size=(9, 400, 1))
+    out = F.pairing_nulls_repeated(real, gen, k=3, horizon_idx=0, rng=rng,
+                                   stratified=False, n_draws=15)
+    assert out["n_draws"] == 15
+    for key in ("true", "shared", "independent", "cross"):
+        assert out[f"{key}_sd"] > 0, f"{key} has no spread, so it is still one draw"
+    assert 0.0 <= out["shared_exceeds_true_frac"] <= 1.0
+
+
+def test_repeated_nulls_carry_the_leak_floor_when_stratified():
+    """A stratified null is bounded below by 1/n_bins; the reading must say so."""
+    rng = np.random.default_rng(21)
+    real, gen = np.zeros((300, 1)), rng.normal(size=(9, 300, 1))
+    assert F.pairing_nulls_repeated(real, gen, 3, 0, rng, True, 5)["leak_floor"] == \
+        pytest.approx(F.stratification_leak())
+    assert F.pairing_nulls_repeated(real, gen, 3, 0, rng, False, 5)["leak_floor"] == 0.0
+
+
+def test_partialling_mostly_removes_a_score_that_is_only_dispersion():
+    """Known-answer case, and it establishes that the floor is not zero.
+
+    Rollouts are centred on the truth and differ only in width, so `total` is pure
+    dispersion and carries nothing about being wrong. The honest answer would be 0 kept.
+    It is not: the nuisance is estimated from held-out seeds, and partialling a noisy
+    proxy under-removes. The measured residue (~0.37 at k=3 with 6 held-out seeds) is the
+    floor that the real-data figure of ~0.87 must be quoted against -- the same class of
+    error as reading a stratified null of 0.10 as "zero".
+    """
+    rng = np.random.default_rng(22)
+    floor = F.dispersion_partial_floor(n_ctx=500, n_seed=12, k=3, rng=rng, n_draws=20)
+    assert 0.15 < floor < 0.55, f"floor {floor:.2f} outside the range this control produces"
+    # most of it does go, which is what makes the partial worth doing at all
+    assert floor < 0.6
+
+
+def test_partial_out_removes_a_planted_monotone_nuisance():
+    """A monotone function of the nuisance has the same ranks, so the residual is exactly
+    zero -- and `spearman` on a constant is NaN by design, so assert on the residual."""
+    rng = np.random.default_rng(23)
+    nuis = rng.normal(size=800)
+    assert np.abs(F.partial_out(np.exp(nuis), nuis)).max() < 1e-9
+    # a nuisance that explains only part of the target leaves a real residual
+    partial = F.partial_out(np.exp(nuis) + 3.0 * rng.normal(size=800), nuis)
+    assert abs(F.spearman(partial, nuis)) < 0.10

@@ -1,7 +1,7 @@
 # Continual Learning for sigma-0: Plasticity Measurement and Continual Pre-Training Plan
 
 > Task dir: `tasks/continual_learning/` · Source research: `deep-reseach.md` (two-pass deep research, 2026-08-26)
-> **Status: MERGED PLAN, revision 3 (2026-09-05).** Five facet drafts under `plan_drafts/`
+> **Status: MERGED PLAN, revision 4 (2026-09-05).** Five facet drafts under `plan_drafts/`
 > are the detail; this file is the spine and the decision record. Green marks what is done,
 > ~~strikethrough~~ marks what measurement has overturned. Not yet adversarially reviewed —
 > see §0.4.
@@ -89,8 +89,14 @@ Tests: **12 → 17**, each new one red on a defect that actually shipped.
 `fidelity.py` cannot run on the existing 80 members: they hold `data_gen/` and `data_real/`
 and **no `data_cond/`**, which is the conditioning window that initialises the replay
 (`episode_builder.py:263-269`). The filename pattern matches, so this is not a layout
-mismatch — the initialisation input was never written. Worse, the tool **exits 0** having
-printed only a header row, so any wrapper checking the exit code would record M1 as done.
+mismatch — the initialisation input was never written.
+
+~~Worse, the tool exits 0 having printed only a header row.~~ **That was wrong and is
+corrected in `results/RESULTS_20260905.md` §5**: the observed run exits **1**; the `exit=0`
+originally reported was `tail`'s exit code, read as `$?` after a pipe. A narrower version of
+the claim is real — a report in which every window is skipped *without raising* did return 0
+— and a guard for it is now in `fidelity.py`, verified to return 2. The `data_cond` finding
+is unaffected; it rested on the `FileNotFoundError`, not on the exit code.
 
 Since M1 needs a regeneration and `plan_drafts/01` §1.1 established that the two threads can
 only be unified by regenerating from the selftrain chain, **those are the same regeneration**.
@@ -122,6 +128,32 @@ The **dilution assumption** — that a false positive in a training pool dilutes
 contaminates — is what makes the `k = 3` budget of §0.3 affordable. `plan_drafts/02` §3.2
 states plainly that it is untested and that nothing should assume it. It is still untested.
 If it fails, §0.3 reverts to `k ≈ 21` and the cycle-1 pool stops fitting in the inode budget.
+
+---
+
+### 0.10 Revision 4 (2026-09-05) — CPU verification of the accepted-but-unimplemented items
+
+One convention throughout: **horizon 50, 8 tickers, 500 contexts, 10 seeds, 60 draws,
+stratified score at `n_bins = 10`, config `v5me3`.** Full tables in
+`results/RESULTS_20260905.md`; machine-readable in `results/nulls_and_partials.json`.
+
+| item | verdict | reading |
+|---|---|---|
+| Repeated pairing nulls | **SUPPORTED** | `shared > true` in **8/8** tickers at k=5 (mean gap +0.032), 7/8 at k=3. Every previously published null was one permutation draw; the ordering is systematic, so the point is stronger than published. `independent`/`cross` sit at 0.05–0.10, i.e. **at the 0.10 leak floor, not at zero** |
+| Dispersion partial | **SUPPORTED, with a floor nobody had stated** | Kept **0.83–0.92, mean 0.87**. A score that is *entirely* dispersion keeps **0.48** under the identical procedure at 10 seeds (0.37 at 12 — the floor falls as the proxy improves). So the reading is "0.87 against a 0.48 floor", roughly half the margin that "0.87 survives" implies |
+| `num_errors` semantics | **SUPPORTED** | Source-level: it counts generated messages that left the visible L2 book unchanged, under a comment calling them errors |
+| `num_errors` magnitude | **SUPPORTED** | 34.0–76.4% per ticker, **pooled 60.6% of every rollout is book-inert**. Needs no join |
+| `num_errors` correlations | **INSUFFICIENT** | 11×48 = **528 slots for 500 contexts**; the 28 surplus are a wrap of neither end (8/8 tickers). The position-to-context mapping is unestablished, so no per-context correlation is reproducible. Not refuted — the join may be recoverable from the batch construction, which has not been read |
+| `fidelity.py` exit code | **REFUTED as stated** | See §0.6, corrected |
+
+Tests **17 → 21**. Two new ones went red first and both failures were informative: one
+assertion was wrong (a monotone nuisance leaves an exactly-zero residual, and `spearman` on
+a constant is NaN by design); the other found the 0.48 floor above, which is the most
+decision-relevant number of the round.
+
+**Reliability budget**: per the standing instruction, the `k ≤ 5` extrapolation to `k ≈ 21`
+is **not** used as a budget anywhere in this revision. Every figure above is quoted at the
+`k` it was measured at.
 
 ---
 
@@ -239,6 +271,11 @@ Cyclic year/regime schedule over 34M / 100M / 300M-class sigma-0 models, probe s
 - [x] $\color{green}{\textsf{P1/P2/P6 acceptance written as exit-code conditions}}$ — `plan_drafts/06` §5
 - [ ] **Five independent adversarial reviews** (`plan_drafts/_REVIEW_BRIEF.md`) — blocked on session quota; relaunch **one at a time**, reading list extended to `01`, `03`, `06`
 - [ ] ~~M1 on the existing archive~~ **impossible — no `data_cond/`** (§0.6); folded into the G2 regeneration
+- [x] $\color{green}{\textsf{Items 2, 3, 4 measured on one convention}}$ — `results/RESULTS_20260905.md`, verdicts in §0.10
+- [x] $\color{green}{\textsf{Item 5: zero-row report now fails}}$ — `fidelity.py` returns 2; **not yet committed to sigma-0** (separate repo, junming identity, PR#60 stack)
+- [ ] Item 6: wandb config for `j5705912`, to confirm `num_devices = 1`
+- [ ] Item 7: fold `D1` §2, `D3` §8/§10, `D4` into the merged plan
+- [ ] Item 8: P1/P2/P6 acceptance **scripts** (the conditions are written; the executable checks are not)
 - [ ] The three P-blockers before any generation: rollout manifest (P1), frozen hashed context set (P2), inode write plan (P6) — `plan_drafts/03` §1
 - [ ] M4: arm-level repeat with several training seeds — the decisive rung (F7)
 - [ ] Probe wiring into the sigma-0 training loop (follow-up)

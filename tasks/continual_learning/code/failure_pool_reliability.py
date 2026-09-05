@@ -419,6 +419,134 @@ def dispersion_share(real: np.ndarray, gen: np.ndarray) -> Dict[str, object]:
     return out
 
 
+# --------------------------------------------------------------------------
+# repeated nulls, and the null that actually discriminates
+# --------------------------------------------------------------------------
+
+def pairing_nulls_repeated(real: np.ndarray, gen: np.ndarray, k: int, horizon_idx: int,
+                           rng: np.random.Generator, stratified: bool,
+                           n_draws: int = 60) -> Dict[str, object]:
+    """``pairing_nulls`` over many draws, because one draw cannot order the readings.
+
+    Every null published on 2026-09-04 came from a single permutation. On one draw
+    ``shared`` read 0.49 against ``true`` at 0.46 and the difference was reported as an
+    observation; over draws the ordering is not a coincidence at all. The mean and sd
+    below let the reading be stated as an ordering ("a consistently mis-paired score is
+    *systematically* more self-consistent") instead of as one number.
+
+    Also reports the floor the construction imposes: for a stratified score any null is
+    bounded below by ``stratification_leak``, so a null "near zero" is near the leak.
+    """
+    keys = ("true", "shared", "independent", "cross")
+    acc: Dict[str, List[float]] = {key: [] for key in keys}
+    for _ in range(n_draws):
+        one = pairing_nulls(real, gen, k, horizon_idx, rng, stratified)
+        if not one:
+            return {}
+        for key in keys:
+            acc[key].append(one[key])
+    out: Dict[str, object] = {"k": k, "stratified": stratified, "n_draws": n_draws,
+                              "leak_floor": stratification_leak() if stratified else 0.0}
+    for key in keys:
+        v = np.asarray(acc[key], dtype=float)
+        out[f"{key}_mean"], out[f"{key}_sd"] = float(np.nanmean(v)), float(np.nanstd(v, ddof=1))
+    # the ordering that one draw cannot establish
+    d = np.asarray(acc["shared"]) - np.asarray(acc["true"])
+    out["shared_minus_true_mean"] = float(np.nanmean(d))
+    out["shared_exceeds_true_frac"] = float(np.nanmean(d > 0))
+    return out
+
+
+def partial_out(target: np.ndarray, nuisance: np.ndarray) -> np.ndarray:
+    """Rank-residual of ``target`` after removing ``nuisance``, both rank-transformed.
+
+    Used instead of a raw regression because every score here is compared by rank and the
+    nuisances are heavy-tailed.
+    """
+    x, y = _rank(nuisance), _rank(target)
+    x = x - x.mean()
+    y = y - y.mean()
+    denom = float((x * x).sum())
+    beta = float((x * y).sum() / denom) if denom > 0 else 0.0
+    return y - beta * x
+
+
+def dispersion_partialled_reliability(real: np.ndarray, gen: np.ndarray, k: int,
+                                      horizon_idx: int, rng: np.random.Generator,
+                                      n_draws: int = 60) -> Dict[str, float]:
+    """Split-half reliability after removing the rollouts' own dispersion and mean move.
+
+    This is the null a low ``cross`` cannot supply. ``cross`` falls whenever the reliable
+    part of the score is attached to the correct context — but "the model's rollouts here
+    are wide" and "the model generated a large move here" are *also* properties of the
+    correct context, and neither is what issue #73 means by a failure. Partialling both
+    out and re-measuring reliability asks whether anything survives that is about being
+    *wrong* rather than about being *wide*.
+
+    The nuisances are estimated from seeds held out of both halves, so the thing being
+    removed is not estimated from the same rollouts that produced the score; otherwise
+    the partial would remove part of the signal by construction.
+
+    **The floor is not zero, and the fraction kept must be read against it.** Because the
+    nuisance is estimated from a handful of held-out seeds it is a noisy proxy for the
+    per-context width, and partialling a noisy proxy under-removes. Measured on a
+    synthetic score that is *entirely* dispersion (rollouts centred on the truth,
+    differing only in width, so `total` carries no information about being wrong), the
+    fraction kept is **0.48 with 10 seeds** (4 held out at k = 3) and 0.37 with 12 seeds
+    (6 held out) -- the floor falls as the proxy gets less noisy, so it must be measured
+    at the seed count actually used, never quoted from another. Use
+    ``dispersion_partial_floor`` to get that floor at the same k and draw count, and
+    quote it beside the measured value. This is the same class of error as reading a
+    stratified null of 0.10 as "zero".
+    """
+    S = gen.shape[0]
+    if 3 * k > S:
+        return {}
+    keep, drop = [], []
+    for _ in range(n_draws):
+        p = rng.permutation(S)
+        A, B, H = p[:k], p[k:2 * k], p[2 * k:]
+        if H.size == 0:
+            continue
+        nuis_spread = scores(real, gen[H])["spread_pop"][:, horizon_idx]
+        nuis_move = np.abs(gen[H].mean(axis=0)[:, horizon_idx])
+        y = real[:, horizon_idx]
+
+        def sc(idx: np.ndarray) -> np.ndarray:
+            return stratify(scores(real, gen[idx])["total"][:, horizon_idx], y)
+
+        sa, sb = sc(A), sc(B)
+        base = spearman(sa, sb)
+        ra = partial_out(partial_out(sa, nuis_spread), nuis_move)
+        rb = partial_out(partial_out(sb, nuis_spread), nuis_move)
+        keep.append(spearman(ra, rb))
+        drop.append(base)
+    if not keep:
+        return {}
+    b, a = float(np.nanmean(drop)), float(np.nanmean(keep))
+    return {"k": k, "n_draws": len(keep), "rho": b, "rho_partialled": a,
+            "fraction_kept": a / b if b > 0 else float("nan"),
+            "rho_sd": float(np.nanstd(drop, ddof=1)),
+            "rho_partialled_sd": float(np.nanstd(keep, ddof=1))}
+
+
+def dispersion_partial_floor(n_ctx: int, n_seed: int, k: int, rng: np.random.Generator,
+                             n_draws: int = 20) -> float:
+    """Fraction of reliability that survives partialling when the score is ALL dispersion.
+
+    A known-answer control for ``dispersion_partialled_reliability``: rollouts are centred
+    on the truth and differ only in a per-context width, so nothing about being wrong is
+    present and the honest answer would be 0. It is not 0, because the nuisance is
+    estimated from held-out seeds and a noisy proxy cannot remove all of what it proxies.
+    That residue is the floor the real measurement must be read against.
+    """
+    width = np.exp(rng.normal(size=(1, n_ctx, 1)))
+    real = np.zeros((n_ctx, 1))
+    gen = width * rng.normal(size=(n_seed, n_ctx, 1))
+    out = dispersion_partialled_reliability(real, gen, k, 0, rng, n_draws)
+    return out.get("fraction_kept", float("nan"))
+
+
 def pool_overlap(real: np.ndarray, gen: np.ndarray, horizon_idx: int,
                  frac: float = 0.10) -> float:
     """How much of the naive top-decile pool survives the correction.
