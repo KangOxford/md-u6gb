@@ -248,13 +248,13 @@ footer {{ margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--rule
   sign-flip test at <em>p</em>&nbsp;=&nbsp;0.0078. Six adversarial agents and seven solution agents attacked it.
   <strong>The point estimate survived. The inference did not</strong> &mdash; every error bar in the study was
   measured on generation replicates, while the claim varies the training run, and that spread is larger than
-  the effect.</p>
+  the effect. Then three of this audit&rsquo;s own claims failed a second check, and are withdrawn below.</p>
   <div class="provenance">
     <div><b>Repository</b><span>KangOxford/sigma-0 (private)</span></div>
     <div><b>Branch</b><span>audit/crps-return-alignment-20260905</span></div>
     <div><b>Commit</b><span>54cb58467c83babab7bb46aee6909fdc80586740</span></div>
     <div><b>Pull request</b><span>#76</span></div>
-    <div><b>Notebook</b><span>10 code cells, 0 errors, 7 figures</span></div>
+    <div><b>Notebook</b><span>12 code cells, 0 errors, 8 figures</span></div>
     <div><b>Replicates measured</b><span>18 fine-tuning runs</span></div>
     <div><b>Round-3 replicates</b><span>13 trained &middot; 5 scored</span></div>
   </div>
@@ -262,8 +262,9 @@ footer {{ margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--rule
 
 <div class="ledger-wrap">
   <h2>What the audit changed</h2>
-  <p class="ledger-note">Nine quantities moved. The four with a marked rule are the ones that change what the
-  study can claim; the rest are arithmetic that was pointing the same way.</p>
+  <p class="ledger-note">Seventeen quantities moved. The rows with a marked rule change what the study can
+  claim; the rest is arithmetic that was already pointing the same way. The last three are claims this
+  audit made and then had to withdraw.</p>
   <div class="tscroll">
     <table>
       <thead><tr><th scope="col">Quantity</th><th scope="col">As published</th><th scope="col">Corrected</th><th scope="col">Why it changed</th></tr></thead>

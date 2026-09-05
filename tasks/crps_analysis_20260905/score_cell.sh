@@ -29,7 +29,7 @@ for SD in 97901 97902; do
 done
 
 "$PY" "$W/run/mid_training/score_v5_primary.py" --task "$ROOT" \
-  --arms "a=s97901,s97902" --assert-k 2 \
+  --arms "a=s97901,s97902" --baseline a --assert-k 2 \
   --assert-ckpt "$CKPT" --assert-ckpt-step 69378 --assert-seeds 97901,97902 \
   --out "$ROOT/score.json" >> "$ROOT/score.log" 2>&1
 rc=$?

@@ -306,3 +306,45 @@ idempotent and restartable. `score_cell.sh` passes `--assert-k 2 --assert-ckpt-s
 --assert-seeds 97901,97902`, so K comes from the estimator rather than a shell directory count.
 Not queued: `parent_multi2` on its seven missing tickers and `wm_ft_multi` on all eight -- needed
 for the round-1 and parent comparisons, but neither can change the verdicts above.
+
+### 2026-09-05 08:xx -- read-back found the artifact half-updated
+
+The repo, the artifact and the PR description are three separate surfaces and updating one does not
+update the others. Read back, not assumed:
+
+| Surface | State before this check | Action |
+|---|---|---|
+| Remote notebook | blob `6205dcfa` == local, current | none |
+| **PR #76 body** | **still the pre-correction version** -- "Ten code cells, seven figures, 545 KB", no mention of any withdrawal | rewritten to the verdict table + the three withdrawals |
+| **Artifact page** | ledger rows and commit hash current, but the provenance strip still read "10 code cells, 0 errors, 7 figures" and the note still read "Nine quantities moved" against 17 rows | both fixed, republished to the same URL |
+
+`WebFetch` on the artifact caches for 15 minutes per URL and returns the whole page, so the final
+check was string-level on the published file: `12 code cells`, `Seventeen quantities moved`,
+commit `54cb5846`, three `withdrawn` rows all present; the stale `10 code cells` absent.
+
+### Scoring queue
+
+`score_v5_primary.py` defaults `--baseline base`, which is not among the scored arms when a cell
+passes only `a=`, so the first cell exited 7 **after** computing its numbers. Fixed by passing
+`--baseline a`; the rollouts survived on node-local storage, so `rescore_cell.sh` scored that cell
+without regenerating anything.
+
+First cell: `multi3` at step 1200, AMD -- `K = 2/2` asserted by the estimator, 500 contexts, 20 days,
+CRPS `1.0540e-04`, qL1 `0.1932`, sd_ratio `0.7446`.
+
+One drainer is running (PID confirmed by exact argv match, not by cmdline substring -- that trap
+catches the wrapping shell too). 1 of 72 scored.
+
+### The minimum pairing, before any verdict is updated
+
+Fixed by construction, not by assumption:
+
+| Element | Held fixed how |
+|---|---|
+| Checkpoint | step 1200 on **both** sides. `multi3` is being scored at 1200 rather than reused at `final`, because the endpoint comparison imports the checkpoint-position term |
+| Independent unit | the **training seed**; 13 of them, shown exchangeable (same parent, weights, item set `seed0_sha1 0f14669f2a4d`, budget, parameter count) |
+| Generation unit | `K = 2`, seeds 97901/97902 in **every** cell, so the pairing basis is the common context and the generation draw is matched across arms |
+| Pairing basis | the ticker; 8 of them, the same 500 contexts and 20 days in each cell |
+
+Nothing is judged until that set is complete. A green CI and a synchronised artifact are
+housekeeping; neither is evidence about round 3.
