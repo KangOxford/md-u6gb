@@ -17,8 +17,15 @@
 这个好转来自别处的清理，不是本文记录的这两次移动。别处若还写着「inode 只剩 0」，那是 09-04 的状态。
 
 最大的一块 `s5e_archive`（13,925,267 个，占配额 27%）没有动，它仍是唯一能单独改变全局的一步。
-另有一项待查：`_s5e_inference_archive_20260902` 在 09-05 的复核中已从原路径消失，且在几处有界搜索里
-都没找到，只剩一个 7 项的半成品副本——**本文所记的操作没有删除过它**，需要知情者确认它的去向。
+另有一项**位置未知**：`_s5e_inference_archive_20260902` 在 09-05T03:46Z 的复核中，于原路径、
+两个 relief 目录、以及 `/home/u6gb/kangli.u6gb` 前两层都没找到，只余一个 7 项的碎片副本（作为证据保留）。
+**「这几处没找到」就是全部结论——不能据此认定它已被删除**；未做深度搜索（那是站点规则禁止的元数据负载），
+所以未搜索到的位置仍然可能存在。
+
+配额读数一律带日期：**09-05T03:46Z 实测 50,461,324 / 51,200,000（空余约 739,000），当前不告急**；
+口径是 `lfs quota -p 1483804535 /lus/lfs1aip2` 的 files 列（项目级、按文件数，不是空间）。
+`/home/u6gb/kangli.u6gb/FACTS.md`（09-04T18:03Z）里那句「inode 只剩 0」是**当时的快照**，
+不是长期状态，照它决策前需重新测量。
 
 ---
 
@@ -94,16 +101,21 @@ Those two names were written by the concurrent session, which found the fragment
 labelled where the good copy was. The second fragment travelled back to Lustre with the
 rest of the offload. Neither can be deleted by this session.
 
-> **Open item, raised 2026-09-05T03:46Z.** The first row's "complete copy" no longer
-> resolves. `_s5e_inference_archive_20260902` is absent from
-> `/lus/lfs1aip2/projects/public/u6gb/_s5e_inference_archive_20260902`, absent from both
-> relief directories, and absent from `/home/u6gb/kangli.u6gb` apart from the 7-entry
-> fragment above. Either a session removed it after judging it disposable, or it sits
-> somewhere these bounded checks did not reach; a deep filesystem search was not run,
-> because that is the metadata load pattern the site rules prohibit. **Nothing here was
-> deleted by the session writing this note.** Someone who knows the archive's fate should
-> confirm which it is before the fragment is discarded, since the fragment is currently
-> the only copy this note can point to.
+> **Open item, status: location unknown, raised 2026-09-05T03:46Z.**
+> `_s5e_inference_archive_20260902` was not found by any of the checks run at that time.
+> What was checked, and only this: its original path
+> `/lus/lfs1aip2/projects/public/u6gb/_s5e_inference_archive_20260902`; both relief
+> directories; and the top two levels of `/home/u6gb/kangli.u6gb`. It was absent from all
+> of them, apart from the 7-entry fragment in the row above.
+>
+> **"Not found by these checks" is the whole finding. It does not establish that the
+> directory was deleted**, and no conclusion about its fate should be drawn from this
+> note. A deep filesystem search was deliberately not run, because that is the metadata
+> load pattern the site rules prohibit, so an unsearched location remains a live
+> possibility. Recorded for someone who knows where it went.
+>
+> The 7-entry fragment is kept as evidence and should not be discarded while this item is
+> open, since it is the only material this note can point to.
 
 ### Not moved
 
@@ -124,11 +136,26 @@ rest of the offload. Neither can be deleted by this session.
 50,461,324   2026-09-05T03:46Z                    (about 739,000 free)
 ```
 
-**Read the last line before acting on this note.** The first three lines describe a few
-hours on 2026-09-04, during which roughly 219,000 inodes were freed and consumed again. By
-the following morning the project had about 739,000 free, from cleanup elsewhere rather
-than from anything recorded here. **The quota is not currently exhausted**, so notes
-elsewhere still saying "Lustre inode quota ~0 free" are describing 2026-09-04, not today.
+**Every line above is a dated snapshot, not a standing fact.** The first three describe a
+few hours on 2026-09-04, during which roughly 219,000 inodes were freed and consumed
+again. By the next morning the project had about 739,000 free, from cleanup elsewhere
+rather than from anything recorded here.
+
+What the numbers are, so a later reader can reproduce or supersede them:
+
+| | |
+|---|---|
+| command | `lfs quota -p 1483804535 /lus/lfs1aip2` |
+| scope | the **project** quota for id 1483804535 (`/lus/lfs1aip2/projects/public/u6gb`), not a user or group quota |
+| the number quoted | the **files** column, i.e. inodes, against a cap of 51,200,000 |
+| space, separately | 137 TB of 200 TB used at the same reading, and never the binding limit here |
+
+**As of 2026-09-05T03:46Z the quota is not exhausted.** Any note that still reads
+"Lustre inode quota ~0 free" is quoting 2026-09-04 and needs re-measuring before it is
+acted on. One such note exists and is easy to hit:
+`/home/u6gb/kangli.u6gb/FACTS.md`, written 2026-09-04T18:03Z, tells readers to write to
+`/home` because "Lustre project inode quota ~0 free". That was true when written. It is a
+dated snapshot, and this note does not amend it, since it belongs to another session.
 
 The structural point survives the recovery: two directories moved by hand, one of which
 was later moved back, do not add up to a fix at the rate this project creates files. The
