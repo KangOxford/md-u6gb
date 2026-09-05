@@ -22,6 +22,19 @@
 **「这几处没找到」就是全部结论——不能据此认定它已被删除**；未做深度搜索（那是站点规则禁止的元数据负载），
 所以未搜索到的位置仍然可能存在。
 
+> **更新 2026-09-05T04:55Z（交叉引用，不改上面那段）：** 同目录的
+> `/lus/lfs1aip2/projects/public/u6gb/deletion_audit_20260905.md`（生成日期 2026-09-05）
+> 记述了这个目录的去向。**该文档称**：它由执行删除的那次会话以后台 `rm -rf` 删除、不可逆；
+> 被删内容是 10 个 run 的 `evaluation/inference/` 中间产物（313,654 文件 / 7.2 GB）；
+> 评测结论本身完整存活于现存 31 个源目录中。
+> **该文档自述的依据是 grep 那次会话的 jsonl 记录**，外加只读的 `lfs find`/`stat`/`cat`/`md5sum`。
+>
+> 上面那段 03:46Z 的「位置未知」**按原样保留，它当时并没有判断错**：
+> 「这几处没找到」确实不足以认定删除。**补上缺口的是那份 jsonl 记录，不是任何 `stat` 结果**——
+> 路径不存在在任何时候都不能推出谁删的、为什么删。
+> 该 audit 文档自身状态为**部分开放**（其第 6 节的 12 个子目录清单当时仍由后台 subagent 重建中），
+> 故此处只做转述与指路，不替它下最终结论。
+
 配额读数一律带日期：**09-05T03:46Z 实测 50,461,324 / 51,200,000（空余约 739,000），当前不告急**；
 口径是 `lfs quota -p 1483804535 /lus/lfs1aip2` 的 files 列（项目级、按文件数，不是空间）。
 `/home/u6gb/kangli.u6gb/FACTS.md`（09-04T18:03Z）里那句「inode 只剩 0」是**当时的快照**，
@@ -117,12 +130,32 @@ rest of the offload. Neither can be deleted by this session.
 > The 7-entry fragment is kept as evidence and should not be discarded while this item is
 > open, since it is the only material this note can point to.
 
+> ---
+>
+> **Update 2026-09-05T04:55Z, cross-reference. The note above is left exactly as written.**
+> A sibling record in the same directory,
+> `/lus/lfs1aip2/projects/public/u6gb/deletion_audit_20260905.md` (dated 2026-09-05),
+> accounts for this directory. **That document states** it was removed by a background
+> `rm -rf` issued by the session that wrote the audit, that the removal is irreversible,
+> that what was removed was the `evaluation/inference/` payload of 10 runs
+> (313,654 files, 7.2 GB), and that the benchmark conclusions themselves survive intact
+> in 31 source directories that still exist. **The evidence that document cites for the
+> removal is a grep of that session's own jsonl transcript**, alongside read-only
+> `lfs find` / `stat` / `cat` / `md5sum`.
+>
+> The 03:46Z note above was not wrong: "not found by these checks" genuinely does not
+> establish deletion, and **an absent path never identifies who removed something or
+> why**. What closes the gap is the jsonl transcript, not any `stat` result. That audit
+> is itself marked partially open (its §6 list of the 12 archived subdirectories was
+> still being reconstructed when it was written), so this is a pointer and a summary of
+> its claims, not a verdict adopted here.
+
 ### Not moved
 
 | path | inodes | why it stayed |
 |---|---|---|
 | `/lus/lfs1aip2/projects/public/u6gb/s5e_archive` | 13,925,267 | 27% of the whole quota in one directory, untouched since 2026-08-15. Moving 13.9M files across filesystems is hours of sustained metadata traffic, which is the load pattern that had group jobs suspended on 2026-05-08. It needs batching and pacing, and a decision from someone who knows whether the archive is dead. |
-| `/lus/lfs1aip2/projects/public/u6gb/_s5e_inference_archive_20260902` | 313,719 | move interrupted, source intact **at the time of writing**; by 2026-09-05T03:46Z the path no longer existed, see the open item above |
+| `/lus/lfs1aip2/projects/public/u6gb/_s5e_inference_archive_20260902` | 313,719 | move interrupted, source intact **at the time of writing**; by 2026-09-05T03:46Z the path no longer existed, see the open item above (and the cross-reference added there on 2026-09-05 to `deletion_audit_20260905.md`, which accounts for it) |
 | `/lus/lfs1aip2/projects/public/u6gb/_s5e_deprecated_20260902` | 64,146 | move never reached it; still present 2026-09-05T03:46Z |
 | `/lus/lfs1aip2/projects/public/u6gb/_s5e_scored_archive_20260904` | 46,269 | move never reached it; still present 2026-09-05T03:46Z |
 | `/lus/lfs1aip2/projects/public/u6gb/.conda/envs` (11 environments) | 350,576 | in use. `latex_env` is the LaTeX toolchain documented in `CLAUDE.md`; the others belong to work this session cannot vouch for. Directory mtime is **not** evidence of disuse: running a program out of an environment does not update it. |
