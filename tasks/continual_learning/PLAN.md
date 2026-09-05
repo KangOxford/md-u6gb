@@ -27,7 +27,7 @@ those facets were killed by a session limit. Everything below is traceable to a 
 | F7 | Doing nothing moves an arm-level endpoint by up to 28%; training-seed variance has **never been measured on this project** | `plan_drafts/02` §2.3 |
 | F8 | `k >= 20` is a *selection* requirement for a per-context ranked list. For a **training pool**, false positives dilute rather than contaminate, and cost-per-power favours small k by 2.4× | `plan_drafts/02` §3.2 |
 | F9 | For a paired arm comparison only `R = N·k` matters; the 1/sqrt(R) law holds to 1% | `plan_drafts/02` §3.3 |
-| ~~F10~~ | **REFUTED by R1, see §0.11.** ~~`wm_ft_multi3` holds one checkpoint (69378) with **no Muon optimizer state** (418.6 MB vs the selftrain chain's 499.5 MB); the selftrain chain holds 17 (275…69378) | measured 2026-09-05, `plan_drafts/01` §1.1 |
+| ~~F10~~ | **REFUTED by R1 (§0.11), then settled by measurement (RESULTS addendum 5 §E): `wm_ft_multi3` is a 32-rung fine-tune DESCENDED from the selftrain checkpoint at 69378 — weights differ, distance grows monotonically with fine-tune steps (0.261 → 0.346 → 0.525), and the byte-identical `_ROOT_METADATA` records that ancestor. X4 CLOSED.** ~~`wm_ft_multi3` holds one checkpoint (69378) with **no Muon optimizer state** (418.6 MB vs the selftrain chain's 499.5 MB); the selftrain chain holds 17 (275…69378) | measured 2026-09-05, `plan_drafts/01` §1.1 |
 | F11 | One rollout member costs **3,007 inodes / 67 MB**; the analysis reads only 112 KB of `.npz` from it | `plan_drafts/03` §3.2 |
 | F12 | The project sat **118 inodes** from its hard cap at 2026-09-04 17:54Z; the 741,511 now free were released by cleanup over nine hours, and are borrowed headroom rather than a baseline | `plan_drafts/03` §3.3 |
 | F13 | The real arm is byte-identical across seeds (md5-verified), so writing it once per ticker halves the per-member inode cost | `plan_drafts/05` §5.3 |
@@ -176,6 +176,23 @@ line and `Peak BF16 (1 GPUs)`), so §0.7's token table stands.
 
 **The lesson on my side**: `01` reported an absence found by a narrow search. An absence
 found by a narrow search is a statement about the search, not about the world.
+
+**X4 is now closed by measurement** (RESULTS addendum 5 §E): the two roots hold *different*
+weights whose distance grows monotonically with fine-tuning steps, so `wm_ft_multi3` is a
+fine-tune descended from the selftrain checkpoint and the shared metadata records an
+**ancestor**, not a checkpoint. Both earlier positions were wrong — mine ("cannot be
+unified") and the one R1's evidence invites ("may be the same object"). The threads share a
+lineage, so unification needs no regeneration; ~~`PLAN` §0.6's "those are the same
+regeneration"~~ is withdrawn. M1 still needs one, because `data_cond` is absent.
+
+**The `num_errors` join is recovered** (addendum 5 §A): `num_errors[i] ↔ rank_indices[i]` for
+`28 ≤ i < 500` and `num_errors[500+j] ↔ rank_indices[j]` for `j < 28`, verified by recomputing
+the definition from the generated books on 3 members across 3 tickers. The 28 surplus slots
+are the final partial batch padded by **wrapping to the start of the list**, so **28 of 500
+contexts (5.6%) are generated twice** and their stored files come from the second pass. With
+the join, the audit's claim that `num_errors` is measured *more* reliably than the failure
+score is **REFUTED** (0.229–0.419 against the score's 0.330–0.545); the sign flip between
+tickers is **CONFIRMED** (−0.136 to +0.195).
 
 ---
 

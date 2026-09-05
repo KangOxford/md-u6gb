@@ -1,0 +1,24 @@
+{
+  "root": "/lus/lfs1aip2/projects/public/u6gb/tasks/crps_return_alignment_20260808T025024Z/ckpt/wm_ft_multi3_step150",
+  "rows": [
+    {
+      "step": 69378,
+      "n_params_total": 78539423,
+      "l2_total": 427.891083085933,
+      "l2_non_embed": 425.35372313885864,
+      "mean_abs_total": 0.024190626975427496,
+      "mean_abs_non_embed": 0.024160952234411698,
+      "n_matrices": 53,
+      "spectral_norm_mean": 25.32330449193542,
+      "spectral_norm_median": 4.3809712150087,
+      "spectral_norm_max": 64.02913888460995,
+      "spectral_top5": {
+        "book_encoder/post_layers_0/seq/C_bias": 64.0291,
+        "book_encoder/post_layers_0/seq/B_bias": 64.0263,
+        "fused_s5/layers_2/seq/B_bias": 63.9892,
+        "fused_s5/layers_2/seq/C_bias": 63.97,
+        "fused_s5/layers_1/seq/C_bias": 63.9498
+      }
+    }
+  ]
+}
