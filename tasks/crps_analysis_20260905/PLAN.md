@@ -225,3 +225,55 @@ n3 = 5 panel is labelled with the count it was computed from.
 **Risk to watch**: node-local storage is TMPFS and the checkpoints vanish with the allocation.
 6317365 has ~19 h left and 6324130 ~23 h, against ~30 min of remaining training, so the margin is
 wide -- but the harvest loop exists because that margin is not the thing that failed last time.
+
+### 2026-09-05 05:0x -- all eight finished; persistence verified; n3 = 13 trained, 5 scored
+
+**How the eight ended.** They reached step 1500 and wrote `complete: true` with
+`last_saved_step: 1500`; step dirs are 9 minutes apart, matching 150 steps at 3.7 s/it. The wrapper
+shell then exited 1 at 04:25, twelve minutes after training finished, because **I edited
+`r3_replicate.sh` in place while it was running** and bash reads a script incrementally by byte
+offset. The corruption cost nothing here, but only because it landed after the work was done.
+Rule: never edit a running shell script; copy to a new name and launch that.
+
+**Integrity, not exit status.** `cp` reported success while persisting one 260-byte file, so the
+judgement is made on restores:
+
+| Check | Result |
+|---|---|
+| Full restore, s40 / s47 / reference `wm_ft_traj3_s1` | 386 arrays, 159,374,987 elements, all finite &mdash; **identical across all three** |
+| Total bytes, eight `step_1200` dirs | 594,031,383 .. 594,118,165 B against reference 594,092,900 B (<= 0.02%) |
+| File counts 20-31 vs reference 28 | expected: OCDBT shard counts vary with write parallelism; `adv_code`'s clean range is 20-43, and the chimera signature is a **3x** size, absent here |
+
+**What the five already-scored replicates say**, training seed as the independent unit, ticker as
+the pairing basis, reference `multi3`:
+
+| Metric | mean | sd | t (df 4) | sign agreement | sign-flip p | floor 2/2^5 |
+|---|---|---|---|---|---|---|
+| R (sd ratio) | **-0.0679** | 0.0330 | **-4.60** | **5/5 negative** | 0.0625 | **0.0625** |
+| fair CRPS (%) | +1.68 | 1.81 | +2.07 | 4/5 | 0.1875 | 0.0625 |
+| qL1 | +0.0003 | 0.0111 | +0.07 | 2/5 | 1.0000 | 0.0625 |
+
+**Verdict: underpowered and confounded. Neither supported nor refuted.**
+
+1. At n = 5 the attainable floor 0.0625 is above alpha = 0.05, so unanimity plus t = -4.60 still
+   cannot reject. This is `sol_peak`'s "registered decision rule is unattainable at the n it
+   headlines", now demonstrated on the data rather than argued.
+2. The contrast reads replicates at step 1200 against `multi3` at its endpoint, so it carries the
+   checkpoint-position term: one save interval moves R by up to 0.1647, **2.4x** the 0.0679 contrast.
+3. Round 1 and the parent cannot enter the comparison. `parent_multi2` is scored on META only and
+   `wm_ft_multi` on no ticker at all. **That is a gap in what was scored, not in compute.**
+
+**K and calibration-member dependency.** K = 2 in **all 239** scored records, so no K-dependence is
+estimable from them. Raising K would not license the comparison either: the fair-CRPS bias against
+a single run is **flat in K** (-0.852%, CI [-1.734, +0.018]), and every run reuses generation seeds
+97901/97902, which couples them -- cross-run correlation +0.389 when the seed is shared against
++0.139 when it is not, and the coupled Dbar (13.70e-5) falls **below** Wbar (14.93e-5), which
+independent draws cannot do. A larger K is not evidence that the scoring is right.
+
+### Next condition (unchanged in kind, now precise)
+
+64 cells missing: 8 new seeds x 8 tickers at step 1200, plus `parent_multi2` and `wm_ft_multi` on
+the seven tickers they lack. **0 idle cards at 05:0x**, so this waits on GPUs rather than on a
+decision. When cards free: score those cells with K = 2 and generation seeds 97901/97902 to stay
+commensurable with the existing 39, then recompute at n3 = 13 where the floor is 2/2^13 = 0.00024.
+Also worth scoring `multi3` at step 1200 so the contrast stops carrying the checkpoint-position term.

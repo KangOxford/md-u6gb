@@ -37,7 +37,7 @@ from a committed artifact, the cell says so.
 """)
 
 code(r"""
-import json, os, math, io
+import json, os, math, io, itertools
 from pathlib import Path
 import numpy as np
 from scipy import stats
@@ -486,7 +486,14 @@ md(r"""
 ## 8. What more compute can and cannot buy
 
 The between-round comparison has one replicate count on each side. They are not symmetric: the
-standard error and the Welch degrees of freedom are pinned by the *smaller* one.
+standard error and the Welch degrees of freedom are pinned by the *smaller* one. Eight further
+round-3 replicates were trained on 2026-09-05 and their step-1200 checkpoints verified by
+restore, so `n_3` can be 13 once they are scored.
+
+The panel below also shows what the five already-scored replicates say, with the **training seed**
+as the independent unit and the **ticker** as the pairing basis. On `R` all five agree in sign and
+the paired t is large. The permutation test still cannot reject, because at `n = 5` its attainable
+floor is `2/2^5 = 0.0625`, which lies above 0.05. That is a property of the design, not of the data.
 """)
 
 code(r"""
@@ -496,48 +503,104 @@ sd_gen    = 0.0133          # generation-realisation se
 def se_between(n3, n4):
     return math.sqrt(sd_within**2 / n3 + sd_within**2 / n4 + sd_gen**2)
 
-n3_now, n4_now, n3_after = 5, 30, 13
+n3_scored, n4_now, n3_after = 5, 30, 13
 
-fig, ax = plt.subplots(1, 2, figsize=(7.4, 2.9))
+# The five scored round-3 replicates, read with the training seed as the unit and the
+# ticker as the pairing basis. Reference is multi3 at its own endpoint.
+TICKS = ["AMD","AMZN","GOOG","INTC","JPM","META","MSFT","NFLX"]
+TRAJ = [json.loads(l) for l in (HOME/"traj_scores.jsonl").read_text().splitlines() if l.strip()]
+refR = {r["ticker"]: float(r["sd_ratio"]) for r in PANEL if r["arm"]=="multi3" and r["step"]=="final"}
+repR = {}
+for r in TRAJ:
+    a = str(r["traj"])
+    if a.startswith("wm_ft_traj3_s") and str(r["step"]) == "1200":
+        repR.setdefault(int(a.split("_s")[-1]), {})[r["ticker"]] = float(r["sd_ratio"])
+seeds = sorted(repR)
+per_seed = np.array([np.mean([repR[s][t] - refR[t] for t in TICKS if t in repR[s]]) for s in seeds])
+
+def signflip(x):
+    n = len(x); m = x.mean()
+    c = sum(1 for f in itertools.product([-1,1], repeat=n)
+            if abs((x*np.array(f)).mean()) >= abs(m) - 1e-15)
+    return c/2**n, 2/2**n
+
+p_sf, floor_sf = signflip(per_seed)
+t_sf = per_seed.mean()/(per_seed.std(ddof=1)/math.sqrt(len(per_seed)))
+
+fig, ax = plt.subplots(1, 3, figsize=(7.4, 2.7))
 
 a = ax[0]
 ns = np.arange(2, 41)
-a.plot(ns, [se_between(n, n4_now) for n in ns], color=HL, lw=1.4, label=f"vary $n_3$ ($n_4$ = {n4_now})")
-a.plot(ns, [se_between(n3_now, n) for n in ns], color=CTRL, lw=1.4, label=f"vary $n_4$ ($n_3$ = {n3_now})")
-a.plot([n3_now], [se_between(n3_now, n4_now)], "o", color=INK, ms=6, zorder=5)
+a.plot(ns, [se_between(n, n4_now) for n in ns], color=HL, lw=1.4, label=f"vary $n_3$ ($n_4$={n4_now})")
+a.plot(ns, [se_between(n3_scored, n) for n in ns], color=CTRL, lw=1.4, label=f"vary $n_4$ ($n_3$={n3_scored})")
+a.plot([n3_scored], [se_between(n3_scored, n4_now)], "o", color=INK, ms=6, zorder=5)
 a.plot([n3_after], [se_between(n3_after, n4_now)], "s", color=HL, ms=6, zorder=5)
-a.annotate(f"now\n$n_3$={n3_now}", xy=(n3_now, se_between(n3_now, n4_now)),
-           xytext=(7.5, se_between(n3_now, n4_now) + 0.004), fontsize=7, color=INK,
-           arrowprops=dict(arrowstyle="->", color=INK, lw=0.8))
-a.annotate(f"after the runs\nlaunched today\n$n_3$={n3_after}", xy=(n3_after, se_between(n3_after, n4_now)),
-           xytext=(18, se_between(n3_after, n4_now) + 0.006), fontsize=7, color=HL,
-           arrowprops=dict(arrowstyle="->", color=HL, lw=0.8))
+a.annotate(f"scored\n$n_3$={n3_scored}", xy=(n3_scored, se_between(n3_scored, n4_now)),
+           xytext=(8, se_between(n3_scored, n4_now)+.004), fontsize=6.5, color=INK,
+           arrowprops=dict(arrowstyle="->", color=INK, lw=.7))
+a.annotate(f"trained\n$n_3$={n3_after}", xy=(n3_after, se_between(n3_after, n4_now)),
+           xytext=(19, se_between(n3_after, n4_now)+.006), fontsize=6.5, color=HL,
+           arrowprops=dict(arrowstyle="->", color=HL, lw=.7))
 a.set_xlabel("replicates on that side"); a.set_ylabel("between-round SE")
-a.set_title("Only the smaller side moves the interval")
-a.legend(frameon=False)
+a.set_title("Only the smaller side moves it", fontsize=8.5)
+a.legend(frameon=False, fontsize=6.5)
 
 b = ax[1]
-b.bar(["round 3", "round 4"], [n3_now, n4_now], color=[HL, CTRL], width=0.5, alpha=0.9)
-b.bar(["round 3"], [n3_after - n3_now], bottom=[n3_now], color=HL, width=0.5, alpha=0.4,
-      hatch="//", edgecolor=HL, label="launched 2026-09-05")
-for i, v in enumerate([n3_now, n4_now]):
-    b.text(i, v + 0.6, str(v), ha="center", fontsize=8)
-b.text(0, n3_after + 0.6, f"-> {n3_after}", ha="center", fontsize=7, color=HL)
-b.set_ylabel("replicates with a step-1200 checkpoint")
-b.set_title("Replicate inventory, read from breadcrumbs")
-b.legend(frameon=False, loc="upper left")
+b.bar(["round 3","round 4"], [n3_scored, n4_now], color=[HL, CTRL], width=.5, alpha=.9, label="scored")
+b.bar(["round 3"], [n3_after-n3_scored], bottom=[n3_scored], color=HL, width=.5, alpha=.35,
+      hatch="//", edgecolor=HL, label="trained, checkpoints\nverified, not yet scored")
+b.text(0, n3_scored-1.6, str(n3_scored), ha="center", fontsize=8, color="white")
+b.text(1, n4_now-3.0, str(n4_now), ha="center", fontsize=8, color="white")
+b.text(0, n3_after+.7, f"{n3_after}", ha="center", fontsize=7.5, color=HL)
+b.set_ylabel("replicates at step 1200")
+b.set_title("Inventory, read from restores", fontsize=8.5)
+b.legend(frameon=False, fontsize=6, loc="upper left")
+
+c = ax[2]
+y = np.arange(len(seeds))
+c.barh(y, per_seed, color=[HL if v < 0 else CTRL for v in per_seed], height=.55, alpha=.9)
+c.axvline(0, color=INK, lw=.9)
+c.axvline(per_seed.mean(), color=INK, ls="--", lw=.9)
+c.set_yticks(y); c.set_yticklabels([f"seed {s}" for s in seeds], fontsize=6.5)
+c.invert_yaxis()
+c.set_xlabel(r"$\Delta R$ vs multi3, ticker-paired")
+c.set_title(f"All {len(seeds)} agree; p cannot go below {floor_sf:.4f}", fontsize=8.5)
+c.text(.03, .06, f"mean {per_seed.mean():+.4f}\nt {t_sf:+.2f} (df {len(seeds)-1})\n"
+       f"sign-flip p {p_sf:.4f}\nfloor 2/2$^{{{len(seeds)}}}$ = {floor_sf:.4f}",
+       transform=c.transAxes, fontsize=6.2, va="bottom",
+       bbox=dict(boxstyle="round,pad=0.32", fc=CTRL, ec="none", alpha=.13))
 
 show(fig, "f7_sample_sizes")
-print(f"SE now                 {se_between(n3_now, n4_now):.5f}")
-print(f"SE at n3 = {n3_after}          {se_between(n3_after, n4_now):.5f}   ({100*(1-se_between(n3_after,n4_now)/se_between(n3_now,n4_now)):.1f}% tighter)")
-print(f"SE at n4 -> infinity   {se_between(n3_now, 10**6):.5f}   ({100*(1-se_between(n3_now,10**6)/se_between(n3_now,n4_now)):.1f}% tighter)")
+print(f"SE now (n3={n3_scored})      {se_between(n3_scored, n4_now):.5f}")
+print(f"SE at n3 = {n3_after}          {se_between(n3_after, n4_now):.5f}   "
+      f"({100*(1-se_between(n3_after,n4_now)/se_between(n3_scored,n4_now)):.1f}% tighter)")
+print(f"SE at n4 -> infinity   {se_between(n3_scored, 10**6):.5f}   "
+      f"({100*(1-se_between(n3_scored,10**6)/se_between(n3_scored,n4_now)):.1f}% tighter)")
+print(f"\nround-3 replicates vs multi3, unit = training seed, paired on ticker:")
+print(f"  per-seed dR: {np.array2string(per_seed, precision=4, floatmode='fixed')}")
+print(f"  mean {per_seed.mean():+.4f}  sd {per_seed.std(ddof=1):.4f}  t {t_sf:+.2f}  "
+      f"negative {int((per_seed<0).sum())}/{len(per_seed)}")
+print(f"  sign-flip p {p_sf:.4f}; attainable floor 2/2^{len(seeds)} = {floor_sf:.4f} > 0.05")
+print(f"  K (generation seeds) in every scored record: {sorted({r['n_seeds'] for r in TRAJ})}")
 """)
 
 md(r"""
 **Reading.** Adding round-4 replicates is nearly free of information: driving `n_4` to infinity
-tightens the interval by a few per cent and leaves the degrees of freedom where they were.
-Round 3 is where the missing information is. Eight further round-3 replicates were launched on
-2026-09-05, which takes `n_3` from five to thirteen.
+tightens the interval by a few per cent and leaves the degrees of freedom where they were. Round 3
+is where the missing information is, and the eight replicates trained on 2026-09-05 take `n_3` from
+five to thirteen once scored.
+
+The right panel is the reason the count matters. All five scored replicates move `R` the same way
+against `multi3`, with a paired t of about `-4.6`. The permutation test returns `0.0625` anyway,
+because that is the smallest value it can return at `n = 5`. Unanimity plus a large t still cannot
+clear 0.05 when the floor sits above it.
+
+Two cautions on that contrast. It compares replicates read at step 1200 against `multi3` read at
+its endpoint, so it carries the checkpoint-position term that section 4 showed is the largest one
+here; and `K = 2` in every one of the 239 scored records, so no K-dependence can be estimated from
+these data at all. Raising `K` would not repair it either: the fair-CRPS bias against a single run
+is flat in `K`, and every run reuses generation seeds 97901/97902, which couples the runs
+(cross-run correlation `+0.389` when the seed is shared against `+0.139` when it is not).
 """)
 
 md(r"""
@@ -555,6 +618,11 @@ ledger = [
  ("maxT family-wise error rate",    "0.042 (claimed)",    "0.076-0.082 (measured)", "calibrated on the wrong curve"),
  ("cosine LR confound at step 1200","8.9x",               "1.0x (no schedule exists)", "metadata field never reaches optax"),
  ("sign-flip p, all contrasts",     "0.0078",             "0.0078 = the floor",  "not a measurement; 2/2^8"),
+ ("round-3 replicates at step 1200","n = 5 (assumed pending)", f"n = 13 trained, {n3_scored} scored", "8 checkpoints verified by restore 2026-09-05"),
+ ("round-3 paired dR vs multi3",    "not reported",       f"{per_seed.mean():+.4f}, t {t_sf:+.2f}, {int((per_seed<0).sum())}/{len(per_seed)}", "training seed as unit, ticker as pairing basis"),
+ ("its sign-flip p",                "not reported",       f"{p_sf:.4f} = the floor at n=5", "2/2^5 = 0.0625 lies ABOVE alpha = 0.05"),
+ ("K in every scored record",       "assumed variable",   "2, uniformly (239/239)",  "no K ladder exists; K-dependence unmeasurable"),
+ ("run independence",               "assumed",            "coupled by common seeds", "cross-run r +0.389 same seed vs +0.139 different"),
 ]
 w = [34, 22, 26, 44]
 hdr = ("quantity", "as published", "corrected", "why it changed")
@@ -581,8 +649,21 @@ eight units agreed, not that the effect is large.
 round-to-round effect of `0.090`. Any comparison between arms at a single hand-picked step is
 reading a quantity whose largest source of variation is which step was picked.
 
-**The remaining measurable thing is round 3.** With `n_3 = 5` against `n_4 = 30`, the interval and
-the degrees of freedom are set by round 3 alone. That is the run that was launched.
+**The remaining measurable thing is round 3.** With `n_3 = 5` scored against `n_4 = 30`, the
+interval and the degrees of freedom are set by round 3 alone. Eight further replicates were trained
+on 2026-09-05 and their step-1200 checkpoints verified by full restore &mdash; 386 arrays,
+159,374,987 elements, all finite, identical in structure to the reference &mdash; so `n_3 = 13` is
+available as soon as those checkpoints are scored.
+
+**The verdict at the sample size actually in hand: still underpowered, and confounded.** Not
+supported, not refuted. Three separate reasons, each sufficient on its own:
+
+1. At `n_3 = 5` the permutation test bottoms out at `0.0625`, above `alpha = 0.05`. Five out of five
+   replicates agreeing with a paired t of `-4.6` still cannot reject.
+2. The contrast reads replicates at step 1200 against `multi3` at its endpoint, so it carries the
+   checkpoint-position term, which moves `R` by up to `0.165` &mdash; 2.4 times the contrast itself.
+3. The comparison against round 1 and against the parent cannot be formed at all: `parent_multi2` is
+   scored on one ticker and `wm_ft_multi` on none. That is a gap in what was scored, not in compute.
 
 **One methodological note that outlives this study.** An adversarial reviewer confirmed a
 learning-rate schedule that does not exist in the code, from a metadata field, and a second agent

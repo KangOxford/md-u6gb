@@ -20,6 +20,11 @@ LEDGER = [
  ("maxT family-wise error rate",       "0.042 claimed",       "0.076&ndash;0.082 measured",  "Calibrated on the single-contrast curve", False),
  ("Cosine LR confound at step 1200",   "8.9&times;",          "1.0&times; &mdash; no schedule exists", "A metadata field that reaches nothing", True),
  ("Sign-flip p, all three contrasts",  "0.0078",              "0.0078 = the floor",         "Not a measurement; it is 2/2<sup>8</sup>", True),
+ ("Round-3 replicates at step 1200",   "n = 5",               "n = 13 trained, 5 scored",   "Eight checkpoints verified by full restore, 2026-09-05", False),
+ ("Round-3 paired &Delta;R vs multi3", "not reported",        "&minus;0.0679, t &minus;4.60, 5/5", "Training seed as unit, ticker as pairing basis", True),
+ ("&hellip; its sign-flip p",          "not reported",        "0.0625 = the floor at n = 5", "2/2<sup>5</sup> lies <em>above</em> &alpha; = 0.05", True),
+ ("K in every scored record",          "assumed variable",    "2, uniformly (239/239)",     "No K ladder exists, so K-dependence is unmeasurable", False),
+ ("Run independence",                  "assumed",             "coupled by common seeds",    "Cross-run r +0.389 shared seed vs +0.139 not", False),
 ]
 
 SECTIONS = [
@@ -89,14 +94,19 @@ SECTIONS = [
 
  ("07", "What more compute can and cannot buy",
   """<p>The between-round comparison has one replicate count on each side, and they are not symmetric. The
-  standard error and the Welch degrees of freedom are pinned by the smaller one. Read from breadcrumbs:
-  <strong>n<sub>3</sub> = 5</strong> against <strong>n<sub>4</sub> = 30</strong> at step 1200.</p>""",
-  "f7_sample_sizes", "Between-round standard error against each replicate count, and the replicate inventory",
+  standard error and the Welch degrees of freedom are pinned by the smaller one:
+  <strong>n<sub>3</sub> = 5</strong> scored against <strong>n<sub>4</sub> = 30</strong> at step 1200.
+  Eight further round-3 replicates finished on 2026-09-05; their step-1200 checkpoints restore to
+  386 arrays and 159,374,987 finite elements, structurally identical to the reference, so
+  n<sub>3</sub> = 13 is available as soon as they are scored.</p>""",
+  "f7_sample_sizes", "Between-round standard error against each replicate count, the replicate inventory, and the paired contrast the five scored replicates support",
   """Adding round-4 replicates is nearly free of information: driving n<sub>4</sub> to infinity tightens the
   interval by 5.9% and leaves the degrees of freedom where they were. Round 3 is where the missing
-  information is &mdash; n<sub>3</sub> from 5 to 13 tightens it by 23.9%. Eight further round-3 replicates
-  were launched on 2026-09-05 on cards verified empty inside the job step, capped at three per node because
-  host RAM rather than GPU is the binding constraint."""),
+  information is &mdash; n<sub>3</sub> from 5 to 13 tightens it by 23.9%.
+  The right panel is why the count matters. All five scored replicates move R the same way against
+  multi3, paired on ticker, with a paired t of &minus;4.60. The permutation test returns 0.0625 anyway,
+  because that is 2/2<sup>5</sup> and it is the smallest value the test can produce at this n. Unanimity
+  and a large t cannot clear a floor set by the sample size."""),
 ]
 
 rows = "\n".join(
@@ -239,10 +249,11 @@ footer {{ margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--rule
   <div class="provenance">
     <div><b>Repository</b><span>KangOxford/sigma-0 (private)</span></div>
     <div><b>Branch</b><span>audit/crps-return-alignment-20260905</span></div>
-    <div><b>Commit</b><span>a7a1cb8eed852dd74b14925eaec9b6fae298e9ad</span></div>
+    <div><b>Commit</b><span>ab7a38205f630496115cf9b305d146e6f7957771</span></div>
     <div><b>Pull request</b><span>#76</span></div>
     <div><b>Notebook</b><span>10 code cells, 0 errors, 7 figures</span></div>
     <div><b>Replicates measured</b><span>18 fine-tuning runs</span></div>
+    <div><b>Round-3 replicates</b><span>13 trained &middot; 5 scored</span></div>
   </div>
 </header>
 
@@ -274,6 +285,12 @@ footer {{ margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--rule
   <p>One save interval moves R by up to 0.165, against a round-to-round effect of 0.090. Any comparison
   between arms at a single hand-picked step is reading a quantity whose largest source of variation is which
   step was picked.</p>
+  <h3>The verdict at the sample size in hand: underpowered, and confounded.</h3>
+  <p>Neither supported nor refuted, for three reasons each sufficient alone. At n<sub>3</sub> = 5 the
+  permutation test bottoms out above &alpha;. The contrast reads replicates at step 1200 against multi3 at
+  its endpoint, so it carries the checkpoint-position term that moves R by 2.4 times the contrast itself.
+  And round 1 and the parent cannot enter the comparison at all: parent_multi2 is scored on one ticker and
+  wm_ft_multi on none &mdash; a gap in what was scored, not in compute.</p>
   <h3>One methodological note that outlives this study.</h3>
   <p>An adversarial reviewer confirmed a learning-rate schedule that does not exist in the code, from a
   metadata field, and a second agent reproduced its arithmetic. Reading the value that was recorded rather
