@@ -239,3 +239,11 @@ correct statement about how many trajectories a given effect needs at a given sd
 statement about what should be run, and with replicates already accumulating it is not even a
 statement about what is missing. Whoever owns the `wm_ft_traj*` line should be asked what they
 are measuring before this section is acted on.
+
+> **Withdrawn 2026-09-05 (round 5).** The sentence above saying `s_trajectory` "can be
+> estimated today from the completed `wm_ft_traj_s*` runs at step 4800, for zero GPU cost"
+> is **wrong**. Those runs have **no matching evaluation**: `sweep_results.jsonl` contains
+> only `multi4`/`unifw`/`multi3` arms, `crps_panel.jsonl` has zero traj rows, and the task
+> root's `data/` has no traj rollout directories. Twelve trajectories are trained and none is
+> scored, so estimating the rung on the published estimand needs generation and scoring —
+> GPU work, not a free read. See `round5/TRAJECTORY_LEDGER.md`.
