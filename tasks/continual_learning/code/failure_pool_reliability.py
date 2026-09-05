@@ -597,6 +597,47 @@ def dispersion_partial_floor(n_ctx: int, n_seed: int, k: int, rng: np.random.Gen
     return out.get("fraction_kept", float("nan"))
 
 
+def strata_of(realised: np.ndarray, n_bins: int = 10) -> np.ndarray:
+    """The stratum id `stratify_v2` uses: 0 for the zero-move atom, 1..n_bins above it."""
+    a = np.abs(realised)
+    out = np.zeros(a.size, dtype=int)
+    pos = a > 0
+    if pos.sum():
+        av = a[pos]
+        edges = np.quantile(av, np.linspace(0.0, 1.0, n_bins + 1))
+        edges[-1] += 1e-12
+        out[pos] = 1 + np.clip(np.digitize(av, edges[1:-1]), 0, n_bins - 1)
+    return out
+
+
+def select_within_stratum(score: np.ndarray, realised: np.ndarray, frac: float,
+                          n_bins: int = 10) -> np.ndarray:
+    """Take the top `frac` inside each stratum, rather than the global top `frac`.
+
+    D1 section 2's prescription, and the half of it that binning alone does not fix. A global
+    selection over within-stratum ranks is not balanced on |realised move| when the strata
+    have very different sizes: a 250-member stratum resolves its ranks to 1/249 and a
+    50-member one to 1/49, so the larger stratum supplies more of the top of the global
+    ordering than its share. Selecting inside each stratum makes the pool's stratum
+    composition equal the population's by construction.
+    """
+    st = strata_of(realised, n_bins)
+    chosen: List[int] = []
+    for sid in np.unique(st):
+        idx = np.flatnonzero(st == sid)
+        k = int(round(frac * idx.size))
+        if k <= 0:
+            continue
+        order = idx[np.argsort(-score[idx], kind="mergesort")]
+        chosen.extend(order[:k].tolist())
+    return np.array(sorted(chosen), dtype=int)
+
+
+def select_global(score: np.ndarray, frac: float) -> np.ndarray:
+    n = max(1, int(round(frac * score.size)))
+    return np.array(sorted(np.argsort(-score, kind="mergesort")[:n].tolist()), dtype=int)
+
+
 def pool_overlap(real: np.ndarray, gen: np.ndarray, horizon_idx: int,
                  frac: float = 0.10) -> float:
     """How much of the naive top-decile pool survives the correction.

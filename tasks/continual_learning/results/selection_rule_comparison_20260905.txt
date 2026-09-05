@@ -1,0 +1,16 @@
+
+=== primary_exclude28  (n contexts = 8 tickers) ===
+          rule | Y_v1 mean Y_v2 mean | bal mean | bal closer to 1 than R_v2_global
+----------------------------------------------------------------------------------
+   R_v1_global |     0.857     0.815 |    1.421 |                            1/8
+   R_v2_global |     0.778     0.806 |    1.324 |                            0/8
+   R_v2_within |     0.777     0.806 |    1.294 |                            6/8
+
+=== sensitivity_include28  (n contexts = 8 tickers) ===
+          rule | Y_v1 mean Y_v2 mean | bal mean | bal closer to 1 than R_v2_global
+----------------------------------------------------------------------------------
+   R_v1_global |     0.862     0.828 |    1.353 |                            2/8
+   R_v2_global |     0.785     0.812 |    1.307 |                            0/8
+   R_v2_within |     0.788     0.817 |    1.255 |                            6/8
+
+wrote ../results/selection_rule_comparison_20260905.json
