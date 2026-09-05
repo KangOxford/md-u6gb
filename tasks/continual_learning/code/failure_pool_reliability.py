@@ -349,7 +349,8 @@ def split_half(real: np.ndarray, gen: np.ndarray, k: int, n_draws: int,
 
 
 def regeneration_null(root: Path, cfg_a: str, cfg_b: str, ticker: str,
-                      key: str) -> Dict[str, float]:
+                      key: str, horizon_idx: Optional[int] = None,
+                      stratified: bool = False) -> Dict[str, float]:
     """Same config, same seeds, two independent generations.
 
     This is the ceiling on any per-context ranking: whatever agreement two full
@@ -369,9 +370,15 @@ def regeneration_null(root: Path, cfg_a: str, cfg_b: str, ticker: str,
         return {"error": "real arms differ between configs"}
     sa = scores(ra, ga)[key]
     sb = scores(rb, gb)[key]
-    rhos = [spearman(sa[:, h], sb[:, h]) for h in range(ra.shape[1])]
+    if stratified:
+        sa = np.stack([stratify(sa[:, j], ra[:, j]) for j in range(sa.shape[1])], 1)
+        sb = np.stack([stratify(sb[:, j], rb[:, j]) for j in range(sb.shape[1])], 1)
+    # Averaging all seven horizons here while every other reading is at one horizon is
+    # the same defect A1 fixed elsewhere; the grand mean 0.846 came from this path.
+    hs = list(range(ra.shape[1])) if horizon_idx is None else [horizon_idx]
+    rhos = [spearman(sa[:, h], sb[:, h]) for h in hs]
     per = []
-    for h in range(ra.shape[1]):
+    for h in hs:
         n_top = max(1, round(0.10 * sa.shape[0]))
         top = np.argsort(-sa[:, h])[:n_top]
         ga_ = sa[top, h].mean() - sa[:, h].mean()
@@ -381,6 +388,7 @@ def regeneration_null(root: Path, cfg_a: str, cfg_b: str, ticker: str,
     return {
         "k": len(common),
         "seeds": common,
+        "horizons_used": [HORIZONS[h] for h in hs], "stratified": stratified,
         "rho_per_horizon": [float(r) for r in rhos],
         "rho_mean": float(np.nanmean(rhos)),
         "top_decile_persistence": float(np.nanmean(per)) if per else float("nan"),
@@ -617,12 +625,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "horizon_idx": a.horizon_idx, "horizon": HORIZONS[a.horizon_idx],
             "pool_overlap_raw_vs_stratified": pool_overlap(real, gen, a.horizon_idx),
         }
-        n_raw = {r["n_pairs"] for r in sh_raw}
-        n_str = {r["n_pairs"] for r in sh_str}
-        assert n_raw == n_str, (
-            f"reporting paths disagree on the horizon set: raw n_pairs={n_raw}, "
-            f"stratified n_pairs={n_str}. A reliability quoted from one path against the "
-            f"other is not a comparison.")
+        # This used to compare two sets built from `a.horizon_idx` a few lines apart, so
+        # it could not fail on any input -- a guard that cannot go red. Compare against the
+        # horizon count each path *should* produce, derived from the data, so a path that
+        # silently reverts to averaging all horizons is caught.
+        expected = a.draws * (1 if a.horizon_idx is not None else real.shape[1])
+        for lab, rows in (("raw", sh_raw), ("stratified", sh_str)):
+            got = {r["n_pairs"] for r in rows}
+            assert got == {expected}, (
+                f"{lab} path produced n_pairs={got}, expected {{{expected}}} for "
+                f"draws={a.draws}, horizon_idx={a.horizon_idx}. A path that averages a "
+                f"different number of horizons is not comparable with the other.")
         entry["stratification_leak"] = stratification_leak()
         report["tickers"][tk] = entry
         print(f"[{tk}] n={real.shape[0]} S={len(seeds)}", flush=True)
@@ -639,7 +652,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ca, cb = a.null_configs
     for tk in a.tickers:
         try:
-            n = regeneration_null(a.root, ca, cb, tk, a.key)
+            n = regeneration_null(a.root, ca, cb, tk, a.key,
+                                  horizon_idx=a.horizon_idx, stratified=True)
         except (FileNotFoundError, ValueError) as e:
             n = {"error": str(e)}
         report["null"][tk] = n

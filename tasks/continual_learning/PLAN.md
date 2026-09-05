@@ -1,7 +1,7 @@
 # Continual Learning for sigma-0: Plasticity Measurement and Continual Pre-Training Plan
 
 > Task dir: `tasks/continual_learning/` · Source research: `deep-reseach.md` (two-pass deep research, 2026-08-26)
-> **Status: MERGED PLAN, revision 4 (2026-09-05).** Five facet drafts under `plan_drafts/`
+> **Status: MERGED PLAN, revision 5 (2026-09-05).** Five facet drafts under `plan_drafts/`
 > are the detail; this file is the spine and the decision record. Green marks what is done,
 > ~~strikethrough~~ marks what measurement has overturned. Not yet adversarially reviewed —
 > see §0.4.
@@ -27,7 +27,7 @@ those facets were killed by a session limit. Everything below is traceable to a 
 | F7 | Doing nothing moves an arm-level endpoint by up to 28%; training-seed variance has **never been measured on this project** | `plan_drafts/02` §2.3 |
 | F8 | `k >= 20` is a *selection* requirement for a per-context ranked list. For a **training pool**, false positives dilute rather than contaminate, and cost-per-power favours small k by 2.4× | `plan_drafts/02` §3.2 |
 | F9 | For a paired arm comparison only `R = N·k` matters; the 1/sqrt(R) law holds to 1% | `plan_drafts/02` §3.3 |
-| F10 | `wm_ft_multi3` holds **one** checkpoint (69378) with **no Muon optimizer state** (418.6 MB vs the selftrain chain's 499.5 MB); the selftrain chain holds 17 (275…69378) | measured 2026-09-05, `plan_drafts/01` §1.1 |
+| ~~F10~~ | **REFUTED by R1, see §0.11.** ~~`wm_ft_multi3` holds one checkpoint (69378) with **no Muon optimizer state** (418.6 MB vs the selftrain chain's 499.5 MB); the selftrain chain holds 17 (275…69378) | measured 2026-09-05, `plan_drafts/01` §1.1 |
 | F11 | One rollout member costs **3,007 inodes / 67 MB**; the analysis reads only 112 KB of `.npz` from it | `plan_drafts/03` §3.2 |
 | F12 | The project sat **118 inodes** from its hard cap at 2026-09-04 17:54Z; the 741,511 now free were released by cleanup over nine hours, and are borrowed headroom rather than a baseline | `plan_drafts/03` §3.3 |
 | F13 | The real arm is byte-identical across seeds (md5-verified), so writing it once per ticker halves the per-member inode cost | `plan_drafts/05` §5.3 |
@@ -154,6 +154,28 @@ decision-relevant number of the round.
 **Reliability budget**: per the standing instruction, the `k ≤ 5` extrapolation to `k ≈ 21`
 is **not** used as a budget anywhere in this revision. Every figure above is quoted at the
 `k` it was measured at.
+
+---
+
+### 0.11 Revision 5 (2026-09-05) — independent review R1 overturns four conclusions
+
+`plan_drafts/R1_review_of_01_03_06.md`, the first of the five independent reviews (launched
+alone; a batch of five exhausted the quota). 17 findings, four BLOCKING. Each re-derived here
+before acceptance; full detail and commands in `results/RESULTS_20260905.md` addendum.
+
+| finding | verdict | what it overturns |
+|---|---|---|
+| ~~"A-to-B is impossible"~~ | **REFUTED** | `wm_ft_multi3` has a **32-rung sibling ladder** `_step150…_step4800` that `01` never searched (it looked only *inside* the directory), Muon state **is** on disk (282 mentions, 835 entries, identical on both roots), and the two `_ROOT_METADATA` are **byte-identical** (md5 `028879b3…`) so step 69378 is inherited, not coincident. **F10, X4 and §0.6's "same regeneration" argument are struck** pending redo |
+| Archive rewritten mid-round | **CONFIRMED** | Every `.returns_multih_*.npz` has mtime **2026-09-05 02:36–02:37Z**, between the audited commit and the corrected run. `06`'s "reproduces the audit" comparisons are across **two datasets**. No number here is anchored until the archive is pinned by content hash — which is exactly what P2 requires |
+| Onset law vs run length | **CONFIRMED** | `deep-reseach.md:2315`: `T = 1.3e-5·P^0.8269` in 5B-token instances. At P = 76M that is **214B tokens**; this run is 3.608B = **1.69%**. ~~M6 as scoped~~ will read ABSENT for reasons unrelated to plasticity. Reframe onto the 32-rung ladder, or defer the plasticity thread on evidence |
+| Step 2 never ran | **CONFIRMED** | `node_wrapper.sh:342` blanks `SQUASHFS_MULTI_MOUNT_ROOT` unconditionally, so line 370's `:-` default always fires and `attach_adaptation.sh`'s unique mount root never applies (`Transport endpoint is not connected` in both probe logs). It also makes both M6 members share one mount root. **A knob that never reaches the code** — this project's own documented failure shape |
+| My A1 guard could not fire | **FIXED** | It compared two sets built from the same variable in the same function body. Now derives its expectation from the data; verified red. `regeneration_null` also still averaged 7 horizons on the raw score — at H=50 stratified it reads **0.726–0.875, mean 0.808**, not 0.846 |
+
+R1 also **closes the `num_devices = 1` caveat** independently (a `[FLOPs] Tokens/step: 52,000`
+line and `Peak BF16 (1 GPUs)`), so §0.7's token table stands.
+
+**The lesson on my side**: `01` reported an absence found by a narrow search. An absence
+found by a narrow search is a statement about the search, not about the world.
 
 ---
 
