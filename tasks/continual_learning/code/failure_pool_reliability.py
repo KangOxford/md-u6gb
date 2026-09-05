@@ -597,21 +597,38 @@ def dispersion_partial_floor(n_ctx: int, n_seed: int, k: int, rng: np.random.Gen
     return out.get("fraction_kept", float("nan"))
 
 
-def strata_of(realised: np.ndarray, n_bins: int = 10) -> np.ndarray:
+def stratum_edges(realised: np.ndarray, n_bins: int = 10) -> np.ndarray:
+    """Quantile edges of the strictly positive |realised move|, fittable on one context set.
+
+    Separated from `strata_of` so the edges can be **frozen on one set of contexts and
+    applied to another**. Without that separation there is no way to ask whether the
+    stratification transfers, because every application refits on the data it is applied to.
+    """
+    a = np.abs(realised)
+    av = a[a > 0]
+    if av.size == 0:
+        return np.array([0.0, 1.0])
+    e = np.quantile(av, np.linspace(0.0, 1.0, n_bins + 1))
+    e[-1] += 1e-12
+    return e
+
+
+def strata_of(realised: np.ndarray, n_bins: int = 10,
+              edges: Optional[np.ndarray] = None) -> np.ndarray:
     """The stratum id `stratify_v2` uses: 0 for the zero-move atom, 1..n_bins above it."""
     a = np.abs(realised)
     out = np.zeros(a.size, dtype=int)
     pos = a > 0
     if pos.sum():
-        av = a[pos]
-        edges = np.quantile(av, np.linspace(0.0, 1.0, n_bins + 1))
-        edges[-1] += 1e-12
-        out[pos] = 1 + np.clip(np.digitize(av, edges[1:-1]), 0, n_bins - 1)
+        e = stratum_edges(realised, n_bins) if edges is None else edges
+        nb = e.size - 1
+        out[pos] = 1 + np.clip(np.digitize(a[pos], e[1:-1]), 0, nb - 1)
     return out
 
 
 def select_within_stratum(score: np.ndarray, realised: np.ndarray, frac: float,
-                          n_bins: int = 10) -> np.ndarray:
+                          n_bins: int = 10,
+                          edges: Optional[np.ndarray] = None) -> np.ndarray:
     """Take the top `frac` inside each stratum, rather than the global top `frac`.
 
     D1 section 2's prescription, and the half of it that binning alone does not fix. A global
@@ -621,7 +638,7 @@ def select_within_stratum(score: np.ndarray, realised: np.ndarray, frac: float,
     ordering than its share. Selecting inside each stratum makes the pool's stratum
     composition equal the population's by construction.
     """
-    st = strata_of(realised, n_bins)
+    st = strata_of(realised, n_bins, edges)
     chosen: List[int] = []
     for sid in np.unique(st):
         idx = np.flatnonzero(st == sid)

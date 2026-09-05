@@ -1,0 +1,21 @@
+wrote ../results/twice_generated_contexts.json  (lineage kept; nothing deleted or moved)
+
+=== primary_exclude28   FIT=236  HELD=236 contexts ===
+         arm | Y_v2 mean | bal mean | from the 28
+----------------------------------------------------
+  T_transfer |     0.818 |    1.215 |           0
+    T_oracle |     0.794 |    1.211 |           0
+    T_global |     0.570 |    2.876 |           0
+  transfer cost (oracle - transfer) on Y_v2: mean -0.0242  sd 0.1475  |mean|/sd 0.16  positive in 4/8
+  transfer cost on |bal-1|:                  mean +0.0232  sd 0.1054
+
+=== sensitivity_include28   FIT=250  HELD=250 contexts ===
+         arm | Y_v2 mean | bal mean | from the 28
+----------------------------------------------------
+  T_transfer |     0.794 |    1.254 |          10
+    T_oracle |     0.791 |    1.235 |          14
+    T_global |     0.498 |    2.979 |          11
+  transfer cost (oracle - transfer) on Y_v2: mean -0.0033  sd 0.0820  |mean|/sd 0.04  positive in 4/8
+  transfer cost on |bal-1|:                  mean -0.0014  sd 0.0752
+
+wrote ../results/context_holdout_20260905.json

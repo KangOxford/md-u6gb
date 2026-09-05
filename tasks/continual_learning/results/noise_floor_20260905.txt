@@ -1,0 +1,39 @@
+Two floors on the same data, at k=2 per side.
+  matched : repro seeds {s0,s1} against repB seeds {s0,s1}  -- the two sides share draws
+  crossed : repro seeds {s0,s1} against repB seeds {s2,s3}  -- disjoint seeds, no sharing
+  phi     : fraction of (context, member) generated values bitwise identical, matched pair
+
+ ticker    H  seeds |    phi | matched sd crossed sd  ratio  1/sqrt(1-phi)
+------------------------------------------------------------------------------
+    AMD   10      4 |  0.964 |     0.1007     0.3365  3.340          5.270
+    AMD   50      4 |  0.647 |     0.2070     0.3576  1.728          1.683
+    AMD  250      4 |  0.139 |     0.3062     0.3496  1.142          1.078
+   AMZN   10      4 |  0.982 |     0.0644     0.3268  5.079          7.454
+   AMZN   50      4 |  0.723 |     0.2203     0.3522  1.599          1.900
+   AMZN  250      4 |  0.166 |     0.2960     0.3767  1.272          1.095
+   GOOG   10      4 |  0.982 |     0.0717     0.3355  4.681          7.454
+   GOOG   50      4 |  0.698 |     0.2234     0.3880  1.736          1.820
+   GOOG  250      4 |  0.145 |     0.3212     0.3866  1.204          1.081
+   INTC   10      4 |  0.985 |     0.0642     0.2919  4.546          8.165
+   INTC   50      4 |  0.772 |     0.2011     0.3249  1.615          2.094
+   INTC  250      4 |  0.356 |     0.2673     0.3554  1.329          1.246
+    JPM   10      4 |  0.950 |     0.0847     0.3545  4.187          4.472
+    JPM   50      4 |  0.475 |     0.2150     0.3679  1.711          1.380
+    JPM  250      4 |  0.050 |     0.3260     0.3625  1.112          1.026
+   META   10      4 |  0.941 |     0.1061     0.3528  3.325          4.117
+   META   50      4 |  0.479 |     0.2161     0.3404  1.575          1.385
+   META  250      4 |  0.059 |     0.2816     0.3430  1.218          1.031
+   MSFT   10      4 |  0.972 |     0.0819     0.3530  4.311          5.976
+   MSFT   50      4 |  0.604 |     0.2120     0.3563  1.681          1.589
+   MSFT  250      4 |  0.110 |     0.2883     0.3513  1.219          1.060
+   NFLX   10      4 |  0.995 |     0.0314     0.3052  9.728         14.142
+   NFLX   50      4 |  0.893 |     0.1365     0.3438  2.520          3.057
+   NFLX  250      4 |  0.649 |     0.2312     0.3714  1.607          1.688
+
+  H= 10: mean phi 0.971 | measured ratio 4.900 | predicted 1/sqrt(1-phi) 7.131 | does NOT track it -- mechanism not established
+  H= 50: mean phi 0.661 | measured ratio 1.771 | predicted 1/sqrt(1-phi) 1.864 | tracks the prediction
+  H=250: mean phi 0.209 | measured ratio 1.263 | predicted 1/sqrt(1-phi) 1.163 | tracks the prediction
+
+  Reported as two floors plus the measured sharing. Matched pairing is not rejected:
+  it is the right design when the two sides SHOULD share nuisance, and it is wrong only
+  to the extent measured here. No MDE and no budget is derived from any of it.
