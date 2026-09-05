@@ -782,32 +782,51 @@ show(fig, "f9_exchangeability")
 
 md(r"""
 **(a) The parent did not move.** `wm_ft_multi2/69378` was written on 2026-08-14 and nothing under it
-has been touched since, so both families restored the same bytes rather than the same path. Every
-one of the thirteen checkpoints carries `init_timestamp_nsecs = 1784451028850888013`, which is the
-**parent's own** value: the weights are restored, not initialised, so there is no per-run
-initialisation to differ.
+has been touched since, so both families restored the same bytes rather than the same path. Every one
+of the thirteen checkpoints carries `init_timestamp_nsecs = 1784451028850888013`, which is the
+**parent's own** value: the weights are restored, not initialised.
 
-**(b) One random stream.** The data order is
+**(b) One random stream, thirteen independent draws from it.** The data order is
 `numpy.random.default_rng(--train-seed).permutation(4800)`. Recomputing it from the current code
 reproduces the hash and the first eight indices that each run logged, for three seeds from each
-family. The mapping is one function, not two that happen to look alike.
+family. One deterministic map, thirteen distinct seeds.
 
-**(c) The units overlap, by exactly as much as chance.** Each run consumes the first 1500 of its own
-permutation of the same 4800-item pool, so any two share about 31% of their training items — and the
-measured mean, 31.18%, is the independent-subsampling expectation of 31.25%. The randomisation is
-sound; what this shows is the *scope*: the pool is fixed, and no item is seen by all thirteen.
+**(c) The overlap is what independence looks like.** Each run consumes the first 1500 of its own
+permutation of the same 4800-item pool, so any two share about 31% of their training items. The
+measured mean, 31.18%, is the independent-subsampling expectation of 31.25%. That is **evidence for
+independent streams, not against them** — dependent draws would not land on the expectation.
 
-### What the thirteen actually are
+### What the thirteen are, stated precisely
 
-Not thirteen independent training runs. **Thirteen independent data-order draws**, conditional on one
-restored initialisation, one 4800-item pool, one context set, and one pair of generation seeds
-(97901/97902). Any variance estimated from them is a **lower bound** on training-run variance,
-because three of the four sources that would vary between genuinely independent runs are held fixed
-by construction and the fourth is inert.
+They are **thirteen independent replicates of a conditional experiment**. The shared parent and the
+shared pool do not make them dependent on each other; they define what the replicates are conditional
+*on*. Given that conditioning set the units are exchangeable, and inference from them is valid.
 
-The inference that follows is therefore scoped to that unit, and the pairing is matched on the
-things held fixed: the same ticker, the same 500 contexts, the same 20 days, the same two generation
-seeds, and step 1200 on both sides.
+The estimand is
+
+$$\operatorname{Var}\!\big(R \;\big|\; \theta_0,\; \mathcal{D},\; \mathcal{C},\; \mathcal{G},\; B \big)$$
+
+with $\theta_0$ the restored parent `wm_ft_multi2@69378`, $\mathcal{D}$ the 4800-item pool,
+$\mathcal{C}$ the 500 evaluation contexts, $\mathcal{G} = \{97901, 97902\}$ the generation seeds, and
+$B = 1500$ steps. Everything estimated below is estimated for **that** quantity.
+
+**What it is not, and the correction.** An earlier version of this section called it a *lower bound*
+on training-run variance. That is wrong. The law of total variance gives
+
+$$\operatorname{Var}(R) \;=\; \mathbb{E}_{C}\!\left[\operatorname{Var}(R \mid C)\right] \;+\; \operatorname{Var}_{C}\!\left(\mathbb{E}[R \mid C]\right)$$
+
+so the **average** conditional variance over conditioning sets is at most the marginal — but a
+**single** conditioning set can sit above or below that average. One fixed $\theta_0$ therefore bounds
+the marginal in neither direction. To say anything about the marginal, the things now held fixed have
+to vary: more than one parent, more than one pool, more than one pair of generation seeds.
+
+**What the genealogy audit did and did not establish.** It established *what is being estimated*, and
+it confirmed the randomisation is sound. It is not a refutation of the design: nothing in it makes the
+thirteen units invalid replicates. It narrows the scope of the conclusion, and that scope is stated
+above rather than left implicit.
+
+The pairing is matched on everything held fixed: the same ticker, the same 500 contexts, the same 20
+days, the same two generation seeds, and step 1200 on both sides.
 """)
 
 md(r"""
@@ -851,6 +870,40 @@ for c,v,e in V:
     print("  ".join(str(z).ljust(x) for z,x in zip((c,v,e), w)))
 print()
 print("counts:", {k: sum(1 for _,v,_ in V if v==k) for k in dict.fromkeys(v for _,v,_ in V)})
+""")
+
+md(r"""
+### The adjudication rule, frozen before the data is complete
+
+Written now, with 35 of 72 cells scored, so that it cannot be tuned to the answer.
+
+**The unit.** One `--train-seed`. Thirteen of them on the round-3 side; the reference is `multi3`
+read at the same step.
+
+**The matching, frozen.** A pair contributes only if both sides are read at **step 1200**, on the
+**same ticker**, over the **same 500 contexts** and **20 days**, with the **same generation seeds**
+97901 and 97902 and `k_actual = 2` asserted by the estimator. Any cell failing one of those is
+dropped and counted, not silently rebalanced.
+
+**The statistic.** Per training seed, the mean over tickers of the paired difference against
+`multi3` at step 1200. Thirteen numbers, one per unit.
+
+**The readout is an interval, not a p-value.** Report the mean, the bootstrap interval over training
+seeds, and the interval over tickers; a p-value is quoted only next to its attainable floor
+$2/2^{n}$, which at $n = 13$ is $0.00024$.
+
+**Effect bounds decide the label**, against the two reference scales already measured:
+
+| Reading | Label |
+|---|---|
+| Interval excludes 0 **and** its lower edge exceeds the generation-realisation spread | the effect is larger than the noise it was confused with |
+| Interval excludes 0 but sits inside the checkpoint-position spread (adjacent-save moves of up to 0.165 on $R$) | present but not separable from which checkpoint was picked |
+| Interval contains 0 | not established |
+| Interval contains 0 **and** is narrower than the smallest effect worth acting on | ruled out at that resolution, which is a result, not a failure |
+
+**Scope.** Whatever comes out is conditional on $(\theta_0, \mathcal{D}, \mathcal{C}, \mathcal{G}, B)$
+as set out in section 10, and says nothing about the marginal training-run variance in either
+direction.
 """)
 
 md(r"""

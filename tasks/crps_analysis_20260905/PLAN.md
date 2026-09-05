@@ -417,3 +417,47 @@ by exact argv match rather than `cmdline` substring.
 
 **Verdicts unchanged.** 12 of 72 cells scored. Nothing is judged until the comparison is complete;
 the three-surface sync is delivery hygiene, not evidence.
+
+### 2026-09-05 09:4x -- the genealogy audit was overstated twice; both corrected
+
+**1. A shared parent does not make the thirteen dependent.** Independence comes from the random
+streams, and those are independent: thirteen distinct seeds through one deterministic map, producing
+orders whose pairwise overlap is **31.18%** against the independent-subsampling expectation of
+**31.25%**. That measurement is **evidence for independent streams**; the previous entry wrote it up
+as a limitation. The shared parent and pool define what the replicates are conditional *on*, not a
+dependency between them. They are thirteen valid independent replicates of a conditional experiment.
+
+**2. "A lower bound on training-run variance" is withdrawn.** By the law of total variance
+`Var(R) = E_C[Var(R|C)] + Var_C(E[R|C])`, only the **average** conditional variance over conditioning
+sets is at most the marginal; a **single** conditioning set can sit above or below that average. One
+fixed parent bounds the marginal in neither direction. Saying anything about the marginal requires
+varying what is now fixed: more than one parent, pool, or pair of generation seeds.
+
+**The estimand, stated once:** `Var(R | theta_0, D, C, G, B)` with `theta_0 = wm_ft_multi2@69378`,
+`D` the 4800-item pool, `C` the 500 evaluation contexts, `G = {97901, 97902}`, `B = 1500` steps.
+
+The genealogy audit narrows the scope of the conclusion and confirms the randomisation is sound. It
+is **not** a refutation of the design, and it should not have been written as one.
+
+### The adjudication rule, frozen at 35 of 72 cells
+
+Written before the data is complete so it cannot be tuned to the answer.
+
+- **Unit**: one `--train-seed`. Thirteen on the round-3 side; reference is `multi3` at the same step.
+- **Matching, frozen**: a pair contributes only at **step 1200**, same ticker, same 500 contexts,
+  same 20 days, same generation seeds 97901/97902, `k_actual = 2` asserted by the estimator. Anything
+  failing that is **dropped and counted**, never silently rebalanced.
+- **Statistic**: per training seed, the mean over tickers of the paired difference. Thirteen numbers.
+- **Readout**: an interval over training seeds. Any p-value is quoted next to its attainable floor,
+  `2/2^13 = 0.00024`.
+- **Label by effect bounds**: interval excludes 0 and its lower edge clears the generation-realisation
+  spread -> larger than the noise it was confused with; excludes 0 but sits inside the
+  checkpoint-position spread (adjacent saves move `R` by up to 0.165) -> present but not separable
+  from which checkpoint was picked; contains 0 -> not established; contains 0 and is narrower than the
+  smallest effect worth acting on -> **ruled out at that resolution, which is a result**.
+
+### Queue
+
+35 of 72 scored, one drainer (v3), rollouts reused rather than regenerated. The drainer now logs the
+four causes distinctly; a live example: `free cards: 1 (busy 15, held 5)` -- held cards are resident
+memory at 0% util and are **not** counted as free.

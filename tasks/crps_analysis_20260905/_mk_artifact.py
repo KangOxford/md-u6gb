@@ -252,7 +252,7 @@ footer {{ margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--rule
   <div class="provenance">
     <div><b>Repository</b><span>KangOxford/sigma-0 (private)</span></div>
     <div><b>Branch</b><span>audit/crps-return-alignment-20260905</span></div>
-    <div><b>Commit</b><span>d5614bc10e4e3df8e368e103026a98a89b25c773</span></div>
+    <div><b>Commit</b><span>0d7b0f0a468352c9c2cc7cc64411085ff6dca95c</span></div>
     <div><b>Pull request</b><span>#76</span></div>
     <div><b>Notebook</b><span>12 code cells, 0 errors, 9 figures</span></div>
     <div><b>Replicates measured</b><span>18 fine-tuning runs</span></div>
@@ -289,17 +289,24 @@ footer {{ margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--rule
   <p>One save interval moves R by up to 0.165, against a round-to-round effect of 0.090. Any comparison
   between arms at a single hand-picked step is reading a quantity whose largest source of variation is which
   step was picked.</p>
-  <h3>The thirteen units are data-order draws, not independent training runs.</h3>
+  <h3>The thirteen units are independent replicates of a conditional experiment.</h3>
   <p>The first version of this answered by comparing launch flags &mdash; same parent path, same weights
-  file, same item-set hash, same budget, same parameter count &mdash; which proves nothing. Checked by
-  measurement instead: the parent has not been touched since 2026-08-14, and all thirteen checkpoints
-  carry the <em>parent&rsquo;s own</em> <code>init_timestamp_nsecs</code>, so the weights are restored and
-  never initialised; recomputing <code>default_rng(train_seed).permutation(4800)</code> from the current
-  code reproduces the order hash and first eight indices that each run logged, for three seeds from each
-  family; and any two runs share 31.18% of their training items against an independent-subsampling
-  expectation of 31.25%. So the unit is a data-order draw conditional on one initialisation, one pool,
-  one context set and one pair of generation seeds &mdash; and any variance from it is a
-  <strong>lower bound</strong> on training-run variance.</p>
+  file, same item-set hash &mdash; which proves nothing, so it was checked by measurement instead. The
+  parent has not been touched since 2026-08-14 and all thirteen checkpoints carry the <em>parent&rsquo;s
+  own</em> <code>init_timestamp_nsecs</code>, so the weights are restored and never initialised;
+  recomputing <code>default_rng(train_seed).permutation(4800)</code> reproduces the order hash and first
+  eight indices each run logged, for three seeds from each family; and any two runs share 31.18% of their
+  training items against an independent-subsampling expectation of 31.25%.</p>
+  <p>That last figure is <strong>evidence for independent streams, not against them</strong>, and an
+  earlier revision of this page had it the other way round. A shared parent does not make the units
+  dependent on one another &mdash; it defines what they are conditional <em>on</em>. The estimand is
+  Var(R | &theta;<sub>0</sub>, D, C, G, B): the restored parent, the 4800-item pool, the 500 contexts,
+  the generation seeds 97901/97902, and the 1500-step budget.</p>
+  <p>Also withdrawn: calling this a <em>lower bound</em> on training-run variance. The law of total
+  variance makes the <em>average</em> conditional variance at most the marginal, but a single
+  conditioning set can sit above or below that average, so one fixed parent bounds the marginal in
+  neither direction. The genealogy audit narrows the scope of the conclusion and confirms the
+  randomisation is sound; it is not a refutation of the design.</p>
   <h3>Three of my own claims did not survive their own check.</h3>
   <p>I wrote that a coupled <em>D&#772;</em> below <em>W&#772;</em> was impossible for independent draws. It
   is not: when runs share a distribution the two expectations are equal, so the difference is a coin
