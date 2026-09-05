@@ -1,0 +1,11 @@
+--- /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/dfm-post-training-20260801/post_training/distributional_objectives/make_null_ladder_notebook.py.bak_20260905T081401Z	2026-09-04 02:28:31.000000000 +0000
++++ /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/dfm-post-training-20260801/post_training/distributional_objectives/make_null_ladder_notebook.py	2026-09-05 08:14:01.000000000 +0000
+@@ -285,7 +285,7 @@
+ | test | largest $|T|$ on null data | verdict |
+ |---|---:|---|
+ | ticker-level $t$, df 7 | 6.87 | fires harder on nothing than the effect does on something |
+-| crossed ticker×day $t$ | 53.65 | no positive variance on 42 of 1575 fits |
++| crossed ticker×day $t$ | 53.65 | Satterthwaite df on the effect is 3.24, and the fit produced no positive variance at all on 42 of 1575 null contrasts. A $t$ of 53.65 on df ≈ 3 is not a large effect, it is a variance estimate that collapsed; the number must never be quoted without its df. |
+ | day-level $t$, df 19 | 2.26 | conservative |
+ 
+ The day-level test — the one the analytic argument had condemned as

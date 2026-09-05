@@ -54,6 +54,24 @@ Smallest effect detectable at 80% power, sd 0.0562:
 | 8 | 0.0650 |
 | 24 | 0.034 |
 
+### What this table is, and what it is not
+
+**It is a design estimate, not an authorisation and not a guarantee.** Three limits, all of
+which must travel with the numbers:
+
+1. **The variance is estimated, not known.** `sd = 0.0562` is the *checkpoint-position* rung
+   measured on ten checkpoints of one trajectory. The trajectory rung it stands in for has
+   never been measured. A power figure computed at an estimated sd is not an unconditional
+   80% — the true power is a random quantity around it, and with the sd itself resting on a
+   handful of points the interval on `k` is wide. **The correct reading is "k = 24 is the
+   order of magnitude", not "24 runs will suffice".**
+2. **The estimate is a floor.** The trajectory rung contains the checkpoint rung, so
+   `sd_trajectory ≥ 0.0562` and every `k` above can only grow once it is measured.
+3. **Nothing here authorises spending 354 node-h.** This section prices the experiment; it
+   does not start it. The only thing the table licenses is the k = 6 staging step, whose
+   purpose is to *measure* `s_trajectory` rather than to test any hypothesis, and even that
+   is a proposal for the user to approve, not a decision taken here.
+
 **The single most important number in this section is k = 24.** The quantity the study cares
 about, |R−1|, at the effect size the study actually reported, needs twenty-four independent
 fine-tuning runs per arm to reach conventional power — and that is a floor, because the
@@ -179,3 +197,45 @@ one allocation**. Non-negotiable consequences:
   "the density ratio is what moved it".
 - **Anything at k < 6.** At k = 3 the smallest detectable effect is 0.1834, larger than the
   entire span of everything this study has ever reported.
+
+---
+
+## 6. CORRECTION 2026-09-05T08:2xZ — the premise of §0 is false
+
+**Everything above was written on the premise that there is one fine-tuning run per arm and
+that the trajectory rung has never been measured. That is no longer true, and it was already
+untrue when this section was written.** Measured on 2026-09-05 under
+`/lus/lfs1aip2/projects/public/u6gb/tasks/crps_return_alignment_20260808T025024Z/ckpt/`:
+
+| family | dirs | checkpoints per dir (min/med/max) | created |
+|---|---|---|---|
+| `wm_ft_traj_s*` | 45 | 0 / 10 / 32 | 09-04 21:18Z .. 09-05 02:48Z |
+| `wm_ft_traj3_s*` | 14 | 0 / 7 / 10 | 09-04 23:50Z .. 09-05 03:30Z |
+| `wm_ft_r3rep_s*` | 8 | 4 / 4 / 4 | 09-05 04:13Z .. 09-05 04:45Z |
+| `wm_ft_traj_r*` | 6 | 0 / 5 / 7 | 09-04 22:57Z .. 09-05 00:07Z |
+| **`wm_ft_traj1_r*`** | **24** | **0 / 0 / 0** | **09-05 06:53Z .. 09-05 08:04Z — in flight now** |
+
+These are trajectory-seed replicates, not a different experiment. Their own progress files say
+so: `wm_ft_traj_s30` records `"train_seed": 30, "max_step": 4800, "step": 4800,
+"complete": true`; `wm_ft_traj3_s1` records `"train_seed": 1`; `wm_ft_r3rep_s40` records
+`"train_seed": 40, "max_step": 1500, "complete": true`. That is exactly the rung-5 measurement
+§4 says is missing.
+
+**Three consequences, in order of importance:**
+
+1. **Do not launch anything from §2's cost table.** Twenty-four `wm_ft_traj1_r*` runs were
+   started within the last hour and have not yet written a checkpoint. Starting a k-trajectory
+   sweep now would duplicate work already in flight and contend for the same cards.
+2. **The right next action is to read what exists, not to spend 354 node-h.** `s_trajectory`
+   can be estimated today from the completed `wm_ft_traj_s*` runs at step 4800, for zero GPU
+   cost. That estimate then decides whether any further trajectories are needed at all.
+3. **This section did not check for prior art before pricing new work.** The
+   `ft_progress.json` files carrying `train_seed` were on disk and readable the whole time.
+   The failure was not measurement, it was not looking — the same failure mode this study is
+   documenting elsewhere.
+
+**§1 and §2 stand as arithmetic and are withdrawn as a plan.** The power table remains a
+correct statement about how many trajectories a given effect needs at a given sd; it is not a
+statement about what should be run, and with replicates already accumulating it is not even a
+statement about what is missing. Whoever owns the `wm_ft_traj*` line should be asked what they
+are measuring before this section is acted on.

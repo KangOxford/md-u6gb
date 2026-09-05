@@ -1,0 +1,41 @@
+--- /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/dfm-post-training-20260801/post_training/distributional_objectives/friday_talk.py.bak_20260905T081401Z	2026-09-04 04:08:41.000000000 +0000
++++ /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/dfm-post-training-20260801/post_training/distributional_objectives/friday_talk.py	2026-09-05 08:14:01.000000000 +0000
+@@ -195,9 +195,14 @@
+ 
+ 
+ def f2():
+-    tests = [('naive_ticker_level_t', 'test A\n(what we used before)'),
+-             ('crossed_model_t', 'test B\n(the proposed fix)'),
+-             ('naive_day_level_t', 'test C\n(what we use now)')]
++    # Labelled by the statistic, not by "what we used before/now".  The old labels put
++    # the headline t = -7.8 on the ticker-level row, and t = -7.8 is the DAY-level value
++    # (fix_nulls.json: naive_day_level_t effect -7.8362, "paired t over 20 days, df=19";
++    # the record also reported df 19).  naive_ticker_level_t is -5.2451 with df=7 and was
++    # never the source of the headline.
++    tests = [('naive_ticker_level_t', 'ticker-level t\n(df 7)'),
++             ('crossed_model_t', 'crossed ticker x day t\n(Satterthwaite df ~3.2)'),
++             ('naive_day_level_t', 'day-level t\n(df 19) -- the headline came from HERE')]
+     f, ax = plt.subplots(figsize=(6.8, 3.0))
+     y = np.arange(len(tests))
+     for i, (k, lab) in enumerate(tests):
+@@ -227,11 +232,15 @@
+ difference between the groups is pure chance. **Red bars show the largest result
+ each test reported across those 1,575 no-effect comparisons; the blue diamond is
+ what the same test reports on the real round-3-versus-round-4 comparison.** A
+-usable test must have its red bar well to the left of its blue diamond. Test A,
+-the one behind our original t = −7.8 claim, reaches |t| = 6.9 on data containing
+-nothing at all — larger than the real effect it was used to certify. Test B,
+-proposed as the fix, reaches |t| = 53.7 and additionally fails to produce a valid
+-answer at all in 42 of the 1,575 fits. Only test C stays below its diamond, and
++usable test must have its red bar well to the left of its blue diamond. The
++ticker-level t reaches |t| = 6.9 on data containing nothing at all — larger than the
++real effect it was used to certify. The crossed model, proposed as the fix, reaches
++|t| = 53.7 and additionally fails to produce a valid answer at all in 42 of the 1,575
++fits. **Our headline t = −7.8 came from the day-level test, and that is the one test
++here that is conservative**: its null spread is 0.75 and it never exceeded 2.27, so the
++two tests that misbehave are not the ones the headline rested on. The correction to the
++headline is therefore about the unit of replication, not about a test that fired on
++noise. Only the day-level test stays below its diamond, and
+ it does so with room to spare, which is why every number later in this talk uses
+ it.""")
+ 
