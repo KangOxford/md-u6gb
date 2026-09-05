@@ -76,6 +76,124 @@ Go to 96 cells only if the strip's spread is < 0.08 **and** devices are coordina
 the strip shows > 0.08, stop and report C6 as unresolvable at this budget rather than buying
 more cells.
 
+## 4A. Provenance of the 12 trajectories of job 6317365 (read-only audit, 2026-09-05T22:xx UTC)
+
+Extracted from `/home/u6gb/kangli.u6gb/traj_s{30..41}.log` and each trajectory's own
+`ft_progress.json`. **Nothing below is a default value used to fill a gap**; fields that are
+not recorded are marked as not recorded.
+
+### Recorded in the artefacts
+
+| seed | parent ckpt | load step | order_sha1 | seed0_sha1 | n_items | max_step | restore |
+|---|---|---|---|---|---|---|---|
+| s30 | `wm_ft_multi3` | 69378 | `14b7ec5e1dad` | `0f14669f2a4d` | 4800 | 4800 | partial |
+| s31 | `wm_ft_multi3` | 69378 | `f2e846ae79a3` | `0f14669f2a4d` | 4800 | 4800 | partial |
+| s32 | `wm_ft_multi3` | 69378 | `6109f5107177` | `0f14669f2a4d` | 4800 | 4800 | partial |
+| s33 | `wm_ft_multi3` | 69378 | `84aad7b2e9a4` | `0f14669f2a4d` | 4800 | 4800 | partial |
+| s34 | `wm_ft_multi3` | 69378 | `c340f571e2b7` | `0f14669f2a4d` | 4800 | 4800 | partial |
+| s35 | `wm_ft_multi3` | 69378 | `abc6c23751f1` | `0f14669f2a4d` | 4800 | 4800 | partial |
+| s36 | `wm_ft_multi3` | 69378 | `e481f09c818d` | `0f14669f2a4d` | 4800 | 4800 | partial |
+| s37 | `wm_ft_multi3` | 69378 | `526a507d8c2a` | `0f14669f2a4d` | 4800 | 4800 | partial |
+| s38 | `wm_ft_multi3` | 69378 | `bc977395b98e` | `0f14669f2a4d` | 4800 | 4800 | partial |
+| s39 | `wm_ft_multi3` | 69378 | `966cddd494e0` | `0f14669f2a4d` | 4800 | 4800 | partial |
+| s40 | `wm_ft_multi3` | 69378 | `18c94703b061` | `0f14669f2a4d` | 4800 | 4800 | partial |
+| s41 | `wm_ft_multi3` | 69378 | `877cc66f0930` | `0f14669f2a4d` | 4800 | 4800 | partial |
+
+**Twelve distinct `order_sha1`** — the data orders really are independent, which is what the
+`--train-seed` patch was for. All twelve share the same `seed0_sha1` reference, which is how
+that patch proves each order differs from seed 0's.
+
+`partial_restore=True` in every case: `StandardRestore` failed because the on-disk optimizer
+state has no `muon` inner state, so the run fell back to a partial restore. **`wm_ft_multi4`
+records the same fallback**, so this is shared, not a difference.
+
+### WEIGHTS and PREFIX — not recorded, and not filled in
+
+Searched: each trajectory's `ft_progress.json` (keys are only `arm, ckpt, complete, hold_gen,
+hold_real, last_saved_step, max_step, step, train_seed`), `ft_log.json` (`final, init, steps`),
+and the full training logs (`v5m4|v5m3` matches: **0**). **The values these twelve ran with are
+not recorded anywhere in their own artefacts.**
+
+What *is* known constrains them without recording them. `ft_arm.sh:29-31` maps parent
+checkpoint to arm one-to-one:
+
+| arm | PARENT_CKPT | WEIGHTS | PREFIX | SEED_BASE |
+|---|---|---|---|---|
+| r1 | `$PRETRAINED` | `v5m_weights.npz` | `v5m` | 96000 |
+| r3 | `$T/ckpt/wm_ft_multi2` | `v5m3_weights.npz` | `v5m3` | 99000 |
+| **r4** | **`$T/ckpt/wm_ft_multi3`** | **`v5m4_weights.npz`** | **`v5m4`** | 99100 |
+
+The twelve load from `wm_ft_multi3`, which matches **r4 and no other arm**. Two facts stop this
+from being a record: `ft_arm.sh` **superseded** `traj_seed_train.sh` at 2026-09-05T04:00:35Z,
+*after* these twelve synced (02:33–02:48Z); and r4's `SEED_BASE` is 99100 while these carry
+train seeds 30–41. **So r4's values are the configuration the parent field points at, not the
+values this run is known to have used.** Closing this needs the owner of job 6317365, or the
+job's submit script.
+
+### Comparability with the current task's artefacts
+
+| dimension | the 12 | `wm_ft_multi4` | verdict |
+|---|---|---|---|
+| parent checkpoint | `wm_ft_multi3` | **`wm_ft_multi3`** | **same** |
+| load step | 69378 | 69378 | same |
+| restore mode | `partial_restore=True` | `partial_restore=True` | same |
+| budget | 4800 steps, n_items 4800 | 4800 steps | same |
+| hyperparameters | fixed by the launcher family: `--lr 1e-5 --anchor-lambda 1.0 --clip 1.0 --epochs 1 --micro 2 --group-items 1` | same family | same source |
+| `WEIGHTS` / `PREFIX` | **not recorded** | **not recorded** | **cannot be compared** |
+| `order_sha1` | 12 distinct values | **not logged** (the seed patch postdates it) | cannot be compared |
+| ownership | job 6317365 (CANCELLED), another line | this line | **authorisation required** |
+
+**Five dimensions match exactly, two cannot be compared because neither side records them.**
+The twelve are therefore the right sample for the trajectory rung of the round-4 configuration;
+the residual risk is confined to `WEIGHTS`/`PREFIX` and to the specific data order of multi4.
+
+## 4B. The minimum scoring run that can decide C6
+
+**Entry point:** `/lus/lfs1aip2/projects/public/u6gb/nb_build_pr22/traj_cell.sh`.
+Not `sweep_cell.sh` — that builds `ckpt/wm_ft_traj_s30_step4800` as a sibling directory, which
+does not exist; `traj_cell.sh` builds `ckpt/${TRAJ}/step_${STEP}`, which resolves for all twelve
+(spot-checked s30, s33, s41).
+
+**Independent unit: one training trajectory.** Tickers, days, contexts and generation seeds are
+all nested inside a trajectory, so **n = number of trajectories**, never the number of cells.
+Effective n of a ticker-averaged quantity is reported alongside every n.
+
+**What each cell does.** One cell = one trajectory × one ticker. It generates 2 × 500 contexts
+of 250 conditioning / 250 generated messages from that trajectory's step-4800 checkpoint on that
+ticker's frozen index file, joins the two seeds as two `OUT_ROOT`s so the scorer sees K = 2, and
+appends one JSON row `{traj, step, ticker, node, crps, qL1, sd_ratio}`. **The eight rows differ
+only in `TRAJ`**, so their spread in `sd_ratio` is the trajectory rung and nothing else.
+
+| item | value |
+|---|---|
+| cells | **8** — `wm_ft_traj_s30 … s37`, one ticker (GOOG), `STEP=4800` |
+| generation seeds per cell | 2 (`97901 97902`), the script's own default, with its reasoning in the file |
+| per cell | **≈ 8.6 min** — halved from a measured 17.2 min 4-seed cell (`sacct` 17:12 / 17:06 / 17:28). **Derived, not measured at K=2** |
+| **wall clock** | **≈ 70 min on 1 node × 4 GPU** |
+| **resources needed** | **1 node, 4 GPUs, ~1.5 h of walltime**, plus node-local scratch for `ROOT` and `RES` |
+| shared-storage need | **none** — `ROOT` is `/local/user/$(id -u)/…` by construction, which is why the exhausted project inode quota does not block it |
+| output | 8 JSON rows; `s_trajectory` = sd of their `sd_ratio` |
+
+```
+RES=/local/user/$(id -u)/traj_strip.jsonl
+for TR in wm_ft_traj_s30 wm_ft_traj_s31 wm_ft_traj_s32 wm_ft_traj_s33 \
+          wm_ft_traj_s34 wm_ft_traj_s35 wm_ft_traj_s36 wm_ft_traj_s37; do
+  TRAJ=$TR STEP=4800 STOCK=GOOG RES=$RES \
+  bash /lus/lfs1aip2/projects/public/u6gb/nb_build_pr22/traj_cell.sh
+done
+```
+
+**Stopping criterion, fixed before data:** if the spread exceeds 0.08, stop and report C6 as
+unresolvable at this budget. Do not buy more cells to chase it.
+
+**Not started.** Scoring and the device assignment are for the coordinator to hand over
+explicitly. This session holds **0 GPU workers and 0 un-launched submitters** — process scan
+finds no `sbatch`, no `*_fleet.sh`, no `*_cell.sh`, no deferred submitter; `crontab` and `atq`
+are empty; all eight tmux windows sit at a shell prompt with nothing queued.
+
+**Training complete is not scoring complete.** Twelve trajectories are trained and **zero are
+scored**, so **C6 remains INSUFFICIENT**.
+
 ## 5. Blockers, each with the action that clears it
 
 | # | blocker | measurement (2026-09-05T20:4x UTC) | action |
