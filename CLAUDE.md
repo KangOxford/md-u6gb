@@ -30,7 +30,26 @@ while true; do ls; sleep 5; done
 inotifywait <lustre_path>
 ```
 
-### 1.1 `scancel` is FORBIDDEN — no exceptions (2026-08-06)
+### 1.1 `scancel` is FORBIDDEN — one exception: the training已经废了 (2026-08-06, 例外 2026-08-20)
+
+**🚨 2026-08-20 用户令，唯一例外：训练本身已经失败时，允许直接 `scancel`，不必等批准。**
+「已经失败」指的是**继续跑下去不可能产出可用结果**的状态，要有日志证据：
+
+| 允许直接杀 | 证据 |
+|---|---|
+| loss 变 `nan` / `inf` 且不再恢复 | 日志里连续多条 `loss=nan`（本次：基准段 44 条，跨 4400 步） |
+| loss 单调爆炸、永不回落 | h192 那种 3075→4878 的形态 |
+| 进程还活着但一步都不推进 | 步数长时间不变 |
+
+**杀之前必须同时处理接续链**：先杀 deferred submitter，再杀训练段。反过来的话，
+训练段一死，submitter 立刻从同一个坏检查点再起一段。
+
+**形式仍受限**：只用 `scancel <jobid>` 这一种写法。**不许带任何 flag，不许带 `.<step>` 后缀**
+——2026-08-06 的事故正是 `scancel -f 5924043.27` 被 Slurm 丢掉 `.27` 变成杀整个分配。
+
+除此之外的一切情况（卡死、跑得慢、要腾资源、别人的作业）仍然是**报给用户，我不动手**。
+
+
 
 **Claude must never run `scancel` in any form.** Not on a job, not on a job step,
 not with `-s`, `-f`, `-u`, `--me`, or any other flag. If a job or step needs to be
@@ -79,6 +98,172 @@ checkpoint、那个目录是不是别的会话在共用、上一次是不是真�
 
 时间戳要带上，否则重跑第二次时 `_deprecated` 会撞名。清理由用户决定，不由我决定。
 
+**🚨 2026-09-01 用户第三次强调，补一条执行细则：不许因为「等 `rm` 的批准」而让实验停下来。**
+用户原话：「do not use the rm but use the rename (mv) do not because of waiting my approval
+of rm to stop the experiments.」
+
+犯法的形态是这样的：清理挂载残渣 / 腾目录时**先发一个 `rm`**，被权限层拦下，
+然后**停在那里等批准**——而这段时间 GPU 空转、接续链断掉。
+`mv` 从一开始就不需要批准，所以**根本不该出现那个等待**。
+
+机械规则：**要清理什么，第一反应就写 `mv`，不写 `rm` 再改。**
+它同时满足两件事——可逆，且不产生任何需要等待的审批点。
+
+### 1.2.1 subagent 也受 `rm` 禁令，而且光在 prompt 里写一句没用（2026-09-03 用户令）
+
+**事发**：起了 5 个 subagent，**五个 prompt 里我都写了 `NEVER rm (use mv with a timestamp)`**，
+其中一个照样发了 `rm -rf BC`（它自己几分钟前建的暂存目录），被权限层拦下，用户点名。
+
+**所以真正的教训不是「记得告诉 subagent」——我告诉了。** 是这条规则在
+「清理我自己刚建的暂存目录」这个场景下不触发：那不像在删数据，像在收拾桌子。
+禁令写在 prompt 顶部的安全清单里，而 `rm -rf BC` 出现在一条长命令的开头，
+写的时候脑子在想 B/C 对照怎么搭，不在想禁令。**与「高频词的禁令最容易失效，
+因为它出现在不需要思考的位置」是同一个机制。**
+
+**两条修法，第二条才是根治的：**
+
+1. **prompt 里把场景写出来，不要只写规则。** 不写「NEVER rm」，写
+   「NEVER `rm` — including scratch, staging and temp directories you created
+   yourself, and including `rm -rf` on a directory you are about to recreate」。
+   规则要覆盖它将会用来说服自己的那个借口。
+
+2. **把「需要清理」这件事从设计里去掉。** 要重复搭建一个暂存目录，
+   **每次用一个新的唯一名字**，就不存在要清空的东西：
+
+   ```bash
+   BC=BC_$(date -u +%H%M%S); mkdir -p "$BC/run/mid_training"   # 不清理，换名字
+   ```
+
+   真的必须让开某个固定路径时才改名：
+   `mv BC BC_deprecated_$(date -u +%Y%m%dT%H%M%SZ) 2>/dev/null || true`
+
+**连带**：让 subagent 写的**代码**也守同一条。缓存失效、覆盖旧产物、
+supersede 一个文件——一律改名或原地覆写，不许 unlink。
+我给它的规则和它写进仓库的规则必须是同一条，否则禁令只管到我这一层。
+
+### 1.3 sigma-0 一律以 junming 身份 —— 检查点是 `gh` 的 active 账号（2026-09-05 用户第三次点名）
+
+用户原话：**「alwys work as junming rather than kang oxford in the sigma-0.
+you need to record this in claude.md」**。
+
+**这不是 push 前的一次检查，是在 sigma-0 上工作的默认身份。** 凡是会在
+`KangOxford/sigma-0` 留下署名的动作——commit、push、开 PR、发或改 PR 评论、
+改标题正文、提 issue、加标签、任何非 GET 的 `gh api`——一律以
+**junming / anjunming1202** 出现。
+
+#### 两套凭据，只对一半等于没对
+
+2026-09-05 实测的违规形态：
+
+| 决定什么 | 由谁决定 | 当时实测 |
+|---|---|---|
+| commit 的 Author / Committer | `git config user.name` | `junming` ✅ |
+| **PR author、PR 评论作者、HTTPS push 的认证身份** | **`gh` 的 active 账号** | **`KangOxford`** ❌ |
+
+三个 sigma-0 检出的 git 身份**全对**，同一时刻 PR#77 上发出去的
+**6 条评论、1 次改标题、1 次改正文、2 次改评论全部署名 KangOxford**。
+`git log` 里一个字都看不出来。
+
+**所以「我检查过身份了」在没写明查的是哪一半之前，不构成任何证据。**
+
+#### 为什么前两版规则没拦住
+
+规则写成「**每次 `git push` 之前**检查」。但走 `gh` 的写操作**根本不经过 push**，
+而且发评论是我一天做几十次的动作、push 是一天几次——**规则挂在低频动作上，
+高频动作就永远不触发。**
+
+#### 机械做法：在 sigma-0 上做任何留痕动作之前
+
+```bash
+gh api user --jq .login            # 必须回 anjunming1202
+gh auth switch --user anjunming1202
+git config user.name               # 必须是 junming <anjunming0819@outlook.com>
+```
+
+用 `gh api user` 而不是 `gh auth status`：它回的是**这次请求实际会用的身份**，
+一行、可判等、不用人眼从多行里挑。
+
+`gh` 的 active 是**进程外的全局状态**，别的会话切过它我这边看不出来，而 LDM
+（`KangOxford/Large-Discovery-Models`）必须用 KangOxford（`anjunming1202` 对它
+无写权限，实测 403），这个开关会被来回拨。**所以是每次写之前查，不是会话开头查一次**；
+也不要在还没要动 sigma-0 时提前把别人切走。
+
+| 仓库 | 身份 |
+|---|---|
+| `KangOxford/sigma-0` | **junming / anjunming1202** |
+| 其余一切（`Large-Discovery-Models` 等） | **KangOxford** |
+
+**已经用错身份发出去的评论改不回来**——GitHub 不允许改评论作者。发现时如实报给
+用户，不要删掉重发假装没发生过。
+
+
+### 1.3.1 sigma-0 的活先看 PR#60（2026-09-03 用户令，保留）
+
+推 sigma-0 之前先
+`gh pr view 60 --repo KangOxford/sigma-0 --json state,mergeable,statusCheckRollup`，
+确认它的状态与检查项，再决定这次要推的东西是叠在它上面还是另开分支。
+
+**为什么要盯 PR#60**：sigma-0 的 PR 是**堆叠**的（一条 PR 的 base 是另一条 PR 的分支，
+如 #60 的 base 就是 `feat/midtrain-return-alignment-evidence-20260818`）。不先看栈顶
+就 push，新分支会从错误的 base 长出来，等到开 PR 时才发现 diff 里混进了下层 PR 的提交。
+
+### ~~1.3.2 每次 push 前的两条硬性检查（2026-09-03 用户令）~~ 已被 1.3 取代，原文保留
+
+#### 原 1.3 每次 push 前的两条硬性检查（2026-09-03 用户令）
+
+**每一次 `git push`（以及每一次开 PR / 发 PR 评论）之前，必须同时满足：**
+
+| # | 检查 | 具体做法 |
+|---|---|---|
+| 1 | **身份按仓库定，不是一刀切**（2026-09-03 用户订正） | **`KangOxford/sigma-0` 用 junming**：`git config user.name` = `junming <anjunming0819@outlook.com>`，`gh auth status` 的 active = **anjunming1202**。**其余一切仓库（含 LDM / Large-Discovery-Models）用 KangOxford。** 不对就 `gh auth switch --user <账号>` 切过去再 push |
+| 2 | **sigma-0 的活先看 PR#60** | https://github.com/KangOxford/sigma-0/pull/60 —— 推 sigma-0 之前先 `gh pr view 60 --repo KangOxford/sigma-0 --json state,mergeable,statusCheckRollup`，确认它的状态与检查项，再决定这次要推的东西是叠在它上面还是另开分支 |
+
+**为什么要盯 PR#60**：sigma-0 的 PR 是**堆叠**的（一条 PR 的 base 是另一条 PR 的分支，
+如 #60 的 base 就是 `feat/midtrain-return-alignment-evidence-20260818`）。不先看栈顶
+就 push，新分支会从错误的 base 长出来，等到开 PR 时才发现 diff 里混进了下层 PR 的提交。
+
+**身份检查为什么必须每次做**：`gh` 的 active 账号是**进程外的全局状态**，别的会话切过它、
+或者某次 `gh auth switch` 之后忘了切回来，我这边完全看不出来——直到 PR 的 author 字段
+写出来才发现。所以是每次 push 前查一遍，不是会话开始时查一遍。
+
+**2026-09-03 订正：这条原本写成「一律 junming」，是错的。** 正确的是按仓库分：
+
+| 仓库 | 身份 |
+|---|---|
+| `KangOxford/sigma-0` | **junming** / anjunming1202 |
+| 其余一切（`Large-Discovery-Models` 等） | **KangOxford** |
+
+### 🚨 sigma-0 一律 junming（2026-09-05 用户第三次重申）
+
+用户原话：**「always work as junming rather than kang oxford in the sigma-0」**。
+
+**在 sigma-0 里，KangOxford 这个身份不该出现在任何地方** —— 不只是 `git push` 那一下：
+
+| 位置 | 必须是 |
+|---|---|
+| `git config user.name` / `user.email` | `junming` / `anjunming0819@outlook.com` |
+| commit 的 Author 与 Committer | junming |
+| `gh` 的 active 账号（开 PR、发评论、加标签） | **anjunming1202** |
+| PR 正文、评论、issue 里的署名 | junming |
+
+**为什么反复失守**：`gh` 的 active 账号是**进程外的全局状态**，别的会话切过它我这边完全看不出来，直到 PR 的 author 字段写出来才发现。所以是**每次 push / 每次开 PR / 每次发评论之前查一遍**，不是会话开始时查一遍。
+
+**不要用 `gh auth switch` 去改全局 active**（那会打断别的会话正在做的事）。用单命令凭据：
+
+```bash
+TOK=$(gh auth token --user anjunming1202)
+git -c "http.https://github.com/.extraheader=Authorization: Basic $(printf 'x-access-token:%s' "$TOK" | base64 -w0)" \
+    push <remote> <branch>
+```
+
+这样全局 active 不动，本次推送用对身份。**LDM / Large-Discovery-Models 反过来用 KangOxford，同样用单命令凭据，不切全局。**
+
+发现的经过：LDM 那条线上 `anjunming1202` 对 `KangOxford/Large-Discovery-Models`
+**没有写权限**（`gh api repos/... --jq .permissions.push` 返回 n/a，push 报 403），
+于是「必须用 junming 推」与「notebook 必须推到远端才算交付」两条规则直接冲突——
+按前者做，notebook 就交付不了。这种冲突本身就是规则写得太宽的信号：
+**一条身份规则如果在某个仓库上让人无法工作，那它的适用范围一定被写宽了。**
+
 ## 2. Safe Alternatives
 
 ```bash
@@ -112,7 +297,81 @@ Any batch script or training code must satisfy:
 5. **Use local cache for W&B, but keep runs online**: set `WANDB_DIR=$TMPDIR` and `WANDB_MODE=online` for training/eval jobs that should be tracked. Do not write W&B tokens into `CLAUDE.md`, Notion pages, shell scripts, or committed files; use the existing login state or a protected environment/secret source.
 6. **Tighten Checkpoint intervals**: Save every N steps instead of every step. Choose N such that "recovering once wastes < 10% of job time."
 
+### 🚨🚨🚨 4.-3 计划优先，GPU 次要——不许照着 gtop 临时找活（2026-09-04 用户令）
+
+**用户原话**：「you cannot just open gtop every time, find available GPUs, and ad hoc run
+tasks… The key is to stick to the plan, not the GPUs… GPU availability is a secondary
+issue; the most fundamental priority is the plan file.」
+
+这条**修正**了 §4.0 一系列空卡规则被我执行成的样子。那些规则说的是「空卡的边际成本
+是零，别拿成本当不做的理由」——**依然成立**。现在明确为错的是另一件事：
+**让空卡决定做什么**。空卡是用来执行计划的；**等卡是可以的，因为卡空着就去跑一件
+计划外的事不行。**
+
+`gtop` 的节奏因此从 15 分钟**放宽到约 30 分钟**——重点不再是抢下每一个窗口。
+
+#### 写计划的流程（不是可选的）
+
+1. **五个 subagent 起草计划**，章节互不重叠，各写各的文件（合并时才不炸 context）。
+2. **另外五个 subagent 对抗评审**这些计划文件。
+3. 评审过了才开始执行，用当时空着的卡。
+4. **计划文件随工作推进持续更新**：进展标绿
+   `$\color{green}{\textsf{done}}$`，被证明搞错的**用删除线保留**（~~原文~~），
+   不要删掉——**错在哪的记录本身就是产物**。
+
+**大部分时间应该花在计划上，不是执行上。**
+
+#### 为什么必须用 subagent 做对抗检查
+
+用户原话：「If you don't use subagents, you tend to assume whatever you've done is
+correct.」
+
+**当天就在我自己身上验证了两次。** 重测数据落地后我一小时内就把结论推上讲稿，
+事后补做的对抗检查在我自己的分析里找出三处缺陷（噪声底借自另一个配置、跨 block
+比较不安全、方差差 8.5 倍还用合并检验），外加一个 20 倍的学习率混淆——它让那个
+头条对比根本不是我声称的那个对比。
+
+四条规则，每次都做：**① 永远先 profile ② 永远维护 plan 文件 ③ 永远跑对抗检查
+④ 永远找文件删、找代码重构。**
+
 ## 4. Job Submission Pacing
+
+### 🚨🚨🚨 4.-2 巡卡必须是一个常驻 Monitor，不是我记着去做（2026-09-03 用户令，第四次犯）
+
+**事发**：整个 2026-09-03 的会话里，我只在「用户提醒」或「我自己要起作业」时跑过 gtop，
+**一次周期性的检查都没做过**。装上 Monitor 后**第一轮就报**：60 张真空卡 + 12 个作业
+在等 Priority。用户原话：「have you followed the restrictions in claude.md, check gtop
+every 15 mins, you should have a monitor do this」。
+
+**下面 4.-1 的 R1 早就把这个失效方式写清楚了**——「时间驱动的规则对任务驱动的我永远
+不触发」——而我读过那一节，仍然没装监视器。**所以 R1 的修正（挂到我一定会做的动作上）
+是不够的：它仍然依赖我在那个动作发生时想起来。唯一可靠的办法是把检查交给一个不是我的
+东西去执行。**
+
+**硬规则：每个会话开始时（或恢复后）立刻挂一个常驻 `Monitor`，15 分钟一轮，
+两侧同查，只在可行动时发事件。** 挂之前不许开始别的工作。
+
+```
+Monitor(persistent=true, timeout_ms=3600000, description="idle GPUs vs PENDING, both sides")
+  每 900 秒：
+    gtop --once  →  只数逐卡行（头行的 idle 把 held 也算进去，见 4.0.1）：
+        awk '/^ ▸ job/{j=$3} /^   nid/{n=$1}
+             /GH200/{ if ($0 ~ /idle/ && $0 ~ /mem +0\.0\//) {
+               match($0,/\[[0-9]\]/); print j, n, substr($0,RSTART+1,1) } }'
+    squeue -u $USER -t PENDING -h -o "%.10i %.26j %.4D %R"
+    发事件的条件（其余时候保持沉默）：
+      · DependencyNeverSatisfied ≥ 1        → 死作业，我不能 scancel，立刻报给用户
+      · 真空卡 ≥ 4 且 Priority/Resources ≥ 1 → 本可 attach 却在排队
+      · gtop 无输出                          → 检查本身失效了，也要报
+```
+
+**为什么条件里必须带 PENDING**：供给侧一个人不构成决策。「有空卡」不是事件，
+「有空卡**而且**有活在等」才是。反过来「我的队列空了」也不是空转的理由——
+派单清单是**账户的** PENDING 队列，不是我私人的 backlog。
+
+**收到事件后的动作**（照 4.0 既有分工）：本战线的排队作业直接 attach，不问；
+别的战线的**立刻报给用户 + 给出 job id**，不 scancel、不起副本（会与排队的那份
+同写一个输出目录）。**「要问一下」不是什么都不做的理由——报告本身要立刻发。**
 
 ### 🚨🚨🚨 4.-1 为什么 4.0 这条规则我反复不执行（2026-08-18，第三次犯，必须先读这一节）
 
@@ -161,6 +420,49 @@ inode 配额打满 → 我写不了一个新的测试文件 → **我升级给�
 > **修正：升级给用户之前必须先回答两个问题——(1) 这个阻塞具体挡住了哪一步？
 > (2) 其他步骤还能不能走？** 只有当答案是「全都走不了」时才停下来等。
 > **等用户回话的时间里，卡照样在烧。**
+
+### 🚨 4.-0.5 gtop 必须由常驻监控每 15 分钟查一次（2026-09-03 用户令）
+
+**不许靠「我记得查」。** 每个会话开始时、以及每次会话恢复后，**第一件事**就是确认
+监控在跑；没有就立刻起一个，间隔 **15 分钟**，同时查空卡与 PENDING 队列。
+
+会话拆卸会杀掉会话内的监控，而**拆卸不留痕迹**——事后看不出它什么时候停的。
+2026-09-03 实测：连着两次恢复我都没重启监控，中间整段是无监控状态，直到用户点名。
+所以「起过一个」不算数，**每次恢复都要重新确认**。
+
+监控必须满足四条，缺一条它就会在最该报的时候沉默：
+
+| # | 要求 | 为什么 |
+|---|---|---|
+| 1 | **探测失败 ≠ 0 空卡** | `gtop` 崩溃时 `grep -c` 返回 0，会被读成「没有空卡」，正好把浪费藏起来。要先认 `采集失败` / `Traceback`，报 `PROBE FAILED` |
+| 2 | **带 `--timeout 60`** | 默认探测超时会让 gtop 整个崩掉（「N 个采集失败，读不到卡」） |
+| 3 | **报逐卡位置，不报头行计数** | 头行把 held 也算进 idle；按 §4.0.1 要给出「哪个分配的哪个节点的哪张卡」 |
+| 4 | **一并报 PENDING 与近期失败** | 供给侧一个人不构成决策（§4.-1 R1）；秒级 FAILED 不会自己浮出来 |
+
+**为什么这条必须是一个进程，而不是一条我要记住的规则。** 这是 §4.-1 R1 的第四次复发，
+而 R1 早就把病因写对了：规则挂在时钟上，我按任务驱动运行，**不会因为「过了 15 分钟」
+而中断自己**。R1 给的修法是「挂到一个我一定会做的动作上」——**那条修法同样失效了**，
+因为它仍然依赖我在写长回复前想起这件事，而写长回复时我在想内容。
+2026-09-03 实测：连续几小时做 CPU 侧的活（打分、写 notebook、推送），期间一次没查卡，
+用户点名时 **60 张空卡、5.37 kW 空转，同时 7 个作业在排队**。
+
+**监控只报不做。** 它绝不提交、绝不 attach、绝不 scancel。这既是 BriCS 禁令的边界
+（禁的是**无人值守下持续发起动作**，只读轮询并写日志不算），也满足 §4.0
+「后台检查必须常驻，且绑资源不绑任务」。两条在这里不冲突，但**只有在它不发起动作时才不冲突**。
+
+**静默必须有含义。** 无事时不写行，但每小时写一条 heartbeat。否则「日志是空的」
+分不清是「集群很闲」还是「看守早死了」——与 [[reference_ps_is_a_shim_on_isambard]]
+里「返回空要先分清是查过没有还是根本没查」同源。
+
+**别的战线的排队作业不许直接 attach 副本**（会与排队的那份同写输出目录）——
+报给用户 + 给出 job id，由用户决定。**但报告本身要立刻发，不许因为「要问一下」就什么都不做。**
+
+现成的实现：`/lus/lfs1aip2/projects/public/u6gb/nb_build_pr22/gpu_watch.sh`，
+日志 `.../nb_build_pr22/logs/gpu_watch.log`，跑在 `tmux -L cl43` 的 `gpuwatch` 窗口。
+
+**必须活过会话的那一份放 tmux 或 Slurm 作业，不要放 `setsid nohup`。**
+tmux 的记录器要设时限（如 12 小时）且**不自我重启**——登录节点常驻 agent 受 BriCS
+禁令约束；时限到了由下一次会话重新起。日志写 Lustre，任何节点可读。
 
 ---
 
@@ -221,6 +523,182 @@ sbatch"）**：XVLA 四连发（2 评测 + 2 训练重启）全走 sbatch 排队
 没起来就是没在算，要么修要么让开。
 
 attach 的具体机制见下面 4.1 起的各条。**注意其中的 `nodelock` 部分已于 2026-08-14 废止**。
+
+### 🚨 4.0.2 巡查必须是常驻 monitor，不能靠我自觉（2026-09-03 用户令）
+
+**用户原话：「check gtop every 15 mins, you should have a monitor do this」。**
+
+§4.-1 的 R1 已经写明这条规则为什么不触发：**它是时间驱动的，而我是任务驱动的**——
+我只在「要提交作业」或「要卡」时才查 gtop，两个触发点在时间上不重合。2026-09-03
+又犯一次：整轮工作里只在需要卡时查过，没有任何定期检查。**结论是这件事不能靠自觉，
+必须有一个进程替我做。**
+
+**这与 §5 / §8.2 的「禁止在登录节点常驻 agent」不冲突**：那两条禁的是常驻
+**AI agent** 和 **auto-restart 包装器**。一个每 15 分钟跑一次 `gtop` + `squeue`、
+只读、只写日志的 shell 循环，既不是 agent 也不自动重启任何东西。用户已明示要它。
+
+**已落地**：
+
+```bash
+bash /lus/lfs1aip2/projects/public/u6gb/gtop_watch.sh     # 循环体，INTERVAL 默认 900s
+tmux new-session -d -s gtopwatch 'bash .../gtop_watch.sh' # 放 tmux，活过会话
+tail -f /lus/lfs1aip2/projects/public/u6gb/logs/gtop_watch.log
+```
+
+它每 15 分钟同时采两侧，并按 §4.-1 的规则判定：
+
+| 记录 | 含义 |
+|---|---|
+| `idle=N pending=M running_allocs=K` | 常规采样，一行 |
+| `ACTIONABLE idle>=1 pending>=1` | **两侧都非空**，有活本可以 attach 却在排队，附空卡清单与排队清单 |
+| `DEAD JOBS: n` | `DependencyNeverSatisfied`，永远不会跑，立刻报给用户（我不能 scancel） |
+
+**判据是逐卡的 `mem 0.0/95.6G` + `idle`**，不是 gtop 头行的 idle 计数（头行把 held
+也算进去）。接回会话时先 `tail` 这个日志，它比我的记忆可靠。
+
+### 🚨🚨🚨 4.0.0 监视器脚本本身会失效，而它失效时是静默的（2026-09-04，第五次犯）
+
+**用户第三次点名同一件事**：「check gtop every 15 mins, you should have a monitor do this,
+record in claude.md」。前两次我的回应都是「好，挂一个监视器」——**两次挂的监视器都没产出过
+一行日志**，而我不知道，因为没有产出的监视器和「没事发生」看起来一模一样。
+
+2026-09-03 那个 `gpu_watch.sh` 跑了几个小时、**零行输出**，三处独立失效：
+
+| 缺陷 | 为什么静默 |
+|---|---|
+| 判据取 `gtop` **头行**的 idle 计数 | 头行把 held（显存驻留、0% util）算作 idle。本文件 §4.0/§4.0.1 已写死"头行不可作判据"，脚本注释里也抄了这条，**代码做了相反的事** |
+| 门槛写成 `MINE -lt 2`（我自己没在跑才报） | §4 规则 3 要求"绑资源不绑任务"。绑到我自己的负载上，等于我一忙它就闭嘴——而我忙的时候正是最不会主动查卡的时候 |
+| 日志是一个**尚不存在**的文件 | 项目 inode 打满时 `>>` 静默失败。追加到不存在的文件不会报错，只会什么都不写 |
+
+**所以规则不是「挂一个监视器」，是下面这四条。**
+
+#### 硬要求
+
+1. **每条会话开工、以及每次会话恢复后，第一件事是确认监视器在跑。** tmux server 是
+   **节点本地**的，会话换节点就看不见旧的了——2026-09-04 从 login42 迁到 nid010871，
+   监视器和一个 attach 的重测 step 一起没了（step 显示 `CANCELLED by <我的 uid>`）。
+   「上次挂过」不算数。
+2. **判据只能是逐卡显存**（`mem 0.0/95.6G`，1–9 MiB 才是真空），永远不是头行计数。
+3. **两侧同查，门槛绑资源**：`真空卡 ≥ 4 且 PENDING ≥ 1` 才报，**与我自己有没有活无关**。
+   派单清单是账户的 PENDING 队列，不是我私人的 backlog。另外
+   `DependencyNeverSatisfied` 永远单独报——那是永不会跑的死作业，我不能 scancel。
+4. **每一轮都写一行，包括「没事」那轮。** 否则静默有二义：分不清「集群很闲」和
+   「监视器早死了」。这是三次失效里我唯一本可以自己发现的那一次。
+5. **日志写一个已存在、且不在项目配额里的路径**（`$HOME`）。项目 inode 会打满，
+   而打满时新建文件是静默失败。
+
+#### 现成的实现（2026-09-04 落地，实测第一轮就报出 60 张空卡 + 12 个排队）
+
+```bash
+bash /home/u6gb/kangli.u6gb/gpu_watch_15min.sh      # 900 秒一轮，只读，绝不提交
+tail -f /home/u6gb/kangli.u6gb/gpu_watch_15min.log
+# 放 tmux（socket 要显式给，且 -t 收的是 target-pane，名字后面那个冒号不能省）
+TMUX="/tools/brics/apps/.../tmux -S /tmp/tmux-$(id -u)/default"
+$TMUX new-window -t '=claude-<本节点>' -n gpuwatch15
+$TMUX send-keys -t '=claude-<本节点>:gpuwatch15' 'bash /home/u6gb/kangli.u6gb/gpu_watch_15min.sh' Enter
+```
+
+**监视器只报不做**：绝不提交、绝不 attach、绝不 scancel。这既是 BriCS 禁令的边界
+（禁的是无人值守下持续**发起动作**，只读轮询写日志不算），也让它不可能自己闯祸。
+收到事件后的动作照 §4.0 分工：本战线的排队作业直接 attach；别的战线的**立刻报给用户 +
+给出 job id**，不 scancel、不起副本（会与排队的那份同写一个输出目录）。
+**「要问一下」不是什么都不做的理由——报告本身要立刻发。**
+
+#### 为什么这条必须是一个进程，不能是一条我要记住的规则
+
+§4.-1 的 R1 早就把病因写对了：**规则挂在时钟上，而我按任务驱动运行**，写分析、改代码、
+发长回复的时候不会因为「过了 15 分钟」而中断自己。R1 给的修法是「挂到一个我一定会做的
+动作上」，**那条修法也失效了**——它仍然依赖我在做那个动作时想起这件事。
+唯一可靠的办法是把检查交给一个不是我的东西去执行，然后**验证它真的在产出**。
+
+#### 补充（2026-09-04 实测）：监视器必须是单例，否则规则本身会制造垃圾
+
+「每条会话开工、以及每次会话恢复后，第一件事是确认监视器在跑」——这条规则**只写了
+一半**。没有任何东西负责去重，于是每条会话都再起一个。2026-09-04 实测同时有
+**七个监视器进程**（五个 `gpu_watch_15min.sh` 副本，外加 `gpu_watch_30min.sh` 和
+`gtop_watch_v2.sh`），全都在轮询 gtop、往同一个日志追加。
+
+**自我复制的监视器不是更可靠，只是更吵。** 修法是把幂等性放进脚本，而不是放进我的
+记忆里——`gpu_watch_15min.sh` 现在开头拿 `flock`，第二次启动直接 no-op 退出。
+所以规则可以继续写成「永远（重）起它」，而不会累积。
+
+两个连带的坑，都是「静默失效」那一类：
+
+1. **日志里的 NUL 会让 grep 闭嘴。** gtop 的输出带 NUL，写进日志后 `grep` 判定为
+   二进制，只说 `Binary file matches` 而不打印任何行——与「没有匹配」不可分辨。
+   实测该日志含 13,900 个 NUL。脚本已加 `tr -d "\000"`；**读这类日志一律用 awk**。
+2. **按 cmdline 子串杀进程会连启动它的 shell 一起杀掉。** `case "$c" in *gpu_watch*)`
+   会命中 `bash -c '... gpu_watch_15min.sh ...'` 这个包装 shell，我据此 kill 时把
+   自己的会话 shell 也杀了（exit 144）。判据要用 **argv 精确匹配**：
+   `mapfile -d '' -t a < /proc/$p/cmdline` 后要求 `${#a[@]} -eq 2` 且
+   `${a[1]}` 以脚本路径结尾。
+
+### 🚨 4.0.1 空卡不需要整节点空：要 4 张卡，进程内挑（2026-09-03 用户令）
+
+**用户原话：「if you find anything about queue, you should check with gtop to find free
+gpus, not need to be a full complete node」。**
+
+犯法的形态（2026-09-03 实测）：gtop 报 39 张空卡，我用 `--gres=gpu:1` 探测，拿到的是
+**有 25 GB 驻留的卡 0**，于是判定「0 张可用」并放弃 attach，转去排队。
+**我把「我拿不到那张卡」读成了「没有空卡」**——正好把 §4.0 倒过来用。
+
+根因两条，都不是「没有空卡」：
+
+| 症状 | 真因 | 修法 |
+|---|---|---|
+| `Unable to satisfy cpu bind request` | 节点 **CPU** 被占满，与 GPU 无关 | **`--cpu-bind=none`**（§4 的 attach 推荐写法本来就带它，我漏了） |
+| 拿到的卡有驻留显存 | **Slurm 的 gres 记账与物理占用不一致**：占卡的进程属于别的 step，Slurm 仍认为卡 0 空闲，且总是先发逻辑设备 0 | **要 `--gres=gpu:4`，在进程内用 `CUDA_VISIBLE_DEVICES` 点名 gtop 看到的那张空卡** |
+
+`--gres=none` 不行：step 内 `CUDA_VISIBLE_DEVICES=[]`，一张卡都看不见。
+
+**可用写法（2026-09-03 实测通过）**：
+
+```bash
+# 1. gtop 找出「哪个节点的哪张卡」空——逐卡行，不看头行计数
+timeout 150 gtop --once 2>/dev/null | awk '
+  /^ ▸ job/{j=$3} /^   nid/{n=$1}
+  /GH200/{ if ($0 ~ /idle/ && $0 ~ /mem +0\.0\//) {
+    match($0,/\[[0-9]\]/); print j, n, substr($0,RSTART+1,1) } }'
+# → 6266773 nid010810 1   （节点的卡 0 在用，卡 1/2/3 空）
+
+# 2. 拿全部四张 + 关掉 cpu 绑定，进程内点名那张空卡
+srun --overlap --jobid=6266773 --nodelist=nid010810 --nodes=1 --ntasks=1 \
+     --gres=gpu:4 --cpu-bind=none --job-name=<真名字> \
+     bash -lc 'CUDA_VISIBLE_DEVICES=1 python ...'
+
+# 3. 与邻居共存时 JAX 默认预分配 90% 会 OOM / autotuning 失败
+export XLA_PYTHON_CLIENT_MEM_FRACTION=0.5   # 按 gtop 上那张卡的剩余量定
+```
+
+**判据仍然是 gtop 的逐卡显存**（1–9 MiB 才是真空），不是 Slurm 说什么，也不是头行的
+idle 计数（它把 held 也算进去）。
+
+### 🚨 4.0.2 gtop 巡查必须是常驻监控，且每次会话开始重起（2026-09-03 用户令）
+
+**用户原话：「check gtop every 15 mins, you should have a monitor do this」。**
+
+**每 15 分钟查一次 gtop，用 Monitor 工具起，不靠我自己记得查。**
+
+犯例（2026-09-03）：这条会话里巡查起过三次、停过三次——一次是 login40 进程槽耗尽时我
+主动停的，另两次随会话进程退出而死。用户问「你遵守了吗」时，**答案是没有：当时一个
+监控都没有在跑**。空缺期间没人知道有多少卡在空转。
+
+**为什么必须用 Monitor 工具，不能用 setsid nohup：**
+
+| 方式 | 结果 |
+|---|---|
+| `setsid nohup ... &` | **子进程被沙箱当场回收**，无错误输出、pgrep 查不到。2026-09-03 实测连起三次全部秒死 |
+| tmux | 本机 tmux 二进制 `Permission denied`，miniforge 那个不存在 |
+| **Monitor 工具** | **唯一可靠**。随会话结束而停，所以**每条新会话开头必须重起一次** |
+
+所以这条是**会话级义务**：接手 / 恢复 / 换节点之后，第一件事就是确认巡查在跑，
+不在就重起。日志追加到
+`/lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/_gtop_watch.log`，
+空卡清单写到同目录 `_free_cards_now.txt`，可以直接喂给 attach 脚本。
+
+**判据仍是 §4.0.1 的逐卡行**（`mem 0.0/95.6G` 且 `idle`），不是头行 idle 计数，
+也不是 `--gres=gpu:1` 探测——后者永远拿逻辑设备 0，卡 0 被占会把它后面三张空卡藏掉。
+2026-09-03 我正是这样把 **33 张空卡误判成 1 张**。
 
 - **There is no fixed upper limit on the number of submitted tasks**: It is not 5, nor 20. Whether to continue submitting is determined by explicit user instructions, current Slurm/QOS limits, startup/mount load, and current HPC status.
 - Batch submissions must still be done one by one and staggered, with `sleep 30+` between batches. Observe `squeue` / startup logs to ensure no abnormal startup load.
@@ -717,3 +1195,31 @@ MacBook 通过 SSH 连到服务器，Claude Code 是服务器上的一个程序�
   的工作必须落到 SLURM 作业里（自带 checkpoint/resume/失败续投），而不是指望会话活着。
 - 登录节点上常驻 agent 仍受 BriCS 2026-05-08 禁令约束。判据是**是否在无人值守下持续
   发起动作**：脱离后闲置等待输入的会话是良性的，自动轮询/循环提交的不是。
+
+## sigma-0 永远用 junming —— 而 `gh` 的 active 账号会被别的会话切走（2026-09-05 用户第三次点名）
+
+§1.3 已经写了「`KangOxford/sigma-0` 用 junming / anjunming1202」，**这次仍然失守**，
+失守的位置是它没写的那一半：
+
+| 层 | 这次的实际状态 | 说明 |
+|---|---|---|
+| `git config user.name` | ✅ junming | 仓库级配置，**别的会话动不了** |
+| **`gh auth status` active** | ❌ **KangOxford** | **进程外的全局状态**，任何会话 `gh auth switch` 一下就换掉，我这边完全看不出来 |
+
+六个 commit 的 author 全是 junming（正确），而屏幕上看到 KangOxford，是因为**推送与开 PR 用的是
+`gh` 的 active 账号，不是 `git config`**。两者是独立的两个身份，只对一个是不够的。
+
+**机械做法：每一次 `git push` / `gh pr create` / `gh pr comment` 之前，两个都查，缺一不可。**
+
+```bash
+git config user.name        # 必须 junming
+gh auth status 2>&1 | grep -B1 "Active account: true"   # 必须 anjunming1202
+gh auth switch --user anjunming1202                      # 不对就切
+```
+
+**为什么不能只在会话开始时查一次**：`gh` 的 active 是全局的，别的会话切过它、或上一次
+`gh auth switch --user KangOxford`（LDM 那条线要用它）之后没切回来，我这边**在推送成功之前
+没有任何征兆**——只有 PR 的 author 字段写出来才发现。所以是**每次推送前查**，不是每会话查。
+
+**与 §1.3 的关系**：那条规定了「哪个仓库用哪个身份」，这条补的是「身份有两处、其中一处是
+共享可变状态」。两条一起才完整。
