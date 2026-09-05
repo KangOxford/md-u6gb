@@ -54,8 +54,30 @@ So the question is never "how do I make subagents checkpoint". They do. The ques
 Layer 2 is the one that fails, and it failed on 2026-09-04T18:30Z: the Lustre project inode
 quota was at its hard cap, every `prompt.txt` sibling write failed, and none of the nine
 agents banked a single line. Layer 3 was untouched, because `/home` is a different mount
-with 22.6 billion inodes free. **Keep layer 2 — it is the agent's own judgement about what
-mattered, which no mechanical rebuild can supply — but never let it be the only layer.**
+whose *inode* quota is only 10.4% used. **Keep layer 2 — it is the agent's own judgement about
+what mattered, which no mechanical rebuild can supply — but never let it be the only layer.**
+
+### `/home` is not a blanket guarantee — check three things, separately
+
+Moving the registry to `/home` fixed the *inode* failure. It did not fix the *byte* failure,
+and on 2026-09-05 the byte quota was the binding one:
+
+```
+quota -u kangli.u6gb   ->   bytes  100.20 GiB used / 100.58 GiB hard  =  99.62% full
+                            inodes 1,565,158 / 15,000,000 hard        =  10.43%
+```
+
+`df` reports 15 PB free and is irrelevant: it measures the filesystem, not the user. Worse,
+**a successful write is not evidence of headroom** — a 2 GiB test write completed, and only
+seconds later did `quota` report `107161140*`, over the hard limit. The accounting lags.
+
+So before any write campaign, ask three independent questions:
+
+```bash
+quota -u $(id -un)                  # 1. bytes AND inodes, per user -- the binding limit
+: > "$DIR/.probe" && echo writable  # 2. can I write here, right now
+findmnt -no SOURCE,FSTYPE /home     # 3. persistent, or scratch that gets purged
+```
 
 ## Commands
 

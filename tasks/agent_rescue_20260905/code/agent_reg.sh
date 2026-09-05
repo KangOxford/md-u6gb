@@ -12,6 +12,8 @@
 #   agent_reg.sh pending
 #   agent_reg.sh rescue
 #   agent_reg.sh recover <agent_id|slug> [--force]
+#   agent_reg.sh stage <agent_id|slug> <prepared|submitted|processed|artifact> [note] [path]
+#   agent_reg.sh stages
 #   agent_reg.sh verify
 R=/lus/lfs1aip2/projects/public/u6gb/.claude/agent_registry
 REG="$R/registry.jsonl"
@@ -72,5 +74,9 @@ recover)
   shift; python3 "$R/reg_recover.py" "$@" ;;
 verify)
   python3 "$R/reg_verify.py" ;;
+stage)
+  shift; python3 "$R/reg_stage.py" "$@" ;;
+stages)
+  python3 "$R/reg_stage.py" table ;;
 *) sed -n '2,20p' "$0" ;;
 esac

@@ -33,8 +33,16 @@ What was missing is the step that turns a transcript back into instructions.
 Why the agent-written layer was empty is recorded in the registry rows themselves:
 `"prompt.txt writes failed on a full filesystem at 18:30Z"`. The Lustre project inode quota
 was at its hard cap (still 50,463,435 / 51,200,000 = 98.6% today) while VAST `/home` had
-22.68 billion inodes free. The registry has since been moved to `/home`, so that specific
-failure cannot recur.
+inodes only 10.4% used. The registry has since been moved to `/home`, so that specific
+**inode** failure cannot recur.
+
+That guarantee does not extend to bytes, and the byte quota is the one currently binding:
+measured 2026-09-05, `/home` is **100.20 GiB used of a 100.58 GiB hard limit (99.62%)** while
+inodes sit at 10.43%. `df` reports 15 PB free because it measures the filesystem, not the
+user. A 2 GiB test write also **succeeded** and only afterwards did `quota` report
+`107161140*` — over the hard limit — so a completed write is not evidence of headroom either.
+Bytes, writability and persistence are three independent questions and each has its own
+command (see §5 of `task_plan.md`).
 
 ## 2. What was built
 
@@ -95,3 +103,116 @@ Other sessions: none touched. The existing 15-minute GPU sweep was checked read-
 neither restarted nor stopped. `registry.jsonl` is append-only — the incorrect
 `sol_notebook_fixes` description was superseded by a new row, not edited. Replaced scripts
 were copied to `.bak_<timestamp>` following the existing convention; nothing was deleted.
+
+---
+
+# Round 2 (2026-09-05) — from "a packet exists" to "the work is done"
+
+## 6. Reconciliation before recovery
+
+Duplicate recovery is avoided by checking, per agent, whether the declared deliverable exists
+and whether its mtime falls before or after that agent's last transcript message.
+
+| slug | declared deliverable | measured | verdict |
+|---|---|---|---|
+| `plan_measurement` | `plan_section_2_measurement.md` | 34,760 B @ 22:28; agent alive to 22:29 | **finished by the agent itself** |
+| `plan_deliverable` | `plan_section_5_deliverable.md` | 48,238 B @ 18:22 = its last message | **finished by the agent itself** |
+| `sol_corrected_inference` | `corrected_inference.py` | 93,432 B @ **09-05 02:40**, 8 h after this agent died | **another session owns it — do not re-recover** |
+| `plan_analysis` | `plan_section_4_analysis.md` | absent | genuinely unfinished → done this round |
+| `plan_infrastructure` | `plan_section_3_infrastructure.md` | absent | genuinely unfinished → done this round |
+| `sol_decisive_experiment` | `plan_section_1_decisive.md` | absent | genuinely unfinished |
+| `sol_history` | none declared | no output of any name | genuinely unfinished |
+| `sol_pipeline_fixes` | tests under `pipefix_.../` | 32 entries, but "mid-flight correcting test expectations when killed" | genuinely unfinished |
+| `sol_notebook_fixes` | four builder scripts | only one touched, at the minute it died | genuinely unfinished |
+
+The two finished agents were closed on the status axis so a later round cannot pick them up
+again.
+
+## 7. The four-stage ledger
+
+A packet existing says nothing about the task being done. The old registry had one axis
+(running/done/failed) and therefore could not express "the packet is there but nobody ran it",
+which was the true state of all nine agents.
+
+```
+prepared   a RESUME packet exists
+submitted  the packet was handed to an executor
+processed  that executor ran to completion and said what it did
+artifact   the declared output exists and is non-empty   <- stat'd, not asserted
+```
+
+The first three are testimony; the fourth is a measurement, and the ledger keeps them apart
+deliberately. The `artifact` column prints `ABSENT` rather than `yes` when the measurement
+found nothing — the first version printed `yes` for both, which is the label saying what the
+measurement did not.
+
+Implemented in `reg_stage.py`, wired as `agent_reg.sh stage` / `stages`.
+
+## 8. Two recoveries actually delivered, sequentially
+
+### `plan_analysis` → `/home/u6gb/kangli.u6gb/plan_section_4_analysis.md` (17,169 B)
+
+The packet paid for itself immediately: the dead agent had banked four verification scripts
+under `/home/u6gb/kangli.u6gb/plan4_verify/`, and **all four reran and reproduced their
+recorded values**:
+
+| quantity | rerun |
+|---|---|
+| rung-3 null sd (8-ticker mean) | 0.019468 (recorded 0.019468) |
+| GOOG variance share / Kish n_eff | 0.6276 / **2.3652** |
+| correct 5% band multiplier | **1.8964** (the ±2 sd band is a 3.68% band) |
+| sign-flip smallest attainable p | **2/2⁸ = 0.0078125** |
+| sign-flip measured size inflation | ×1.35 to ×1.87 |
+
+Two statements were tightened against the source rather than repeated: the "120%" attribution
+is a derived ratio (119.9% = 0.0969/0.0808), not a recorded field; and under a context shuffle
+`qL1` and `sd_ratio` are **bit-identical** in `fix_midtraining.json`, not different by 2.2e-16.
+
+### `plan_infrastructure` → `/home/u6gb/kangli.u6gb/plan_section_3_infrastructure.md` (14,613 B)
+
+The banked transcript stopped one step short of a root cause, and said the remaining step was
+CPU-only. Four shell signatures were reproduced here:
+
+| test | result |
+|---|---|
+| `set -u` + redirect + unset variable | **file created at 0 bytes, command never ran** — matches the observed 0-byte `.done` |
+| variable set but empty | 1 byte, so **0 vs 1 byte distinguishes unset from empty** |
+| `set -e`, then `cmd; _rc=$?` | the guard is **unreachable** (`collect_rollouts.sh:182`) |
+| `$?` beside a command substitution | **position decides**: `$?` is correct only if it precedes the substitution |
+
+That last one sharpens FACTS.md's rule. Of five sites matching the loose pattern, **exactly one
+is a real defect**: `eval_shard.sh:12`, where `$(date …)` precedes `$?` inside the `|| echo
+"… FAILED rc=$?"` branch, so every failure is logged as `rc=0`. Also inventoried: **10 sites**
+testing `.done` with `-f` (a 0-byte file passes all ten), **8 launchers** ending in `exec` so
+their EXIT trap never fires, and **8 sites** reading `rc=$?` that must each be classified for
+reachability.
+
+**Not confirmed:** the previous agent reported seeing a 0-byte `.done`. Scanning
+`/lus/lfs1aip2/projects/public/u6gb/nb_build_pr22/crps_res_kcollapse_20260904T163807Z/*/member_*/.done`
+found **no `.done` files there at all**, so that sighting could not be reproduced. The
+mechanism is established, the sighting is not, and the deliverable says both.
+
+## 9. Verification of this round
+
+| what | result |
+|---|---|
+| packet reusable end to end | 4/4 banked scripts reran and reproduced recorded values |
+| artifact 1 | `plan_section_4_analysis.md`, 17,169 B, stage `artifact` = PRESENT |
+| artifact 2 | `plan_section_3_infrastructure.md`, 14,613 B, stage `artifact` = PRESENT |
+| consumption stamp | `recover plan_analysis` after delivery → **0 built, 1 already current** |
+| registry checks | `verify` 6/6 green |
+| ledger | both items show prepared → submitted → processed → artifact PRESENT |
+| concurrency | two items run **sequentially**; the other seven were not started |
+
+## 10. Remaining, and what is off limits
+
+| slug | what is missing |
+|---|---|
+| `sol_decisive_experiment` | the power/cost/prespecification section (its patch is already applied) |
+| `sol_history` | the whole chronological reconstruction; needs cross-month `sacct` and several roots |
+| `sol_pipeline_fixes` | a fail-before/pass-after test per defect; connects directly to §8's inventory |
+| `sol_notebook_fixes` | three of four builder scripts untouched |
+| `sol_corrected_inference` | **off limits — another session is working on it** |
+
+Nothing was merged. Other sessions and the existing GPU sweep were not touched. The registry
+remains append-only and every replaced script is preserved as `.bak_<timestamp>`.

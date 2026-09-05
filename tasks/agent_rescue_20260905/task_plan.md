@@ -96,3 +96,109 @@ prompt:   prompt.txt
 - 其他会话：一个没碰。
 - 已有巡查：`gpu_watch_15min.log` 03:56:24 还在更新（本轮 03:59 查），**未新起、未停掉**。
 - `registry.jsonl`：只追加，没改没删。旧脚本按既有约定 `cp` 成 `.bak_<时间戳>`。
+
+---
+
+# 第二轮（2026-09-05 06:00–07:00）—— 从「包建好了」到「活干完了」
+
+## 7. 先核对：九个包对应的任务现在到底是什么状态
+
+不重复恢复的前提是先知道谁已经做完了。判据是**产物的 mtime 与该 agent 最后一条消息的时间比**。
+
+| slug | 声明的产物 | 实测 | 判定 |
+|---|---|---|---|
+| `plan_measurement` | `plan_section_2_measurement.md` | 34,760 B @ 22:28，agent 活到 22:29 | $\color{green}{\textsf{它自己做完了}}$ |
+| `plan_deliverable` | `plan_section_5_deliverable.md` | 48,238 B @ 18:22，正是它最后一条消息 | $\color{green}{\textsf{它自己做完了}}$ |
+| `sol_corrected_inference` | `corrected_inference.py` | 93,432 B @ **09-05 02:40**，比它死掉晚 8 小时 | **别的会话在做，不碰** |
+| `plan_analysis` | `plan_section_4_analysis.md` | 缺 | 真未完成 → **本轮做** |
+| `plan_infrastructure` | `plan_section_3_infrastructure.md` | 缺 | 真未完成 → **本轮做** |
+| `sol_decisive_experiment` | `plan_section_1_decisive.md` | 缺（它欠的补丁脚本倒是在） | 真未完成 |
+| `sol_history` | 无声明路径 | 无任何产物 | 真未完成 |
+| `sol_pipeline_fixes` | `pipefix_.../` 测试 | 目录 32 项，但「被杀时正在改测试期望」 | 真未完成 |
+| `sol_notebook_fixes` | 四个 builder 脚本 | 只有 1 个在它死的那一分钟被改过，另 3 个未动 | 真未完成 |
+
+`plan_measurement` 与 `plan_deliverable` 已在状态轴上收掉，防止下一轮再被当成待恢复。
+
+## 8. 四段账本（用户要求：准备/提交/处理/产物分开记）
+
+「包建好了」不等于「活干完了」。旧账本只有一根轴（running/done/failed），**表达不了
+「包在但没人跑」**——而那正是九个 agent 上一轮之后的真实状态。
+
+```
+prepared   RESUME 包存在
+submitted  包交给了某个执行者
+processed  执行者跑完并说了它做了什么
+artifact   声明的产物存在且非空   ← 唯一不是自述、而是 stat 出来的
+```
+
+前三段是**证词**，第四段是**测量**，账本刻意把它们分开。
+`artifact` 列在产物缺失时显示 `ABSENT` 而不是 `yes`——改这一处是因为初版写了 `yes`，
+**标签替数字说了它没说的话**。
+
+实现 `reg_stage.py`，接进 `agent_reg.sh stage` / `stages`。
+
+## 9. 实际恢复两个（顺序做，不并发九个）
+
+### `plan_analysis` → `/home/u6gb/kangli.u6gb/plan_section_4_analysis.md`（17,169 B）
+
+包的价值当场兑现：死掉的 agent 把四个校验脚本落在
+`/home/u6gb/kangli.u6gb/plan4_verify/`，**全部重跑成功且复现记录值**：
+
+| 量 | 重跑值 |
+|---|---|
+| rung-3 零效应 sd | 0.019468（记录 0.019468） |
+| GOOG 方差份额 / Kish n_eff | 0.6276 / **2.3652** |
+| 正确的 5% 带宽乘数 | **1.8964**（±2 sd 其实只有 3.68%） |
+| 符号翻转最小可达 p | **2/2⁸ = 0.0078125** |
+| 符号翻转实测尺寸膨胀 | 1.35–1.87× |
+
+另外两处我把措辞收紧了：120% 是推导值（119.9% = 0.0969/0.0808，非记录字段）；
+洗牌前后 qL1 与 sd_ratio 在 JSON 里是**逐位相同**，不是 2.2e-16。
+
+### `plan_infrastructure` → `/home/u6gb/kangli.u6gb/plan_section_3_infrastructure.md`（14,613 B）
+
+包里最后两句正卡在根因上（「`.done` 是 0 字节」「MANIFEST 为空却继续往下走」，
+并注明这一步纯 CPU）。四个 shell 签名当场测出来：
+
+| 测试 | 结果 |
+|---|---|
+| `set -u` + 重定向 + 未定义变量 | **文件 0 字节，命令没跑**——与观察到的 0 字节 `.done` 吻合 |
+| 变量已定义但为空 | 1 字节 ⇒ **0 与 1 字节可区分 unset 与 empty** |
+| `set -e` 下 `cmd; _rc=$?` | 守卫**不可达**（`collect_rollouts.sh:182`） |
+| `$?` 与命令替换同行 | **位置决定对错**：`$?` 在替换之前才正确 |
+
+因此普查结果比 FACTS.md 的原表述更精确：5 处疑似只有 **1 处真坏**
+（`eval_shard.sh:12`，`$(date)` 在前，于是每次失败都记 `rc=0`）。
+另查出 **10 处**用 `-f` 判 `.done`（0 字节能骗过全部）、**8 个**以 `exec` 收尾的启动器、
+**8 处** `rc=$?` 需逐个判定是否可达。
+
+~~「上一版说 agent 观察到一个 0 字节的 `.done`，所以现场必有」~~ —— 我在
+`crps_res_kcollapse_20260904T163807Z/*/member_*/.done` 下**一个 `.done` 都没找到**，
+所以那次目击**没能复核**。机制成立、目击未证实，两件事都写进产物。
+
+## 10. `/home` 那条保证是错的（用户点名）
+
+原话「/home 有空 inode 所以不会再失败」**只对了一半**。三件事必须分开查：
+
+| 问题 | 命令 | 2026-09-05 实测 |
+|---|---|---|
+| 字节额度 | `quota -u $(id -un)` | **100.20 / 100.58 GiB = 99.62% 满，只剩 0.39 GiB** |
+| inode 额度 | 同上 | 1,565,158 / 15,000,000 = 10.43%，宽裕 |
+| 能不能写 | `: > "$DIR/.probe"` | 能 |
+| 是否持久 | `findmnt -no SOURCE,FSTYPE /home` | NFS4 on VAST，非 scratch |
+
+`df` 报 15 PB 空闲，**答的不是这个问题**——它量的是文件系统，不是这个用户。
+更要紧的是：**写成功不等于有余量**。我写了 2 GiB 成功，几秒后 `quota` 才报
+`107161140*`（超硬上限，带星号）。记账是滞后的。
+
+测试文件用 `truncate -s 0` 原地清零，不 unlink（符合禁令），配额随后回落到 99.61%。
+
+## 11. 剩余真正未完成项（未并发启动）
+
+| slug | 缺什么 | 备注 |
+|---|---|---|
+| `sol_decisive_experiment` | 功效计算 + 成本 + 预登记那一节 | 补丁已应用，只欠文档 |
+| `sol_history` | 整条线的时间线重建 | 需要跨月 `sacct` 与多个根目录，重 |
+| `sol_pipeline_fixes` | 四个缺陷各配一个先红后绿的测试 | 与本轮 §9 的普查直接衔接 |
+| `sol_notebook_fixes` | 四个 builder 脚本里三个未动 | |
+| `sol_corrected_inference` | —— | **别的会话在做，禁止重复恢复** |
