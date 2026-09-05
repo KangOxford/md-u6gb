@@ -712,59 +712,102 @@ estimand you want, not on the data. Every one of the 239 scored records is at `K
 """)
 
 md(r"""
-## 10. Is `n_3 = 13` thirteen comparable units?
+## 10. Is `n_3 = 13` thirteen independent training units?
 
-Pooling requires that the eight replicates trained on 2026-09-05 be exchangeable with the five
-already scored, not merely similar. Checked before any pooling:
+The first version of this section answered by comparing configuration: same parent path, same
+weights file, same item-set hash, same budget, same parameter count. **That is a configuration
+table, not evidence.** Two runs can agree on every launch flag and still fail to be exchangeable if
+the parent changed underneath them, if the seed feeds a different random stream, or if their
+training samples overlap in a way the inference does not price.
 
-| Property | Five existing (`traj3_s*`) | Eight new (`r3rep_s4*`) |
-|---|---|---|
-| Parent checkpoint | `wm_ft_multi2` step 69378 | `wm_ft_multi2` step 69378 |
-| Weights / prefix | `v5m3_weights.npz` / `v5m3` | `v5m3_weights.npz` / `v5m3` |
-| Training item set (`seed0_sha1`) | `0f14669f2a4d` | `0f14669f2a4d` |
-| Items per epoch | 4800 | 4800 |
-| Budget (`max_step`) | 1500 | 1500 |
-| Trainable parameters | 78,539,423 | 78,539,423 |
-| Optimizer | scalar LR, `inject_hyperparams` | scalar LR, `inject_hyperparams` |
-| What differs | `order_sha1` only | `order_sha1` only |
-
-The item-set hash is identical and only the data-order permutation differs, which is the intended
-replication unit. Two limits survive that check and must travel with any `n_3 = 13` result:
-
-- `jax_seed` is pinned at 42 in every checkpoint, so all thirteen share one initialisation. They
-  estimate the **data-order** component of trajectory variance, a lower bound on the whole of it.
-- The comparison must be read at step 1200 on both sides. Mixing a replicate at 1200 against a
-  reference at its endpoint imports the checkpoint-position term, which section 4 showed is the
-  largest one here. That is why `multi3` is being scored at step 1200 rather than reused at `final`.
-""")
-
-md(r"""
-## 9. The corrected ledger
+Each of those was checked directly.
 """)
 
 code(r"""
-ledger = [
- ("panel effect, fair CRPS",        "+2.92%, p = 0.094",  f"+2.92%, p = {2*(1-stats.norm.cdf(abs(SPREAD['panel_effect_final_pct']/5.47))):.3f}", "run-to-run spread was never in the se"),
- ("peak refutation, multi4",        "P = 0.19",           f"P = {grubbs_p(10, (np.array(r3['multi4']['levels']).max()-np.array(r3['multi4']['levels']).mean())/np.array(r3['multi4']['levels']).std(ddof=1)):.4f}", "max-of-normals -> exact Grubbs"),
- ("peak refutation, unifw",         "P = 0.1385",         f"P = {grubbs_p(6, (np.array(r3['unifw']['levels']).max()-np.array(r3['unifw']['levels']).mean())/np.array(r3['unifw']['levels']).std(ddof=1)):.4f}", "same, and it fires in the control arm"),
- ("null band, 2-seed vs 4-seed",    "0.0195",             f"{0.019468*math.sqrt(1.5):.4f}", "band was built for a 4-vs-4 contrast"),
- ("rung 3 / rung 2",                "2.89x",              f"{rung3/(0.019468/math.sqrt(2)):.2f}x", "level sd compared against a contrast sd"),
- ("Welch df from n_eff = 2.365",    "1.37",               "2.30", "n_eff - 1 is not the Satterthwaite reduction"),
- ("maxT family-wise error rate",    "0.042 (claimed)",    "0.076-0.082 (measured)", "calibrated on the wrong curve"),
- ("cosine LR confound at step 1200","8.9x",               "1.0x (no schedule exists)", "metadata field never reaches optax"),
- ("sign-flip p, all contrasts",     "0.0078",             "0.0078 = the floor",  "not a measurement; 2/2^8"),
- ("round-3 replicates at step 1200","n = 5 (assumed pending)", f"n = 13 trained, {n3_scored} scored", "8 checkpoints verified by restore 2026-09-05"),
- ("round-3 paired dR vs multi3",    "not reported",       f"{per_seed.mean():+.4f}, t {t_sf:+.2f}, {int((per_seed<0).sum())}/{len(per_seed)}", "training seed as unit, ticker as pairing basis"),
- ("its sign-flip p",                "not reported",       f"{p_sf:.4f} = the floor at n=5", "2/2^5 = 0.0625 lies ABOVE alpha = 0.05"),
- ("K in every scored record",       "assumed variable",   "2, uniformly (239/239)",  "no K ladder exists; K-dependence unmeasurable"),
- ("run independence",               "assumed",            "coupled by common seeds", "cross-run r +0.389 same seed vs +0.139 different"),
-]
-w = [34, 22, 26, 44]
-hdr = ("quantity", "as published", "corrected", "why it changed")
-print("  ".join(h.ljust(x) for h, x in zip(hdr, w)))
-print("-" * (sum(w) + 6))
-for row in ledger:
-    print("  ".join(str(c).ljust(x) for c, x in zip(row, w)))
+import hashlib
+N_ITEMS, MAXSTEP = 4800, 1500
+def order(seed): return np.random.default_rng(seed).permutation(N_ITEMS)
+def sha(a): return hashlib.sha1(a.tobytes()).hexdigest()[:12]
+
+# (b) One random stream, or two? Recompute the order each run LOGGED, from the
+# current code, for seeds drawn from both families.
+LOGGED = {("traj3",1): "0d0abe40f578", ("traj3",2): "1579377c1dd8", ("traj3",22): "b39203d492c2",
+          ("r3rep",40): "18c94703b061", ("r3rep",41): "877cc66f0930", ("r3rep",47): "ded0d4b1c7f7"}
+repro = {k: sha(order(k[1])) == v for k, v in LOGGED.items()}
+print("(b) seed -> data order, recomputed against what each run logged")
+for (fam, sd), v in sorted(LOGGED.items()):
+    print(f"    {fam}_s{sd:<3d} logged {v}  recomputed {sha(order(sd))}  {'match' if repro[(fam,sd)] else 'MISMATCH'}")
+print(f"    seed-0 reference {sha(order(0))} (both families logged 0f14669f2a4d)")
+print(f"    one function across both families: {all(repro.values())}\n")
+
+# (c) Sample overlap. Each run consumes the first MAXSTEP of its own permutation
+# of the SAME 4800-item pool, so the units are not disjoint.
+seeds = [1,2,3,4,6] + list(range(40,48))
+sets = {sd: set(order(sd)[:MAXSTEP].tolist()) for sd in seeds}
+ov = [len(sets[a] & sets[b])/MAXSTEP for a, b in itertools.combinations(seeds, 2)]
+union = set().union(*sets.values())
+print("(c) training-sample overlap between the 13 units")
+print(f"    each run sees {MAXSTEP}/{N_ITEMS} = {100*MAXSTEP/N_ITEMS:.2f}% of one fixed pool")
+print(f"    pairwise overlap, {len(ov)} pairs: mean {100*np.mean(ov):.2f}%  "
+      f"[{100*min(ov):.2f}, {100*max(ov):.2f}]")
+print(f"    expected if the subsets were drawn independently: {100*MAXSTEP/N_ITEMS:.2f}%")
+print(f"    union {len(union)}/{N_ITEMS} = {100*len(union)/N_ITEMS:.1f}%; "
+      f"items seen by all 13: {len(set.intersection(*sets.values()))}")
+
+fig, ax = plt.subplots(1, 2, figsize=(7.4, 2.8))
+a = ax[0]
+a.hist([100*x for x in ov], bins=16, color=CTRL, alpha=.8, edgecolor="white", linewidth=.6)
+a.axvline(100*MAXSTEP/N_ITEMS, color=HL, lw=1.3,
+          label=f"independent-subsampling\nexpectation {100*MAXSTEP/N_ITEMS:.2f}%")
+a.set_xlabel("pairwise training-sample overlap (%)"); a.set_ylabel("pairs")
+a.set_title("The units share a pool, exactly as much as chance predicts", fontsize=8.5)
+a.legend(frameon=False, fontsize=6.5)
+
+b = ax[1]
+srcs  = ["initialisation", "dropout", "data order", "numerics"]
+live  = [0, 0, 1, 0.15]
+cols  = [CTRL, CTRL, HL, WARN]
+b.barh(range(4), live, color=cols, height=.55, alpha=.9)
+b.set_yticks(range(4)); b.set_yticklabels(srcs, fontsize=7.5); b.invert_yaxis()
+b.set_xlim(0, 1.25); b.set_xticks([0, 1]); b.set_xticklabels(["inert", "live"], fontsize=7)
+for i, t in enumerate(["restored from one parent, not initialised",
+                       "p_dropout = 0.0, key inert",
+                       "default_rng(train_seed).permutation(4800)",
+                       "XLA autotuning, ~4e-05 on the loss"]):
+    b.text(0.03, i, t, va="center", fontsize=6.2,
+           color="white" if live[i] > 0.5 else INK)
+b.set_title("Only one source of variation is live", fontsize=8.5)
+show(fig, "f9_exchangeability")
+""")
+
+md(r"""
+**(a) The parent did not move.** `wm_ft_multi2/69378` was written on 2026-08-14 and nothing under it
+has been touched since, so both families restored the same bytes rather than the same path. Every
+one of the thirteen checkpoints carries `init_timestamp_nsecs = 1784451028850888013`, which is the
+**parent's own** value: the weights are restored, not initialised, so there is no per-run
+initialisation to differ.
+
+**(b) One random stream.** The data order is
+`numpy.random.default_rng(--train-seed).permutation(4800)`. Recomputing it from the current code
+reproduces the hash and the first eight indices that each run logged, for three seeds from each
+family. The mapping is one function, not two that happen to look alike.
+
+**(c) The units overlap, by exactly as much as chance.** Each run consumes the first 1500 of its own
+permutation of the same 4800-item pool, so any two share about 31% of their training items — and the
+measured mean, 31.18%, is the independent-subsampling expectation of 31.25%. The randomisation is
+sound; what this shows is the *scope*: the pool is fixed, and no item is seen by all thirteen.
+
+### What the thirteen actually are
+
+Not thirteen independent training runs. **Thirteen independent data-order draws**, conditional on one
+restored initialisation, one 4800-item pool, one context set, and one pair of generation seeds
+(97901/97902). Any variance estimated from them is a **lower bound** on training-run variance,
+because three of the four sources that would vary between genuinely independent runs are held fixed
+by construction and the fourth is inert.
+
+The inference that follows is therefore scoped to that unit, and the pairing is matched on the
+things held fixed: the same ticker, the same 500 contexts, the same 20 days, the same two generation
+seeds, and step 1200 on both sides.
 """)
 
 md(r"""

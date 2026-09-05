@@ -382,3 +382,38 @@ corrupted the eight training wrappers earlier today):
 
 The old drainer was stopped by exact PID -- not by `cmdline` substring, which also matches the
 wrapping shell. v2's first round read 25 free cards and launched 11 cells.
+
+### 2026-09-05 09:xx -- exchangeability verified, and two more probe bugs
+
+**The configuration table was not evidence.** Section 10 of the notebook is rewritten around three
+measurements:
+
+| Check | Method | Result |
+|---|---|---|
+| Parent identity | mtime under `wm_ft_multi2/69378`, and the `init_timestamp_nsecs` each checkpoint carries | Parent written 2026-08-14, untouched since. **All thirteen carry the parent's own `1784451028850888013`** -- weights are restored, never initialised, so there is no per-run initialisation to differ |
+| Training random stream | recompute `numpy.random.default_rng(train_seed).permutation(4800)` from current code, compare to what each run logged | Hash **and** first eight indices reproduce for traj3 s1/s2/s22 and r3rep s40/s41/s47, plus the shared seed-0 reference `0f14669f2a4d`. One function, not two that look alike |
+| Sample overlap | pairwise intersection of the first 1500 items of each permutation | mean **31.18%** over 78 pairs [28.73, 33.73], against the independent-subsampling expectation **31.25%**; union 4764/4800 = 99.2%; **0** items seen by all thirteen |
+
+**What the thirteen are.** Not thirteen independent training runs. Thirteen independent **data-order
+draws**, conditional on one restored initialisation, one 4800-item pool, one context set, and one
+pair of generation seeds (97901/97902). Randomness inventory: initialisation **absent** (restore, not
+init), dropout **inert** (`p_dropout = 0.0`), data order **live**, numerics ~4e-05 on the loss. Any
+variance estimated from them is a **lower bound** on training-run variance, and the inference is
+scoped to that unit.
+
+**Two more probe bugs, both of the same family: a failed or mis-keyed probe read as a measurement.**
+
+1. `PROBE FAILED` fired for eleven rounds while `gtop` was working. The per-card lines carry **no
+   `GH200` string at COLUMNS=200** -- the parser keyed on it, so a working probe looked like a dead
+   one. Re-keyed on the bracketed card index, which is present at every width.
+2. The four outcomes are now recorded separately and never substituted for one another:
+   `PROBE FAILED` (no node lines at all), `NO ALLOCATION` (probe fine, no nodes held),
+   `NO FREE CARDS: N busy, M held` (held = resident memory at 0% util, which is not free), and
+   `free cards: N (busy B, held H)`. On the cell side, a missing `.done` is a **generation** failure
+   and a non-zero `score_v5_primary` exit is a **scoring** failure; they are logged distinctly.
+
+`drain_cells_v3.sh` carries both fixes, written as a new file. Exactly one drainer runs, confirmed
+by exact argv match rather than `cmdline` substring.
+
+**Verdicts unchanged.** 12 of 72 cells scored. Nothing is judged until the comparison is complete;
+the three-surface sync is delivery hygiene, not evidence.
