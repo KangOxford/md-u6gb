@@ -1,0 +1,3 @@
+{"ts":"2026-09-05T07:36:00Z","agent_id":"aba6e0d82eec431ad","slug":"sol_notebook_fixes","stage":"submitted","note":"handed to this session; verification tooling only, the four builder scripts were NOT edited","spill_reason":"registry.jsonl is on /home and /home hit its hard byte quota (Errno 122)"}
+{"ts":"2026-09-05T07:36:01Z","agent_id":"aba6e0d82eec431ad","slug":"sol_notebook_fixes","stage":"processed","note":"5 of 6 banked verify scripts run; verify_sweep.py crash diagnosed (two record shapes in one file); patch written but NOT applied because /home is full","spill_reason":"same"}
+{"ts":"2026-09-05T07:36:02Z","agent_id":"ae540615fd15021b3","slug":"sol_history","stage":"submitted","note":"scoped only; not executed this round","spill_reason":"same"}

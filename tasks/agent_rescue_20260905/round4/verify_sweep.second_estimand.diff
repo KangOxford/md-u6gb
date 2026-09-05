@@ -1,0 +1,31 @@
+--- /home/u6gb/kangli.u6gb/nbfix_20260904T174047Z/verify_sweep.py.bak_20260905T081539Z	2026-09-05 07:41:52.876303878 +0000
++++ /home/u6gb/kangli.u6gb/nbfix_20260904T174047Z/verify_sweep.py	2026-09-05 08:15:39.193881065 +0000
+@@ -26,8 +26,26 @@
+ print(f'  per-seed rows {len(per_seed)}   pooled (K>=2, no seed) rows {len(pooled)}'
+       f'   -- kept separate, NOT merged')
+ if pooled:
+-    ps=collections.Counter((r['arm'], str(r['step'])) for r in pooled)
+-    print('  pooled cells by (arm,step):', dict(sorted(ps.items())))
++    # Counting the pooled rows is not the same as reporting them.  They are a second
++    # estimand -- K>=2 CRPS-scored cells -- and dropping them from the OUTPUT is the same
++    # silent loss as dropping them from the input, just one step later.  So they get their
++    # own table, with the number of cells behind each number printed next to it.
++    pool=collections.defaultdict(list)
++    for r in pooled:
++        pool[(r['arm'], str(r['step']))].append(r)
++    print()
++    print('=== SECOND ESTIMAND: pooled K>=2 cells (CRPS-scored, no per-seed identity) ===')
++    print(f"  {'arm':8} {'step':>6} {'cells':>6} {'R':>9} {'|R-1|':>8} {'qL1':>8} {'crps':>11}")
++    for (a,st),rs in sorted(pool.items()):
++        R=[float(r['sd_ratio']) for r in rs if r.get('sd_ratio') is not None]
++        q=[float(r['qL1']) for r in rs if r.get('qL1') is not None]
++        c=[float(r['crps']) for r in rs if r.get('crps') is not None]
++        mR=sum(R)/len(R) if R else float('nan')
++        print(f"  {a:8} {st:>6} {len(rs):>6} {mR:>9.4f} {abs(mR-1):>8.4f} "
++              f"{(sum(q)/len(q) if q else float('nan')):>8.4f} "
++              f"{(sum(c)/len(c) if c else float('nan')):>11.4e}")
++    print('  NOTE: these are NOT comparable row-for-row with the per-seed table above --')
++    print('        different estimand, different K, no seed identity.  Never merge them.')
+ cells=collections.defaultdict(dict)
+ for r in per_seed:
+     cells[(r['arm'],int(r['step']))][(r['ticker'],r['seed'])]=(r['sd_ratio'],r['qL1'])

@@ -1,0 +1,26 @@
+== null_ladder AFTER ==
+null_ladder_and_calibration.ipynb  (368238 bytes)
+  PASS  NB1 parses as nbformat 4
+  PASS  NB2 every code cell carries output
+  PASS  NB3 the notebook embeds figures
+  PASS  NB4 no cell carries an error output
+  PASS  NB5 the rendered notebook carries the correction: 'Satterthwaite df on the effect is 3.24'
+  PASS  NB7 the notebook is not older than its builder
+  PASS  NB6 every figure on disk is a non-empty PNG
+
+7 passed, 0 failed
+rc=0
+== null_ladder BEFORE ==
+null_ladder_and_calibration.ipynb.bak_20260905T101704Z  (368016 bytes)
+  PASS  NB1 parses as nbformat 4
+  PASS  NB2 every code cell carries output
+  PASS  NB3 the notebook embeds figures
+  PASS  NB4 no cell carries an error output
+  FAIL  NB5 the rendered notebook carries the correction: 'Satterthwaite df on the effect is 3.24'
+        the corrected sentence is in the source but not in the rendered cells
+  FAIL  NB7 the notebook is not older than its builder
+        notebook 1788488914 < builder 1788596041 -- stale by 1785 min; the rendered file predates the fix
+  PASS  NB6 every figure on disk is a non-empty PNG
+
+5 passed, 2 failed
+rc=2

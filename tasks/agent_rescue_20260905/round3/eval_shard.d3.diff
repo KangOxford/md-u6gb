@@ -1,0 +1,15 @@
+--- /lus/lfs1aip2/projects/public/u6gb/nb_build_pr22/eval_shard.sh.bak_20260905T072947Z	2026-09-02 19:37:47.000000000 +0000
++++ /lus/lfs1aip2/projects/public/u6gb/nb_build_pr22/eval_shard.sh	2026-09-05 07:29:47.000000000 +0000
+@@ -9,7 +9,11 @@
+         echo "[$(date -u +%H:%M:%S)] shard $SHARD cell $i: $STOCK $SEED step=${STEP:-final}"
+         STOCK="$STOCK" SEED="$SEED" STEP="$STEP" bash "$S/eval_v5me4_cell.sh" \
+             >> "$S/logs/eval_shard${SHARD}.log" 2>&1 \
+-            || echo "[$(date -u +%H:%M:%S)] shard $SHARD cell $i FAILED rc=$?: $STOCK $SEED"
++            || { rc=$?
++                 # $? had to be read on its own line: bash expands a word left to
++                 # right, so a $(...) appearing BEFORE $? resets it and every failure
++                 # was logged as rc=0.  Position, not co-occurrence, is what breaks it.
++                 echo "[$(date -u +%H:%M:%S)] shard $SHARD cell $i FAILED rc=$rc: $STOCK $SEED"; }
+     fi
+     i=$(( i + 1 ))
+ done < "$S/eval_cells.txt"

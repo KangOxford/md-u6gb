@@ -1,0 +1,19 @@
+--- /local/user/1483804540/claude-1483804540/-lus-lfs1aip2-projects-public-u6gb/2616cee4-af68-470a-83ca-736217425df6/scratchpad/bak_20260905T2130/parent_cell.sh	2026-09-05 07:46:22.000000000 +0000
++++ /lus/lfs1aip2/projects/public/u6gb/nb_build_pr22/parent_cell.sh	2026-09-05 21:35:32.000000000 +0000
+@@ -33,7 +33,15 @@
+     export OUT_ROOT="$ROOT/data/s$sd" SEED0="$sd"
+     bash "$Wo/run/mid_training/collect_rollouts.sh" >> "$ROOT/gen.log" 2>&1
+     _rc=$?
+-    [ -f "$OUT_ROOT/member_0/.done" ] || { echo "[gen] seed $sd produced nothing (exit=$_rc)" >&2; tail -6 "$ROOT/gen.log" >&2; exit 7; }
++    # `-f` accepts a 0-byte .done, which is what a redirection that succeeded followed by
++    # a writer that died leaves behind -- an allocation expiring mid-write produces exactly
++    # that, and the member is then scored as complete.  Existence is not integrity.
++    if [ ! -s "$OUT_ROOT/member_0/.done" ] || \
++       ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
++                 "$OUT_ROOT/member_0/.done" 2>/dev/null; then
++        echo "[gen] seed $sd produced nothing usable (exit=$_rc)" >&2
++        tail -6 "$ROOT/gen.log" >&2; exit 7
++    fi
+     ARMLIST="${ARMLIST:+$ARMLIST,}s$sd"
+ done
+ cd "$Wo/run/mid_training"

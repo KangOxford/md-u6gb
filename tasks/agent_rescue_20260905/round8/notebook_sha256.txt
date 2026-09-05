@@ -1,0 +1,2 @@
+14b7e5d06ff6599d2fc363b4b79ef1ffe731d720373d8bc37a577bdb22c6dd10  friday_talk.ipynb
+224ff0b84c5877b4dae4d3869069e028bd830e8605f84d582ae09908dd627159  null_ladder_and_calibration.ipynb

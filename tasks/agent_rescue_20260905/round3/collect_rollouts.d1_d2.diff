@@ -1,0 +1,46 @@
+--- /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/crps-return-alignment-20260808/run/mid_training/collect_rollouts.sh.bak_20260905T072947Z	2026-09-04 21:39:45.000000000 +0000
++++ /lus/lfs1aip2/projects/public/u6gb/sigma-0-worktrees/crps-return-alignment-20260808/run/mid_training/collect_rollouts.sh	2026-09-05 07:29:47.000000000 +0000
+@@ -89,10 +89,20 @@
+ esac
+ mkdir -p "$OUT_ROOT"
+ 
++# A .done is a manifest, not a flag.  `-f` accepts a 0-byte file, and a 0-byte .done
++# is what a redirection that succeeded followed by a writer that died leaves behind --
++# an allocation expiring mid-write produces exactly this.  Such a member is then
++# skipped on resume and scored as if it were complete.  Measured 2026-09-05: ten sites
++# tested .done with -f and none with -s.  Existence is not integrity.
++_done_ok() {
++    [ -s "$1/.done" ] || return 1
++    "$PYTHON" -c 'import json,sys; json.load(open(sys.argv[1]))' "$1/.done" 2>/dev/null
++}
++
+ for ((k=0; k<K; k++)); do
+     SEED=$((SEED0 + k * SEED_STRIDE))
+     MEMBER_DIR="$OUT_ROOT/member_$k"
+-    if [ -f "$MEMBER_DIR/.done" ]; then
++    if _done_ok "$MEMBER_DIR"; then
+         echo "[collect] member $k already done, skipping"
+         continue
+     fi
+@@ -167,6 +177,7 @@
+   "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$(basename -- "${BASH_SOURCE[0]}")")
+ 
+     echo "[collect] member $k seed=$SEED -> $MEMBER_DIR (writing to $WRITE_DIR)"
++    _rc=0
+     "$PYTHON" -u -B "$WORKDIR/run/base_model/runtime/inference.py" \
+         --architecture=mamba3 --token_mode=26tok \
+         --ckpt_path="$CKPT" --checkpoint_step="$CKPT_STEP" \
+@@ -178,8 +189,11 @@
+         --n_cond_msgs="$N_COND" --n_gen_msgs="$N_GEN" \
+         --test_split=1.0 --sample_indices_file="$INDICES" \
+         --seed="$SEED" --rank=0 --world_size=1 \
+-        > "$WRITE_DIR/inference.log" 2>&1
+-    _rc=$?
++        > "$WRITE_DIR/inference.log" 2>&1 || _rc=$?
++    # `set -e` kills the script at the line above, so the guard below never ran and the
++    # operator never learned WHICH log to read.  The exit code survived; the diagnostic
++    # did not.  `_rc=0` then `|| _rc=$?` keeps both.  Reproduced 2026-09-05 in
++    # /home/u6gb/kangli.u6gb/pipefix_20260904T174156Z/t_shellstate.sh (case D2).
+     # Without this the old path's behaviour carried over: a crashed inference
+     # still got its .done, so the member looked collected and scoring read
+     # whatever partial set of contexts had landed before the crash.
