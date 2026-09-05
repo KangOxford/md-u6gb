@@ -1,0 +1,30 @@
+TARGET (a): these 8 tickers and these contexts. The ticker set is fixed, so the
+            interval covers only the finite-context/finite-rollout noise. It says
+            nothing about a ticker not measured.
+
+TARGET (b): a new ticker or a new context set. The ticker is the resampling unit,
+            df = 7. This is what 'fitted once and reused' would need.
+
+=== primary_exclude28 ===
+  transfer cost, per ticker: [ 0.055  0.001 -0.360 -0.005 -0.050  0.107 -0.037  0.095]
+  TARGET (b) mean -0.0242  95% CI [-0.1476, +0.0991]  (SD units of the eval score, df=7)
+     as a fraction of the contrast being measured (0.818): [-18.0%, +12.1%]
+  the widest |bound| of that CI is 0.1476 SD units = 18.0% of the contrast
+     -> a tolerance delta smaller than that CANNOT be certified by this data
+     -> a tolerance delta of 0.148 SD units or larger WOULD contain it
+     (stated as a description of the interval, NOT as a pre-registered bound;
+      no tolerance was set in advance, so no equivalence claim is licensed)
+
+=== sensitivity_include28 ===
+  transfer cost, per ticker: [-0.061 -0.032  0.123  0.044 -0.151  0.020 -0.012  0.043]
+  TARGET (b) mean -0.0033  95% CI [-0.0718, +0.0653]  (SD units of the eval score, df=7)
+     as a fraction of the contrast being measured (0.794): [-9.0%, +8.2%]
+  the widest |bound| of that CI is 0.0718 SD units = 9.0% of the contrast
+     -> a tolerance delta smaller than that CANNOT be certified by this data
+     -> a tolerance delta of 0.072 SD units or larger WOULD contain it
+     (stated as a description of the interval, NOT as a pre-registered bound;
+      no tolerance was set in advance, so no equivalence claim is licensed)
+
+The bal result, checked the same way rather than by a 6/8 count:
+  primary_exclude28: |bal-1| global minus stratified, mean +1.661  95% CI [+1.171, +2.151]  -> excludes 0, better in 8/8
+  sensitivity_include28: |bal-1| global minus stratified, mean +1.725  95% CI [+1.267, +2.184]  -> excludes 0, better in 8/8

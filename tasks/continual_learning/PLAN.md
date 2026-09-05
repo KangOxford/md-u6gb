@@ -1,7 +1,7 @@
 # Continual Learning for sigma-0: Plasticity Measurement and Continual Pre-Training Plan
 
 > Task dir: `tasks/continual_learning/` · Source research: `deep-reseach.md` (two-pass deep research, 2026-08-26)
-> **Status: MERGED PLAN, revision 6 (2026-09-05).** Five facet drafts under `plan_drafts/`
+> **Status: MERGED PLAN, revision 7 (2026-09-05).** Five facet drafts under `plan_drafts/`
 > are the detail; this file is the spine and the decision record. Green marks what is done,
 > ~~strikethrough~~ marks what measurement has overturned. Not yet adversarially reviewed —
 > see §0.4.
@@ -254,6 +254,41 @@ every config in the archive — which a checklist would not have surfaced.
 | **P6** inode write plan | The conditions are written and both anchors measured (3,007 inodes/member unpacked, 1,507 deduped) | The `lfs quota` read-and-record step, and the `inodes_planned < 0.5 × free_at_start` check, are not implemented as an executable gate |
 
 **P1 partial, P2 partial (one of four conditions verified), P6 partial. No generation.**
+
+---
+
+### 0.13 Revision 7 (2026-09-05) — an invalid inference of mine, corrected
+
+Detail in `results/RESULTS_20260905.md` addendum 8.
+
+**Withdrawn.** The pre-registered reading rule at `4611383a` said "a cost indistinguishable
+from zero means the edges transfer". That reads a failure to detect a difference as a
+demonstration that there is none. Showing two things are close enough to substitute needs a
+tolerance fixed in advance and an interval inside it, not a wide interval straddling zero.
+~~"the edges may be fitted once and reused"~~ and its SUPPORTED label are withdrawn.
+
+**The interval, target stated.** "Fit once and reuse" is a claim about a *new* ticker or
+context set, so the ticker is the resampling unit, df = 7:
+
+| analysis | mean | 95% CI | as a fraction of the contrast |
+|---|---:|---|---|
+| primary | −0.0242 | **[−0.1476, +0.0991]** | **[−18.0%, +12.1%]** |
+| sensitivity | −0.0033 | **[−0.0718, +0.0653]** | **[−9.0%, +8.2%]** |
+
+**The measured transfer difference is small, and reusability is NOT established.** A δ of
+0.148 SD units (primary) or 0.072 (sensitivity) or larger would contain the interval — offered
+as a description of the interval, **not** as pre-registered support, since no tolerance was
+set in advance and choosing one now because it fits is the manoeuvre pre-registration exists
+to prevent.
+
+**What survives, and one of them is stronger than reported.** The realised-move confound
+tested as the comparison actually claimed — the literal issue-#73 rule against the stratified
+one, on `|bal − 1|`, paired with df = 7 — is **+1.661, 95% CI [+1.171, +2.151]** (primary) and
+**+1.725, [+1.267, +2.184]** (sensitivity), **excluding zero, 8/8 tickers under both**. That
+is a difference, not a failure to find one. The matched-`k` `num_errors` advantage stands
+(8/8 at k=1 and at k=5). The 1.26–4.90× floor inflation is **scoped to contrasts whose two
+sides genuinely cannot share draws**; it does not condemn matched pairing, which is the right
+design when the two sides should share a nuisance.
 
 ---
 

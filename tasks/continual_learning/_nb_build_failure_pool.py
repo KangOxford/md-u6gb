@@ -365,9 +365,13 @@ show(fig)''')
 M("""The literal issue-#73 rule carries **2.88-2.98x** the population's realised move on
 contexts it never saw, against 1.21-1.25 for the stratified rules. The held-out-rollout
 comparison put the same gap at 1.42 against 1.29, so **that test understates the confound by
-about a factor of four** -- which is why the two are not interchangeable. The transfer cost
-brackets zero under both analyses (|mean|/sd 0.16 and 0.04, direction a coin flip in both),
-so the edges may be fitted once and reused. Neither panel says anything about training.""")
+about a factor of four** -- which is why the two are not interchangeable. The transfer cost's 95%
+confidence interval, with the ticker as the resampling unit, is **[-0.148, +0.099]** SD units
+in the primary analysis and **[-0.072, +0.065]** in the sensitivity one -- spanning up to a
+fifth of the effect it measures. ~~The edges may be fitted once and reused.~~ **Withdrawn**:
+an interval that straddles zero is a failure to detect a difference, not a demonstration that
+there is none, and no tolerance was fixed in advance. The measured difference is small and
+reusability is **not established**. Neither panel says anything about training.""")
 
 M("""## Table 1 — Per ticker""")
 
