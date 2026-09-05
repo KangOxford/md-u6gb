@@ -1,3 +1,125 @@
+# PLAN — subagent recovery and the work the lost agents owed
+
+Living plan file for this task. Canonical path:
+`/lus/lfs1aip2/projects/public/u6gb/tasks/agent_rescue_20260905/task_plan.md`
+Updated 2026-09-05T20:40 UTC under protocol PLAN-GPU-20260905T2030. The round-by-round
+narrative that this file used to be is kept below, unchanged, from "# subagent 断线恢复".
+
+**A plan existing is not evidence that anything in it is done.** Every row that claims
+completion names the artefact and the check that produced it.
+
+---
+
+## 1. Original goal
+
+Nine subagents died with their session on 2026-09-04. Recover what they established and finish
+what they owed, without re-running what already exists and without disturbing other lines that
+share this Unix account.
+
+## 2. Claims to be adjudicated
+
+| # | claim | status | decided by |
+|---|---|---|---|
+| C1 | a lost subagent's work is unrecoverable | **refuted** | 603 durable transcripts on `/home`; all nine had 416 KB–5.6 MB and their prompts inline in the registry |
+| C2 | round 4 ends below round 3 on R | holds (pre-existing) | 18 vs 4 single-seed separation, p = 2.7e-4 |
+| C3 | the exit was caused by the importance weights | refuted (pre-existing) | uniform-weight control moves −0.0969 vs −0.0808 |
+| C4 | the headline `t = −7.8` came from a test that fires on noise | **refuted, this task** | −7.8362 is `naive_day_level_t` (df 19), the *conservative* test here (null max 2.27) |
+| C5 | the registered analysis matches what was run | **5 match, 1 gap, 1 qualification** | `round6/H8_REGISTERED_VS_RUN.md` |
+| **C6** | **round 4's exit survives trajectory-to-trajectory noise** | **UNDECIDED — the open scientific question** | needs `s_trajectory`; see §4 |
+
+**C6 is the one that matters and it is not settled.** Everything delivered so far corrects how
+the existing numbers are read. None of it establishes that the effect is real beyond the
+variance component that has never been measured. **Pushing the notebooks did not decide C6.**
+
+## 3. Necessary steps and dependencies
+
+```
+S1 recover the nine ─> S2 finish their owed work ─> S3 correct the analysis artefacts
+                                                          |
+S4 pipeline preconditions (CPU) ──────────────────────────+
+                                                          v
+                                            S5 score the 12 trajectories (GPU)
+                                                          |
+                                                          v
+                                            S6 estimate s_trajectory ─> decides C6
+```
+
+| step | what | needs | state |
+|---|---|---|---|
+| S1 | registry, recovery packets, verify harness | CPU | **done** |
+| S2 | the plan sections and the pipeline/notebook fixes | CPU | **done for 3 of 4 agents**; `sol_history` H6 declined, H7/H8 done |
+| S3 | H8; display defects D-1/D-2/D-3; notebooks with outputs in the PR | CPU | **done** |
+| **S4a** | `.done` tested for content, not existence — **9 sites still use `-f`** | CPU | **OPEN — next action** |
+| **S4b** | two call sites still decide on the exit code (`r3null_cell.sh:45`, `inter_cell.sh:60`) | CPU | **OPEN — next action** |
+| S4c | 8 launchers still end in `exec`, defeating their EXIT trap | CPU | open, not on the C6 path |
+| **S4d** | inode/byte headroom for generation | placement decision, **not mine alone** | **BLOCKING S5, and now blocking file creation entirely** |
+| S5 | generate + score the 12 trained trajectories at step 4800 | **GPU** | blocked by S4a/S4b/S4d + ownership |
+| S6 | estimate `s_trajectory`; re-read C2/C3 against it | CPU | blocked by S5 |
+
+## 4. The GPU step, sized
+
+Not the 354 node-h plan — that was *training* new trajectories and stays withdrawn. This is
+scoring checkpoints that already exist.
+
+| quantity | value | source |
+|---|---|---|
+| trajectories trained, complete at step 4800 | **12** (`wm_ft_traj_s30…s41`, seeds 30–41, all distinct) | `round5/TRAJECTORY_LEDGER.md` |
+| of those, scored | **0** | `sweep_results.jsonl` arms are only `multi3/multi4/unifw` |
+| cells for the full estimate | 12 × 8 tickers = **96** | one prespecified checkpoint each |
+| measured cost per cell | **17.2 min**, 1 node × 4 GPU | `sacct` `crps-*` COMPLETED 17:12 / 17:06 / 17:28 |
+| **minimum useful request** | **4 GPUs (1 node), ~2.5 h** → an 8-cell strip | enough to separate spread ≤ 0.03 from > 0.08 |
+| full panel | ≈ **27.5 node-h**; on 8 nodes ≈ 3.5 h wall | |
+| **GPU workers this session holds now** | **0** | no step of mine is running |
+
+**Stopping criteria, fixed before data.** Stop after the 8-cell strip and report its spread.
+Go to 96 cells only if the strip's spread is < 0.08 **and** devices are coordinated for it. If
+the strip shows > 0.08, stop and report C6 as unresolvable at this budget rather than buying
+more cells.
+
+## 5. Blockers, each with the action that clears it
+
+| # | blocker | measurement (2026-09-05T20:4x UTC) | action |
+|---|---|---|---|
+| **B1** | **storage** | Lustre inodes **51,200,000 / 51,200,000 — full**, `/home` bytes **105,728,116 / 105,468,748 KB — over**. Creating this file as a new path failed with `Disk quota exceeded`; it is written by overwriting an existing inode. Generation's default path writes ~12,004 files/member, 24,016/cell | free inodes, or run generation with `PACK_MEMBER=1` to node-local and copy back 4 files/member (the `sweep_cell.sh` shape). **Not clearable by me alone** |
+| B2 | good data discarded on exit code | `r3null_cell.sh:45`, `inter_cell.sh:60` still `\|\| exit 7`; the failure is intermittent → silently biased sample | S4b, mine, CPU |
+| B3 | `.done` existence ≠ integrity | 9 sites still `-f` | S4a, mine, CPU |
+| B4 | ownership | the 12 came from job 6317365, another line, owner unknown | explicit authorisation to score them |
+| B5 | devices | shared account; a card free at read time may belong to another of Kang's tasks | coordinated allocation/node/device before starting |
+
+## 6. Cancelled / deferred
+
+| item | decision |
+|---|---|
+| **354 node-h plan (train 6 or 24 new trajectories)** | **withdrawn** — its premise was false; replicates already exist |
+| H6, a GPU-hour total for the line | **declined** — cancelled/resubmitted steps make a total a guess |
+| `step_budget.ipynb`, `verdict_audit.ipynb` | **out of scope** — another session holds uncommitted edits to one builder |
+| `sol_corrected_inference` | **forbidden** — another session owns it |
+| S4c (`exec` launchers) | deferred — real, not on the C6 path |
+
+## 7. Budget and stopping criteria
+
+CPU work continues with no device request. GPU spend is capped at the §4 strip and only after
+a coordinated device assignment. Nothing is started to occupy reserved cards; no allocation or
+held job of Kang's is cancelled or released.
+
+## 8. Next action
+
+**S4a + S4b — CPU, authorised, no device needed.** Two of the three things that would otherwise
+waste the first GPU hour.
+
+## 9. Readable results
+
+| what | path |
+|---|---|
+| notebooks with outputs + HTML | `tasks/agent_rescue_20260905/notebooks/` |
+| trajectory provenance ledger | `tasks/agent_rescue_20260905/round5/TRAJECTORY_LEDGER.md` |
+| registered-vs-run | `tasks/agent_rescue_20260905/round6/H8_REGISTERED_VS_RUN.md` |
+| acceptance | `round7/ACCEPTANCE_v4.md`, `round8/DISPLAY_ACCEPTANCE.md` |
+| the four plan sections | `tasks/agent_rescue_20260905/delivered/` |
+| PR | https://github.com/KangOxford/md-u6gb/pull/2 |
+
+---
+
 # subagent 断线恢复 —— 任务计划
 
 **日期**：2026-09-05  **仓库**：`KangOxford/md-u6gb`

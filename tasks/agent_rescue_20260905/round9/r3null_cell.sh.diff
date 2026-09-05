@@ -1,0 +1,20 @@
+--- /local/user/1483804540/claude-1483804540/-lus-lfs1aip2-projects-public-u6gb/2616cee4-af68-470a-83ca-736217425df6/scratchpad/bak_20260905T2130/r3null_cell.sh	2026-09-04 18:03:11.000000000 +0000
++++ /lus/lfs1aip2/projects/public/u6gb/nb_build_pr22/r3null_cell.sh	2026-09-05 21:35:32.000000000 +0000
+@@ -42,7 +42,16 @@
+ export N_SEQ=500 BATCH=48 N_COND=250 N_GEN=250
+ export K=1 SEED0="$SEED" SEED_STRIDE=1
+ export INFERENCE_MONTHS=2026-01 WIDE_LEVELS=500
+-bash "$W/run/mid_training/collect_rollouts.sh" || { echo "[gen] failed" >&2; exit 7; }
++# Success is the product, not the exit code.  collect_rollouts.sh has been observed
++# returning nonzero with the member fully written, intermittently -- so `|| exit 7` threw
++# away good cells and left a biased sample nobody notices.  Check what was produced.
++_rc=0; bash "$W/run/mid_training/collect_rollouts.sh" || _rc=$?
++if [ ! -s "$OUT_ROOT/member_0/.done" ] || \
++   ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
++             "$OUT_ROOT/member_0/.done" 2>/dev/null; then
++    echo "[gen] produced no complete member (collect exit=$_rc)" >&2; exit 7
++fi
++[ "$_rc" -ne 0 ] && echo "[gen] collect exited $_rc but member_0 is complete; keeping it" >&2
+ 
+ cd "$W/run/mid_training"
+ # stderr used to be discarded, taking every [fatal] explanation with it.
