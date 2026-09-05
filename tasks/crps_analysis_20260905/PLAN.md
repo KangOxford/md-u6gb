@@ -178,3 +178,50 @@ SE and df at all; n4 = 18 -> 30 moved the SE by 4.4% and left df at 5.42.
 - Any quantile or sign-flip statistic is printed next to its **event count** and its **attainable floor**.
 - No number enters a heading, is bolded, or is called "best" until n has stopped growing.
 - Every scored cell records `k_actual` from the estimator, not from a shell directory count.
+
+---
+
+## 6. Progress log
+
+### 2026-09-05 03:5x -- eight round-3 replicates running, and a copy-back defect I wrote myself
+
+| seed | node | step | step_1050 on Lustre | step_1200 on Lustre |
+|---|---|---|---|---|
+| s40 | nid010851 | 850  | no  | no |
+| s41 | nid010851 | 1100 | yes | no |
+| s42 | nid010234 | 1200 | yes | **yes** |
+| s43 | nid010308 | 1150 | yes | no |
+| s44 | nid010308 | 1150 | yes | no |
+| s45 | nid010488 | 1100 | yes | no |
+| s46 | nid010488 | 1100 | yes | no |
+| s47 | nid010488 | 1100 | yes | no |
+
+All eight alive. Throughput 5.0-6.6 s/it; s40 is one node-hour behind the rest.
+
+**The defect.** `wmle_full_ft.py` saves to `"${--out}_step<N>"`, appending the suffix to the
+`--out` path rather than creating a child of it, so every checkpoint is a **sibling** of `$LOCAL`.
+My copy-back copied `"$LOCAL"/.` and so persisted exactly one file, the 260-byte
+`ft_progress.json`, while reporting **zero errors** -- `cp` genuinely succeeded on the directory it
+was given.
+
+This is the same shape as the defect the notebook audits in someone else's code
+(`adv_code`: *"sync_once line 106 makes a total copy-back failure indistinguishable from success"*).
+I had read that finding, written a copy-back with explicit error reporting to avoid it, and still
+shipped a check that passes because it measures the wrong thing. Reporting errors is not the same
+as reporting the quantity that matters; the guard now counts what is **on the destination** and
+warns when that count is zero.
+
+Fixed in `r3_replicate.sh`. Recovery for the runs already in flight is
+`harvest_r3.sh` (one `srun --overlap` per node, read-only on the trainer's side, never removes
+anything), driven by `harvest_loop.sh` every 5 minutes until no run is left.
+
+### Next condition
+
+When all eight have `step_1200` on Lustre, score those checkpoints through the same cell pipeline
+as the existing five round-3 replicates, recompute the between-round contrast at n3 = 13, and
+update the notebook's figure 7 and the ledger. Until then the notebook stands as published; its
+n3 = 5 panel is labelled with the count it was computed from.
+
+**Risk to watch**: node-local storage is TMPFS and the checkpoints vanish with the allocation.
+6317365 has ~19 h left and 6324130 ~23 h, against ~30 min of remaining training, so the margin is
+wide -- but the harvest loop exists because that margin is not the thing that failed last time.

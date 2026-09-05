@@ -27,10 +27,23 @@ mkdir -p "$LOCAL" "$DEST" || { echo "[r3] ABORT: cannot create dirs"; exit 4; }
 # Copy back every 180 s. Failures are reported, not swallowed: the old syncer
 # printed "final sync done" unconditionally and read the step from the SOURCE,
 # so a total copy-back failure was indistinguishable from success.
-( while sleep 180; do
-    if cp -a --update "$LOCAL"/. "$DEST"/ 2>/dev/null; then :; else echo "[r3][copyback] FAILED at $(date -u +%H:%M:%SZ)"; fi
-  done ) & SYNC=$!
-trap 'kill $SYNC 2>/dev/null; if cp -a --update "$LOCAL"/. "$DEST"/ 2>/dev/null; then echo "[r3][copyback] final ok -> $DEST"; else echo "[r3][copyback] FINAL SYNC FAILED"; fi' EXIT
+# wmle_full_ft.py saves to "${--out}_step<N>", i.e. a SIBLING of $LOCAL, not a child.
+# Copying "$LOCAL/." therefore succeeds while persisting only ft_progress.json -- a
+# check that passes because it measures the wrong thing. Copy the siblings, and count
+# what actually landed rather than trusting cp's exit status.
+sync_ckpts() {
+  local n=0
+  cp -a --update "$LOCAL"/. "$DEST"/ 2>/dev/null || true
+  for d in "${LOCAL}"_step*; do
+    [ -d "$d" ] || continue
+    cp -a --update "$d" "$DEST"/ 2>/dev/null && n=$((n+1))
+  done
+  local on_dest; on_dest=$(ls -d "$DEST"/*_step* 2>/dev/null | wc -l)
+  echo "[r3][copyback] $(date -u +%H:%M:%SZ) local=$n on_dest=$on_dest"
+  [ "$on_dest" -gt 0 ] || echo "[r3][copyback] WARNING: nothing persisted to $DEST"
+}
+( while sleep 180; do sync_ckpts; done ) & SYNC=$!
+trap 'kill $SYNC 2>/dev/null; sync_ckpts; echo "[r3][copyback] final -> $DEST"' EXIT
 
 export PYTHONPATH="$W/src:$W:${PYTHONPATH:-}" PYTHONNOUSERSITE=1
 export XLA_PYTHON_CLIENT_MEM_FRACTION=0.92
