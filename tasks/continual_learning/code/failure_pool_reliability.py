@@ -178,6 +178,43 @@ def _rank(x: np.ndarray) -> np.ndarray:
 # the correction: score a context against others whose future moved as much
 # --------------------------------------------------------------------------
 
+def stratify_v2(score: np.ndarray, realised: np.ndarray, n_bins: int = 10) -> np.ndarray:
+    """``stratify`` with the zero-move mass given its own stratum.
+
+    The production binning calls ``np.quantile(|y|, linspace(0, 1, 11))`` on data where
+    **97-208 of 500 realised moves are exactly zero** at horizon 50. Coincident quantile
+    edges collapse, so `np.digitize` returns 1-4 empty bins and one stratum holding 100-250
+    contexts -- 20-50% of the sample in what is supposed to be a decile. Two things break:
+    it is not decile stratification, and within-bin ranks then live on different grids (a
+    250-member bin resolves to 1/249, a 50-member bin to 1/49), so a global selection over
+    those ranks is no longer |y|-balanced.
+
+    Here the zero mass is stratum 0 and the strictly positive mass is binned by its own
+    quantiles. Every returned value is still a within-stratum rank on [0, 1], so the leak
+    against |y| is bounded by 1 / (number of non-empty strata) exactly as before.
+    """
+    out = np.empty(score.size, dtype=float)
+    a = np.abs(realised)
+    zero = a == 0.0
+    for mask in (zero, ~zero):
+        if mask.sum() == 0:
+            continue
+        if mask is zero:
+            sub = np.flatnonzero(mask)
+            out[sub] = _rank(score[sub]) / max(sub.size - 1, 1) if sub.size > 2 else 0.5
+            continue
+        sub = np.flatnonzero(mask)
+        av = a[sub]
+        edges = np.quantile(av, np.linspace(0.0, 1.0, n_bins + 1))
+        edges[-1] += 1e-12
+        b = np.clip(np.digitize(av, edges[1:-1]), 0, n_bins - 1)
+        for i in range(n_bins):
+            m = b == i
+            idx = sub[m]
+            out[idx] = _rank(score[idx]) / max(idx.size - 1, 1) if idx.size > 2 else 0.5
+    return out
+
+
 def stratify(score: np.ndarray, realised: np.ndarray, n_bins: int = 10) -> np.ndarray:
     """Rank ``score`` inside bins of |realised move|, returned on [0, 1].
 

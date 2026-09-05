@@ -280,3 +280,47 @@ def test_the_largest_k_estimator_is_always_available():
         out = F.rollouts_needed(ks, rhos)
         assert "k_for_rho_0.80_largest_k_only" in out
         assert out["k_for_rho_0.80_largest_k_only"] > 0
+
+
+# --- the zero-move stratum (D1 section 2) ---------------------------------------------
+
+def test_production_stratify_collapses_when_many_moves_are_zero():
+    """The defect: coincident quantile edges make empty bins and one huge stratum.
+
+    Reproduced synthetically so the test does not depend on the archive: a third of the
+    sample at exactly zero collapses the lower deciles into one bin.
+    """
+    rng = np.random.default_rng(30)
+    y = np.concatenate([np.zeros(340), rng.normal(size=660)])
+    edges = np.quantile(np.abs(y), np.linspace(0, 1, 11))
+    edges[-1] += 1e-12
+    b = np.clip(np.digitize(np.abs(y), edges[1:-1]), 0, 9)
+    sizes = [int((b == i).sum()) for i in range(10)]
+    assert sizes.count(0) >= 2, "the collapse this guards against did not occur"
+    assert max(sizes) > 2 * (y.size / 10), "one stratum should hold far more than a decile"
+
+
+def test_stratify_v2_gives_the_zero_mass_its_own_stratum():
+    rng = np.random.default_rng(31)
+    y = np.concatenate([np.zeros(340), rng.normal(size=660)])
+    out = F.stratify_v2(rng.normal(size=y.size), y, n_bins=10)
+    assert np.isfinite(out).all() and (0.0 <= out).all() and (out <= 1.0).all()
+    # the strictly positive mass is split into ten near-equal strata, so no stratum
+    # holds more than the zero mass plus a little
+    a = np.abs(y)
+    edges = np.quantile(a[a > 0], np.linspace(0, 1, 11))
+    edges[-1] += 1e-12
+    b = np.clip(np.digitize(a[a > 0], edges[1:-1]), 0, 9)
+    sizes = [int((b == i).sum()) for i in range(10)]
+    assert sizes.count(0) == 0, f"positive mass still has empty strata: {sizes}"
+    assert max(sizes) < 1.5 * (660 / 10)
+
+
+def test_stratify_v2_leaks_less_of_the_realised_move():
+    """On a distribution with a zero atom, v2 must leak less |y| than the production form."""
+    rng = np.random.default_rng(32)
+    y = np.concatenate([np.zeros(340), rng.normal(size=660)])
+    score = np.abs(y) ** 2
+    leak_v1 = abs(F.spearman(F.stratify(score, y), np.abs(y)))
+    leak_v2 = abs(F.spearman(F.stratify_v2(score, y), np.abs(y)))
+    assert leak_v2 < leak_v1, f"v2 leak {leak_v2:.3f} not below v1 {leak_v1:.3f}"
