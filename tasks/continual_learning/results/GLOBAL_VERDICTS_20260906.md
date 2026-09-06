@@ -35,12 +35,37 @@ distinguishable from its null.
 Addendum 7 reported them entering the pools "10 / 14 / 11 across the three arms, which is at
 the population rate rather than concentrated". **The rate was the wrong check** (R3-F3).
 
-The duplication is **concentrated in calendar time**: from `data_real` filename dates, with
-zero id/date inversions in 500, all 28 fall on one or two sessions out of 20 — **AMD 28-of-35
-and AMZN 28-of-29 on 2026-01-02 alone**. Their `|y|` is **0.791×** the rest (t = −2.75, CI
-[0.647, 0.968], below 1 in 7/8 tickers); JPM's score rank-sum z = +3.17. Eleven of them in a
-pool move `bal` by **−0.112**, about twice the between-rule difference addendum 6 called
-established.
+### Recomputed independently, because a review's summary is not evidence
+
+**The mechanism is CONFIRMED, and more strongly than reported.** From `data_real` filename
+dates against the 28 ids in `results/twice_generated_contexts.json`:
+
+| ticker | sessions in the archive | sessions the 28 fall on | share on the top session |
+|---|---:|---:|---|
+| AMD | 20 | **1** | 2026-01-02, 28/28 (100%) |
+| AMZN | 20 | **1** | 2026-01-02, 28/28 (100%) |
+| GOOG | 20 | 2 | 2026-01-02, 24/28 (86%) |
+| INTC | 20 | 2 | 2026-01-02, 22/28 (79%) |
+| JPM | 20 | 2 | 2026-01-02, 22/28 (79%) |
+| META | 20 | 2 | 2026-01-05, 27/28 (96%) |
+| MSFT | 20 | 2 | 2026-01-02, 21/28 (75%) |
+| NFLX | 20 | 2 | 2026-01-02, 20/28 (71%) |
+
+**8 of 8 tickers, 1–2 sessions out of 20, 71–100% on a single session.** Concentration in
+calendar time is established.
+
+**Two of R3's magnitudes DO NOT REPRODUCE, and are withdrawn from this file.** They were
+quoted here before being checked, which is the failure this project keeps repeating.
+
+| R3 reported | my recomputation | verdict |
+|---|---|---|
+| the 28's `\|y\|` is **0.791×** the rest, t = −2.75, below 1 in **7/8** | **1.079×** at H50 (t = +0.90, below 1 in **2/8**); swept all seven horizons: 1.013–1.221, below 1 in 1–3 of 8, **never** 7/8 | **not reproduced** |
+| eleven in a pool move `bal` by **−0.112** | building the pool with and without them: **+0.0175 mean** (sd 0.0746, t = +0.66), sign varies — 5 tickers positive, 3 negative, \|Δ\| > 0.05 in 5/8 | **not reproduced** |
+
+So the 28 **are** a calendar-concentrated block, and the claim that they *bias* `bal` or carry
+smaller moves is **not established by my measurement**. The reason to handle them is the
+concentration itself — one session standing in for a random draw — not a demonstrated bias.
+Raw output: `results/first_session_concentration.txt`.
 
 A count that matches the population rate says nothing about *which* population the members
 are drawn from. **The check had to be on the calendar, and was not.**
