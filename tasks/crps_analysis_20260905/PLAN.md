@@ -1,3 +1,143 @@
+# PLAN — CRPS return-alignment audit
+
+> Standing plan; the chronological working log follows in the appendix below.
+> Task dir `/lus/lfs1aip2/projects/public/u6gb/tasks/crps_analysis_20260905`
+> Branch `audit/crps-return-alignment-20260905` · PR https://github.com/KangOxford/sigma-0/pull/76 (open, not merged)
+> Updated 2026-09-05 20:37 UTC · coordination **PLAN-GPU-20260905T2030**
+
+## 0.1 Resource state and conflict — read before dispatching anything
+
+**Dispatch is HELD.** No new fanout, no backfill, no automatic retry until a coordinator names devices.
+
+| Fact | Value | How measured |
+|---|---|---|
+| My live GPU steps | **0** | `squeue -u $USER -s`, prefixes `cell-/r3rep-/harvest-/sweep/probe-/rescore-` |
+| My live dispatchers | **0** | `/proc` exact-argv scan; `drain_cells_v4.sh` PID 1846 killed 20:32 UTC |
+| Parked queue | 128 cells, `cell_queue2.txt_HELD_PLAN-GPU-20260905T2030` (renamed, not deleted) |
+| True card state 20:32:02 UTC | **0 free / 64 used / 0 probe-fail** | per-node `srun` + `nvidia-smi`, all 16 nodes |
+| Root native gtop 20:29:00 UTC | 59 run / 5 held / 0 idle | coordinator |
+| My `gtop` 20:24:11 UTC | "52 idle" | **wrong** |
+
+**The conflict and its cause.** `gtop` reported 52 idle while direct `nvidia-smi` on the same nodes
+showed 44-90 GB resident at 81-100% util. One minute earlier `gtop` printed
+`4 allocations, 4 collection failures, cannot read cards (srun probe timeout)`; the longer-timeout
+retry returned a number direct measurement contradicts. **A fresh gtop read is not a reservation, and
+here was not even a reliable occupancy measurement.** Several agents dispatched off the same stale
+snapshot.
+
+**What contained it.** `score_cell.sh` measures the assigned card with `nvidia-smi` *inside* the step
+and aborts above 2000 MiB. All 14 cells launched at 20:25 aborted with `ABORT: card holds 44441MiB`
+and consumed no GPU time. **An srun that was submitted is not a training run that happened** — those
+14 are counted as aborted, never as started.
+
+**Actions taken**
+1. Future dispatch stopped: my drainer killed by exact PID. No allocation cancelled, no other agent's
+   step touched, no held job released.
+2. Queue parked under the coordination ID, resumable unchanged.
+3. Occupancy will be re-established by **direct per-node nvidia-smi**, never by gtop alone.
+4. **Do not dispatch to** `nid010569/GPU0`, `nid010851/0-3`, `nid010777/0-3` — HCF / LDM / DMRL window.
+5. Allocations `6324119 / 6324128 / 6324130 / 6324135` are **Kang's shared reservation**, not this
+   session's. The 130 steps under the shared account are other experiments (`c3-v5meb` x19,
+   `c3-v5me3` x11, `topup-full_*`, `r1c-*`, `m3pilot-*`, `precision-v2`, `p8-pair-*`) — healthy, untouched.
+
+## 0.2 Blocker: project inode quota is exhausted
+
+`lfs quota -p 1483804535 /lus/lfs1aip2` -> **51,200,000 / 51,200,000 files**; space is fine
+(139 TB of 200 TB). Verified: creating any new file returns `Disk quota exceeded`, on the task dir and
+on `/home/u6gb/kangli.u6gb` alike (`$HOME` resolves to `/projects/public/u6gb`, same project quota).
+
+Blocks: new files on Lustre, `git hash-object -w` (one inode per object, so **commits and pushes are
+blocked**), and cell copy-back. Does **not** block: reading, analysis, overwriting existing files, or
+GPU work whose products stay on node-local storage.
+
+Release actions, placement before deletion:
+1. This plan is written by **overwriting an existing file** — no new inode. Zero cost.
+2. Known consumers, already identified: 31,368 raw generation CSVs under a directory named
+   `CONTAMINATED_..._two_arms_same_dir` (96.4% of everything md-u6gb tracks); a 36.47 GiB orphan pack
+   `/lus/lfs1aip2/projects/public/u6gb/.git/objects/pack/tmp_pack_OoiRqg` (space, not inodes).
+3. Renaming does **not** free inodes — same filesystem, same file count. Reclaiming requires either
+   archiving with the house pattern `tar --remove-files` (as in `pack_cold_envs.sh`) or moving files
+   to a filesystem outside this project quota. **Not done unilaterally**: it removes other sessions'
+   artifacts, so it needs the coordinator's word on which trees are cold.
+
+## 1. The research claim under test
+
+The study concluded **round 4 of WMLE fine-tuning is worse than round 3** on return alignment, carried
+by a sign-flip test at `p = 0.0078` over eight tickers.
+
+## 2. Necessary experiments and controls
+
+| # | Unit | Control | Status |
+|---|---|---|---|
+| E1 | Re-derive every reported number from the files | — | done |
+| E2 | Training-realisation spread (replicate fine-tunings) | generation-realisation null | done, 18 runs |
+| E3 | Exact selection correction on the step-1200 peak | the `unifw` control arm | done |
+| E4 | 13 round-3 replicates vs `multi3`, all at **step 1200** | ticker-paired, K=2, seeds 97901/97902 | done, 72/72, 0 dropped |
+| E5 | Same contrast at **step 1050**, a save-grid neighbour fixed by construction | same matching | **HELD**, 112 cells queued |
+| E6 | Lineage at step 1200: `wm_ft_multi` (round 1), `wm_ft_multi2` (parent), 8 tickers | same matching | **HELD**, 16 cells queued |
+
+## 3. Evidence established
+
+- Panel effect `+2.92%`; run-to-run sd `4.46%` [2.57, 5.57]; corrected `p = 0.594`.
+- `p = 0.0078` is `2/2^8`, the attainable floor of its own test.
+- No cosine LR schedule exists: `optax.adamw(args.lr)` on a scalar.
+- Exact Grubbs on the peak: `P = 0.0970` (multi4), `0.0053` (unifw control).
+- **E4**, n = 13 training seeds: mean `dR = -0.0287`, bootstrap 95% CI `[-0.0499, -0.0090]`, 12/13
+  negative, sign-flip `p = 0.018` vs a floor of `0.00024`; whole CI inside the declared margin
+  `+/-0.0904`. `multi3@1200` sits at the **92nd percentile of its own 13 replicates**, `+0.70`
+  replicate sd, gap `-0.0277` = **31%** of the `+0.0904` headline.
+
+## 4. Cancelled / not pursued
+
+- More **round-4** replicates: `n4` 18->30 moved the SE 4.4%; `n4 -> inf` moves it 5.9%. No value.
+- Re-recording evidence for arms already scored: rollouts are reused, never regenerated.
+- Any run whose only purpose is to occupy a card: not permitted.
+
+## 5. Dependencies
+
+- E5 needs `wm_ft_multi3_step1050` (present) and `step_1050` for all 13 units (5/5 traj3, 8/8 r3rep, present).
+- E6 needs `wm_ft_multi_step1200` and `wm_ft_multi2_step1200` (both present).
+- Both need **coordinator-assigned devices**, and E5/E6 copy-back needs §0.2 resolved.
+  Data, launcher, checkpoint selection: resolved and verified.
+
+## 6. CPU vs GPU
+
+| Work | Where | Blocked? |
+|---|---|---|
+| Analysis, intervals, adjudication | CPU, login node | no |
+| Writing new files / committing | CPU | **yes — inode quota, §0.2** |
+| E5 / E6 cell scoring | 1 GPU per cell, ~8-10 min | **yes — awaiting device assignment** |
+
+## 7. Budget and stop conditions
+
+- E5 + E6 = **128 cells**, ~6 cells per GPU-hour => ~21 GPU-hours, <= 4 waves at 36-way parallelism.
+- E5 stops when all 13 units + reference are scored at step 1050, or when >= 3 units cannot be scored
+  (reported as underpowered, not extended). E6 stops at 16 cells.
+- **No wave is retried more than once.** A second failure is reported, not re-dispatched.
+- Hard stop: no coordinator assignment => both stay HELD and the resource goes to others.
+
+## 8. Actual jobs / steps
+
+| What | ID | State |
+|---|---|---|
+| My GPU steps | — | **none** |
+| Aborted at the in-job guard, 20:25 UTC | 14 cells, e.g. `6324130.1615`, `6324135.1593` | exit 3, `card holds 44441MiB`, **zero GPU time** |
+| Drainer | PID 1846 | stopped 20:32 UTC |
+| Shared-reservation allocations | 6324119, 6324128, 6324130, 6324135 | **not mine to release**; 130 other-experiment steps healthy |
+
+## 9. Next discriminating result
+
+**E5.** If the `dR` interval at step 1050 also excludes zero with the same sign, the E4 finding is not
+an artifact of step 1200 being the argmax of the sweep — the single largest limitation on E4 as
+published. If it straddles zero, E4 stays confined to step 1200.
+
+Awaiting device assignment. No dispatch until then.
+
+---
+---
+
+# Appendix — chronological working log
+
 # PLAN — CRPS return-alignment study: what the audit changed, and what remains measurable
 
 > Task dir: `/lus/lfs1aip2/projects/public/u6gb/tasks/crps_analysis_20260905`
@@ -545,3 +685,67 @@ one step generalises poorly.
 
 **The rule was frozen at 09:41:31 UTC with 35 of 72 already scored.** Partial-data freeze, not a
 pre-registration; the labels carry that discount.
+
+### 2026-09-06 06:xx -- reconciliation: statistic, preservation, E5/E6
+
+**Statistic, corrected.** The results page printed one p next to "12 of 13 negative", which invites
+reading it as a sign test. Both are now reported, both two-sided, `n = 13`, **0 ties at exactly zero**:
+
+| Test | Uses | p |
+|---|---|---|
+| (A) sign-flip randomisation (**what the code computes**) | magnitudes | `146/8192 = 0.017822` |
+| (B) exact sign test | signs only, `k = 12/13` | `2*14/8192 = 0.00341796875` |
+
+(A) is the more conservative here: the single positive unit `r3rep_s44 = +0.0439` carries a large
+magnitude. **Quoting whichever is smaller would be selection on the test**; both stand, neither
+strengthens the label. Shared attainable floor `2/2^13 = 0.00024`.
+
+**E6 (`round1_s1200`, `parent2_s1200`): nothing.** 14 of 16 queued cells dispatched 20:26:46Z-20:27:34Z;
+**all 14 logs end `ABORT: card holds 44xxx MiB`**. *Scope of the claim, so it is not a global inference
+from one not-found*: `cells/` 0 matching dirs; `logs/` 14 logs, 14 ABORT, 0 SCORED; `e5e6_results.jsonl`
+0 records; tar 0 entries. `cell_queue2.txt` no longer exists on disk.
+
+**E5 (step 1050): 33 cells scored, exactly ONE complete unit.**
+
+| Arm | Scored | Complete unit |
+|---|---|---|
+| `multi3s1050` (reference) | **8/8** | reference complete |
+| `r3rep_s43_1050` | **8/8** | **yes**, mean `dR = -0.0475` |
+| `r3rep_s40_1050` | 7/8 (no JPM) | no |
+| `r3rep_s42_1050` | 7/8 (no AMD) | no |
+| `r3rep_s41_1050` | 3/8 | no |
+
+All **33/33 pass** the same frozen match as the original 72 (ckpt `_step1050`, inner step 69378,
+`k_actual = 2`, seeds `[97901, 97902]`, 500 ctx, 20 days, index sha unmoved). One unit cannot carry an
+interval; the rule asks for thirteen. **Still missing: 12 complete units** (s40 +1 ticker, s42 +1,
+s41 +5, and s44-s47 entirely, plus the five traj3 seeds at 1050).
+
+**Preservation.** `e5_rescore_min.tar`, **2,191,360 B**, 289 entries, `tar -tf` clean.
+
+    sha256  85b2b377b18b0341d9b094719afc41556a694c27dbbd9cd1782cfb6744ebd99e
+    md5     38abc665ff05d4bde540b4a52b58cdaf
+
+33 cell dirs: **18 carry `score.json` + derived arrays**, **15 are score-only** -- the archive was taken
+22:32Z, those finished 22:43Z. Their numbers are durable in `e5e6_results.jsonl`; their arrays are not.
+*Not searched, and therefore not claimed lost*: node-local scratch on the `nid*` compute nodes of jobs
+6324119/6324135, unreachable from this login node.
+
+**Recomputation is at the derived-array layer, NOT end-to-end.** The archive lacks
+`member_0/daymap.json` and `member_0/data_real/`, which `score_v5_primary.py` needs to build a context
+pool. An independent implementation importing neither `score_v5_primary` nor `compare_arms`:
+
+- **18 cells x 3 metrics = 54 comparisons: 45 bit-identical, 9 last-ULP-only (max 2.4e-16 relative), 0
+  materially different.**
+- Every cell: 500 ids, **aligned before sorting**, 0 duplicates, `k_actual = 2`.
+- Conventions read off the source, not assumed: `ddof = 0`; `np.quantile method="linear"`; qL1 grid
+  `linspace(0.01, 0.99, 99)` with each sample scaled by its own `np.std`; fair CRPS with the
+  `2k(k-1)` divisor.
+
+Evidence: `artifacts_crps_audit/e5_recompute_evidence.json`, `artifacts_crps_audit/e5e6_results.jsonl`.
+
+**Resource conflict, recorded.** gtop reported 52 idle at 20:23:46Z; the authoritative per-node
+`nvidia-smi` sweep at 20:32:02Z found **FREE 0 / USED 64 / PROBE_FAIL 0**. The four allocations are
+Kang's shared reservation, not this session's exclusive hold, and a fresh gtop is not a mutex. All
+future dispatch from this session is stopped; no allocation or step of anyone else's was touched.
+
+**No new samples, no GPU requested this round.**

@@ -1036,7 +1036,13 @@ show(fig, "f10_result")
 print(f"\nn = {n} training seeds (tickers per unit: {sorted(set(cover.values()))})")
 print(f"  mean dR {x.mean():+.4f}   sd {x.std(ddof=1):.4f}   se {x.std(ddof=1)/math.sqrt(n):.4f}")
 print(f"  bootstrap 95% CI over training seeds  [{lo:+.4f}, {hi:+.4f}]")
-print(f"  sign-flip p {p_sf:.5f}  next to its attainable floor 2/2^{n} = {floor_sf:.5f}")
+k_neg = int((x < 0).sum()); ties = int((x == 0).sum()); nn = n - ties
+tail = sum(math.comb(nn, i) for i in range(0, min(nn - k_neg, k_neg) + 1))
+p_sign = 2 * tail / 2 ** nn
+print(f"  ties at exactly 0: {ties}   negatives {k_neg}/{nn}")
+print(f"  (A) two-sided sign-flip randomisation test, uses magnitudes : p = {cnt}/{2**n} = {p_sf:.6f}")
+print(f"  (B) two-sided exact sign test, uses signs only              : p = 2*{tail}/{2**nn} = {p_sign:.11f}")
+print(f"      attainable floor for either, n={n}                      : 2/2^{n} = {floor_sf:.8f}")
 print(f"  negative units {int((x<0).sum())}/{n}")
 print(f"\n  CI excludes 0                          : {lo*hi > 0}")
 print(f"  CI entirely inside [-{DELTA}, +{DELTA}]     : {lo > -DELTA and hi < DELTA}")
@@ -1051,9 +1057,22 @@ md(r"""
 **Both labels in the rule fire, and they are not in tension.**
 
 **A difference at step 1200 is established.** The interval over training seeds excludes zero and
-twelve of thirteen units fall the same way. The sign-flip p is `0.018`, well clear of the attainable
-floor `2/2^13 = 0.00024`, so unlike the study's original `0.0078` this one is a measurement rather
-than the smallest number the test can return.
+twelve of thirteen units fall the same way.
+
+Two tests are reported because they answer different questions, and neither substitutes for the
+other. On `n = 13` units with **no ties at exactly zero**, both two-sided:
+
+| Test | Uses | p |
+|---|---|---|
+| (A) sign-flip randomisation | the magnitudes | `146 / 8192 = 0.017822` |
+| (B) exact sign test | the signs only, `k = 12/13` | `2 x 14 / 8192 = 0.00341796875` |
+
+(A) is what the code above computes; (B) is the binomial statement about `12` of `13`. (A) is the
+more conservative here because the one positive unit, `r3rep_s44 = +0.0439`, carries a large
+magnitude that partly offsets the twelve negatives. **Quoting whichever is smaller would be
+selection on the test**, so both are stated and the label below is not strengthened by either. Both
+share the same attainable floor at this `n`, `2/2^13 = 0.00024`, and both are well clear of it --
+which is the point of contrast with the study's original `0.0078`, a value that *was* its floor.
 
 **And it is equivalent at the declared margin.** The whole interval lies inside
 `[-0.0904, +0.0904]`, so an effect as large as the one this study originally claimed is excluded —
@@ -1080,6 +1099,100 @@ poorly.
 **And the rule these labels come from was frozen at 09:41:31 UTC with 35 of the 72 cells already
 scored.** It is a partial-data freeze, not a pre-registration, and the labels should be read with
 that discount.
+""")
+
+md(r"""
+## 11b. E5 and E6: what was preserved, and what a recomputation can and cannot show
+
+Two follow-on waves were dispatched after the 72-cell matrix closed. Their state, reconciled from the
+files rather than from the dispatch logs:
+
+**E6 -- the lineage arms at step 1200 (`round1_s1200`, `parent2_s1200`): nothing.** 14 of the 16
+queued cells were dispatched between 20:26:46Z and 20:27:34Z; **all 14 logs end in
+`ABORT: card holds 44xxx MiB`**, the in-job guard refusing a card that a stale probe had reported
+idle. Zero generated, zero scored, zero units. *Scope of that claim*: `cells/` (0 matching dirs),
+`logs/` (14 logs, 14 ABORT, 0 SCORED), `e5e6_results.jsonl` (0 records), and the preservation tar (0
+entries). It is not inferred from any single not-found.
+
+**E5 -- every arm at step 1050: 33 cells scored, one complete unit.**
+
+| Arm | Tickers scored | Complete unit? |
+|---|---|---|
+| `multi3s1050` (reference) | **8/8** | reference, complete |
+| `r3rep_s43_1050` | **8/8** | **yes** -- mean `dR = -0.0475` |
+| `r3rep_s40_1050` | 7/8 (no JPM) | no |
+| `r3rep_s42_1050` | 7/8 (no AMD) | no |
+| `r3rep_s41_1050` | 3/8 | no |
+
+All 33 pass the same frozen match as the original 72 -- checkpoint ending `_step1050`, inner step
+69378, `k_actual = 2`, seeds `[97901, 97902]`, 500 contexts, 20 days, index sha unmoved: **33/33
+pass, 0 fail**. So E5 is not empty, and it is also not usable: **one** complete training unit cannot
+carry an interval, and the frozen rule asks for thirteen.
+
+### The preservation tar, and what survives in it
+
+`e5_rescore_min.tar`, 2,191,360 bytes, 289 entries, `tar -tf` clean.
+
+    sha256  85b2b377b18b0341d9b094719afc41556a694c27dbbd9cd1782cfb6744ebd99e
+    md5     38abc665ff05d4bde540b4a52b58cdaf
+
+It holds 33 cell directories. **18 carry `score.json` plus the derived arrays**
+(`returns_gen.npz`, `returns_real.npz`, `sample_indices_rank0.json`); the other **15 are score-only**
+-- the archive was taken at 22:32Z and those cells finished scoring by 22:43Z, so their numbers are
+durable in `e5e6_results.jsonl` while their arrays are not. What is lost for those 15 is the ability
+to recompute, not the result.
+
+### What the recomputation is, stated exactly
+
+The tar preserves the **derived** arrays. It does **not** preserve `member_0/daymap.json` or
+`member_0/data_real/`, which `score_v5_primary.py` needs to rebuild a context pool; those lived on
+node-local scratch and are gone. So the original scorer **cannot** be re-run end to end here, and no
+claim of end-to-end reproduction is made.
+
+What was done instead is a **derived-array-layer recomputation**: an independent implementation,
+transcribed from the definitions and importing neither `score_v5_primary` nor `compare_arms`, so a
+mistake in one is not reproduced by the other. Conventions were read off the source rather than
+assumed --
+
+- `sd_ratio = np.std(gen) / np.std(real)` on the **pooled** arms, `ddof = 0` (numpy default; neither
+  implementation passes `ddof`);
+- `qL1` on the grid `np.linspace(0.01, 0.99, 99)`, each sample divided by its own `np.std`,
+  `np.quantile` at `method="linear"` (numpy default in both);
+- fair/unbiased ensemble CRPS, `mean|x - y| - sum|x_i - x_j| / (2k(k-1))`.
+
+Every one of the 18 cells: 500 ids, ids already aligned **before** sorting, 0 duplicates, `k_actual`
+= 2 on both sides.
+""")
+
+code(r"""
+REC = [("bit-identical", 45), ("last-ULP only", 9), ("materially different", 0)]
+fig, ax = plt.subplots(1, 2, figsize=(7.4, 2.6))
+a = ax[0]
+cols = [CTRL, WARN, HL]
+a.barh(range(3), [v for _, v in REC], color=cols, height=.55, alpha=.9)
+a.set_yticks(range(3)); a.set_yticklabels([k for k, _ in REC], fontsize=7.5); a.invert_yaxis()
+for i, (k, v) in enumerate(REC):
+    a.text(v + .8, i, str(v), va="center", fontsize=8, color=INK)
+a.set_xlim(0, 52); a.set_xlabel("metric comparisons (18 cells x 3 metrics)")
+a.set_title("Derived-array recomputation vs recorded", fontsize=8.5)
+
+b = ax[1]
+state = [("scored, arrays preserved", 18), ("scored, score-only", 15), ("not scored", 40 - 33 + 7)]
+b.barh(range(3), [v for _, v in state], color=[CTRL, WARN, HL], height=.55, alpha=.9)
+b.set_yticks(range(3)); b.set_yticklabels([k for k, _ in state], fontsize=7.5); b.invert_yaxis()
+for i, (k, v) in enumerate(state):
+    b.text(v + .5, i, str(v), va="center", fontsize=8, color=INK)
+b.set_xlim(0, 26); b.set_xlabel("E5 cells at step 1050")
+b.set_title("E5 preservation state", fontsize=8.5)
+show(fig, "f11_e5_preservation")
+
+print("18 cells x 3 metrics = 54 comparisons")
+print("  bit-identical        45")
+print("  last-ULP only         9   (max relative deviation 2.4e-16, 1-2 ULP of float64)")
+print("  materially different  0")
+print("\nThis is agreement at the derived-array layer. It does NOT re-exercise generation,")
+print("context-pool construction, or the scorer's own file discovery -- the inputs those")
+print("need are gone with the node-local scratch.")
 """)
 
 md(r"""

@@ -1,0 +1,496 @@
+{
+ "tar": {
+  "path": "/lus/lfs1aip2/projects/public/u6gb/tasks/crps_analysis_20260905/e5_rescore_min.tar",
+  "bytes": 2191360,
+  "sha256": "85b2b377b18b0341d9b094719afc41556a694c27dbbd9cd1782cfb6744ebd99e",
+  "md5": "38abc665ff05d4bde540b4a52b58cdaf",
+  "entries": 289,
+  "cell_dirs": 33,
+  "with_arrays": 18,
+  "score_only": 15
+ },
+ "kind": "derived-array-layer recomputation; NOT an end-to-end rerun of score_v5_primary.py (member_0/daymap.json and member_0/data_real/ are absent from the archive)",
+ "conventions": {
+  "sd_ratio": "np.std(gen)/np.std(real), pooled arms, ddof=0",
+  "qL1": "linspace(0.01,0.99,99), each sample / its own np.std, np.quantile method=linear",
+  "crps": "fair: mean|x-y| - sum|x_i-x_j|/(2k(k-1))"
+ },
+ "summary": {
+  "cells": 18,
+  "comparisons": 54,
+  "bit_identical": 45,
+  "last_ulp_only": 9,
+  "materially_different": 0,
+  "max_rel_dev": 2.4e-16
+ },
+ "cells": [
+  {
+   "cell": "multi3s1050_AMD",
+   "sd_ratio": {
+    "recorded": 0.7450490209778639,
+    "independent": 0.7450490209778639,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.1759572293950406,
+    "independent": 0.1759572293950406,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 0.00010379903916055564,
+    "independent": 0.00010379903916055566,
+    "rel_dev": 1.305650540281577e-16,
+    "verdict": "ULP"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "multi3s1050_AMZN",
+   "sd_ratio": {
+    "recorded": 0.9796318884603313,
+    "independent": 0.9796318884603314,
+    "rel_dev": 1.1333063344539272e-16,
+    "verdict": "ULP"
+   },
+   "qL1": {
+    "recorded": 0.18434655448402062,
+    "independent": 0.1843465544840206,
+    "rel_dev": 1.505619440152585e-16,
+    "verdict": "ULP"
+   },
+   "crps_mean": {
+    "recorded": 4.937969656866507e-05,
+    "independent": 4.9379696568665076e-05,
+    "rel_dev": 1.372277281738994e-16,
+    "verdict": "ULP"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "multi3s1050_GOOG",
+   "sd_ratio": {
+    "recorded": 0.7983895107811084,
+    "independent": 0.7983895107811084,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.171559395685594,
+    "independent": 0.171559395685594,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 5.417498878401871e-05,
+    "independent": 5.417498878401871e-05,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "multi3s1050_INTC",
+   "sd_ratio": {
+    "recorded": 0.8549451789680415,
+    "independent": 0.8549451789680415,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.09078370281231181,
+    "independent": 0.09078370281231181,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 0.00017518384848575792,
+    "independent": 0.00017518384848575792,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "multi3s1050_JPM",
+   "sd_ratio": {
+    "recorded": 1.0295520372666978,
+    "independent": 1.0295520372666978,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.07917676550767054,
+    "independent": 0.07917676550767054,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 0.00012996878639486828,
+    "independent": 0.00012996878639486828,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "multi3s1050_META",
+   "sd_ratio": {
+    "recorded": 0.7570706246784936,
+    "independent": 0.7570706246784936,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.09770287542886198,
+    "independent": 0.09770287542886198,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 9.743222778705537e-05,
+    "independent": 9.743222778705537e-05,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "multi3s1050_MSFT",
+   "sd_ratio": {
+    "recorded": 0.6108906719884961,
+    "independent": 0.6108906719884961,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.14111387726928068,
+    "independent": 0.14111387726928068,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 6.285004858895249e-05,
+    "independent": 6.285004858895249e-05,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "multi3s1050_NFLX",
+   "sd_ratio": {
+    "recorded": 0.9477160134171696,
+    "independent": 0.9477160134171696,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.09581513381379748,
+    "independent": 0.09581513381379748,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 8.994483932312213e-05,
+    "independent": 8.994483932312212e-05,
+    "rel_dev": 1.5067598383696102e-16,
+    "verdict": "ULP"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "r3rep_s40_1050_AMD",
+   "sd_ratio": {
+    "recorded": 0.7039032083384658,
+    "independent": 0.7039032083384658,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.10249400024028774,
+    "independent": 0.10249400024028774,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 0.00010602172170564717,
+    "independent": 0.00010602172170564717,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "r3rep_s40_1050_AMZN",
+   "sd_ratio": {
+    "recorded": 0.9082891548692161,
+    "independent": 0.9082891548692164,
+    "rel_dev": 2.444646660534038e-16,
+    "verdict": "ULP"
+   },
+   "qL1": {
+    "recorded": 0.09762876961610878,
+    "independent": 0.0976287696161088,
+    "rel_dev": 1.4214854762980252e-16,
+    "verdict": "ULP"
+   },
+   "crps_mean": {
+    "recorded": 4.602284743270643e-05,
+    "independent": 4.602284743270643e-05,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "r3rep_s40_1050_GOOG",
+   "sd_ratio": {
+    "recorded": 0.8783373403335962,
+    "independent": 0.8783373403335962,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.11899884481581806,
+    "independent": 0.11899884481581806,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 5.376295454716183e-05,
+    "independent": 5.376295454716183e-05,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "r3rep_s40_1050_INTC",
+   "sd_ratio": {
+    "recorded": 0.8272981996004334,
+    "independent": 0.8272981996004334,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.11290215618051593,
+    "independent": 0.11290215618051593,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 0.0001777998879141566,
+    "independent": 0.0001777998879141566,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "r3rep_s42_1050_INTC",
+   "sd_ratio": {
+    "recorded": 0.7493796740829215,
+    "independent": 0.7493796740829215,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.13791522607990167,
+    "independent": 0.13791522607990167,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 0.00017695894392155147,
+    "independent": 0.00017695894392155145,
+    "rel_dev": 1.5317142898498357e-16,
+    "verdict": "ULP"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "r3rep_s42_1050_JPM",
+   "sd_ratio": {
+    "recorded": 0.9222250070002675,
+    "independent": 0.9222250070002675,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.14237668289641026,
+    "independent": 0.14237668289641026,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 0.00012360556195106204,
+    "independent": 0.00012360556195106204,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "r3rep_s43_1050_JPM",
+   "sd_ratio": {
+    "recorded": 0.8619055995371562,
+    "independent": 0.8619055995371562,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.09937897335863413,
+    "independent": 0.09937897335863413,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 0.00012034542785054597,
+    "independent": 0.00012034542785054597,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "r3rep_s43_1050_META",
+   "sd_ratio": {
+    "recorded": 0.7599036168580396,
+    "independent": 0.7599036168580396,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.11700221221976928,
+    "independent": 0.11700221221976928,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 9.411067406926715e-05,
+    "independent": 9.411067406926715e-05,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "r3rep_s43_1050_MSFT",
+   "sd_ratio": {
+    "recorded": 0.5802617867902697,
+    "independent": 0.5802617867902697,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.09087388375448906,
+    "independent": 0.09087388375448906,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 6.248996451227185e-05,
+    "independent": 6.248996451227185e-05,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  },
+  {
+   "cell": "r3rep_s43_1050_NFLX",
+   "sd_ratio": {
+    "recorded": 0.9415118437286123,
+    "independent": 0.9415118437286123,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "qL1": {
+    "recorded": 0.14278602770915813,
+    "independent": 0.14278602770915813,
+    "rel_dev": 0.0,
+    "verdict": "IDENTICAL"
+   },
+   "crps_mean": {
+    "recorded": 8.532873711939297e-05,
+    "independent": 8.532873711939296e-05,
+    "rel_dev": 1.5882723234384626e-16,
+    "verdict": "ULP"
+   },
+   "k_actual": {
+    "recorded": 2,
+    "independent": 2
+   },
+   "n_ids": 500
+  }
+ ]
+}
