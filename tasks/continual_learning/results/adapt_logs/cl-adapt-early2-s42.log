@@ -1,0 +1,706 @@
+========================================
+[Wrapper] Running on node: nid010851
+[Wrapper] SLURM_NODEID: 0
+[Wrapper] SLURM_PROCID: 0
+[Wrapper] SLURM_LOCALID: 0
+[Wrapper] CUDA_VISIBLE_DEVICES: 0
+========================================
+[Wrapper] Conda env: base (/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3)
+[Wrapper] Python: /lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/bin/python (Python 3.12.11)
+[OFI] aws-ofi-nccl: /lus/lfs1aip2/projects/public/s5e/quant_team/quant/aws-ofi-nccl-1.18.0/lib
+[NCCL] Override lib path: /lus/lfs1aip2/projects/public/s5e/quant_team/quant/nccl-2.29.3/lib
+[NCCL] Library: lrwxrwxrwx 1 1483803536 brics.s5e 17 Feb 25  2026 /lus/lfs1aip2/projects/public/s5e/quant_team/quant/nccl-2.29.3/lib/libnccl.so.2 -> libnccl.so.2.29.3
+[NCCL] Version: NCCL version 2.29.3 compiled with CUDA 12.6
+[NCCL] LD_PRELOAD: /lus/lfs1aip2/projects/public/s5e/quant_team/quant/nccl-2.29.3/lib/libnccl.so.2
+[NCCL] WARNING: Expected cuda12.6 (source build), got: NCCL version 2.29.3 compiled with CUDA 12.6
+[XLA] XLA_FLAGS=   --xla_gpu_all_reduce_combine_threshold_bytes=134217728   --xla_gpu_enable_latency_hiding_scheduler=true   --xla_gpu_enable_highest_priority_async_stream=true   --xla_gpu_nccl_terminate_on_error=true   --xla_gpu_nccl_termination_timeout_seconds=600   --xla_gpu_first_collective_call_terminate_timeout_seconds=600
+[Wrapper] SLURM_PROCID=0 (process rank)
+[Wrapper] SLURM_NNODES=1 (total nodes)
+[Wrapper] JAX_COORDINATOR_ADDRESS=nid010851:29500
+[Wrapper] Available GPUs:
+GPU 0: NVIDIA GH200 120GB (UUID: GPU-d1d2a06f-055e-7feb-baf9-422826e44998)
+[squashfs] multi-mode: mounting 1 shards from /lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs
+[squashfs] mounted 1/1 shards
+[squashfs] DATA_ROOT (multi) = 1 comma-joined paths
+[squashfs]   first: /tmp/kangli.u6gb/sigma0/cl_probe_early2/sp500_squashfs_6324130_0/2024-08
+[guard] 26-token encoder confirmed via lob.encoding
+/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+wandb: Currently logged in as: kang-oxford (oxford-lob) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: creating run
+wandb: Tracking run with wandb version 0.21.3
+wandb: Run data is saved locally in /tmp/kangli.u6gb/sigma0/cl_probe_early2/wandb/wandb/run-20260905_235940-ffqshrmi
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run j6324130
+wandb: ⭐️ View project at https://wandb.ai/oxford-lob/sigma0-continual
+wandb: 🚀 View run at https://wandb.ai/oxford-lob/sigma0-continual/runs/ffqshrmi
+[*] Setting Randomness...
+[*] Generating LOBSTER Prediction Dataset from /lus/lfs1aip2/projects/s5e/lob_preproc_sp500
+[*] Multi-ticker mode: ['A', 'AAPL', 'ABBV', 'ABNB', 'ABT', 'ACGL', 'ACN', 'ADBE', 'ADI', 'ADM', 'ADP', 'ADSK', 'AEE', 'AEP', 'AES', 'AFL', 'AIG', 'AIZ', 'AJG', 'AKAM', 'ALB', 'ALGN', 'ALL', 'ALLE', 'AMAT', 'AMCR', 'AMD', 'AME', 'AMGN', 'AMP', 'AMT', 'AMZN', 'ANET', 'AON', 'APA', 'APD', 'APH', 'APO', 'APP', 'APTV', 'ARE', 'ARES', 'ARM', 'AVB', 'AVGO', 'AVY', 'AWK', 'AXON', 'AXP', 'AZO', 'BA', 'BALL', 'BAX', 'BBY', 'BDX', 'BEN', 'BF.B', 'BG', 'BIIB', 'BK', 'BKNG', 'BKR', 'BLDR', 'BLK', 'BMY', 'BR', 'BRK.B', 'BRO', 'BSX', 'BX', 'BXP', 'C', 'CAG', 'CAH', 'CARR', 'CAT', 'CB', 'CBOE', 'CBRE', 'CCL', 'CDW', 'CE', 'CEG', 'CF', 'CFG', 'CHD', 'CHRW', 'CHTR', 'CI', 'CIEN', 'CINF', 'CL', 'CLX', 'CMCSA', 'CME', 'CMG', 'CMI', 'CMS', 'CNC', 'CNP', 'COF', 'COIN', 'COP', 'COR', 'COST', 'CPAY', 'CPB', 'CPRT', 'CPT', 'CRH', 'CRL', 'CRM', 'CRWD', 'CSCO', 'CSGP', 'CTAS', 'CTRA', 'CTSH', 'CTVA', 'CVS', 'CVX', 'D', 'DAL', 'DASH', 'DD', 'DDOG', 'DE', 'DECK', 'DELL', 'DG', 'DGX', 'DHI', 'DHR', 'DIS', 'DLR', 'DLTR', 'DOC', 'DOV', 'DOW', 'DPZ', 'DRI', 'DTE', 'DUK', 'DVA', 'DVN', 'DXCM', 'EA', 'EBAY', 'ECL', 'ED', 'EFX', 'EIX', 'EL', 'EME', 'EMR', 'EOG', 'EPAM', 'EQIX', 'EQR', 'EQT', 'ERIE', 'ES', 'ESS', 'ETN', 'ETR', 'EVRG', 'EW', 'EXC', 'EXPD', 'EXPE', 'EXR', 'F', 'FANG', 'FAST', 'FCX', 'FDS', 'FDX', 'FE', 'FFIV', 'FICO', 'FIS', 'FITB', 'FIX', 'FOX', 'FOXA', 'FRT', 'FSLR', 'FTNT', 'FTV', 'GD', 'GDDY', 'GE', 'GEHC', 'GEN', 'GEV', 'GILD', 'GIS', 'GL', 'GLW', 'GM', 'GNRC', 'GOOG', 'GOOGL', 'GPC', 'GPN', 'GRMN', 'GS', 'GWW', 'HAL', 'HAS', 'HBAN', 'HCA', 'HD', 'HIG', 'HII', 'HLT', 'HOLX', 'HON', 'HOOD', 'HPE', 'HPQ', 'HRL', 'HSIC', 'HST', 'HSY', 'HUBB', 'HUM', 'HWM', 'IBKR', 'IBM', 'ICE', 'IDXX', 'IEX', 'IFF', 'INCY', 'INTC', 'INTU', 'INVH', 'IP', 'IQV', 'IR', 'IRM', 'ISRG', 'IT', 'ITW', 'IVZ', 'J', 'JBHT', 'JBL', 'JCI', 'JKHY', 'JNJ', 'JPM', 'KDP', 'KEY', 'KEYS', 'KHC', 'KIM', 'KKR', 'KLAC', 'KMB', 'KMI', 'KO', 'KR', 'KVUE', 'L', 'LEN', 'LH', 'LHX', 'LII', 'LIN', 'LLY', 'LMT', 'LNT', 'LOW', 'LRCX', 'LULU', 'LUV', 'LVS', 'LW', 'LYB', 'LYV', 'MA', 'MAA', 'MAR', 'MAS', 'MCD', 'MCHP', 'MCK', 'MCO', 'MDLZ', 'MDT', 'MET', 'META', 'MGM', 'MKC', 'MLM', 'MNST', 'MO', 'MOH', 'MOS', 'MPC', 'MPWR', 'MRK', 'MRNA', 'MSCI', 'MSFT', 'MSI', 'MTB', 'MTCH', 'MTD', 'MU', 'NCLH', 'NDAQ', 'NDSN', 'NEE', 'NEM', 'NFLX', 'NI', 'NKE', 'NOC', 'NOW', 'NRG', 'NSC', 'NTAP', 'NTRS', 'NUE', 'NVDA', 'NVR', 'NWS', 'NWSA', 'NXPI', 'O', 'ODFL', 'OKE', 'OMC', 'ON', 'ORCL', 'ORLY', 'OTIS', 'OXY', 'PANW', 'PAYC', 'PAYX', 'PCAR', 'PCG', 'PEG', 'PEP', 'PFE', 'PFG', 'PG', 'PGR', 'PH', 'PHM', 'PKG', 'PLD', 'PLTR', 'PM', 'PNC', 'PNR', 'PNW', 'POOL', 'PPG', 'PPL', 'PRU', 'PSA', 'PSX', 'PTC', 'PWR', 'PYPL', 'QCOM', 'RCL', 'REG', 'REGN', 'RF', 'RJF', 'RL', 'RMD', 'ROK', 'ROL', 'ROP', 'ROST', 'RSG', 'RTX', 'RVTY', 'SBAC', 'SBUX', 'SCHW', 'SHW', 'SJM', 'SLB', 'SMCI', 'SNA', 'SNPS', 'SO', 'SOLV', 'SPG', 'SPGI', 'SRE', 'STE', 'STLD', 'STT', 'STX', 'STZ', 'SW', 'SWK', 'SWKS', 'SYF', 'SYK', 'SYY', 'T', 'TAP', 'TDG', 'TDY', 'TECH', 'TEL', 'TER', 'TFC', 'TGT', 'TJX', 'TKO', 'TMO', 'TMUS', 'TPL', 'TPR', 'TRGP', 'TRMB', 'TROW', 'TRV', 'TSCO', 'TSLA', 'TSN', 'TT', 'TTD', 'TTWO', 'TXN', 'TYL', 'UAL', 'UBER', 'UDR', 'UHS', 'ULTA', 'UNH', 'UNP', 'UPS', 'URI', 'USB', 'V', 'VICI', 'VLO', 'VLTO', 'VMC', 'VRSK', 'VRSN', 'VRTX', 'VST', 'VTR', 'VTRS', 'VZ', 'WAB', 'WAT', 'WDAY', 'WDC', 'WEC', 'WELL', 'WFC', 'WM', 'WMB', 'WMT', 'WRB', 'WSM', 'WST', 'WTW', 'WY', 'WYNN', 'XEL', 'XOM', 'XYL', 'YUM', 'ZBH', 'ZBRA', 'ZTS']
+[*] Loaded data index from /tmp/kangli.u6gb/sigma0/cl_probe_early2/sp500_squashfs_6324130_0/2024-08/index.json: 20069 files cached
+  [index] CRM: dropped 1 unpaired entries
+  A: 21 train, 0 val, 0 test days
+  AAPL: 21 train, 0 val, 0 test days
+  ABBV: 20 train, 0 val, 0 test days
+  ABNB: 21 train, 0 val, 0 test days
+  ABT: 21 train, 0 val, 0 test days
+  ACGL: 20 train, 0 val, 0 test days
+  ACN: 21 train, 0 val, 0 test days
+  ADBE: 21 train, 0 val, 0 test days
+  ADI: 21 train, 0 val, 0 test days
+  ADM: 21 train, 0 val, 0 test days
+  ADP: 21 train, 0 val, 0 test days
+  ADSK: 21 train, 0 val, 0 test days
+  AEE: 21 train, 0 val, 0 test days
+  AEP: 20 train, 0 val, 0 test days
+  AES: 21 train, 0 val, 0 test days
+  AFL: 21 train, 0 val, 0 test days
+  AIG: 21 train, 0 val, 0 test days
+  AIZ: 21 train, 0 val, 0 test days
+  AJG: 21 train, 0 val, 0 test days
+  AKAM: 21 train, 0 val, 0 test days
+  ALB: 21 train, 0 val, 0 test days
+  ALGN: 21 train, 0 val, 0 test days
+  ALL: 21 train, 0 val, 0 test days
+  ALLE: 21 train, 0 val, 0 test days
+  AMAT: 20 train, 0 val, 0 test days
+  AMCR: 21 train, 0 val, 0 test days
+  AMD: 21 train, 0 val, 0 test days
+  AME: 20 train, 0 val, 0 test days
+  AMGN: 20 train, 0 val, 0 test days
+  AMP: 21 train, 0 val, 0 test days
+  AMT: 20 train, 0 val, 0 test days
+  AMZN: 21 train, 0 val, 0 test days
+  ANET: 21 train, 0 val, 0 test days
+  AON: 19 train, 0 val, 0 test days
+  APA: 21 train, 0 val, 0 test days
+  APD: 21 train, 0 val, 0 test days
+  APH: 21 train, 0 val, 0 test days
+  APO: 19 train, 0 val, 0 test days
+  APP: 21 train, 0 val, 0 test days
+  APTV: 21 train, 0 val, 0 test days
+  ARE: 21 train, 0 val, 0 test days
+  ARES: 21 train, 0 val, 0 test days
+  ARM: 21 train, 0 val, 0 test days
+  AVB: 21 train, 0 val, 0 test days
+  AVGO: 21 train, 0 val, 0 test days
+  AVY: 20 train, 0 val, 0 test days
+  AWK: 21 train, 0 val, 0 test days
+  AXON: 21 train, 0 val, 0 test days
+  AXP: 21 train, 0 val, 0 test days
+  AZO: 21 train, 0 val, 0 test days
+  BA: 20 train, 0 val, 0 test days
+  BALL: 21 train, 0 val, 0 test days
+  BAX: 21 train, 0 val, 0 test days
+  BBY: 21 train, 0 val, 0 test days
+  BDX: 21 train, 0 val, 0 test days
+  BEN: 21 train, 0 val, 0 test days
+  BF.B: 21 train, 0 val, 0 test days
+  BG: 21 train, 0 val, 0 test days
+  BIIB: 21 train, 0 val, 0 test days
+  BK: 21 train, 0 val, 0 test days
+  BKNG: 20 train, 0 val, 0 test days
+  BKR: 21 train, 0 val, 0 test days
+  BLDR: 21 train, 0 val, 0 test days
+  BLK: 21 train, 0 val, 0 test days
+  BMY: 21 train, 0 val, 0 test days
+  BR: 21 train, 0 val, 0 test days
+  BRK.B: 21 train, 0 val, 0 test days
+  BRO: 21 train, 0 val, 0 test days
+  BSX: 21 train, 0 val, 0 test days
+  BX: 21 train, 0 val, 0 test days
+  BXP: 21 train, 0 val, 0 test days
+  C: 21 train, 0 val, 0 test days
+  CAG: 21 train, 0 val, 0 test days
+  CAH: 21 train, 0 val, 0 test days
+  CARR: 21 train, 0 val, 0 test days
+  CAT: 21 train, 0 val, 0 test days
+  CB: 21 train, 0 val, 0 test days
+  CBOE: 21 train, 0 val, 0 test days
+  CBRE: 21 train, 0 val, 0 test days
+  CCL: 21 train, 0 val, 0 test days
+  CDW: 21 train, 0 val, 0 test days
+  CE: 21 train, 0 val, 0 test days
+  CEG: 21 train, 0 val, 0 test days
+  CF: 21 train, 0 val, 0 test days
+  CFG: 21 train, 0 val, 0 test days
+  CHD: 21 train, 0 val, 0 test days
+  CHRW: 21 train, 0 val, 0 test days
+  CHTR: 21 train, 0 val, 0 test days
+  CI: 21 train, 0 val, 0 test days
+  CIEN: 21 train, 0 val, 0 test days
+  CINF: 21 train, 0 val, 0 test days
+  CL: 20 train, 0 val, 0 test days
+  CLX: 21 train, 0 val, 0 test days
+  CMCSA: 20 train, 0 val, 0 test days
+  CME: 20 train, 0 val, 0 test days
+  CMG: 21 train, 0 val, 0 test days
+  CMI: 21 train, 0 val, 0 test days
+  CMS: 20 train, 0 val, 0 test days
+  CNC: 21 train, 0 val, 0 test days
+  CNP: 21 train, 0 val, 0 test days
+  COF: 21 train, 0 val, 0 test days
+  COIN: 21 train, 0 val, 0 test days
+  COP: 21 train, 0 val, 0 test days
+  COR: 21 train, 0 val, 0 test days
+  COST: 21 train, 0 val, 0 test days
+  CPAY: 21 train, 0 val, 0 test days
+  CPB: 21 train, 0 val, 0 test days
+  CPRT: 21 train, 0 val, 0 test days
+  CPT: 20 train, 0 val, 0 test days
+  CRH: 21 train, 0 val, 0 test days
+  CRL: 21 train, 0 val, 0 test days
+  CRM: 20 train, 0 val, 0 test days
+  CRWD: 21 train, 0 val, 0 test days
+  CSCO: 21 train, 0 val, 0 test days
+  CSGP: 20 train, 0 val, 0 test days
+  CTAS: 21 train, 0 val, 0 test days
+  CTRA: 21 train, 0 val, 0 test days
+  CTSH: 21 train, 0 val, 0 test days
+  CTVA: 20 train, 0 val, 0 test days
+  CVS: 21 train, 0 val, 0 test days
+  CVX: 21 train, 0 val, 0 test days
+  D: 21 train, 0 val, 0 test days
+  DAL: 21 train, 0 val, 0 test days
+  DASH: 20 train, 0 val, 0 test days
+  DD: 21 train, 0 val, 0 test days
+  DDOG: 20 train, 0 val, 0 test days
+  DE: 21 train, 0 val, 0 test days
+  DECK: 21 train, 0 val, 0 test days
+  DELL: 21 train, 0 val, 0 test days
+  DG: 21 train, 0 val, 0 test days
+  DGX: 21 train, 0 val, 0 test days
+  DHI: 21 train, 0 val, 0 test days
+  DHR: 21 train, 0 val, 0 test days
+  DIS: 20 train, 0 val, 0 test days
+  DLR: 21 train, 0 val, 0 test days
+  DLTR: 20 train, 0 val, 0 test days
+  DOC: 20 train, 0 val, 0 test days
+  DOV: 21 train, 0 val, 0 test days
+  DOW: 21 train, 0 val, 0 test days
+  DPZ: 21 train, 0 val, 0 test days
+  DRI: 20 train, 0 val, 0 test days
+  DTE: 21 train, 0 val, 0 test days
+  DUK: 21 train, 0 val, 0 test days
+  DVA: 21 train, 0 val, 0 test days
+  DVN: 21 train, 0 val, 0 test days
+  DXCM: 20 train, 0 val, 0 test days
+  EA: 21 train, 0 val, 0 test days
+  EBAY: 21 train, 0 val, 0 test days
+  ECL: 21 train, 0 val, 0 test days
+  ED: 21 train, 0 val, 0 test days
+  EFX: 21 train, 0 val, 0 test days
+  EIX: 21 train, 0 val, 0 test days
+  EL: 21 train, 0 val, 0 test days
+  EME: 21 train, 0 val, 0 test days
+  EMR: 21 train, 0 val, 0 test days
+  EOG: 21 train, 0 val, 0 test days
+  EPAM: 21 train, 0 val, 0 test days
+  EQIX: 21 train, 0 val, 0 test days
+  EQR: 21 train, 0 val, 0 test days
+  EQT: 21 train, 0 val, 0 test days
+  ERIE: 21 train, 0 val, 0 test days
+  ES: 21 train, 0 val, 0 test days
+  ESS: 21 train, 0 val, 0 test days
+  ETN: 21 train, 0 val, 0 test days
+  ETR: 21 train, 0 val, 0 test days
+  EVRG: 21 train, 0 val, 0 test days
+  EW: 21 train, 0 val, 0 test days
+  EXC: 21 train, 0 val, 0 test days
+  EXPD: 21 train, 0 val, 0 test days
+  EXPE: 21 train, 0 val, 0 test days
+  EXR: 21 train, 0 val, 0 test days
+  F: 20 train, 0 val, 0 test days
+  FANG: 21 train, 0 val, 0 test days
+  FAST: 20 train, 0 val, 0 test days
+  FCX: 21 train, 0 val, 0 test days
+  FDS: 20 train, 0 val, 0 test days
+  FDX: 21 train, 0 val, 0 test days
+  FE: 21 train, 0 val, 0 test days
+  FFIV: 21 train, 0 val, 0 test days
+  FICO: 21 train, 0 val, 0 test days
+  FIS: 21 train, 0 val, 0 test days
+  FITB: 21 train, 0 val, 0 test days
+  FIX: 21 train, 0 val, 0 test days
+  FOX: 21 train, 0 val, 0 test days
+  FOXA: 20 train, 0 val, 0 test days
+  FRT: 20 train, 0 val, 0 test days
+  FSLR: 20 train, 0 val, 0 test days
+  FTNT: 21 train, 0 val, 0 test days
+  FTV: 21 train, 0 val, 0 test days
+  GD: 21 train, 0 val, 0 test days
+  GDDY: 21 train, 0 val, 0 test days
+  GE: 21 train, 0 val, 0 test days
+  GEHC: 21 train, 0 val, 0 test days
+  GEN: 20 train, 0 val, 0 test days
+  GEV: 20 train, 0 val, 0 test days
+  GILD: 21 train, 0 val, 0 test days
+  GIS: 21 train, 0 val, 0 test days
+  GL: 21 train, 0 val, 0 test days
+  GLW: 21 train, 0 val, 0 test days
+  GM: 21 train, 0 val, 0 test days
+  GNRC: 21 train, 0 val, 0 test days
+  GOOG: 21 train, 0 val, 0 test days
+  GOOGL: 21 train, 0 val, 0 test days
+  GPC: 21 train, 0 val, 0 test days
+  GPN: 21 train, 0 val, 0 test days
+  GRMN: 21 train, 0 val, 0 test days
+  GS: 21 train, 0 val, 0 test days
+  GWW: 21 train, 0 val, 0 test days
+  HAL: 21 train, 0 val, 0 test days
+  HAS: 21 train, 0 val, 0 test days
+  HBAN: 21 train, 0 val, 0 test days
+  HCA: 21 train, 0 val, 0 test days
+  HD: 20 train, 0 val, 0 test days
+  HIG: 21 train, 0 val, 0 test days
+  HII: 21 train, 0 val, 0 test days
+  HLT: 21 train, 0 val, 0 test days
+  HOLX: 21 train, 0 val, 0 test days
+  HON: 21 train, 0 val, 0 test days
+  HOOD: 20 train, 0 val, 0 test days
+  HPE: 21 train, 0 val, 0 test days
+  HPQ: 21 train, 0 val, 0 test days
+  HRL: 21 train, 0 val, 0 test days
+  HSIC: 21 train, 0 val, 0 test days
+  HST: 21 train, 0 val, 0 test days
+  HSY: 21 train, 0 val, 0 test days
+  HUBB: 21 train, 0 val, 0 test days
+  HUM: 21 train, 0 val, 0 test days
+  HWM: 21 train, 0 val, 0 test days
+  IBKR: 20 train, 0 val, 0 test days
+  IBM: 21 train, 0 val, 0 test days
+  ICE: 21 train, 0 val, 0 test days
+  IDXX: 21 train, 0 val, 0 test days
+  IEX: 20 train, 0 val, 0 test days
+  IFF: 21 train, 0 val, 0 test days
+  INCY: 21 train, 0 val, 0 test days
+  INTC: 21 train, 0 val, 0 test days
+  INTU: 21 train, 0 val, 0 test days
+  INVH: 19 train, 0 val, 0 test days
+  IP: 21 train, 0 val, 0 test days
+  IQV: 21 train, 0 val, 0 test days
+  IR: 21 train, 0 val, 0 test days
+  IRM: 21 train, 0 val, 0 test days
+  ISRG: 21 train, 0 val, 0 test days
+  IT: 21 train, 0 val, 0 test days
+  ITW: 21 train, 0 val, 0 test days
+  IVZ: 21 train, 0 val, 0 test days
+  J: 21 train, 0 val, 0 test days
+  JBHT: 21 train, 0 val, 0 test days
+  JBL: 21 train, 0 val, 0 test days
+  JCI: 21 train, 0 val, 0 test days
+  JKHY: 21 train, 0 val, 0 test days
+  JNJ: 21 train, 0 val, 0 test days
+  JPM: 21 train, 0 val, 0 test days
+  KDP: 21 train, 0 val, 0 test days
+  KEY: 21 train, 0 val, 0 test days
+  KEYS: 20 train, 0 val, 0 test days
+  KHC: 21 train, 0 val, 0 test days
+  KIM: 20 train, 0 val, 0 test days
+  KKR: 20 train, 0 val, 0 test days
+  KLAC: 21 train, 0 val, 0 test days
+  KMB: 20 train, 0 val, 0 test days
+  KMI: 21 train, 0 val, 0 test days
+  KO: 20 train, 0 val, 0 test days
+  KR: 21 train, 0 val, 0 test days
+  KVUE: 21 train, 0 val, 0 test days
+  L: 21 train, 0 val, 0 test days
+  LEN: 21 train, 0 val, 0 test days
+  LH: 20 train, 0 val, 0 test days
+  LHX: 21 train, 0 val, 0 test days
+  LII: 20 train, 0 val, 0 test days
+  LIN: 20 train, 0 val, 0 test days
+  LLY: 21 train, 0 val, 0 test days
+  LMT: 21 train, 0 val, 0 test days
+  LNT: 20 train, 0 val, 0 test days
+  LOW: 21 train, 0 val, 0 test days
+  LRCX: 21 train, 0 val, 0 test days
+  LULU: 21 train, 0 val, 0 test days
+  LUV: 21 train, 0 val, 0 test days
+  LVS: 21 train, 0 val, 0 test days
+  LW: 21 train, 0 val, 0 test days
+  LYB: 21 train, 0 val, 0 test days
+  LYV: 21 train, 0 val, 0 test days
+  MA: 21 train, 0 val, 0 test days
+  MAA: 21 train, 0 val, 0 test days
+  MAR: 21 train, 0 val, 0 test days
+  MAS: 20 train, 0 val, 0 test days
+  MCD: 21 train, 0 val, 0 test days
+  MCHP: 21 train, 0 val, 0 test days
+  MCK: 21 train, 0 val, 0 test days
+  MCO: 21 train, 0 val, 0 test days
+  MDLZ: 21 train, 0 val, 0 test days
+  MDT: 20 train, 0 val, 0 test days
+  MET: 21 train, 0 val, 0 test days
+  META: 20 train, 0 val, 0 test days
+  MGM: 21 train, 0 val, 0 test days
+  MKC: 20 train, 0 val, 0 test days
+  MLM: 21 train, 0 val, 0 test days
+  MNST: 21 train, 0 val, 0 test days
+  MO: 21 train, 0 val, 0 test days
+  MOH: 20 train, 0 val, 0 test days
+  MOS: 21 train, 0 val, 0 test days
+  MPC: 21 train, 0 val, 0 test days
+  MPWR: 21 train, 0 val, 0 test days
+  MRK: 21 train, 0 val, 0 test days
+  MRNA: 21 train, 0 val, 0 test days
+  MSCI: 21 train, 0 val, 0 test days
+  MSFT: 21 train, 0 val, 0 test days
+  MSI: 21 train, 0 val, 0 test days
+  MTB: 21 train, 0 val, 0 test days
+  MTCH: 20 train, 0 val, 0 test days
+  MTD: 21 train, 0 val, 0 test days
+  MU: 21 train, 0 val, 0 test days
+  NCLH: 20 train, 0 val, 0 test days
+  NDAQ: 21 train, 0 val, 0 test days
+  NDSN: 20 train, 0 val, 0 test days
+  NEE: 21 train, 0 val, 0 test days
+  NEM: 21 train, 0 val, 0 test days
+  NFLX: 21 train, 0 val, 0 test days
+  NI: 21 train, 0 val, 0 test days
+  NKE: 20 train, 0 val, 0 test days
+  NOC: 20 train, 0 val, 0 test days
+  NOW: 20 train, 0 val, 0 test days
+  NRG: 21 train, 0 val, 0 test days
+  NSC: 21 train, 0 val, 0 test days
+  NTAP: 21 train, 0 val, 0 test days
+  NTRS: 21 train, 0 val, 0 test days
+  NUE: 21 train, 0 val, 0 test days
+  NVDA: 21 train, 0 val, 0 test days
+  NVR: 21 train, 0 val, 0 test days
+  NWS: 21 train, 0 val, 0 test days
+  NWSA: 21 train, 0 val, 0 test days
+  NXPI: 21 train, 0 val, 0 test days
+  O: 20 train, 0 val, 0 test days
+  ODFL: 21 train, 0 val, 0 test days
+  OKE: 21 train, 0 val, 0 test days
+  OMC: 21 train, 0 val, 0 test days
+  ON: 21 train, 0 val, 0 test days
+  ORCL: 21 train, 0 val, 0 test days
+  ORLY: 20 train, 0 val, 0 test days
+  OTIS: 21 train, 0 val, 0 test days
+  OXY: 21 train, 0 val, 0 test days
+  PANW: 21 train, 0 val, 0 test days
+  PAYC: 21 train, 0 val, 0 test days
+  PAYX: 21 train, 0 val, 0 test days
+  PCAR: 21 train, 0 val, 0 test days
+  PCG: 20 train, 0 val, 0 test days
+  PEG: 21 train, 0 val, 0 test days
+  PEP: 21 train, 0 val, 0 test days
+  PFE: 20 train, 0 val, 0 test days
+  PFG: 21 train, 0 val, 0 test days
+  PG: 21 train, 0 val, 0 test days
+  PGR: 21 train, 0 val, 0 test days
+  PH: 21 train, 0 val, 0 test days
+  PHM: 21 train, 0 val, 0 test days
+  PKG: 20 train, 0 val, 0 test days
+  PLD: 21 train, 0 val, 0 test days
+  PLTR: 21 train, 0 val, 0 test days
+  PM: 21 train, 0 val, 0 test days
+  PNC: 21 train, 0 val, 0 test days
+  PNR: 21 train, 0 val, 0 test days
+  PNW: 21 train, 0 val, 0 test days
+  POOL: 21 train, 0 val, 0 test days
+  PPG: 21 train, 0 val, 0 test days
+  PPL: 21 train, 0 val, 0 test days
+  PRU: 21 train, 0 val, 0 test days
+  PSA: 21 train, 0 val, 0 test days
+  PSX: 21 train, 0 val, 0 test days
+  PTC: 21 train, 0 val, 0 test days
+  PWR: 20 train, 0 val, 0 test days
+  PYPL: 21 train, 0 val, 0 test days
+  QCOM: 21 train, 0 val, 0 test days
+  RCL: 21 train, 0 val, 0 test days
+  REG: 21 train, 0 val, 0 test days
+  REGN: 21 train, 0 val, 0 test days
+  RF: 21 train, 0 val, 0 test days
+  RJF: 21 train, 0 val, 0 test days
+  RL: 21 train, 0 val, 0 test days
+  RMD: 21 train, 0 val, 0 test days
+  ROK: 21 train, 0 val, 0 test days
+  ROL: 21 train, 0 val, 0 test days
+  ROP: 20 train, 0 val, 0 test days
+  ROST: 21 train, 0 val, 0 test days
+  RSG: 20 train, 0 val, 0 test days
+  RTX: 21 train, 0 val, 0 test days
+  RVTY: 20 train, 0 val, 0 test days
+  SBAC: 21 train, 0 val, 0 test days
+  SBUX: 21 train, 0 val, 0 test days
+  SCHW: 21 train, 0 val, 0 test days
+  SHW: 20 train, 0 val, 0 test days
+  SJM: 21 train, 0 val, 0 test days
+  SLB: 21 train, 0 val, 0 test days
+  SMCI: 21 train, 0 val, 0 test days
+  SNA: 21 train, 0 val, 0 test days
+  SNPS: 21 train, 0 val, 0 test days
+  SO: 21 train, 0 val, 0 test days
+  SOLV: 21 train, 0 val, 0 test days
+  SPG: 21 train, 0 val, 0 test days
+  SPGI: 21 train, 0 val, 0 test days
+  SRE: 21 train, 0 val, 0 test days
+  STE: 21 train, 0 val, 0 test days
+  STLD: 21 train, 0 val, 0 test days
+  STT: 21 train, 0 val, 0 test days
+  STX: 21 train, 0 val, 0 test days
+  STZ: 20 train, 0 val, 0 test days
+  SW: 21 train, 0 val, 0 test days
+  SWK: 21 train, 0 val, 0 test days
+  SWKS: 21 train, 0 val, 0 test days
+  SYF: 21 train, 0 val, 0 test days
+  SYK: 20 train, 0 val, 0 test days
+  SYY: 21 train, 0 val, 0 test days
+  T: 21 train, 0 val, 0 test days
+  TAP: 20 train, 0 val, 0 test days
+  TDG: 21 train, 0 val, 0 test days
+  TDY: 21 train, 0 val, 0 test days
+  TECH: 20 train, 0 val, 0 test days
+  TEL: 21 train, 0 val, 0 test days
+  TER: 21 train, 0 val, 0 test days
+  TFC: 21 train, 0 val, 0 test days
+  TGT: 21 train, 0 val, 0 test days
+  TJX: 20 train, 0 val, 0 test days
+  TKO: 21 train, 0 val, 0 test days
+  TMO: 21 train, 0 val, 0 test days
+  TMUS: 21 train, 0 val, 0 test days
+  TPL: 21 train, 0 val, 0 test days
+  TPR: 21 train, 0 val, 0 test days
+  TRGP: 21 train, 0 val, 0 test days
+  TRMB: 21 train, 0 val, 0 test days
+  TROW: 21 train, 0 val, 0 test days
+  TRV: 21 train, 0 val, 0 test days
+  TSCO: 21 train, 0 val, 0 test days
+  TSLA: 21 train, 0 val, 0 test days
+  TSN: 20 train, 0 val, 0 test days
+  TT: 20 train, 0 val, 0 test days
+  TTD: 21 train, 0 val, 0 test days
+  TTWO: 21 train, 0 val, 0 test days
+  TXN: 19 train, 0 val, 0 test days
+  TYL: 21 train, 0 val, 0 test days
+  UAL: 21 train, 0 val, 0 test days
+  UBER: 20 train, 0 val, 0 test days
+  UDR: 21 train, 0 val, 0 test days
+  UHS: 21 train, 0 val, 0 test days
+  ULTA: 21 train, 0 val, 0 test days
+  UNH: 21 train, 0 val, 0 test days
+  UNP: 21 train, 0 val, 0 test days
+  UPS: 21 train, 0 val, 0 test days
+  URI: 21 train, 0 val, 0 test days
+  USB: 20 train, 0 val, 0 test days
+  V: 21 train, 0 val, 0 test days
+  VICI: 21 train, 0 val, 0 test days
+  VLO: 21 train, 0 val, 0 test days
+  VLTO: 21 train, 0 val, 0 test days
+  VMC: 20 train, 0 val, 0 test days
+  VRSK: 21 train, 0 val, 0 test days
+  VRSN: 21 train, 0 val, 0 test days
+  VRTX: 21 train, 0 val, 0 test days
+  VST: 21 train, 0 val, 0 test days
+  VTR: 21 train, 0 val, 0 test days
+  VTRS: 21 train, 0 val, 0 test days
+  VZ: 21 train, 0 val, 0 test days
+  WAB: 21 train, 0 val, 0 test days
+  WAT: 20 train, 0 val, 0 test days
+  WDAY: 21 train, 0 val, 0 test days
+  WDC: 21 train, 0 val, 0 test days
+  WEC: 21 train, 0 val, 0 test days
+  WELL: 21 train, 0 val, 0 test days
+  WFC: 21 train, 0 val, 0 test days
+  WM: 21 train, 0 val, 0 test days
+  WMB: 21 train, 0 val, 0 test days
+  WMT: 21 train, 0 val, 0 test days
+  WRB: 20 train, 0 val, 0 test days
+  WSM: 21 train, 0 val, 0 test days
+  WST: 21 train, 0 val, 0 test days
+  WTW: 21 train, 0 val, 0 test days
+  WY: 21 train, 0 val, 0 test days
+  WYNN: 21 train, 0 val, 0 test days
+  XEL: 21 train, 0 val, 0 test days
+  XOM: 21 train, 0 val, 0 test days
+  XYL: 21 train, 0 val, 0 test days
+  YUM: 20 train, 0 val, 0 test days
+  ZBH: 21 train, 0 val, 0 test days
+  ZBRA: 21 train, 0 val, 0 test days
+  ZTS: 21 train, 0 val, 0 test days
+Using mask function: <function LOBSTER_Dataset.no_mask at 0x4002c3175080>
+[*] Starting S5 Training on lobster-prediction =>> Initializing...
+[backbone] architecture=mamba3 wrapper=external
+[Schedule] steps_per_epoch: 201
+[Schedule] total_steps: 201
+[Schedule] warmup_end_step: 2
+[Schedule] Base SSM LR: 0.0005, Base LR: 0.0005
+[Schedule] lr_min: 2.5e-05, ssm_lr_min: 2.5e-05
+[Schedule] Muon kernel LR: 0.01, min: 0.0005
+(2112, 1024)
+[Optimizer] Using optax schedules (LR managed inside JIT)
+configuring Muon optimization (kernel -> NS, SSM -> Adam, rest -> AdamW)
+  Muon kernel LR: 0.01, WD: 0.005
+  AdamW LR: 0.0005, WD: 0.005
+  SSM LR: 0.0005, WD: 0
+[*] Gradient clipping enabled: max_norm=1.0
+[*] Trainable Parameters: 78539423
+[*] State params embedding shape: (2112, 1024)
+[Sharding] Single-node: forcing hierarchical=False (1D mesh)
+[Sharding] Single-node mode: Using 1 local devices
+[Sharding] Created 1D mesh with 1 devices along 'data' axis
+[*] Restoring weights from /lus/lfs1aip2/projects/public/u6gb/sigma-0/checkpoints_selftrain/j5705912_b30675li_5705912
+[Checkpoint] Loading step=33575 from /lus/lfs1aip2/projects/public/u6gb/sigma-0/checkpoints_selftrain/j5705912_b30675li_5705912 (partial_restore=False)
+[Restore] state.step = 33575
+[Restore] Restored metrics: {'loss_train': 0.7268354892730713, 'epoch': 0, 'step_in_epoch': 33574}
+[Restore] Adam mu norms (first 3 params): [6.33627996649011e-06, 7.309991815418471e-06, 2.4153553113137605e-07]
+[Restore] Adam nu norms (first 3 params): [8.664467060492953e-11, 7.788690525867281e-11, 1.7011768729813248e-11]
+[Restore] Schedule count = 33575
+[Restore Reset] state.step 33575 → 0 (fresh LR schedule)
+[*] State distributed via sharding (replicated across 1 devices)
+[JIT] Created JIT-compiled train_step with sharding
+[JIT] Created JIT-compiled eval_step with sharding
+[FLOPs] Params: 78,539,423
+[FLOPs] Tokens/step: 52,000
+[FLOPs] Correction factor: 2.630
+[FLOPs] FLOPs/step: 6.445e+13
+[FLOPs] TFLOPS/step: 64.45
+[FLOPs] Peak BF16 (1 GPUs): 989 TFLOPS
+[Restore] Best metrics restored: val_loss=100000000.00000, val_acc=-100000000.0000, test_loss=100000000.00000, test_acc=-10000.0000
+[Restore] Resuming training from epoch 0 (of 1)
+[*] Starting Training Epoch 1...
+[*] Step 0 - LR managed by optax schedules
+Training on 1 devices.
+  0%|          | 0/1568369 [00:00<?, ?it/s]ERROR:2026-09-06 00:00:14,042:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+ERROR:2026-09-06 00:00:20,826:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+ERROR:2026-09-06 00:00:23,625:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+ERROR:2026-09-06 00:00:26,596:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+ERROR:2026-09-06 00:00:29,619:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+ERROR:2026-09-06 00:00:32,645:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+ERROR:2026-09-06 00:00:35,598:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+ERROR:2026-09-06 00:00:38,617:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+ERROR:2026-09-06 00:00:41,621:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+ERROR:2026-09-06 00:00:44,626:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+ERROR:2026-09-06 00:00:47,813:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+ERROR:2026-09-06 00:00:50,839:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+
+=== Epoch 0, Batch 0 ===
+CPU Memory: 11.90 GB
+Device cuda:0 Used: 702.39 MB / 85.50 GB
+/lus/lfs1aip2/projects/public/s5e/quant_team/quant/miniforge3/lib/python3.12/site-packages/jax/_src/compiler.py:834: UserWarning: Error writing persistent compilation cache entry for 'jit_train_step': OSError: [Errno 122] Disk quota exceeded: '/lus/lfs1aip2/projects/public/s5e/quant_team/quant/jax_cache_lobs5/jit_train_step-bfadc5dd8442feae311bdfcf204dfd33dc762e56aabdbc0c6f7f9940834cca81-cache'
+  warnings.warn(
+  0%|          | 1/1568369 [01:57<51302:43:20, 117.76s/it]  0%|          | 2/1568369 [01:58<21296:53:26, 48.88s/it]   0%|          | 3/1568369 [01:59<11702:32:42, 26.86s/it]  0%|          | 4/1568369 [01:59<7193:24:17, 16.51s/it]   0%|          | 5/1568369 [02:00<4702:15:10, 10.79s/it]  0%|          | 6/1568369 [02:01<3199:17:21,  7.34s/it]  0%|          | 7/1568369 [02:01<2246:46:48,  5.16s/it]  0%|          | 8/1568369 [02:02<1621:33:25,  3.72s/it]  0%|          | 9/1568369 [02:02<1203:27:57,  2.76s/it]  0%|          | 10/1568369 [02:03<919:14:56,  2.11s/it]  0%|          | 11/1568369 [02:04<725:01:54,  1.66s/it]  0%|          | 12/1568369 [02:04<590:48:24,  1.36s/it]  0%|          | 13/1568369 [02:05<497:38:22,  1.14s/it]  0%|          | 14/1568369 [02:06<433:38:29,  1.00it/s]  0%|          | 15/1568369 [02:06<389:07:30,  1.12it/s]  0%|          | 16/1568369 [02:07<357:10:11,  1.22it/s]  0%|          | 17/1568369 [02:08<335:43:18,  1.30it/s]  0%|          | 18/1568369 [02:08<320:50:12,  1.36it/s]  0%|          | 19/1568369 [02:09<310:05:41,  1.40it/s]  0%|          | 20/1568369 [02:10<302:59:49,  1.44it/s]  0%|          | 21/1568369 [02:10<297:12:22,  1.47it/s]  0%|          | 22/1568369 [02:11<294:32:19,  1.48it/s]  0%|          | 23/1568369 [02:12<292:09:30,  1.49it/s]  0%|          | 24/1568369 [02:12<290:41:27,  1.50it/s]  0%|          | 25/1568369 [02:13<289:08:34,  1.51it/s]  0%|          | 26/1568369 [02:14<288:26:11,  1.51it/s]  0%|          | 27/1568369 [02:14<287:30:59,  1.52it/s]  0%|          | 28/1568369 [02:15<287:02:59,  1.52it/s]  0%|          | 29/1568369 [02:16<287:18:37,  1.52it/s]  0%|          | 30/1568369 [02:16<286:19:58,  1.52it/s]  0%|          | 31/1568369 [02:17<284:40:50,  1.53it/s]  0%|          | 32/1568369 [02:18<283:35:05,  1.54it/s]  0%|          | 33/1568369 [02:18<282:15:50,  1.54it/s]  0%|          | 34/1568369 [02:19<281:34:29,  1.55it/s]  0%|          | 35/1568369 [02:19<281:24:34,  1.55it/s]  0%|          | 36/1568369 [02:20<281:39:49,  1.55it/s]  0%|          | 37/1568369 [02:21<282:55:24,  1.54it/s]  0%|          | 38/1568369 [02:21<282:29:01,  1.54it/s]  0%|          | 39/1568369 [02:22<281:11:38,  1.55it/s]  0%|          | 40/1568369 [02:23<280:55:39,  1.55it/s]  0%|          | 41/1568369 [02:23<280:03:29,  1.56it/s]  0%|          | 42/1568369 [02:24<280:00:50,  1.56it/s]  0%|          | 43/1568369 [02:25<279:49:39,  1.56it/s]  0%|          | 44/1568369 [02:25<280:08:30,  1.56it/s]  0%|          | 45/1568369 [02:26<280:21:27,  1.55it/s]  0%|          | 46/1568369 [02:27<280:32:10,  1.55it/s]  0%|          | 47/1568369 [02:27<280:06:57,  1.56it/s]  0%|          | 48/1568369 [02:28<279:56:39,  1.56it/s]  0%|          | 49/1568369 [02:28<279:36:05,  1.56it/s]  0%|          | 50/1568369 [02:29<279:51:50,  1.56it/s]  0%|          | 51/1568369 [02:30<279:20:38,  1.56it/s]  0%|          | 52/1568369 [02:30<281:05:38,  1.55it/s]  0%|          | 53/1568369 [02:31<281:00:08,  1.55it/s]  0%|          | 54/1568369 [02:32<281:54:24,  1.55it/s]  0%|          | 55/1568369 [02:32<281:37:02,  1.55it/s]  0%|          | 56/1568369 [02:33<280:57:01,  1.55it/s]  0%|          | 57/1568369 [02:34<280:39:38,  1.55it/s]  0%|          | 58/1568369 [02:34<280:26:49,  1.55it/s]  0%|          | 59/1568369 [02:35<280:37:56,  1.55it/s]  0%|          | 60/1568369 [02:36<280:54:56,  1.55it/s]  0%|          | 61/1568369 [02:36<280:27:25,  1.55it/s]  0%|          | 62/1568369 [02:37<280:15:11,  1.55it/s]  0%|          | 63/1568369 [02:38<280:00:45,  1.56it/s]  0%|          | 64/1568369 [02:38<279:47:16,  1.56it/s]  0%|          | 65/1568369 [02:39<279:45:53,  1.56it/s]  0%|          | 66/1568369 [02:39<280:14:54,  1.55it/s]  0%|          | 67/1568369 [02:40<280:13:42,  1.55it/s]  0%|          | 68/1568369 [02:41<280:18:52,  1.55it/s]  0%|          | 69/1568369 [02:41<281:45:41,  1.55it/s]  0%|          | 70/1568369 [02:42<281:35:33,  1.55it/s]  0%|          | 71/1568369 [02:43<280:56:42,  1.55it/s]  0%|          | 72/1568369 [02:43<280:18:05,  1.55it/s]  0%|          | 73/1568369 [02:44<280:06:03,  1.56it/s]  0%|          | 74/1568369 [02:45<279:46:57,  1.56it/s]  0%|          | 75/1568369 [02:45<279:25:47,  1.56it/s]  0%|          | 76/1568369 [02:46<279:20:23,  1.56it/s]  0%|          | 77/1568369 [02:47<281:11:32,  1.55it/s]  0%|          | 78/1568369 [02:47<280:57:14,  1.55it/s]  0%|          | 79/1568369 [02:48<280:06:01,  1.56it/s]  0%|          | 80/1568369 [02:48<280:10:19,  1.55it/s]  0%|          | 81/1568369 [02:49<281:26:33,  1.55it/s]  0%|          | 82/1568369 [02:50<280:53:37,  1.55it/s]  0%|          | 83/1568369 [02:50<280:29:54,  1.55it/s]  0%|          | 84/1568369 [02:51<280:01:19,  1.56it/s]  0%|          | 85/1568369 [02:52<279:54:13,  1.56it/s]  0%|          | 86/1568369 [02:52<279:31:53,  1.56it/s]  0%|          | 87/1568369 [02:53<279:28:42,  1.56it/s]  0%|          | 88/1568369 [02:54<279:34:11,  1.56it/s]  0%|          | 89/1568369 [02:54<280:26:02,  1.55it/s]  0%|          | 90/1568369 [02:55<280:30:49,  1.55it/s]  0%|          | 91/1568369 [02:56<280:16:35,  1.55it/s]  0%|          | 92/1568369 [02:56<279:52:51,  1.56it/s]  0%|          | 93/1568369 [02:57<279:52:40,  1.56it/s]  0%|          | 94/1568369 [02:57<279:45:42,  1.56it/s]  0%|          | 95/1568369 [02:58<279:15:12,  1.56it/s]  0%|          | 96/1568369 [02:59<279:01:30,  1.56it/s]  0%|          | 97/1568369 [02:59<278:44:55,  1.56it/s]  0%|          | 98/1568369 [03:00<278:40:54,  1.56it/s]  0%|          | 99/1568369 [03:01<278:34:18,  1.56it/s][Timing] Epoch 0 step 100/1568369: avg 1.82 s/step, recent 1.818 s/step, MFU 3.6% (35.5 TFLOPS)
+  0%|          | 100/1568369 [03:01<279:02:40,  1.56it/s]  0%|          | 101/1568369 [03:02<278:48:14,  1.56it/s]  0%|          | 102/1568369 [03:03<278:55:59,  1.56it/s]  0%|          | 103/1568369 [03:03<278:51:21,  1.56it/s]  0%|          | 104/1568369 [03:04<278:53:52,  1.56it/s]  0%|          | 105/1568369 [03:04<278:49:40,  1.56it/s]  0%|          | 106/1568369 [03:05<278:29:41,  1.56it/s]  0%|          | 107/1568369 [03:06<278:45:23,  1.56it/s]  0%|          | 108/1568369 [03:06<278:33:47,  1.56it/s]  0%|          | 109/1568369 [03:07<278:53:17,  1.56it/s]  0%|          | 110/1568369 [03:08<278:54:28,  1.56it/s]  0%|          | 111/1568369 [03:08<279:04:00,  1.56it/s]  0%|          | 112/1568369 [03:09<278:58:06,  1.56it/s]  0%|          | 113/1568369 [03:10<279:03:56,  1.56it/s]  0%|          | 114/1568369 [03:10<279:36:08,  1.56it/s]  0%|          | 115/1568369 [03:11<280:19:08,  1.55it/s]  0%|          | 116/1568369 [03:12<280:30:38,  1.55it/s]  0%|          | 117/1568369 [03:12<280:07:42,  1.56it/s]  0%|          | 118/1568369 [03:13<279:44:15,  1.56it/s]  0%|          | 119/1568369 [03:13<279:28:58,  1.56it/s]  0%|          | 120/1568369 [03:14<279:38:32,  1.56it/s]  0%|          | 121/1568369 [03:15<279:59:18,  1.56it/s]  0%|          | 122/1568369 [03:15<281:59:39,  1.54it/s]  0%|          | 123/1568369 [03:16<282:12:31,  1.54it/s]  0%|          | 124/1568369 [03:17<281:34:20,  1.55it/s]  0%|          | 125/1568369 [03:17<281:07:20,  1.55it/s]  0%|          | 126/1568369 [03:18<280:25:29,  1.55it/s]  0%|          | 127/1568369 [03:19<280:20:07,  1.55it/s]  0%|          | 128/1568369 [03:19<280:25:29,  1.55it/s]  0%|          | 129/1568369 [03:20<280:46:39,  1.55it/s]  0%|          | 130/1568369 [03:21<280:26:03,  1.55it/s]  0%|          | 131/1568369 [03:21<280:27:54,  1.55it/s]  0%|          | 132/1568369 [03:22<281:15:20,  1.55it/s]  0%|          | 133/1568369 [03:22<281:18:06,  1.55it/s]  0%|          | 134/1568369 [03:23<280:52:49,  1.55it/s]  0%|          | 135/1568369 [03:24<280:22:50,  1.55it/s]  0%|          | 136/1568369 [03:24<279:48:45,  1.56it/s]  0%|          | 137/1568369 [03:25<280:32:16,  1.55it/s]  0%|          | 138/1568369 [03:26<280:41:08,  1.55it/s]  0%|          | 139/1568369 [03:26<280:51:16,  1.55it/s]  0%|          | 140/1568369 [03:27<280:11:57,  1.55it/s]  0%|          | 141/1568369 [03:28<280:11:03,  1.55it/s]  0%|          | 142/1568369 [03:28<279:47:37,  1.56it/s]  0%|          | 143/1568369 [03:29<280:27:20,  1.55it/s]  0%|          | 144/1568369 [03:30<280:26:31,  1.55it/s]  0%|          | 145/1568369 [03:30<280:33:53,  1.55it/s]  0%|          | 146/1568369 [03:31<280:05:00,  1.56it/s]  0%|          | 147/1568369 [03:31<280:13:42,  1.55it/s]  0%|          | 148/1568369 [03:32<280:08:08,  1.56it/s]  0%|          | 149/1568369 [03:33<281:04:25,  1.55it/s]  0%|          | 150/1568369 [03:33<280:40:43,  1.55it/s]  0%|          | 151/1568369 [03:34<280:44:46,  1.55it/s]  0%|          | 152/1568369 [03:35<280:10:17,  1.55it/s]  0%|          | 153/1568369 [03:35<279:44:48,  1.56it/s]  0%|          | 154/1568369 [03:36<279:32:41,  1.56it/s]  0%|          | 155/1568369 [03:37<280:10:06,  1.55it/s]  0%|          | 156/1568369 [03:37<280:23:43,  1.55it/s]  0%|          | 157/1568369 [03:38<281:46:36,  1.55it/s]  0%|          | 158/1568369 [03:39<282:20:16,  1.54it/s]  0%|          | 159/1568369 [03:39<281:38:02,  1.55it/s]  0%|          | 160/1568369 [03:40<280:39:25,  1.55it/s]  0%|          | 161/1568369 [03:41<279:48:41,  1.56it/s]  0%|          | 162/1568369 [03:41<279:38:12,  1.56it/s]  0%|          | 163/1568369 [03:42<279:19:28,  1.56it/s]  0%|          | 164/1568369 [03:42<279:04:25,  1.56it/s]  0%|          | 165/1568369 [03:43<279:06:29,  1.56it/s]  0%|          | 166/1568369 [03:44<278:54:00,  1.56it/s]  0%|          | 167/1568369 [03:44<282:31:01,  1.54it/s]  0%|          | 168/1568369 [03:45<284:38:49,  1.53it/s]  0%|          | 169/1568369 [03:46<283:11:00,  1.54it/s]  0%|          | 170/1568369 [03:46<281:54:58,  1.55it/s]  0%|          | 171/1568369 [03:47<281:21:18,  1.55it/s]  0%|          | 172/1568369 [03:48<280:44:12,  1.55it/s]  0%|          | 173/1568369 [03:48<280:03:01,  1.56it/s]  0%|          | 174/1568369 [03:49<279:39:11,  1.56it/s]  0%|          | 175/1568369 [03:50<279:35:06,  1.56it/s]  0%|          | 176/1568369 [03:50<279:18:22,  1.56it/s]  0%|          | 177/1568369 [03:51<279:06:54,  1.56it/s]  0%|          | 178/1568369 [03:51<279:11:06,  1.56it/s]  0%|          | 179/1568369 [03:52<278:58:07,  1.56it/s]  0%|          | 180/1568369 [03:53<279:02:05,  1.56it/s]  0%|          | 181/1568369 [03:53<278:48:54,  1.56it/s]  0%|          | 182/1568369 [03:54<278:52:48,  1.56it/s]  0%|          | 183/1568369 [03:55<278:56:17,  1.56it/s]  0%|          | 184/1568369 [03:55<278:45:31,  1.56it/s]  0%|          | 185/1568369 [03:56<278:51:33,  1.56it/s]  0%|          | 186/1568369 [03:57<278:43:18,  1.56it/s]  0%|          | 187/1568369 [03:57<278:28:51,  1.56it/s]  0%|          | 188/1568369 [03:58<279:13:15,  1.56it/s]  0%|          | 189/1568369 [03:58<278:35:04,  1.56it/s]  0%|          | 190/1568369 [03:59<278:51:26,  1.56it/s]  0%|          | 191/1568369 [04:00<278:50:02,  1.56it/s]  0%|          | 192/1568369 [04:00<278:40:25,  1.56it/s]  0%|          | 193/1568369 [04:01<278:41:06,  1.56it/s]  0%|          | 194/1568369 [04:02<278:47:59,  1.56it/s]  0%|          | 195/1568369 [04:02<278:42:11,  1.56it/s]  0%|          | 196/1568369 [04:03<278:53:53,  1.56it/s]  0%|          | 197/1568369 [04:04<278:54:07,  1.56it/s]  0%|          | 198/1568369 [04:04<278:35:15,  1.56it/s]  0%|          | 199/1568369 [04:05<278:50:49,  1.56it/s][Timing] Epoch 0 step 200/1568369: avg 1.23 s/step, recent 0.643 s/step, MFU 10.1% (100.3 TFLOPS)
+  0%|          | 200/1568369 [04:06<278:55:19,  1.56it/s]Ending epoch early at step 201 due to curtail_epoch arg.
+  0%|          | 200/1568369 [04:06<537:16:04,  1.23s/it]
+
+=>> Epoch 1 Metrics ===
+	Train Loss: 1.55522
+[Checkpoint] Epoch-end save: epoch=0, global_step=201
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mj6324130[0m at: [34mhttps://wandb.ai/oxford-lob/sigma0-continual/runs/ffqshrmi[0m
+[1;34mwandb[0m: Find logs at: [1;35m../../../../../../tmp/kangli.u6gb/sigma0/cl_probe_early2/wandb/wandb/run-20260905_235940-ffqshrmi/logs[0m
+[squashfs] unmounted /tmp/kangli.u6gb/sigma0/cl_probe_early2/sp500_squashfs_6324130_0/2024-08/
