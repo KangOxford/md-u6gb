@@ -117,14 +117,23 @@ happens.
 
 Reviews are real files with reproduction artefacts, not summaries:
 
-| review | file | size | findings | reproduction |
-|---|---|---|---|---|
-| R1 | `plan_drafts/R1_review_of_01_03_06.md` | — | — | — |
-| R2 | `plan_drafts/R2_review_statistics.md` | — | 14, 3 blocking | `plan_drafts/R2_checks.py` |
-| R3 | `plan_drafts/R3_review_causal_design.md` | 861 lines | 13, 3 blocking | recomputed inline, login node |
+**Cohort status: 3 of 5 real.** A review counts only if it left a file; a failed or empty run
+counts as nothing, and is recorded as nothing.
+
+| review | file | size | findings | reproduction | status |
+|---|---|---|---|---|---|
+| R1 | `plan_drafts/R1_review_of_01_03_06.md` | 55,763 B / 891 lines | — | — | **complete** |
+| R2 | `plan_drafts/R2_review_statistics.md` | 47,850 B / 746 lines | 14, 3 blocking | `plan_drafts/R2_checks.py`, 467 lines | **complete** |
+| R3 | `plan_drafts/R3_review_causal_design.md` | 58,665 B / 861 lines | 13, 3 blocking | recomputed inline | **complete** |
+| R4 | `plan_drafts/R4_review_independence.md` | **absent** | — | — | **FAILED — session limit, zero output; relaunched** |
+| R5 | — | absent | — | — | **not yet launched** |
 
 Subagent transcripts are session-local and do not survive the session; the review files and
 their scripts are the durable record.
+
+**A review's numbers are not evidence until recomputed.** V2 above records two R3 magnitudes
+that did not reproduce. They had already been written into this file before being checked —
+the same failure this document exists to catch, committed in the document itself.
 
 ## V4 — the coverage check that was vacuous, and its corrected result
 
