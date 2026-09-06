@@ -2,12 +2,47 @@
 # B (attach form): early-vs-late fixed-budget adaptation on the 2024-08 slice,
 # attached into an idle node of an existing allocation (no queueing).
 # Usage: attach_adaptation.sh <RESTORE_STEP> <SHORT> [JAX_SEED] [ALLOC] [NODE]
-#   attach_adaptation.sh 275   e275   6141106 nid010252
-#   attach_adaptation.sh 69378 l69378 6141106 nid010252
+#
+# RESTORE_STEP -- which checkpoint of the selftrain chain to adapt from.
+#
+# The example in this header used to read 275, and 275 must not be used. Read from the run's
+# own log, /lus/lfs1aip2/projects/public/u6gb/sigma-0/logs_lobs5/training_5705912_node0.log:
+#
+#     [Schedule] steps_per_epoch: 80805346
+#     [Schedule] total_steps:     80805346
+#     [Schedule] warmup_end_step:   808053
+#
+# so the run's LAST checkpoint, step 69378, is 0.0859% of one epoch and 8.59% of the way to
+# the end of the linear warmup. EVERY checkpoint in the chain is inside the warmup:
+#
+#     step     275  ->  0.03% of the warmup ramp
+#     step   33575  ->  4.16%
+#     step   69378  ->  8.59%
+#
+# Two consequences the caller has to carry, not the script:
+#   1. 275 is 0.03% up the ramp -- adapting from it is untrained-versus-trained, not
+#      early-versus-late. Use 33575 as the early member; 69378 is the late one.
+#   2. The interval 33575 -> 69378 spans a roughly 2x change in the learning rate the
+#      checkpoints were produced under (4.16% -> 8.59% of peak). RESTORE_RESET_SCHEDULE=True
+#      below gives both members the same fresh schedule at adaptation time, so the confound
+#      is in what the checkpoints ARE, not in how they are adapted. It is unregistered in the
+#      plan and must be reported with any early-versus-late reading.
+#
+# An earlier version of this header derived warmup_end_step ~= 693 by INFERRING
+# steps_per_epoch from the last checkpoint number. That inference was wrong by three orders
+# of magnitude. The figures above are read from the log, not inferred.
+#   attach_adaptation.sh 33575 e33575 42   <alloc> <node>     # early member
+#   attach_adaptation.sh 69378 l69378 42   <alloc> <node>     # late member
 # Gate first (memory <100MiB, 0 compute PIDs) before calling this.
 set -euo pipefail
 
-STEP="${1:?RESTORE_STEP required}"
+STEP="${1:?RESTORE_STEP required -- 33575 (early) or 69378 (late); NOT 275, see the header}"
+case "$STEP" in
+  275) echo "REFUSED: step 275 is 0.03% up the linear warmup ramp (warmup_end_step 808053," \
+            "read from logs_lobs5/training_5705912_node0.log). Adapting from it is an" \
+            "untrained-versus-trained contrast, not early-versus-late. Use 33575." >&2
+       exit 7 ;;
+esac
 SHORT="${2:?short name required}"
 # S2: the seed is an ARGUMENT, not an assumption. Both this script and
 # submit_adaptation_pair.sh carried a header claiming the two members "share every setting
@@ -62,7 +97,13 @@ export SIGMA0_JOB_TMPDIR=/tmp/kangli.u6gb/sigma0/cl_probe_${SHORT}
 export SQUASHFS_MULTI_MOUNT_ROOT=${SIGMA0_JOB_TMPDIR}/sp500_squashfs
 export FORBID_RAW_NPYZST=1
 export DATA_ROOT=/lus/lfs1aip2/projects/s5e/lob_preproc_sp500
-TICKERS=$(grep '^env_TICKERS:' "$YAML" | sed 's/^env_TICKERS: //')
+# S5: the YAML asks for 488 tickers; the 2024-08 shard holds 482, all paired. Six of the
+# requested names (BAC among them) are simply absent, and lobster_dataloader.py:375 asserts
+# rather than skipping, so both members died at 51s inside dataset setup. The ticker set is
+# now pinned to what the shard actually contains, read from one file both members share --
+# a matched pair must train on identical tickers, so deriving the list per member would be
+# a second bug even if each derivation succeeded.
+TICKERS=$(cat /lus/lfs1aip2/projects/public/u6gb/tasks/continual_learning/results/tickers_2024-08.txt)
 export TICKERS
 export TRAIN_DATE_RANGE=2024-08-01,2024-08-31
 export TEST_DATE_RANGE=

@@ -1,0 +1,16 @@
+{
+ "request_universe_size": 488,
+ "request_provenance": "/lus/lfs1aip2/projects/public/u6gb/sigma-0/configs/train/dfm_smoke_1gpu.yaml",
+ "shard_universe_size": 482,
+ "shard_provenance": "/lus/lfs1aip2/projects/public/s5e/quant_team/lob_preproc_sp500_squashfs/shard_2024-08.squashfs::index.json",
+ "requested_absent_from_shard": [
+  "BAC",
+  "EXE",
+  "PSKY",
+  "Q",
+  "SNDK",
+  "XYZ"
+ ],
+ "shard_not_requested": [],
+ "intersection_size": 482
+}
